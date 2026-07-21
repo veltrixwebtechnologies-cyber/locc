@@ -1,0 +1,351 @@
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
+import { MapPin, Search, LocateFixed, ChevronLeft, ChevronRight } from "lucide-react";
+import { AppShell } from "@/components/app-shell";
+import { AwningCard } from "@/components/awning-card";
+import { stores, deliveryCategories, type StoreCategory } from "@/lib/mock-data";
+import { reverseGeocode } from "@/lib/geocoding.functions";
+
+export const Route = createFileRoute("/")({
+  validateSearch: (s: Record<string, unknown>) => ({
+    category: typeof s.category === "string" ? s.category : undefined,
+    q: typeof s.q === "string" ? s.q : undefined,
+  }),
+  component: Home,
+});
+
+function Home() {
+  const search = Route.useSearch();
+  const reverseGeocodeFn = useServerFn(reverseGeocode);
+  const [location, setLocation] = useState("Marine Drive, Kochi");
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(location);
+  const [locStatus, setLocStatus] = useState<"idle" | "loading" | "ok" | "error">("idle");
+  const [locError, setLocError] = useState("");
+  const [query, setQuery] = useState(search.q ?? "");
+  const [cat, setCat] = useState<string>(search.category ?? "all");
+
+  useEffect(() => {
+    setQuery(search.q ?? "");
+    setCat(search.category ?? "all");
+  }, [search.category, search.q]);
+
+  const autoSetLocation = () => {
+    if (!navigator.geolocation) {
+      setLocStatus("error");
+      setLocError("Location is not supported by this browser.");
+      return;
+    }
+
+    setLocStatus("loading");
+    setLocError("");
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const coords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+        let label = `Current location · ${coords.lat.toFixed(5)}, ${coords.lng.toFixed(5)}`;
+        try {
+          const result = await reverseGeocodeFn({ data: coords });
+          label = result.address;
+        } catch {
+          setLocError("Location found, but the address name could not be loaded.");
+        }
+        setDraft(label);
+        setLocation(label);
+        setEditing(false);
+        setLocStatus("ok");
+      },
+      (err) => {
+        setLocStatus("error");
+        setLocError(
+          err.code === err.PERMISSION_DENIED
+            ? "Permission denied. Allow location access in your browser."
+            : err.code === err.POSITION_UNAVAILABLE
+              ? "Location unavailable. Type your area manually."
+              : err.code === err.TIMEOUT
+                ? "Timed out getting your location. Try Auto again."
+                : "Could not get your location.",
+        );
+      },
+      { enableHighAccuracy: true, timeout: 8000 },
+    );
+  };
+
+  const activeFilter: StoreCategory | undefined = useMemo(() => {
+    if (cat === "all") return undefined;
+    return deliveryCategories.find((c) => c.id === cat)?.filter;
+  }, [cat]);
+
+  const filtered = useMemo(() => {
+    return stores.filter((s) => {
+      if (cat !== "all" && !activeFilter) return false;
+      if (activeFilter && s.category !== activeFilter) return false;
+      if (query && !s.name.toLowerCase().includes(query.toLowerCase())) return false;
+      return true;
+    });
+  }, [cat, activeFilter, query]);
+
+  return (
+    <AppShell>
+      {/* Location bar */}
+      <div className="sticky top-0 z-30 bg-background/95 backdrop-blur md:top-16">
+        <div className="px-5 pt-4 pb-3 md:px-8 md:pt-8">
+          <p className="font-mono text-[10px] uppercase tracking-widest text-primary">
+            Good to see you
+          </p>
+          {editing ? (
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                setLocation(draft || location);
+                setEditing(false);
+              }}
+              className="mt-1 flex items-center gap-2"
+            >
+              <MapPin className="h-4 w-4 text-primary" />
+              <input
+                autoFocus
+                value={draft}
+                onChange={(e) => setDraft(e.target.value)}
+                className="w-full bg-transparent text-base font-medium outline-none"
+                placeholder="Enter street, area or landmark"
+              />
+              <button
+                type="button"
+                onClick={autoSetLocation}
+                disabled={locStatus === "loading"}
+                className="inline-flex items-center gap-1 text-xs text-primary disabled:opacity-60"
+              >
+                <LocateFixed
+                  className={`h-3.5 w-3.5 ${locStatus === "loading" ? "animate-spin" : ""}`}
+                />
+                {locStatus === "loading" ? "Finding" : "Auto"}
+              </button>
+              <button
+                type="submit"
+                className="rounded-md bg-primary px-2.5 py-1 text-xs font-medium text-primary-foreground"
+              >
+                Set
+              </button>
+            </form>
+          ) : (
+            <button
+              onClick={() => {
+                setDraft(location);
+                setEditing(true);
+              }}
+              className="mt-1 flex items-center gap-2 text-left"
+            >
+              <MapPin className="h-4 w-4 text-primary" />
+              <span className="text-base font-medium underline-offset-4 hover:underline">
+                {location}
+              </span>
+            </button>
+          )}
+          {locStatus === "error" && <p className="mt-1 text-[11px] text-destructive">{locError}</p>}
+          {locStatus === "ok" && !editing && (
+            <p className="mt-1 text-[11px] text-primary">Delivery location updated.</p>
+          )}
+        </div>
+      </div>
+
+      {/* Hero */}
+      <section className="px-5 pt-2 pb-4 md:px-8 md:pt-4 md:pb-8">
+        <h1 className="font-display text-[28px] font-extrabold leading-[1.1] text-foreground md:text-6xl md:leading-[1.05]">
+          Pick your own local shop, <br className="hidden md:block" />
+          <span className="text-primary">we just deliver.</span>
+        </h1>
+        <p className="mt-3 max-w-2xl text-sm text-muted-foreground md:text-base">
+          No dark stores. Real neighborhood shops — a partner picks it up and brings it to your
+          door.
+        </p>
+      </section>
+
+      {/* Search */}
+      <div className="px-5 md:px-8">
+        <label className="flex items-center gap-2 rounded-xl bg-card px-3 py-2.5 ring-1 ring-black/[0.04] md:px-4 md:py-3.5">
+          <Search className="h-4 w-4 text-muted-foreground md:h-5 md:w-5" />
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search shops near you"
+            className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground md:text-base"
+          />
+        </label>
+      </div>
+
+      {/* Category tiles */}
+      <div className="mt-5 md:mt-8">
+        <div className="mb-2 flex items-center justify-between px-5 md:px-8">
+          <h2 className="font-display text-base font-bold text-foreground md:text-lg">
+            Shop by category
+          </h2>
+          {cat !== "all" && (
+            <button
+              onClick={() => setCat("all")}
+              className="text-xs text-primary underline-offset-4 hover:underline"
+            >
+              Clear
+            </button>
+          )}
+        </div>
+        <CategoryStrip cat={cat} setCat={setCat} />
+      </div>
+
+      {/* Store list */}
+      <div className="mt-2 flex items-center justify-between px-5 pt-2 md:mt-6 md:px-8">
+        <h2 className="font-display text-base font-bold text-foreground md:text-xl">
+          Verified local shops near you
+        </h2>
+        <span className="font-mono text-[10px] uppercase text-muted-foreground md:text-xs">
+          {filtered.length} shops
+        </span>
+      </div>
+
+      <div className="mt-3 grid grid-cols-1 gap-3 px-5 pb-8 md:mt-4 md:grid-cols-2 md:gap-5 md:px-8 lg:grid-cols-3">
+        {filtered.length === 0 ? (
+          <div className="md:col-span-2 lg:col-span-3">
+            <EmptyState />
+          </div>
+        ) : (
+          filtered.map((s) => <AwningCard key={s.id} store={s} />)
+        )}
+      </div>
+
+      <p className="px-5 pb-6 text-center font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+        · Local Shore · Coastal India ·
+      </p>
+
+      {/* Auth CTA (mock) */}
+      <div className="px-5 pb-4">
+        <Link
+          to="/auth"
+          search={{ redirect: undefined }}
+          className="block text-center text-xs text-muted-foreground underline-offset-4 hover:underline"
+        >
+          Sign in with phone number
+        </Link>
+      </div>
+    </AppShell>
+  );
+}
+
+function EmptyState() {
+  return (
+    <div className="rounded-xl border hairline bg-card p-6 text-center animate-fade-in">
+      <p className="font-display text-lg">No shops match that.</p>
+      <p className="mt-1 text-sm text-muted-foreground">
+        No stores near you yet — try expanding your search radius or clearing filters.
+      </p>
+    </div>
+  );
+}
+
+function CategoryStrip({ cat, setCat }: { cat: string; setCat: (v: string) => void }) {
+  const scrollerRef = useRef<HTMLDivElement>(null);
+  const [canLeft, setCanLeft] = useState(false);
+  const [canRight, setCanRight] = useState(false);
+
+  const update = () => {
+    const el = scrollerRef.current;
+    if (!el) return;
+    setCanLeft(el.scrollLeft > 4);
+    setCanRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 4);
+  };
+
+  useEffect(() => {
+    update();
+    const el = scrollerRef.current;
+    if (!el) return;
+    el.addEventListener("scroll", update, { passive: true });
+    window.addEventListener("resize", update);
+    return () => {
+      el.removeEventListener("scroll", update);
+      window.removeEventListener("resize", update);
+    };
+  }, []);
+
+  const scrollBy = (dir: 1 | -1) => {
+    const el = scrollerRef.current;
+    if (!el) return;
+    el.scrollBy({ left: dir * Math.max(240, el.clientWidth * 0.7), behavior: "smooth" });
+  };
+
+  return (
+    <div className="relative group">
+      {/* Left arrow */}
+      <button
+        type="button"
+        aria-label="Scroll categories left"
+        onClick={() => scrollBy(-1)}
+        className={`absolute left-2 top-[38%] z-10 hidden -translate-y-1/2 items-center justify-center rounded-full border border-black/[0.06] bg-background/95 p-2 shadow-md backdrop-blur transition-all duration-200 hover:scale-110 hover:bg-primary hover:text-primary-foreground md:flex ${
+          canLeft ? "opacity-100" : "pointer-events-none opacity-0"
+        }`}
+      >
+        <ChevronLeft className="h-4 w-4" />
+      </button>
+      {/* Right arrow */}
+      <button
+        type="button"
+        aria-label="Scroll categories right"
+        onClick={() => scrollBy(1)}
+        className={`absolute right-2 top-[38%] z-10 hidden -translate-y-1/2 items-center justify-center rounded-full border border-black/[0.06] bg-background/95 p-2 shadow-md backdrop-blur transition-all duration-200 hover:scale-110 hover:bg-primary hover:text-primary-foreground md:flex ${
+          canRight ? "opacity-100" : "pointer-events-none opacity-0"
+        }`}
+      >
+        <ChevronRight className="h-4 w-4" />
+      </button>
+
+      {/* Edge fades */}
+      <div
+        className={`pointer-events-none absolute left-0 top-0 z-[5] hidden h-full w-12 bg-gradient-to-r from-background to-transparent transition-opacity duration-200 md:block ${
+          canLeft ? "opacity-100" : "opacity-0"
+        }`}
+      />
+      <div
+        className={`pointer-events-none absolute right-0 top-0 z-[5] hidden h-full w-12 bg-gradient-to-l from-background to-transparent transition-opacity duration-200 md:block ${
+          canRight ? "opacity-100" : "opacity-0"
+        }`}
+      />
+
+      <div
+        ref={scrollerRef}
+        className="flex gap-3 overflow-x-auto scroll-smooth px-5 pb-3 md:gap-4 md:px-8 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      >
+        {deliveryCategories.map((c, i) => {
+          const active = c.id === cat;
+          return (
+            <button
+              key={c.id}
+              onClick={() => setCat(active ? "all" : c.id)}
+              style={{ animationDelay: `${i * 40}ms` }}
+              className="group/tile flex w-[88px] shrink-0 flex-col items-center gap-1.5 animate-fade-in md:w-[104px]"
+            >
+              <div
+                className={`relative aspect-square w-full overflow-hidden rounded-2xl bg-[var(--sand)] ring-1 transition-all duration-300 ease-out group-hover/tile:-translate-y-0.5 group-hover/tile:shadow-md ${
+                  active
+                    ? "ring-2 ring-primary scale-[1.03]"
+                    : "ring-black/[0.05] group-hover/tile:ring-primary/40"
+                }`}
+              >
+                <img
+                  src={c.imageUrl}
+                  alt={c.label}
+                  loading="lazy"
+                  className="h-full w-full object-cover transition-transform duration-500 ease-out group-hover/tile:scale-110"
+                />
+              </div>
+              <span
+                className={`text-center text-[11px] font-medium leading-tight transition-colors md:text-xs ${
+                  active ? "text-primary" : "text-foreground"
+                }`}
+              >
+                {c.label}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
