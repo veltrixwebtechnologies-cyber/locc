@@ -46,15 +46,17 @@ function StorePage() {
     queryFn: async () => {
       const { data, error } = await (supabase as any).from("products").select("id,name,category,selling_price,image_url,stock").in("status", ["active", "approved"]).order("created_at", { ascending: false });
       if (error) throw error;
-      return (data ?? []).map((p: any) => {
+      return Promise.all((data ?? []).map(async (p: any) => {
         const rawImage = p.image_url ?? "";
-        const imageUrl = /^(https?:|data:)/i.test(rawImage)
-          ? rawImage
-          : rawImage
-            ? supabase.storage.from("product-images").getPublicUrl(rawImage).data.publicUrl
-            : "";
+        let imageUrl = rawImage;
+        if (rawImage && !/^(https?:|data:)/i.test(rawImage)) {
+          const { data: signed } = await supabase.storage
+            .from("product-images")
+            .createSignedUrl(rawImage, 60 * 60);
+          imageUrl = signed?.signedUrl ?? "";
+        }
         return { id: p.id, storeId: APPROVED_STORE.id, name: p.name, unit: p.category ?? "", price: Number(p.selling_price), imageUrl, category: p.category ?? "Other" };
-      });
+      }));
     },
   });
   const store = loaded.store;
