@@ -30,7 +30,7 @@ function OrderPage() {
     if (!store || !status) return undefined;
     const steps = orderStatusFlow.length - 1;
     const t = Math.min(0.95, Math.max(0.05, currentIndex / steps));
-    if (status === "delivered" || status === "placed" || status === "confirmed") return undefined;
+    if (status === "delivered" || status === "new" || status === "accepted") return undefined;
     return {
       lat: store.lat + (destination.lat - store.lat) * t,
       lng: store.lng + (destination.lng - store.lng) * t,

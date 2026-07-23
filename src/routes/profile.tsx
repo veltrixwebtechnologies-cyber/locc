@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { AppShell } from "@/components/app-shell";
-import { authStore, useAuth } from "@/lib/auth-store";
+import { useAuth } from "@/lib/auth-store";
 import { supabase } from "@/integrations/supabase/client";
 import { ChevronRight, LogOut, MapPin, Bell, HelpCircle } from "lucide-react";
 
@@ -46,7 +46,6 @@ function ProfilePage() {
         <button
           onClick={async () => {
             await supabase.auth.signOut();
-            authStore.signOut();
             navigate({ to: "/", search: { category: undefined, q: undefined } });
           }}
           className="mx-5 mt-6 inline-flex items-center gap-2 text-sm text-destructive hover:underline"

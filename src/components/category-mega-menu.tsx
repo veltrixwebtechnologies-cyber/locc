@@ -1,4 +1,5 @@
 import { Link } from "@tanstack/react-router";
+import { useState } from "react";
 import { ChevronDown, PackageSearch } from "lucide-react";
 import { deliveryCategories } from "@/lib/mock-data";
 
@@ -274,46 +275,95 @@ export function HeaderCategoryMenu() {
 }
 
 export function MobileCategoryStrip() {
+  const [isOpen, setIsOpen] = useState(false);
+  const [openGroup, setOpenGroup] = useState<string | null>(null);
+  const selected = menuGroups.find((group) => group.id === openGroup);
+
   return (
     <div className="border-b hairline bg-background md:hidden">
       <div className="px-4 py-3">
-        <div className="mb-2 flex items-center justify-between">
-          <div>
+        <div className="flex items-center justify-between">
+          <button
+            type="button"
+            aria-expanded={isOpen}
+            onClick={() => setIsOpen((value) => !value)}
+            className="text-left"
+          >
             <p className="font-mono text-[10px] uppercase tracking-widest text-primary">Browse</p>
             <h2 className="font-display text-lg leading-tight text-foreground">Categories</h2>
-          </div>
+          </button>
           <Link
             to="/"
             search={{ category: undefined, q: undefined }}
+            onClick={() => {
+              setIsOpen(false);
+              setOpenGroup(null);
+            }}
             className="text-[11px] font-medium text-muted-foreground"
           >
             All
           </Link>
         </div>
-        <div className="flex gap-2 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          {menuGroups.map((group) => (
-            <Link
-              key={group.id}
-              to="/"
-              search={{ category: group.categoryId, q: undefined }}
-              className="flex min-w-[86px] flex-col items-center gap-1 rounded-lg border hairline bg-card px-2 py-2 text-center text-[11px] font-semibold text-foreground shadow-sm transition-all active:scale-[0.98] hover:border-primary/40 hover:bg-muted"
-            >
-              <span className="h-11 w-11 overflow-hidden rounded-full border hairline bg-card">
-                {imageFor(group.categoryId) ? (
-                  <img
-                    src={imageFor(group.categoryId)}
-                    alt=""
-                    loading="lazy"
-                    className="h-full w-full object-cover"
-                  />
-                ) : (
-                  <PackageSearch className="m-2.5 h-5 w-5 text-primary" />
-                )}
-              </span>
-              {group.label}
-            </Link>
-          ))}
-        </div>
+        {isOpen && (
+          <div className="mt-3 flex gap-2 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            {menuGroups.map((group) => (
+              <button
+                key={group.id}
+                type="button"
+                aria-expanded={openGroup === group.id}
+                onClick={() => setOpenGroup(openGroup === group.id ? null : group.id)}
+                className={`flex min-w-[86px] flex-col items-center gap-1 rounded-lg border hairline bg-card px-2 py-2 text-center text-[11px] font-semibold text-foreground shadow-sm transition-all active:scale-[0.98] hover:border-primary/40 hover:bg-muted ${openGroup === group.id ? "border-primary/50 bg-muted ring-2 ring-primary/15" : ""}`}
+              >
+                <span className="h-11 w-11 overflow-hidden rounded-full border hairline bg-card">
+                  {imageFor(group.categoryId) ? (
+                    <img src={imageFor(group.categoryId)} alt="" loading="lazy" className="h-full w-full object-cover" />
+                  ) : (
+                    <PackageSearch className="m-2.5 h-5 w-5 text-primary" />
+                  )}
+                </span>
+                {group.label}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {isOpen && selected && (
+          <div className="mt-3 overflow-hidden rounded-xl border hairline bg-card shadow-xl">
+            <div className="awning h-1.5" style={{ ["--awning-color" as string]: "var(--teal)" }} aria-hidden />
+            <div className="bg-primary px-4 py-3 text-primary-foreground">
+              <p className="font-mono text-[10px] uppercase tracking-widest opacity-80">Shop Local</p>
+              <p className="mt-1 font-display text-xl leading-tight">{selected.label}</p>
+            </div>
+            <div className="grid grid-cols-2 gap-x-4 gap-y-4 p-4">
+              {selected.columns.map((column) => (
+                <div key={column.heading}>
+                  <Link
+                    to="/"
+                    search={{ category: selected.categoryId, q: undefined }}
+                    onClick={() => setOpenGroup(null)}
+                    className="text-xs font-bold text-primary underline-offset-4 hover:underline"
+                  >
+                    {column.heading}
+                  </Link>
+                  <ul className="mt-2 space-y-1.5">
+                    {column.items.map((item) => (
+                      <li key={item}>
+                        <Link
+                          to="/"
+                          search={{ category: selected.categoryId, q: item }}
+                          onClick={() => setOpenGroup(null)}
+                          className="text-xs text-foreground/85 underline-offset-4 hover:text-primary hover:underline"
+                        >
+                          {item}
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

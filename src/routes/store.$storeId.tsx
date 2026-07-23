@@ -1,8 +1,10 @@
 import { createFileRoute, Link, notFound, useNavigate } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { ArrowLeft, Search, Star } from "lucide-react";
 import {
-  getStore,
+  getStore, APPROVED_STORE,
   productsByStore,
   categoryColor,
   categoryLabel,
@@ -15,7 +17,7 @@ import { ProductThumb } from "@/components/product-thumb";
 
 export const Route = createFileRoute("/store/$storeId")({
   loader: ({ params }): { store: Store; products: Product[] } => {
-    const store = getStore(params.storeId);
+    const store = params.storeId === APPROVED_STORE.id ? APPROVED_STORE : getStore(params.storeId);
     if (!store) throw notFound();
     return { store, products: productsByStore[store.id] ?? [] };
   },
@@ -37,7 +39,26 @@ export const Route = createFileRoute("/store/$storeId")({
 });
 
 function StorePage() {
-  const { store, products } = Route.useLoaderData() as { store: Store; products: Product[] };
+  const loaded = Route.useLoaderData() as { store: Store; products: Product[] };
+  const approved = useQuery({
+    queryKey: ["approved-products"],
+    enabled: loaded.store.id === APPROVED_STORE.id,
+    queryFn: async () => {
+      const { data, error } = await (supabase as any).from("products").select("id,name,category,selling_price,image_url,stock").in("status", ["active", "approved"]).order("created_at", { ascending: false });
+      if (error) throw error;
+      return (data ?? []).map((p: any) => {
+        const rawImage = p.image_url ?? "";
+        const imageUrl = /^(https?:|data:)/i.test(rawImage)
+          ? rawImage
+          : rawImage
+            ? supabase.storage.from("product-images").getPublicUrl(rawImage).data.publicUrl
+            : "";
+        return { id: p.id, storeId: APPROVED_STORE.id, name: p.name, unit: p.category ?? "", price: Number(p.selling_price), imageUrl, category: p.category ?? "Other" };
+      });
+    },
+  });
+  const store = loaded.store;
+  const products = (loaded.store.id === APPROVED_STORE.id ? (approved.data ?? []) : loaded.products) as Product[];
   const navigate = useNavigate();
   const [query, setQuery] = useState("");
   const cart = useCart();

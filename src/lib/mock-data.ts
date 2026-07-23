@@ -24,6 +24,21 @@ export interface DeliveryCategory {
 
 const catImg = (id: string) => `https://images.unsplash.com/${id}?auto=format&fit=crop&w=240&q=70`;
 
+export const APPROVED_STORE: Store = {
+  id: "approved-catalog",
+  name: "Verified local products",
+  category: "grocery",
+  tagline: "Approved by Seller Hub",
+  distanceKm: 2,
+  rating: 5,
+  isOpen: true,
+  etaMin: 30,
+  address: "Available from approved local vendors",
+  lat: 9.9816,
+  lng: 76.2999,
+  imageUrl: catImg("photo-1542838132-92c53300491e"),
+};
+
 export const deliveryCategories: DeliveryCategory[] = [
   {
     id: "fresh",

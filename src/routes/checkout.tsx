@@ -5,7 +5,7 @@ import { AppShell } from "@/components/app-shell";
 import { cartStore, useCart, cartTotals } from "@/lib/cart-store";
 import { getStore } from "@/lib/mock-data";
 import { ordersStore } from "@/lib/orders-store";
-import { authStore } from "@/lib/auth-store";
+import { supabase } from "@/integrations/supabase/client";
 import { addressesStore, useAddresses } from "@/lib/addresses-store";
 import { DeliveryMap } from "@/components/delivery-map";
 import { reverseGeocode } from "@/lib/geocoding.functions";
@@ -14,8 +14,9 @@ import { Crosshair, Plus, Check } from "lucide-react";
 const CURRENT_LOCATION_ID = "__current_location";
 
 export const Route = createFileRoute("/checkout")({
-  beforeLoad: () => {
-    if (typeof window !== "undefined" && !authStore.isSignedIn()) {
+  beforeLoad: async () => {
+    const { data } = await supabase.auth.getSession();
+    if (!data.session) {
       throw redirect({ to: "/auth", search: { redirect: "/checkout" } });
     }
   },
@@ -266,9 +267,9 @@ function CheckoutPage() {
       : "";
   const canPlace = !!selectedAddressLine;
 
-  const placeOrder = () => {
+  const placeOrder = async () => {
     if (!selectedAddressLine) return;
-    const order = ordersStore.place({
+    const order = await ordersStore.place({
       storeId: store.id,
       storeName: store.name,
       lines: cart.lines,

@@ -22,6 +22,7 @@ export function QtyStepper({
   if (qty === 0) {
     return (
       <button
+        type="button"
         onClick={onAdd}
         className="rounded-lg border border-primary/30 bg-transparent px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-primary hover:bg-primary hover:text-primary-foreground transition-colors"
       >
@@ -34,6 +35,7 @@ export function QtyStepper({
       className={`inline-flex items-center overflow-hidden rounded-lg bg-primary text-primary-foreground ${pop ? "cart-pop" : ""}`}
     >
       <button
+        type="button"
         aria-label="Decrease"
         onClick={() => onChange(qty - 1)}
         className="grid h-7 w-7 place-items-center hover:bg-teal-deep"
@@ -42,6 +44,7 @@ export function QtyStepper({
       </button>
       <span className="w-6 text-center font-mono text-xs">{qty}</span>
       <button
+        type="button"
         aria-label="Increase"
         onClick={() => onChange(qty + 1)}
         className="grid h-7 w-7 place-items-center hover:bg-teal-deep"

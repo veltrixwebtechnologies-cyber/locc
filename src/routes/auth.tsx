@@ -1,11 +1,6 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
-import { useCallback, useEffect, useRef, useState } from "react";
-import { useServerFn } from "@tanstack/react-start";
-import { authStore } from "@/lib/auth-store";
+import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { sendResendEmailOtp, verifyResendEmailOtp } from "@/lib/email-otp.functions";
-import { getFirebaseAuth, isFirebaseConfigured } from "@/integrations/firebase/client";
-import { RecaptchaVerifier, signInWithPhoneNumber, type ConfirmationResult } from "firebase/auth";
 import { ArrowLeft, ShieldCheck, Truck, Store, Mail, Phone, Loader2 } from "lucide-react";
 
 export const Route = createFileRoute("/auth")({
@@ -17,25 +12,22 @@ export const Route = createFileRoute("/auth")({
 
 type Mode = "phone" | "email";
 
-function mapFirebaseError(code: string | undefined): string {
-  switch (code) {
-    case "auth/invalid-phone-number":
-      return "That phone number looks invalid. Check the country code and try again.";
-    case "auth/missing-phone-number":
-      return "Enter a phone number to continue.";
-    case "auth/quota-exceeded":
-      return "SMS quota exceeded for this project. Try again later.";
-    case "auth/too-many-requests":
-      return "Too many attempts from this device. Please wait a few minutes and retry.";
-    case "auth/invalid-verification-code":
-      return "That code is incorrect. Please re-check and try again.";
-    case "auth/code-expired":
-      return "This code has expired. Tap Resend to get a new one.";
-    case "auth/captcha-check-failed":
-      return "reCAPTCHA failed to verify. Refresh the page and try again.";
-    default:
-      return "Something went wrong. Please try again.";
+function authErrorMessage(error: unknown, fallback: string) {
+  if (typeof error === "string" && error.trim()) return error;
+  if (error instanceof Error && error.message) return error.message;
+  if (error && typeof error === "object") {
+    const value = error as { message?: unknown; msg?: unknown; error_code?: unknown; code?: unknown };
+    const detail = typeof value.message === "string" && value.message.trim()
+      ? value.message
+      : typeof value.msg === "string" && value.msg.trim()
+        ? value.msg
+        : "";
+    if (detail) {
+      const code = typeof value.error_code === "string" ? value.error_code : typeof value.code === "string" ? value.code : "";
+      return code ? `${code}: ${detail}` : detail;
+    }
   }
+  return fallback;
 }
 
 function AuthPage() {
@@ -49,8 +41,6 @@ function AuthPage() {
   const [phone, setPhone] = useState("");
   const [otp, setOtp] = useState("");
   const [cooldown, setCooldown] = useState(0);
-  const recaptchaRef = useRef<RecaptchaVerifier | null>(null);
-  const confirmationRef = useRef<ConfirmationResult | null>(null);
 
   // email flow (OTP)
   const [emailStep, setEmailStep] = useState<"email" | "otp">("email");
@@ -72,14 +62,19 @@ function AuthPage() {
   const completeSupabaseEmailSession = useCallback(async () => {
     const { data, error: userError } = await supabase.auth.getUser();
     const user = data.user;
-    if (userError || !user?.email) return false;
+    if (userError || !user) return false;
+
+    if (user.phone) {
+      done();
+      return true;
+    }
+    if (!user.email) return false;
 
     const displayName =
       (typeof user.user_metadata?.name === "string" && user.user_metadata.name.trim()) ||
       name.trim() ||
       user.email.split("@")[0];
 
-    authStore.signInEmail(user.email, displayName);
     done();
     return true;
   }, [done, name]);
@@ -113,34 +108,6 @@ function AuthPage() {
     return () => clearTimeout(t);
   }, [cooldown]);
 
-  // cleanup recaptcha on unmount
-  useEffect(() => {
-    return () => {
-      try {
-        recaptchaRef.current?.clear();
-      } catch {
-        /* noop */
-      }
-      recaptchaRef.current = null;
-    };
-  }, []);
-
-  const ensureRecaptcha = (): RecaptchaVerifier => {
-    if (recaptchaRef.current) return recaptchaRef.current;
-    const auth = getFirebaseAuth();
-    recaptchaRef.current = new RecaptchaVerifier(auth, "firebase-recaptcha-container", {
-      size: "invisible",
-    });
-    return recaptchaRef.current;
-  };
-
-  const requestOtp = async (fullPhone: string) => {
-    const auth = getFirebaseAuth();
-    const verifier = ensureRecaptcha();
-    const confirmation = await signInWithPhoneNumber(auth, fullPhone, verifier);
-    confirmationRef.current = confirmation;
-  };
-
   const sendOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!/^\d{6,14}$/.test(phone)) {
@@ -152,9 +119,18 @@ function AuthPage() {
       return;
     }
     setError(null);
-    // DEV: skip OTP — sign in directly
-    authStore.signIn(`${countryCode}${phone}`);
-    done();
+    setLoading(true);
+    try {
+      const { error: authError } = await supabase.auth.signInWithOtp({ phone: `${countryCode}${phone}` });
+      if (authError) throw authError;
+      setStep("otp");
+      setCooldown(30);
+    } catch (err) {
+      console.error("Supabase phone OTP error", err);
+      setError(authErrorMessage(err, "Could not send the verification code. Check Supabase Auth SMS settings."));
+    } finally {
+      setLoading(false);
+    }
   };
 
   const resendOtp = async () => {
@@ -162,17 +138,13 @@ function AuthPage() {
     setError(null);
     setLoading(true);
     try {
-      await requestOtp(`${countryCode}${phone}`);
+      const { error: authError } = await supabase.auth.signInWithOtp({ phone: `${countryCode}${phone}` });
+      if (authError) throw authError;
       setCooldown(30);
       setOtp("");
     } catch (err) {
-      setError(mapFirebaseError((err as { code?: string })?.code));
-      try {
-        recaptchaRef.current?.clear();
-      } catch {
-        /* noop */
-      }
-      recaptchaRef.current = null;
+      console.error("Supabase phone OTP resend error", err);
+      setError(authErrorMessage(err, "Could not resend the verification code. Check Supabase Auth SMS settings."));
     } finally {
       setLoading(false);
     }
@@ -184,27 +156,23 @@ function AuthPage() {
       setError("Enter the 6-digit code.");
       return;
     }
-    if (!confirmationRef.current) {
-      setError("This session has expired. Please request a new code.");
-      return;
-    }
     setError(null);
     setLoading(true);
     try {
-      await confirmationRef.current.confirm(otp);
-      // Hand off the verified phone to the app's existing auth store.
-      // Supabase remains the primary backend for everything else.
-      authStore.signIn(`${countryCode}${phone}`);
+      const { error: authError } = await supabase.auth.verifyOtp({
+        phone: `${countryCode}${phone}`,
+        token: otp,
+        type: "sms",
+      });
+      if (authError) throw authError;
       done();
     } catch (err) {
-      setError(mapFirebaseError((err as { code?: string })?.code));
+      console.error("Supabase phone OTP verification error", err);
+      setError(authErrorMessage(err, "That code could not be verified."));
     } finally {
       setLoading(false);
     }
   };
-  const sendOtpFn = useServerFn(sendResendEmailOtp);
-  const verifyOtpFn = useServerFn(verifyResendEmailOtp);
-
   const sendEmailOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
@@ -212,9 +180,75 @@ function AuthPage() {
       return;
     }
     setError(null);
-    // DEV: skip OTP — sign in directly
-    authStore.signInEmail(email, name.trim() || email.split("@")[0]);
-    done();
+    setLoading(true);
+    try {
+      const { error: authError } = await supabase.auth.signInWithOtp({
+        email,
+        options: {
+          shouldCreateUser: true,
+          data: { display_name: name.trim() || email.split("@")[0] },
+          emailRedirectTo: `${window.location.origin}/auth`,
+        },
+      });
+      if (authError) throw authError;
+      setEmailStep("otp");
+      setCooldown(30);
+    } catch (err) {
+      console.error("Supabase email OTP error", err);
+      setError(authErrorMessage(err, "Could not send the verification code. Check Supabase SMTP settings."));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const verifyEmailOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (emailOtp.length < 6 || emailOtp.length > 8) {
+      setError("Enter the verification code from the email.");
+      return;
+    }
+    setError(null);
+    setLoading(true);
+    try {
+      let { error: authError } = await supabase.auth.verifyOtp({ email, token: emailOtp, type: "email" });
+      // New users can receive a signup confirmation token when email
+      // confirmation is enabled. Support that token type as well.
+      if (authError) {
+        const fallback = await supabase.auth.verifyOtp({ email, token: emailOtp, type: "signup" as any });
+        authError = fallback.error;
+      }
+      if (authError) throw authError;
+      done();
+    } catch (err) {
+      console.error("Supabase email OTP verification error", err);
+      setError(authErrorMessage(err, "That code could not be verified."));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const resendEmailOtp = async () => {
+    if (cooldown > 0 || loading) return;
+    setError(null);
+    setLoading(true);
+    try {
+      const { error: authError } = await supabase.auth.signInWithOtp({
+        email,
+        options: {
+          shouldCreateUser: true,
+          data: { display_name: name.trim() || email.split("@")[0] },
+          emailRedirectTo: `${window.location.origin}/auth`,
+        },
+      });
+      if (authError) throw authError;
+      setCooldown(30);
+      setEmailOtp("");
+    } catch (err) {
+      console.error("Supabase email OTP resend error", err);
+      setError(authErrorMessage(err, "Could not resend the verification code."));
+    } finally {
+      setLoading(false);
+    }
   };
 
   const switchMode = (m: Mode) => {
@@ -303,11 +337,11 @@ function AuthPage() {
             <p className="mt-2 text-sm text-muted-foreground">
               {mode === "phone"
                 ? step === "phone"
-                  ? "We'll text you a 6-digit code via Firebase. No password to remember."
+                  ? "We'll text you a 6-digit code via Supabase Auth. No password to remember."
                   : `Sent to ${countryCode} ${phone}. Enter the 6-digit code you received.`
                 : emailStep === "email"
-                  ? "We'll email you a 6-digit verification code. No password to remember."
-                  : `Sent to ${email}. Check your inbox (and spam) for the 6-digit code.`}
+                  ? "We'll email you a verification code. No password to remember."
+                  : `Sent to ${email}. Check your inbox (and spam) for the verification code.`}
             </p>
 
             {/* Mode tabs */}
@@ -407,7 +441,6 @@ function AuthPage() {
                         setStep("phone");
                         setOtp("");
                         setError(null);
-                        confirmationRef.current = null;
                       }}
                       className="text-muted-foreground underline-offset-4 hover:underline"
                     >
@@ -459,7 +492,42 @@ function AuthPage() {
                   New to Local Shore? An account is created automatically.
                 </p>
               </form>
-            ) : null}
+            ) : (
+              <form onSubmit={verifyEmailOtp} className="mt-6 space-y-4">
+                <p className="text-xs text-muted-foreground">Code sent to <span className="font-mono">{email}</span></p>
+                <input
+                  inputMode="numeric"
+                  maxLength={8}
+                  value={emailOtp}
+                  onChange={(e) => setEmailOtp(e.target.value.replace(/\D/g, ""))}
+                  placeholder="00000000"
+                  className="w-full rounded-xl bg-card px-3 py-4 text-center font-mono text-3xl tracking-[0.5em] outline-none ring-1 ring-black/[0.06] focus:ring-2 focus:ring-primary"
+                  autoFocus
+                />
+                {error && <p className="text-xs text-destructive">{error}</p>}
+                <button type="submit" disabled={loading} className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-3.5 text-sm font-semibold text-primary-foreground disabled:opacity-70">
+                  {loading && <Loader2 className="h-4 w-4 animate-spin" />}
+                  {loading ? "Verifying…" : "Verify and continue"}
+                </button>
+                <div className="flex items-center justify-between text-xs">
+                  <button
+                    type="button"
+                    onClick={() => { setEmailStep("email"); setEmailOtp(""); setError(null); }}
+                    className="text-muted-foreground underline-offset-4 hover:underline"
+                  >
+                    Use a different email
+                  </button>
+                  <button
+                    type="button"
+                    onClick={resendEmailOtp}
+                    disabled={cooldown > 0 || loading}
+                    className="text-primary underline-offset-4 hover:underline disabled:text-muted-foreground disabled:no-underline"
+                  >
+                    {cooldown > 0 ? `Resend in ${cooldown}s` : "Resend code"}
+                  </button>
+                </div>
+              </form>
+            )}
           </div>
 
           <p className="mx-auto mt-10 w-full max-w-md text-center text-[11px] text-muted-foreground lg:hidden">

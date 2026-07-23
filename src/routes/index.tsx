@@ -4,7 +4,9 @@ import { useServerFn } from "@tanstack/react-start";
 import { MapPin, Search, LocateFixed, ChevronLeft, ChevronRight } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { AwningCard } from "@/components/awning-card";
-import { stores, deliveryCategories, type StoreCategory } from "@/lib/mock-data";
+import { stores, deliveryCategories, APPROVED_STORE, type StoreCategory } from "@/lib/mock-data";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { reverseGeocode } from "@/lib/geocoding.functions";
 
 export const Route = createFileRoute("/")({
@@ -25,6 +27,24 @@ function Home() {
   const [locError, setLocError] = useState("");
   const [query, setQuery] = useState(search.q ?? "");
   const [cat, setCat] = useState<string>(search.category ?? "all");
+  const approvedProducts = useQuery({
+    queryKey: ["approved-catalog-count"],
+    queryFn: async () => {
+      const { count, error } = await (supabase as any).from("products").select("id", { count: "exact", head: true }).in("status", ["active", "approved"]);
+      if (error) throw error;
+      return count ?? 0;
+    },
+  });
+  const approvedVendors = useQuery({
+    queryKey: ["approved-vendors"],
+    queryFn: async () => {
+      const { data, error } = await (supabase as any)
+        .from("approved_vendor_catalog")
+        .select("id,shop_name,business_type,city,state,address_line1,category");
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
 
   useEffect(() => {
     setQuery(search.q ?? "");
@@ -77,13 +97,23 @@ function Home() {
   }, [cat]);
 
   const filtered = useMemo(() => {
-    return stores.filter((s) => {
+    const vendor = approvedVendors.data?.[0];
+    const vendorStore = vendor
+      ? {
+          ...APPROVED_STORE,
+          name: vendor.shop_name,
+          tagline: vendor.business_type || "Approved local vendor",
+          address: [vendor.address_line1, vendor.city, vendor.state].filter(Boolean).join(", ") || APPROVED_STORE.address,
+        }
+      : APPROVED_STORE;
+    const allStores = approvedProducts.data ? [vendorStore, ...stores] : stores;
+    return allStores.filter((s) => {
       if (cat !== "all" && !activeFilter) return false;
       if (activeFilter && s.category !== activeFilter) return false;
       if (query && !s.name.toLowerCase().includes(query.toLowerCase())) return false;
       return true;
     });
-  }, [cat, activeFilter, query]);
+  }, [cat, activeFilter, query, approvedProducts.data, approvedVendors.data]);
 
   return (
     <AppShell>
@@ -225,6 +255,12 @@ function Home() {
         >
           Sign in with phone number
         </Link>
+        <a
+          href={import.meta.env.VITE_SELLER_HUB_URL || "http://localhost:5174"}
+          className="mt-2 block text-center text-xs text-primary underline-offset-4 hover:underline"
+        >
+          Become a seller
+        </a>
       </div>
     </AppShell>
   );
