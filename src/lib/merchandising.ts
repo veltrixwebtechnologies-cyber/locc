@@ -173,6 +173,25 @@ export function useWishlist() {
   });
 }
 
+export function useWishlistProducts() {
+  const wishlist = useWishlist();
+  return useQuery({
+    queryKey: ["wishlist-products", wishlist.data?.map((item: { product_id: string }) => item.product_id).join(",")],
+    enabled: Boolean(wishlist.data?.length),
+    queryFn: async () => {
+      const ids = (wishlist.data ?? []).map((item: { product_id: string }) => item.product_id);
+      if (!ids.length) return [] as MerchandisingProduct[];
+      const { data, error } = await (supabase as any)
+        .from("public_merchandising_products")
+        .select(productSelect)
+        .in("id", ids);
+      if (error) throw error;
+      const byId = new Map((data ?? []).map((product: MerchandisingProduct) => [product.id, product]));
+      return ids.map((id: string) => byId.get(id)).filter(Boolean) as MerchandisingProduct[];
+    },
+  });
+}
+
 export function useToggleWishlist() {
   const queryClient = useQueryClient();
   const auth = useAuth();
@@ -183,12 +202,20 @@ export function useToggleWishlist() {
         const { error } = await (supabase as any).from("wishlist").delete().eq("product_id", productId);
         if (error) throw error;
       } else {
-        const { error } = await (supabase as any).from("wishlist").insert({ product_id: productId });
+        const { data: userData, error: userError } = await supabase.auth.getUser();
+        if (userError || !userData.user) throw userError ?? new Error("Sign in to use your wishlist.");
+        const { error } = await (supabase as any).from("wishlist").insert({
+          user_id: userData.user.id,
+          product_id: productId,
+        });
         if (error) throw error;
       }
       if (!active) await (supabase as any).from("product_views").insert({ product_id: productId, event_type: "wishlist" });
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["wishlist"] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["wishlist"] });
+      queryClient.invalidateQueries({ queryKey: ["wishlist-products"] });
+    },
   });
 }
 

@@ -1,14 +1,16 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { Home, ClipboardList, User, ShoppingBag, LogIn } from "lucide-react";
+import { Home, ClipboardList, User, ShoppingBag, LogIn, Heart } from "lucide-react";
 import { useCart, cartTotals } from "@/lib/cart-store";
 import { useAuth } from "@/lib/auth-store";
 import { HeaderCategoryMenu, MobileCategoryStrip } from "@/components/category-mega-menu";
 import { Fragment, type ReactNode } from "react";
+import { useWishlist } from "@/lib/merchandising";
 
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const cart = useCart();
   const auth = useAuth();
+  const wishlist = useWishlist();
   const { itemCount } = cartTotals(cart.lines);
   const isSignedIn = !!(auth.phone || auth.email);
 
@@ -24,6 +26,12 @@ export function AppShell({ children }: { children: ReactNode }) {
       label: "Cart",
       icon: ShoppingBag,
       match: (p) => p.startsWith("/cart") || p.startsWith("/checkout"),
+    },
+    {
+      to: "/wishlist",
+      label: "Wishlist",
+      icon: Heart,
+      match: (p) => p.startsWith("/wishlist"),
     },
     {
       to: "/orders",
@@ -53,7 +61,8 @@ export function AppShell({ children }: { children: ReactNode }) {
             {tabs.map((t) => {
               const active = t.match(pathname);
               const Icon = t.icon;
-              const showBadge = t.to === "/cart" && itemCount > 0;
+              const badgeCount = t.to === "/cart" ? itemCount : t.to === "/wishlist" ? (wishlist.data?.length ?? 0) : 0;
+              const showBadge = badgeCount > 0;
               return (
                 <Fragment key={t.to}>
                   {t.to === "/cart" && <HeaderCategoryMenu />}
@@ -69,7 +78,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                     {t.label}
                     {showBadge && (
                       <span className="ml-0.5 min-w-[18px] rounded-full bg-[var(--marigold)] px-1.5 text-center font-mono text-[10px] leading-[18px] text-ink">
-                        {itemCount}
+                        {badgeCount}
                       </span>
                     )}
                   </Link>
@@ -107,11 +116,12 @@ export function AppShell({ children }: { children: ReactNode }) {
 
       {/* Mobile bottom tab bar */}
       <nav className="fixed inset-x-0 bottom-0 z-40 border-t hairline bg-background/95 backdrop-blur md:hidden">
-        <div className="mx-auto grid max-w-xl grid-cols-4">
+        <div className="mx-auto grid max-w-xl grid-cols-5">
           {tabs.map((t) => {
             const active = t.match(pathname);
             const Icon = t.icon;
-            const showBadge = t.to === "/cart" && itemCount > 0;
+            const badgeCount = t.to === "/cart" ? itemCount : t.to === "/wishlist" ? (wishlist.data?.length ?? 0) : 0;
+            const showBadge = badgeCount > 0;
             return (
               <Link
                 key={t.to}
@@ -124,7 +134,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                   <Icon className="h-5 w-5" strokeWidth={active ? 2.2 : 1.8} />
                   {showBadge && (
                     <span className="absolute -right-2 -top-1.5 min-w-[16px] rounded-full bg-[var(--marigold)] px-1 text-center font-mono text-[9px] leading-4 text-ink">
-                      {itemCount}
+                      {badgeCount}
                     </span>
                   )}
                 </span>

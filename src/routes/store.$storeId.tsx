@@ -15,6 +15,7 @@ import { cartStore, useCart, cartTotals } from "@/lib/cart-store";
 import { QtyStepper } from "@/components/qty-stepper";
 import { ProductThumb } from "@/components/product-thumb";
 import { recordProductEvent } from "@/lib/merchandising";
+import { WishlistButton } from "@/components/wishlist-button";
 
 export const Route = createFileRoute("/store/$storeId")({
   loader: ({ params }): { store: Store; products: Product[] } => {
@@ -191,6 +192,9 @@ function StorePage() {
                           <p className="text-xs text-muted-foreground">{p.unit}</p>
                         </div>
                         <span className="font-mono text-sm">₹{p.price}</span>
+                        {store.id === APPROVED_STORE.id && (
+                          <WishlistButton productId={p.id} productName={p.name} />
+                        )}
                         <QtyStepper
                           qty={q}
                           onAdd={() => { void recordProductEvent(p.id, "add_to_cart"); cartStore.add(store.id, store.name, p); }}

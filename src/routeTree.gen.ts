@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as WishlistRouteImport } from './routes/wishlist'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as OrdersRouteImport } from './routes/orders'
 import { Route as NotificationsRouteImport } from './routes/notifications'
@@ -23,6 +24,11 @@ import { Route as OrderOrderIdRouteImport } from './routes/order.$orderId'
 import { Route as LovableEmailAuthWebhookRouteImport } from './routes/lovable/email/auth/webhook'
 import { Route as LovableEmailAuthPreviewRouteImport } from './routes/lovable/email/auth/preview'
 
+const WishlistRoute = WishlistRouteImport.update({
+  id: '/wishlist',
+  path: '/wishlist',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ProfileRoute = ProfileRouteImport.update({
   id: '/profile',
   path: '/profile',
@@ -99,6 +105,7 @@ export interface FileRoutesByFullPath {
   '/notifications': typeof NotificationsRoute
   '/orders': typeof OrdersRoute
   '/profile': typeof ProfileRoute
+  '/wishlist': typeof WishlistRoute
   '/order/$orderId': typeof OrderOrderIdRoute
   '/store/$storeId': typeof StoreStoreIdRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
@@ -114,6 +121,7 @@ export interface FileRoutesByTo {
   '/notifications': typeof NotificationsRoute
   '/orders': typeof OrdersRoute
   '/profile': typeof ProfileRoute
+  '/wishlist': typeof WishlistRoute
   '/order/$orderId': typeof OrderOrderIdRoute
   '/store/$storeId': typeof StoreStoreIdRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
@@ -130,6 +138,7 @@ export interface FileRoutesById {
   '/notifications': typeof NotificationsRoute
   '/orders': typeof OrdersRoute
   '/profile': typeof ProfileRoute
+  '/wishlist': typeof WishlistRoute
   '/order/$orderId': typeof OrderOrderIdRoute
   '/store/$storeId': typeof StoreStoreIdRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
@@ -147,6 +156,7 @@ export interface FileRouteTypes {
     | '/notifications'
     | '/orders'
     | '/profile'
+    | '/wishlist'
     | '/order/$orderId'
     | '/store/$storeId'
     | '/lovable/email/auth/preview'
@@ -162,6 +172,7 @@ export interface FileRouteTypes {
     | '/notifications'
     | '/orders'
     | '/profile'
+    | '/wishlist'
     | '/order/$orderId'
     | '/store/$storeId'
     | '/lovable/email/auth/preview'
@@ -177,6 +188,7 @@ export interface FileRouteTypes {
     | '/notifications'
     | '/orders'
     | '/profile'
+    | '/wishlist'
     | '/order/$orderId'
     | '/store/$storeId'
     | '/lovable/email/auth/preview'
@@ -193,6 +205,7 @@ export interface RootRouteChildren {
   NotificationsRoute: typeof NotificationsRoute
   OrdersRoute: typeof OrdersRoute
   ProfileRoute: typeof ProfileRoute
+  WishlistRoute: typeof WishlistRoute
   OrderOrderIdRoute: typeof OrderOrderIdRoute
   StoreStoreIdRoute: typeof StoreStoreIdRoute
   LovableEmailAuthPreviewRoute: typeof LovableEmailAuthPreviewRoute
@@ -201,6 +214,13 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/wishlist': {
+      id: '/wishlist'
+      path: '/wishlist'
+      fullPath: '/wishlist'
+      preLoaderRoute: typeof WishlistRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/profile': {
       id: '/profile'
       path: '/profile'
@@ -305,6 +325,7 @@ const rootRouteChildren: RootRouteChildren = {
   NotificationsRoute: NotificationsRoute,
   OrdersRoute: OrdersRoute,
   ProfileRoute: ProfileRoute,
+  WishlistRoute: WishlistRoute,
   OrderOrderIdRoute: OrderOrderIdRoute,
   StoreStoreIdRoute: StoreStoreIdRoute,
   LovableEmailAuthPreviewRoute: LovableEmailAuthPreviewRoute,

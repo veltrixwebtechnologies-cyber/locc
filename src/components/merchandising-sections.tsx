@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { Heart, Star } from "lucide-react";
+import { Star } from "lucide-react";
 import { useEffect, useState } from "react";
 import {
   useActiveCollections,
@@ -9,21 +9,15 @@ import {
   useFeaturedBrands,
   useNewArrivals,
   useRecommendedProducts,
-  useToggleWishlist,
   useTrending,
-  useWishlist,
   type MerchandisingProduct,
 } from "@/lib/merchandising";
-import { useAuth } from "@/lib/auth-store";
 import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
+import { WishlistButton } from "@/components/wishlist-button";
 
 type ProductSectionProps = { title: string; products: MerchandisingProduct[] | undefined };
 
 function ProductCard({ product }: { product: MerchandisingProduct }) {
-  const auth = useAuth();
-  const wishlist = useWishlist();
-  const toggle = useToggleWishlist();
   const [imageUrl, setImageUrl] = useState(product.image_url ?? "");
   useEffect(() => {
     let mounted = true;
@@ -34,7 +28,6 @@ function ProductCard({ product }: { product: MerchandisingProduct }) {
     }
     return () => { mounted = false; };
   }, [product.image_url]);
-  const isSaved = wishlist.data?.some((item: { product_id: string }) => item.product_id === product.id) ?? false;
   const discount = product.discount_price && product.mrp > product.discount_price
     ? Math.round(((product.mrp - product.discount_price) / product.mrp) * 100)
     : 0;
@@ -57,20 +50,9 @@ function ProductCard({ product }: { product: MerchandisingProduct }) {
           </span>
         </div>
       </Link>
-      <button
-        type="button"
-        aria-label={isSaved ? `Remove ${product.name} from wishlist` : `Add ${product.name} to wishlist`}
-        onClick={() => {
-          if (!auth.email && !auth.phone) {
-            toast.error("Sign in to use your wishlist.");
-            return;
-          }
-          toggle.mutate({ productId: product.id, active: isSaved });
-        }}
-        className="absolute right-2 top-2 rounded-full bg-background/90 p-2 text-primary shadow-sm"
-      >
-        <Heart className={`h-4 w-4 ${isSaved ? "fill-current" : ""}`} />
-      </button>
+      <div className="absolute right-2 top-2">
+        <WishlistButton productId={product.id} productName={product.name} />
+      </div>
     </div>
   );
 }

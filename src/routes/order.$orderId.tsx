@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo } from "react";
 import { AppShell } from "@/components/app-shell";
 import { useOrders, orderStatusFlow, orderStatusLabel, type OrderStatus } from "@/lib/orders-store";
@@ -6,6 +6,7 @@ import { getStore } from "@/lib/mock-data";
 import { DeliveryMap } from "@/components/delivery-map";
 import { MessageCircle, Phone, Star } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/order/$orderId")({
   component: OrderPage,
@@ -13,6 +14,7 @@ export const Route = createFileRoute("/order/$orderId")({
 
 function OrderPage() {
   const { orderId } = Route.useParams();
+  const navigate = useNavigate();
   const orders = useOrders();
   const order = orders.find((o) => o.id === orderId);
 
@@ -29,6 +31,17 @@ function OrderPage() {
 
     return () => window.clearTimeout(timer);
   }, [order?.id, order?.status]);
+
+  useEffect(() => {
+    if (order?.status !== "delivered") return;
+
+    toast.success("Order delivered successfully");
+    const timer = window.setTimeout(() => {
+      void navigate({ to: "/orders" });
+    }, 4_000);
+
+    return () => window.clearTimeout(timer);
+  }, [navigate, order?.status]);
 
   const destination = useMemo(() => {
     if (order?.destination) return order.destination;
@@ -165,7 +178,13 @@ function OrderPage() {
         </section>
       ) : (
         <section className="mx-5 mt-4 rounded-xl bg-card p-4 text-sm text-muted-foreground ring-1 ring-black/[0.04]">
-          Finding a delivery partner near {order.storeName}…
+          {order.status === "delivered"
+            ? "Delivered successfully. Returning to your orders…"
+            : order.status === "cancelled"
+              ? "This order was cancelled."
+              : order.status === "returned"
+                ? "This order was returned."
+                : `Finding a delivery partner near ${order.storeName}…`}
         </section>
       )}
 
