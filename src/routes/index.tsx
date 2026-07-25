@@ -28,11 +28,24 @@ function Home() {
   const [query, setQuery] = useState(search.q ?? "");
   const [cat, setCat] = useState<string>(search.category ?? "all");
   const approvedProducts = useQuery({
-    queryKey: ["approved-catalog-count"],
+    queryKey: ["approved-product-catalog"],
     queryFn: async () => {
-      const { count, error } = await (supabase as any).from("products").select("id", { count: "exact", head: true }).in("status", ["active", "approved"]);
+      let { data, error } = await (supabase as any)
+        .from("approved_product_catalog")
+        .select("id,seller_id,name,category,selling_price,image_url,stock,shop_name,business_type,city,state,address_line1")
+        .order("created_at", { ascending: false });
+      // Keep existing deployments working until the catalog view migration is applied.
+      if (error) {
+        const fallback = await (supabase as any)
+          .from("products")
+          .select("id,seller_id,name,category,selling_price,image_url,stock")
+          .in("status", ["active", "approved"])
+          .order("created_at", { ascending: false });
+        data = fallback.data;
+        error = fallback.error;
+      }
       if (error) throw error;
-      return count ?? 0;
+      return data ?? [];
     },
   });
   const approvedVendors = useQuery({
@@ -97,16 +110,18 @@ function Home() {
   }, [cat]);
 
   const filtered = useMemo(() => {
-    const vendor = approvedVendors.data?.[0];
+    const liveProducts = approvedProducts.data ?? [];
+    const productVendor = liveProducts[0];
+    const vendor = approvedVendors.data?.[0] ?? productVendor;
     const vendorStore = vendor
       ? {
           ...APPROVED_STORE,
-          name: vendor.shop_name,
+          name: vendor.shop_name || APPROVED_STORE.name,
           tagline: vendor.business_type || "Approved local vendor",
           address: [vendor.address_line1, vendor.city, vendor.state].filter(Boolean).join(", ") || APPROVED_STORE.address,
         }
       : APPROVED_STORE;
-    const allStores = approvedProducts.data ? [vendorStore, ...stores] : stores;
+    const allStores = liveProducts.length > 0 ? [vendorStore, ...stores] : stores;
     return allStores.filter((s) => {
       if (cat !== "all" && !activeFilter) return false;
       if (activeFilter && s.category !== activeFilter) return false;

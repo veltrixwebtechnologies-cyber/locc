@@ -2,6 +2,8 @@ import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { ArrowLeft, ShieldCheck, Truck, Store, Mail, Phone, Loader2 } from "lucide-react";
+import { toast } from "sonner";
+import { OtpInput } from "@/components/auth/otp-input";
 
 export const Route = createFileRoute("/auth")({
   component: AuthPage,
@@ -11,6 +13,7 @@ export const Route = createFileRoute("/auth")({
 });
 
 type Mode = "phone" | "email";
+type AuthIntent = "login" | "signup";
 
 function authErrorMessage(error: unknown, fallback: string) {
   if (typeof error === "string" && error.trim()) return error;
@@ -30,10 +33,20 @@ function authErrorMessage(error: unknown, fallback: string) {
   return fallback;
 }
 
+function authFriendlyError(error: unknown, fallback: string) {
+  const message = authErrorMessage(error, fallback).toLowerCase();
+  if (message.includes("expired") || message.includes("otp_expired")) return "This code has expired. Request a new code.";
+  if (message.includes("invalid") || message.includes("token")) return "Invalid verification code. Check the code and try again.";
+  if (message.includes("rate") || message.includes("too many") || message.includes("limit")) return "Too many attempts. Wait a moment and try again.";
+  if (message.includes("network") || message.includes("fetch")) return "Network error. Check your connection and try again.";
+  return fallback;
+}
+
 function AuthPage() {
   const navigate = useNavigate();
   const { redirect } = Route.useSearch();
   const [mode, setMode] = useState<Mode>("phone");
+  const [intent, setIntent] = useState<AuthIntent>("login");
 
   // phone flow
   const [step, setStep] = useState<"phone" | "otp">("phone");
@@ -59,47 +72,34 @@ function AuthPage() {
     navigate({ to: "/", search: { category: undefined, q: undefined } });
   }, [navigate, redirect]);
 
-  const completeSupabaseEmailSession = useCallback(async () => {
-    const { data, error: userError } = await supabase.auth.getUser();
-    const user = data.user;
-    if (userError || !user) return false;
-
-    if (user.phone) {
-      done();
-      return true;
-    }
-    if (!user.email) return false;
-
-    const displayName =
-      (typeof user.user_metadata?.name === "string" && user.user_metadata.name.trim()) ||
-      name.trim() ||
-      user.email.split("@")[0];
-
-    done();
-    return true;
-  }, [done, name]);
-
   useEffect(() => {
     let active = true;
 
-    void supabase.auth.getSession().then(async ({ data }) => {
-      if (!active || !data.session) return;
-      await completeSupabaseEmailSession();
-    });
-
-    const { data: authListener } = supabase.auth.onAuthStateChange((event) => {
-      if (event === "SIGNED_IN" || event === "USER_UPDATED") {
-        setTimeout(() => {
-          if (active) void completeSupabaseEmailSession();
-        }, 0);
-      }
+    void supabase.auth.getSession().then(({ data }) => {
+      if (active && data.session) done();
     });
 
     return () => {
       active = false;
-      authListener.subscription.unsubscribe();
     };
-  }, [completeSupabaseEmailSession]);
+  }, [done]);
+
+  const accountExists = async (value: { email?: string; phone?: string }) => {
+    const { data, error: lookupError } = await (supabase as any).rpc("account_exists", {
+      p_email: value.email ?? null,
+      p_phone: value.phone ?? null,
+    });
+    if (lookupError) throw new Error("Could not verify the account right now.");
+    return data === true;
+  };
+
+  const saveProfile = async (userId: string, profile: { email?: string; phone?: string; display_name: string }) => {
+    const { error: profileError } = await (supabase as any).from("profiles").upsert(
+      { id: userId, ...profile },
+      { onConflict: "id" },
+    );
+    if (profileError) throw new Error("Your account was created, but your profile could not be saved.");
+  };
 
   // 30s resend cooldown ticker
   useEffect(() => {
@@ -110,6 +110,10 @@ function AuthPage() {
 
   const sendOtp = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (intent === "signup" && name.trim().length < 2) {
+      setError("Enter your full name to create an account.");
+      return;
+    }
     if (!/^\d{6,14}$/.test(phone)) {
       setError("Enter a valid phone number.");
       return;
@@ -121,13 +125,26 @@ function AuthPage() {
     setError(null);
     setLoading(true);
     try {
-      const { error: authError } = await supabase.auth.signInWithOtp({ phone: `${countryCode}${phone}` });
+      const normalizedPhone = `${countryCode}${phone}`;
+      const exists = await accountExists({ phone: normalizedPhone });
+      if (intent === "login" && !exists) {
+        setError("No account found with this phone number.");
+        return;
+      }
+      if (intent === "signup" && exists) {
+        setError("This phone number is already registered. Please log in instead.");
+        return;
+      }
+      const { error: authError } = await supabase.auth.signInWithOtp({
+        phone: normalizedPhone,
+        options: { shouldCreateUser: intent === "signup" },
+      });
       if (authError) throw authError;
       setStep("otp");
       setCooldown(30);
     } catch (err) {
       console.error("Supabase phone OTP error", err);
-      setError(authErrorMessage(err, "Could not send the verification code. Check Supabase Auth SMS settings."));
+      setError(authFriendlyError(err, "Could not send the verification code. Check Supabase Auth SMS settings."));
     } finally {
       setLoading(false);
     }
@@ -138,7 +155,10 @@ function AuthPage() {
     setError(null);
     setLoading(true);
     try {
-      const { error: authError } = await supabase.auth.signInWithOtp({ phone: `${countryCode}${phone}` });
+      const { error: authError } = await supabase.auth.signInWithOtp({
+        phone: `${countryCode}${phone}`,
+        options: { shouldCreateUser: intent === "signup" },
+      });
       if (authError) throw authError;
       setCooldown(30);
       setOtp("");
@@ -165,16 +185,28 @@ function AuthPage() {
         type: "sms",
       });
       if (authError) throw authError;
+      if (intent === "signup") {
+        const { data } = await supabase.auth.getUser();
+        if (!data.user) throw new Error("Could not finish creating your account.");
+        await saveProfile(data.user.id, { phone: `${countryCode}${phone}`, display_name: name.trim() || "Customer" });
+        toast.success("Account created successfully!");
+      } else {
+        toast.success("Welcome back!");
+      }
       done();
     } catch (err) {
       console.error("Supabase phone OTP verification error", err);
-      setError(authErrorMessage(err, "That code could not be verified."));
+      setError(authFriendlyError(err, "That code could not be verified."));
     } finally {
       setLoading(false);
     }
   };
   const sendEmailOtp = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (intent === "signup" && name.trim().length < 2) {
+      setError("Enter your full name to create an account.");
+      return;
+    }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       setError("Enter a valid email.");
       return;
@@ -182,11 +214,20 @@ function AuthPage() {
     setError(null);
     setLoading(true);
     try {
+      const exists = await accountExists({ email: email.trim() });
+      if (intent === "login" && !exists) {
+        setError("No account found with this email.");
+        return;
+      }
+      if (intent === "signup" && exists) {
+        setError("This email is already registered. Please log in instead.");
+        return;
+      }
       const { error: authError } = await supabase.auth.signInWithOtp({
         email,
         options: {
-          shouldCreateUser: true,
-          data: { display_name: name.trim() || email.split("@")[0] },
+          shouldCreateUser: intent === "signup",
+          ...(intent === "signup" ? { data: { display_name: name.trim() || email.split("@")[0] } } : {}),
           emailRedirectTo: `${window.location.origin}/auth`,
         },
       });
@@ -195,7 +236,7 @@ function AuthPage() {
       setCooldown(30);
     } catch (err) {
       console.error("Supabase email OTP error", err);
-      setError(authErrorMessage(err, "Could not send the verification code. Check Supabase SMTP settings."));
+      setError(authFriendlyError(err, "Could not send the verification code. Check Supabase SMTP settings."));
     } finally {
       setLoading(false);
     }
@@ -203,8 +244,8 @@ function AuthPage() {
 
   const verifyEmailOtp = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (emailOtp.length < 6 || emailOtp.length > 8) {
-      setError("Enter the verification code from the email.");
+    if (emailOtp.length !== 6) {
+      setError("Enter the 6-digit verification code from the email.");
       return;
     }
     setError(null);
@@ -218,10 +259,21 @@ function AuthPage() {
         authError = fallback.error;
       }
       if (authError) throw authError;
+      const { data } = await supabase.auth.getUser();
+      if (!data.user) throw new Error("Could not finish creating your account.");
+      if (intent === "signup") {
+        await saveProfile(data.user.id, {
+          email: email.trim(),
+          display_name: name.trim() || email.split("@")[0],
+        });
+        toast.success("Account created successfully!");
+      } else {
+        toast.success("Welcome back!");
+      }
       done();
     } catch (err) {
       console.error("Supabase email OTP verification error", err);
-      setError(authErrorMessage(err, "That code could not be verified."));
+      setError(authFriendlyError(err, "That code could not be verified."));
     } finally {
       setLoading(false);
     }
@@ -235,8 +287,8 @@ function AuthPage() {
       const { error: authError } = await supabase.auth.signInWithOtp({
         email,
         options: {
-          shouldCreateUser: true,
-          data: { display_name: name.trim() || email.split("@")[0] },
+          shouldCreateUser: intent === "signup",
+          ...(intent === "signup" ? { data: { display_name: name.trim() || email.split("@")[0] } } : {}),
           emailRedirectTo: `${window.location.origin}/auth`,
         },
       });
@@ -253,6 +305,15 @@ function AuthPage() {
 
   const switchMode = (m: Mode) => {
     setMode(m);
+    setError(null);
+    setStep("phone");
+    setEmailStep("email");
+    setOtp("");
+    setEmailOtp("");
+  };
+
+  const switchIntent = (next: AuthIntent) => {
+    setIntent(next);
     setError(null);
     setStep("phone");
     setEmailStep("email");
@@ -328,10 +389,10 @@ function AuthPage() {
             <h1 className="font-display text-3xl leading-tight sm:text-4xl">
               {mode === "phone"
                 ? step === "phone"
-                  ? "Sign in with your phone"
+                  ? `${intent === "signup" ? "Sign up" : "Sign in"} with your phone`
                   : "Enter the code we sent"
                 : emailStep === "email"
-                  ? "Sign in with your email"
+                  ? `${intent === "signup" ? "Sign up" : "Sign in"} with your email`
                   : "Enter the code we emailed"}
             </h1>
             <p className="mt-2 text-sm text-muted-foreground">
@@ -343,6 +404,27 @@ function AuthPage() {
                   ? "We'll email you a verification code. No password to remember."
                   : `Sent to ${email}. Check your inbox (and spam) for the verification code.`}
             </p>
+
+            <div className="mt-6 grid grid-cols-2 gap-1 rounded-xl bg-muted p-1">
+              <button
+                type="button"
+                onClick={() => switchIntent("login")}
+                className={`rounded-lg py-2 text-sm font-medium transition-colors ${
+                  intent === "login" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                Login
+              </button>
+              <button
+                type="button"
+                onClick={() => switchIntent("signup")}
+                className={`rounded-lg py-2 text-sm font-medium transition-colors ${
+                  intent === "signup" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                Sign up
+              </button>
+            </div>
 
             {/* Mode tabs */}
             <div className="mt-6 grid grid-cols-2 gap-1 rounded-xl bg-muted p-1">
@@ -373,6 +455,16 @@ function AuthPage() {
             {mode === "phone" ? (
               step === "phone" ? (
                 <form onSubmit={sendOtp} className="mt-6 space-y-4">
+                  {intent === "signup" && (
+                    <input
+                      type="text"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      placeholder="Full name"
+                      autoComplete="name"
+                      className="w-full rounded-xl bg-card px-3.5 py-3.5 text-sm outline-none ring-1 ring-black/[0.06] focus:ring-2 focus:ring-primary"
+                    />
+                  )}
                   <label className="flex items-center gap-2 rounded-xl bg-card px-3 py-3.5 ring-1 ring-black/[0.06] focus-within:ring-2 focus-within:ring-primary">
                     <input
                       inputMode="tel"
@@ -404,7 +496,7 @@ function AuthPage() {
                     className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-3.5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-teal-deep disabled:opacity-70"
                   >
                     {loading && <Loader2 className="h-4 w-4 animate-spin" />}
-                    {loading ? "Sending code…" : "Send code"}
+                    {loading ? "Sending code…" : "Login"}
                   </button>
                   <div id="firebase-recaptcha-container" />
                 </form>
@@ -416,23 +508,15 @@ function AuthPage() {
                       {countryCode} {phone}
                     </span>
                   </p>
-                  <input
-                    inputMode="numeric"
-                    maxLength={6}
-                    value={otp}
-                    onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
-                    placeholder="000000"
-                    className="w-full rounded-xl bg-card px-3 py-4 text-center font-mono text-3xl tracking-[0.5em] outline-none ring-1 ring-black/[0.06] focus:ring-2 focus:ring-primary"
-                    autoFocus
-                  />
+                  <OtpInput value={otp} onChange={setOtp} disabled={loading} />
                   {error && <p className="text-xs text-destructive">{error}</p>}
                   <button
                     type="submit"
-                    disabled={loading}
+                    disabled={loading || otp.length !== 6}
                     className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-3.5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-teal-deep disabled:opacity-70"
                   >
                     {loading && <Loader2 className="h-4 w-4 animate-spin" />}
-                    {loading ? "Verifying…" : "Verify and continue"}
+                    {loading ? "Verifying…" : "Verify"}
                   </button>
                   <div className="flex items-center justify-between text-xs">
                     <button
@@ -460,13 +544,16 @@ function AuthPage() {
               )
             ) : emailStep === "email" ? (
               <form onSubmit={sendEmailOtp} className="mt-6 space-y-3">
-                <input
-                  type="text"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="Your name (optional)"
-                  className="w-full rounded-xl bg-card px-3.5 py-3.5 text-sm outline-none ring-1 ring-black/[0.06] focus:ring-2 focus:ring-primary"
-                />
+                {intent === "signup" && (
+                  <input
+                    type="text"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="Full name"
+                    autoComplete="name"
+                    className="w-full rounded-xl bg-card px-3.5 py-3.5 text-sm outline-none ring-1 ring-black/[0.06] focus:ring-2 focus:ring-primary"
+                  />
+                )}
                 <label className="flex items-center gap-2 rounded-xl bg-card px-3 py-3.5 ring-1 ring-black/[0.06] focus-within:ring-2 focus-within:ring-primary">
                   <Mail className="h-4 w-4 text-muted-foreground" />
                   <input
@@ -480,34 +567,33 @@ function AuthPage() {
                   />
                 </label>
                 {error && <p className="text-xs text-destructive">{error}</p>}
+                {error === "No account found with this email." && (
+                  <div className="flex items-center justify-between text-xs">
+                    <button type="button" onClick={() => switchIntent("signup")} className="text-primary underline-offset-4 hover:underline">Create Account</button>
+                    <button type="button" onClick={() => { setEmail(""); setError(null); }} className="text-muted-foreground underline-offset-4 hover:underline">Change Email</button>
+                  </div>
+                )}
+                {error === "This email is already registered. Please log in instead." && (
+                  <button type="button" onClick={() => switchIntent("login")} className="text-xs text-primary underline-offset-4 hover:underline">Go to Login</button>
+                )}
                 <button
                   type="submit"
                   disabled={loading}
                   className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-3.5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-teal-deep disabled:opacity-70"
                 >
                   {loading && <Loader2 className="h-4 w-4 animate-spin" />}
-                  {loading ? "Sending code…" : "Send verification code"}
+                  {loading ? "Sending code…" : "Login"}
                 </button>
-                <p className="pt-1 text-center text-xs text-muted-foreground">
-                  New to Local Shore? An account is created automatically.
-                </p>
+                {intent === "signup" && <p className="pt-1 text-center text-xs text-muted-foreground">We&apos;ll create your account after verification.</p>}
               </form>
             ) : (
               <form onSubmit={verifyEmailOtp} className="mt-6 space-y-4">
                 <p className="text-xs text-muted-foreground">Code sent to <span className="font-mono">{email}</span></p>
-                <input
-                  inputMode="numeric"
-                  maxLength={8}
-                  value={emailOtp}
-                  onChange={(e) => setEmailOtp(e.target.value.replace(/\D/g, ""))}
-                  placeholder="00000000"
-                  className="w-full rounded-xl bg-card px-3 py-4 text-center font-mono text-3xl tracking-[0.5em] outline-none ring-1 ring-black/[0.06] focus:ring-2 focus:ring-primary"
-                  autoFocus
-                />
+                <OtpInput value={emailOtp} onChange={setEmailOtp} disabled={loading} />
                 {error && <p className="text-xs text-destructive">{error}</p>}
-                <button type="submit" disabled={loading} className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-3.5 text-sm font-semibold text-primary-foreground disabled:opacity-70">
+                <button type="submit" disabled={loading || emailOtp.length !== 6} className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-3.5 text-sm font-semibold text-primary-foreground disabled:opacity-70">
                   {loading && <Loader2 className="h-4 w-4 animate-spin" />}
-                  {loading ? "Verifying…" : "Verify and continue"}
+                  {loading ? "Verifying…" : "Verify"}
                 </button>
                 <div className="flex items-center justify-between text-xs">
                   <button

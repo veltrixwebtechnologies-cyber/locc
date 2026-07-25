@@ -44,7 +44,20 @@ function StorePage() {
     queryKey: ["approved-products"],
     enabled: loaded.store.id === APPROVED_STORE.id,
     queryFn: async () => {
-      const { data, error } = await (supabase as any).from("products").select("id,name,category,selling_price,image_url,stock").in("status", ["active", "approved"]).order("created_at", { ascending: false });
+      let { data, error } = await (supabase as any)
+        .from("approved_product_catalog")
+        .select("id,name,category,selling_price,image_url,stock")
+        .order("created_at", { ascending: false });
+      // Keep existing deployments working until the catalog view migration is applied.
+      if (error) {
+        const fallback = await (supabase as any)
+          .from("products")
+          .select("id,name,category,selling_price,image_url,stock")
+          .in("status", ["active", "approved"])
+          .order("created_at", { ascending: false });
+        data = fallback.data;
+        error = fallback.error;
+      }
       if (error) throw error;
       return Promise.all((data ?? []).map(async (p: any) => {
         const rawImage = p.image_url ?? "";
