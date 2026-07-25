@@ -36,13 +36,15 @@ function CheckoutPage() {
   const reverseGeocodeFn = useServerFn(reverseGeocode);
 
   const savedAddresses = useAddresses();
-  const [addr, setAddr] = useState<string>(() => savedAddresses[0]?.id ?? "");
+  const [addr, setAddr] = useState<string>(() => savedAddresses[0]?.id ?? CURRENT_LOCATION_ID);
   const [pinCoords, setPinCoords] = useState<{ lat: number; lng: number }>(() => ({
     lat: savedAddresses[0]?.lat ?? 9.9816,
     lng: savedAddresses[0]?.lng ?? 76.2999,
   }));
   const [accuracyMeters, setAccuracyMeters] = useState<number | null>(null);
-  const [currentAddress, setCurrentAddress] = useState("");
+  const [currentAddress, setCurrentAddress] = useState(() =>
+    savedAddresses.length === 0 ? "Map pin location" : "",
+  );
   const [pay, setPay] = useState<"upi" | "card" | "cod">("upi");
   const [showAdd, setShowAdd] = useState(false);
   const [newLabel, setNewLabel] = useState("");
