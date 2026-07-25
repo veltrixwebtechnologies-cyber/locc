@@ -10,6 +10,7 @@ import { addressesStore, useAddresses } from "@/lib/addresses-store";
 import { DeliveryMap } from "@/components/delivery-map";
 import { reverseGeocode } from "@/lib/geocoding.functions";
 import { Crosshair, Plus, Check } from "lucide-react";
+import { toast } from "sonner";
 
 const CURRENT_LOCATION_ID = "__current_location";
 
@@ -47,6 +48,7 @@ function CheckoutPage() {
   const [newLabel, setNewLabel] = useState("");
   const [newLine, setNewLine] = useState("");
   const [manualAddress, setManualAddress] = useState("");
+  const [isPlacing, setIsPlacing] = useState(false);
   const watchIdRef = useRef<number | null>(null);
 
   const chooseAddr = (id: string) => {
@@ -68,7 +70,10 @@ function CheckoutPage() {
   };
 
   const saveNewAddress = () => {
-    if (!newLabel.trim() || !newLine.trim()) return;
+    if (!newLabel.trim() || !newLine.trim()) {
+      toast.error("Enter an address label and full address.");
+      return;
+    }
     const created = addressesStore.add({
       label: newLabel.trim(),
       line: newLine.trim(),
@@ -272,22 +277,29 @@ function CheckoutPage() {
   const canPlace = !!selectedAddressLine;
 
   const placeOrder = async () => {
-    if (!selectedAddressLine) return;
-    const order = await ordersStore.place({
-      storeId: store.id,
-      storeName: store.name,
-      lines: cart.lines,
-      subtotal: totals.subtotal,
-      deliveryFee,
-      total,
-      address: selectedAddressLine,
-      destination: pinCoords,
-      paymentMethod: pay === "upi" ? "UPI" : pay === "card" ? "Card" : "Cash on delivery",
-      etaMin: store.etaMin,
-      distanceKm: store.distanceKm,
-    });
-    cartStore.clear();
-    navigate({ to: "/order/$orderId", params: { orderId: order.id } });
+    if (!selectedAddressLine || isPlacing) return;
+    setIsPlacing(true);
+    try {
+      const order = await ordersStore.place({
+        storeId: store.id,
+        storeName: store.name,
+        lines: cart.lines,
+        subtotal: totals.subtotal,
+        deliveryFee,
+        total,
+        address: selectedAddressLine,
+        destination: pinCoords,
+        paymentMethod: pay === "upi" ? "UPI" : pay === "card" ? "Card" : "Cash on delivery",
+        etaMin: store.etaMin,
+        distanceKm: store.distanceKm,
+      });
+      cartStore.clear();
+      navigate({ to: "/order/$orderId", params: { orderId: order.id } });
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not place the order. Try again.");
+    } finally {
+      setIsPlacing(false);
+    }
   };
 
   return (
@@ -479,10 +491,10 @@ function CheckoutPage() {
       <div className="sticky bottom-16 z-30 mt-5 px-5">
         <button
           onClick={placeOrder}
-          disabled={!canPlace}
+          disabled={!canPlace || isPlacing}
           className="w-full rounded-xl bg-[var(--marigold)] py-3.5 font-display text-lg text-ink shadow-lg hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:brightness-100"
         >
-          {canPlace ? `Place order · ₹${total}` : "Add a delivery address"}
+          {isPlacing ? "Placing order…" : canPlace ? `Place order · ₹${total}` : "Add a delivery address"}
         </button>
       </div>
     </AppShell>
