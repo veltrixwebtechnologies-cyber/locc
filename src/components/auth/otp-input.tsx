@@ -12,7 +12,7 @@ export const OTP_LENGTH = 8;
 
 export function OtpInput({ value, onChange, disabled, autoFocus = true, "aria-label": ariaLabel }: OtpInputProps) {
   const refs = useRef<Array<HTMLInputElement | null>>([]);
-  const digits = value.padEnd(6, "").slice(0, 6).split("");
+  const digits = value.padEnd(OTP_LENGTH, "").slice(0, OTP_LENGTH).split("");
 
   useEffect(() => {
     if (autoFocus) refs.current[0]?.focus();
@@ -23,12 +23,12 @@ export function OtpInput({ value, onChange, disabled, autoFocus = true, "aria-la
     const nextDigits = digits.slice();
     nextDigits[index] = clean;
     onChange(nextDigits.join(""));
-    if (clean && index < 5) refs.current[index + 1]?.focus();
+    if (clean && index < OTP_LENGTH - 1) refs.current[index + 1]?.focus();
   };
 
   const handlePaste = (event: React.ClipboardEvent<HTMLInputElement>) => {
     event.preventDefault();
-    const pasted = event.clipboardData.getData("text").replace(/\D/g, "").slice(0, 6);
+    const pasted = event.clipboardData.getData("text").replace(/\D/g, "").slice(0, OTP_LENGTH);
     onChange(pasted);
     refs.current[Math.min(pasted.length, OTP_LENGTH - 1)]?.focus();
   };
@@ -52,7 +52,7 @@ export function OtpInput({ value, onChange, disabled, autoFocus = true, "aria-la
               refs.current[index - 1]?.focus();
             }
             if (event.key === "ArrowLeft" && index > 0) refs.current[index - 1]?.focus();
-            if (event.key === "ArrowRight" && index < 5) refs.current[index + 1]?.focus();
+            if (event.key === "ArrowRight" && index < OTP_LENGTH - 1) refs.current[index + 1]?.focus();
           }}
           className="h-12 w-full rounded-xl bg-card text-center font-mono text-xl outline-none ring-1 ring-black/[0.06] transition focus:ring-2 focus:ring-primary disabled:opacity-60"
         />
