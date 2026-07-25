@@ -110,6 +110,10 @@ function AuthPage() {
 
   const sendOtp = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (cooldown > 0) {
+      setError(`Please wait ${cooldown}s before requesting another code.`);
+      return;
+    }
     if (intent === "signup" && name.trim().length < 2) {
       setError("Enter your full name to create an account.");
       return;
@@ -164,7 +168,7 @@ function AuthPage() {
       setOtp("");
     } catch (err) {
       console.error("Supabase phone OTP resend error", err);
-      setError(authErrorMessage(err, "Could not resend the verification code. Check Supabase Auth SMS settings."));
+      setError(authFriendlyError(err, "Could not resend the verification code. Check Supabase Auth SMS settings."));
     } finally {
       setLoading(false);
     }
@@ -203,6 +207,10 @@ function AuthPage() {
   };
   const sendEmailOtp = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (cooldown > 0) {
+      setError(`Please wait ${cooldown}s before requesting another code.`);
+      return;
+    }
     if (intent === "signup" && name.trim().length < 2) {
       setError("Enter your full name to create an account.");
       return;
@@ -224,7 +232,7 @@ function AuthPage() {
         return;
       }
       const { error: authError } = await supabase.auth.signInWithOtp({
-        email,
+        email: email.trim(),
         options: {
           shouldCreateUser: intent === "signup",
           ...(intent === "signup" ? { data: { display_name: name.trim() || email.split("@")[0] } } : {}),
@@ -251,13 +259,7 @@ function AuthPage() {
     setError(null);
     setLoading(true);
     try {
-      let { error: authError } = await supabase.auth.verifyOtp({ email, token: emailOtp, type: "email" });
-      // New users can receive a signup confirmation token when email
-      // confirmation is enabled. Support that token type as well.
-      if (authError) {
-        const fallback = await supabase.auth.verifyOtp({ email, token: emailOtp, type: "signup" as any });
-        authError = fallback.error;
-      }
+      const { error: authError } = await supabase.auth.verifyOtp({ email: email.trim(), token: emailOtp, type: "email" });
       if (authError) throw authError;
       const { data } = await supabase.auth.getUser();
       if (!data.user) throw new Error("Could not finish creating your account.");
@@ -297,7 +299,7 @@ function AuthPage() {
       setEmailOtp("");
     } catch (err) {
       console.error("Supabase email OTP resend error", err);
-      setError(authErrorMessage(err, "Could not resend the verification code."));
+      setError(authFriendlyError(err, "Could not resend the verification code."));
     } finally {
       setLoading(false);
     }

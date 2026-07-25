@@ -1,5 +1,5 @@
 import { createFileRoute, Link, notFound, useNavigate } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { ArrowLeft, Search, Star } from "lucide-react";
@@ -14,6 +14,7 @@ import {
 import { cartStore, useCart, cartTotals } from "@/lib/cart-store";
 import { QtyStepper } from "@/components/qty-stepper";
 import { ProductThumb } from "@/components/product-thumb";
+import { recordProductEvent } from "@/lib/merchandising";
 
 export const Route = createFileRoute("/store/$storeId")({
   loader: ({ params }): { store: Store; products: Product[] } => {
@@ -92,6 +93,10 @@ function StorePage() {
 
   const qtyOf = (id: string) => cart.lines.find((l) => l.productId === id)?.qty ?? 0;
   const color = categoryColor[store.category];
+
+  useEffect(() => {
+    products.forEach((product) => { void recordProductEvent(product.id, "view"); });
+  }, [products]);
 
   return (
     <div className="min-h-screen bg-background pb-32">
@@ -188,7 +193,7 @@ function StorePage() {
                         <span className="font-mono text-sm">₹{p.price}</span>
                         <QtyStepper
                           qty={q}
-                          onAdd={() => cartStore.add(store.id, store.name, p)}
+                          onAdd={() => { void recordProductEvent(p.id, "add_to_cart"); cartStore.add(store.id, store.name, p); }}
                           onChange={(n) => cartStore.setQty(p.id, n)}
                         />
                       </li>

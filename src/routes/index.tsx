@@ -8,6 +8,7 @@ import { stores, deliveryCategories, APPROVED_STORE, type StoreCategory } from "
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { reverseGeocode } from "@/lib/geocoding.functions";
+import { MerchandisingSections } from "@/components/merchandising-sections";
 
 export const Route = createFileRoute("/")({
   validateSearch: (s: Record<string, unknown>) => ({
@@ -256,6 +257,8 @@ function Home() {
           filtered.map((s) => <AwningCard key={s.id} store={s} />)
         )}
       </div>
+
+      <MerchandisingSections />
 
       <p className="px-5 pb-6 text-center font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
         · Local Shore · Coastal India ·
