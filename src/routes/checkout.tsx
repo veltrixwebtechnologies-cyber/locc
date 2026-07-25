@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { AppShell } from "@/components/app-shell";
 import { cartStore, useCart, cartTotals } from "@/lib/cart-store";
-import { getStore } from "@/lib/mock-data";
+import { getStore, APPROVED_STORE } from "@/lib/mock-data";
 import { ordersStore } from "@/lib/orders-store";
 import { supabase } from "@/integrations/supabase/client";
 import { addressesStore, useAddresses } from "@/lib/addresses-store";
@@ -26,7 +26,11 @@ export const Route = createFileRoute("/checkout")({
 function CheckoutPage() {
   const cart = useCart();
   const totals = cartTotals(cart.lines);
-  const store = cart.storeId ? getStore(cart.storeId) : null;
+  const store = cart.storeId === APPROVED_STORE.id
+    ? APPROVED_STORE
+    : cart.storeId
+      ? getStore(cart.storeId)
+      : null;
   const navigate = useNavigate();
   const reverseGeocodeFn = useServerFn(reverseGeocode);
 

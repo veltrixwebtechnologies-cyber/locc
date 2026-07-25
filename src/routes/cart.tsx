@@ -2,7 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { AppShell } from "@/components/app-shell";
 import { cartStore, useCart, cartTotals } from "@/lib/cart-store";
 import { QtyStepper } from "@/components/qty-stepper";
-import { getStore } from "@/lib/mock-data";
+import { getStore, APPROVED_STORE } from "@/lib/mock-data";
 import { useAuth } from "@/lib/auth-store";
 import { Trash2, Lock } from "lucide-react";
 
@@ -14,7 +14,11 @@ function CartPage() {
   const cart = useCart();
   const auth = useAuth();
   const totals = cartTotals(cart.lines);
-  const store = cart.storeId ? getStore(cart.storeId) : null;
+  const store = cart.storeId === APPROVED_STORE.id
+    ? APPROVED_STORE
+    : cart.storeId
+      ? getStore(cart.storeId)
+      : null;
   const navigate = useNavigate();
   const isSignedIn = !!(auth.phone || auth.email);
 
