@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import type { CartLine } from "./cart-store";
 import { supabase } from "@/integrations/supabase/client";
 
-export type OrderStatus = "new" | "accepted" | "packed" | "ready_for_pickup" | "out_for_delivery" | "delivered";
+export type OrderStatus = "new" | "accepted" | "packed" | "ready_for_pickup" | "out_for_delivery" | "delivered" | "cancelled" | "returned";
 export const orderStatusFlow: OrderStatus[] = ["new", "accepted", "packed", "ready_for_pickup", "out_for_delivery", "delivered"];
 export const orderStatusLabel: Record<OrderStatus, string> = {
   new: "Order placed",
@@ -11,6 +11,8 @@ export const orderStatusLabel: Record<OrderStatus, string> = {
   ready_for_pickup: "Ready for pickup",
   out_for_delivery: "Out for delivery",
   delivered: "Delivered",
+  cancelled: "Cancelled",
+  returned: "Returned",
 };
 
 export interface Order {
@@ -33,6 +35,7 @@ export interface Order {
 }
 
 function fromRow(row: any): Order {
+  const normalizedStatus = row.status === "shipped" ? "out_for_delivery" : row.status;
   return {
     id: row.id,
     code: row.order_number,
@@ -51,9 +54,9 @@ function fromRow(row: any): Order {
     total: Number(row.total),
     address: row.buyer_address ?? "",
     destination: { lat: 9.9816, lng: 76.2999 },
-    paymentMethod: Number(row.shipping_fee) > 0 ? "Cash on delivery" : "UPI",
+    paymentMethod: row.payment_method === "upi" ? "UPI" : row.payment_method === "card" ? "Card" : "Cash on delivery",
     createdAt: new Date(row.placed_at ?? row.created_at).getTime(),
-    status: row.status,
+    status: normalizedStatus,
     etaMin: 30,
     distanceKm: 2,
   };
@@ -73,13 +76,30 @@ export const ordersStore = {
     const { data: session } = await supabase.auth.getSession();
     const user = session.session?.user;
     if (!user) throw new Error("Sign in before placing an order");
-    const { data: created, error } = await (supabase as any).rpc("place_order", {
+    const baseParams = {
       p_buyer_name: user.user_metadata?.display_name ?? user.email ?? "Customer",
       p_buyer_phone: user.phone ?? null,
       p_buyer_address: order.address,
       p_items: order.lines.map((line) => ({ product_id: line.productId, qty: line.qty })),
-    });
+    };
+    const paymentParams = {
+      ...baseParams,
+      p_payment_method: order.paymentMethod === "UPI" ? "upi" : order.paymentMethod === "Card" ? "card" : "cod",
+    };
+
+    let result = await (supabase as any).rpc("place_order", paymentParams);
+    const missingPaymentAwareRpc =
+      result.error?.code === "PGRST202" ||
+      result.error?.message?.includes("schema cache") ||
+      result.error?.message?.includes("p_payment_method");
+
+    if (missingPaymentAwareRpc) {
+      result = await (supabase as any).rpc("place_order", baseParams);
+    }
+
+    const { data: created, error } = result;
     if (error) throw error;
+    if (!created?.id) throw new Error("The order was not created. Try again.");
     return {
       ...order,
       id: created.id,
@@ -98,10 +118,22 @@ export function useOrders() {
   const [orders, setOrders] = useState<Order[]>([]);
   useEffect(() => {
     let active = true;
-    const refresh = () => void loadOrders().then((rows) => { if (active) setOrders(rows); }).catch(() => { if (active) setOrders([]); });
+    const refresh = () => void loadOrders().then((rows) => { if (active) setOrders(rows); }).catch(() => undefined);
     refresh();
     const channel = supabase.channel("shoreline-orders").on("postgres_changes", { event: "*", schema: "public", table: "orders" }, refresh).subscribe();
-    return () => { active = false; void supabase.removeChannel(channel); };
+    const poll = window.setInterval(refresh, 5_000);
+    const refreshWhenVisible = () => {
+      if (document.visibilityState === "visible") refresh();
+    };
+    window.addEventListener("focus", refresh);
+    document.addEventListener("visibilitychange", refreshWhenVisible);
+    return () => {
+      active = false;
+      window.clearInterval(poll);
+      window.removeEventListener("focus", refresh);
+      document.removeEventListener("visibilitychange", refreshWhenVisible);
+      void supabase.removeChannel(channel);
+    };
   }, []);
   return orders;
 }

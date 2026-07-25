@@ -1,10 +1,11 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { AppShell } from "@/components/app-shell";
 import { useOrders, orderStatusFlow, orderStatusLabel, type OrderStatus } from "@/lib/orders-store";
 import { getStore } from "@/lib/mock-data";
 import { DeliveryMap } from "@/components/delivery-map";
 import { MessageCircle, Phone, Star } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/order/$orderId")({
   component: OrderPage,
@@ -18,6 +19,16 @@ function OrderPage() {
   const store = order ? getStore(order.storeId) : undefined;
   const currentIndex = order ? orderStatusFlow.indexOf(order.status) : 0;
   const status = order?.status;
+
+  useEffect(() => {
+    if (!order || order.status === "delivered" || order.status === "cancelled" || order.status === "returned") return;
+
+    const timer = window.setTimeout(() => {
+      void (supabase as any).rpc("advance_demo_order", { p_order_id: order.id });
+    }, 5_000);
+
+    return () => window.clearTimeout(timer);
+  }, [order?.id, order?.status]);
 
   const destination = useMemo(() => {
     if (order?.destination) return order.destination;
