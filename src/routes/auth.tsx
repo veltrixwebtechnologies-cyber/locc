@@ -3,7 +3,7 @@ import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { ArrowLeft, ShieldCheck, Truck, Store, Mail, Phone, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { OtpInput } from "@/components/auth/otp-input";
+import { OtpInput, OTP_LENGTH } from "@/components/auth/otp-input";
 
 export const Route = createFileRoute("/auth")({
   component: AuthPage,
@@ -176,8 +176,8 @@ function AuthPage() {
 
   const verifyOtp = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (otp.length !== 6) {
-      setError("Enter the 6-digit code.");
+    if (otp.length !== OTP_LENGTH) {
+      setError(`Enter the ${OTP_LENGTH}-digit code.`);
       return;
     }
     setError(null);
@@ -252,8 +252,8 @@ function AuthPage() {
 
   const verifyEmailOtp = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (emailOtp.length !== 6) {
-      setError("Enter the 6-digit verification code from the email.");
+    if (emailOtp.length !== OTP_LENGTH) {
+      setError(`Enter the ${OTP_LENGTH}-digit verification code from the email.`);
       return;
     }
     setError(null);
@@ -400,10 +400,10 @@ function AuthPage() {
             <p className="mt-2 text-sm text-muted-foreground">
               {mode === "phone"
                 ? step === "phone"
-                  ? "We'll text you a 6-digit code via Supabase Auth. No password to remember."
-                  : `Sent to ${countryCode} ${phone}. Enter the 6-digit code you received.`
+                  ? `We'll text you an ${OTP_LENGTH}-digit code via Supabase Auth. No password to remember.`
+                  : `Sent to ${countryCode} ${phone}. Enter the ${OTP_LENGTH}-digit code you received.`
                 : emailStep === "email"
-                  ? "We'll email you a verification code. No password to remember."
+                  ? `We'll email you an ${OTP_LENGTH}-digit verification code. No password to remember.`
                   : `Sent to ${email}. Check your inbox (and spam) for the verification code.`}
             </p>
 
@@ -514,7 +514,7 @@ function AuthPage() {
                   {error && <p className="text-xs text-destructive">{error}</p>}
                   <button
                     type="submit"
-                    disabled={loading || otp.length !== 6}
+                    disabled={loading || otp.length !== OTP_LENGTH}
                     className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-3.5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-teal-deep disabled:opacity-70"
                   >
                     {loading && <Loader2 className="h-4 w-4 animate-spin" />}
@@ -593,7 +593,7 @@ function AuthPage() {
                 <p className="text-xs text-muted-foreground">Code sent to <span className="font-mono">{email}</span></p>
                 <OtpInput value={emailOtp} onChange={setEmailOtp} disabled={loading} />
                 {error && <p className="text-xs text-destructive">{error}</p>}
-                <button type="submit" disabled={loading || emailOtp.length !== 6} className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-3.5 text-sm font-semibold text-primary-foreground disabled:opacity-70">
+                <button type="submit" disabled={loading || emailOtp.length !== OTP_LENGTH} className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-3.5 text-sm font-semibold text-primary-foreground disabled:opacity-70">
                   {loading && <Loader2 className="h-4 w-4 animate-spin" />}
                   {loading ? "Verifying…" : "Verify"}
                 </button>

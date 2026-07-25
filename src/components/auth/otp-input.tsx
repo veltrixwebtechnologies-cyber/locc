@@ -8,6 +8,8 @@ type OtpInputProps = {
   "aria-label"?: string;
 };
 
+export const OTP_LENGTH = 8;
+
 export function OtpInput({ value, onChange, disabled, autoFocus = true, "aria-label": ariaLabel }: OtpInputProps) {
   const refs = useRef<Array<HTMLInputElement | null>>([]);
   const digits = value.padEnd(6, "").slice(0, 6).split("");
@@ -28,12 +30,12 @@ export function OtpInput({ value, onChange, disabled, autoFocus = true, "aria-la
     event.preventDefault();
     const pasted = event.clipboardData.getData("text").replace(/\D/g, "").slice(0, 6);
     onChange(pasted);
-    refs.current[Math.min(pasted.length, 5)]?.focus();
+    refs.current[Math.min(pasted.length, OTP_LENGTH - 1)]?.focus();
   };
 
   return (
-    <div className="grid grid-cols-6 gap-2" role="group" aria-label={ariaLabel ?? "Verification code"}>
-      {Array.from({ length: 6 }, (_, index) => (
+    <div className="grid grid-cols-8 gap-1.5 sm:gap-2" role="group" aria-label={ariaLabel ?? "Verification code"}>
+      {Array.from({ length: OTP_LENGTH }, (_, index) => (
         <input
           key={index}
           ref={(element) => { refs.current[index] = element; }}
