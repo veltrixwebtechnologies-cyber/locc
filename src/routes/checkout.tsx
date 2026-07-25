@@ -51,6 +51,7 @@ function CheckoutPage() {
   const [newLine, setNewLine] = useState("");
   const [manualAddress, setManualAddress] = useState("");
   const [isPlacing, setIsPlacing] = useState(false);
+  const [showDemoPayment, setShowDemoPayment] = useState(false);
   const watchIdRef = useRef<number | null>(null);
 
   const chooseAddr = (id: string) => {
@@ -280,6 +281,10 @@ function CheckoutPage() {
 
   const placeOrder = async () => {
     if (!selectedAddressLine || isPlacing) return;
+    if (pay !== "cod" && !showDemoPayment) {
+      setShowDemoPayment(true);
+      return;
+    }
     setIsPlacing(true);
     try {
       const order = await ordersStore.place({
@@ -301,6 +306,7 @@ function CheckoutPage() {
       toast.error(error instanceof Error ? error.message : "Could not place the order. Try again.");
     } finally {
       setIsPlacing(false);
+      setShowDemoPayment(false);
     }
   };
 
@@ -472,7 +478,7 @@ function CheckoutPage() {
           ))}
         </div>
         <p className="mt-3 text-[11px] text-muted-foreground">
-          Payments are mocked in this preview — no charge will be made.
+          Demo payment mode is active — no real charge will be made.
         </p>
       </section>
 
@@ -499,6 +505,21 @@ function CheckoutPage() {
           {isPlacing ? "Placing order…" : canPlace ? `Place order · ₹${total}` : "Add a delivery address"}
         </button>
       </div>
+
+      {showDemoPayment && (
+        <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 px-5" role="dialog" aria-modal="true" aria-labelledby="demo-payment-title">
+          <div className="w-full max-w-md rounded-xl bg-card p-5 shadow-xl ring-1 ring-black/[0.08]">
+            <h2 id="demo-payment-title" className="font-display text-xl">Confirm demo payment</h2>
+            <p className="mt-2 text-sm text-muted-foreground">
+              This is a simulated {pay === "upi" ? "UPI" : "Card"} payment for ₹{total}. No money will be charged.
+            </p>
+            <div className="mt-4 flex justify-end gap-2">
+              <button type="button" onClick={() => setShowDemoPayment(false)} className="rounded-lg border hairline px-4 py-2 text-sm">Cancel</button>
+              <button type="button" onClick={() => { setShowDemoPayment(false); void placeOrder(); }} disabled={isPlacing} className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-60">Confirm payment</button>
+            </div>
+          </div>
+        </div>
+      )}
     </AppShell>
   );
 }
