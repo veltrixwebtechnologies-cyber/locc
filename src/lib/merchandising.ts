@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth-store";
@@ -163,9 +164,31 @@ export function useRecommendedProducts() {
 
 export function useWishlist() {
   const auth = useAuth();
+  const queryClient = useQueryClient();
+  const accountKey = auth.email || auth.phone || "signed-out";
+
+  useEffect(() => {
+    if (!auth.email && !auth.phone) return;
+
+    const refresh = () => {
+      void queryClient.invalidateQueries({ queryKey: ["wishlist", accountKey] });
+    };
+    const channel = supabase
+      .channel(`wishlist-sync-${accountKey}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "wishlist" }, refresh)
+      .subscribe();
+
+    window.addEventListener("focus", refresh);
+    return () => {
+      window.removeEventListener("focus", refresh);
+      void supabase.removeChannel(channel);
+    };
+  }, [accountKey, auth.email, auth.phone, queryClient]);
+
   return useQuery({
-    queryKey: ["wishlist", auth.email || auth.phone],
+    queryKey: ["wishlist", accountKey],
     enabled: Boolean(auth.email || auth.phone),
+    refetchInterval: 10_000,
     queryFn: async () => {
       const { data, error } = await (supabase as any).from("wishlist").select("product_id,created_at").order("created_at", { ascending: false });
       if (error) throw error;
