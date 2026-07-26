@@ -25,6 +25,16 @@ export type MerchandisingProduct = {
   shop_name: string;
 };
 
+export type WishlistCatalogItem = {
+  productId: string;
+  name: string;
+  shopName: string;
+  category: string;
+  price: number;
+  imageUrl?: string;
+  sellerId?: string;
+};
+
 const productSelect = "id,seller_id,name,brand,brand_id,brand_name,category,selling_price,mrp,discount_price,discount_starts_at,discount_ends_at,clearance,stock,image_url,average_rating,review_count,shop_name,created_at";
 
 export function useNewArrivals() {
@@ -176,6 +186,7 @@ export function useWishlist() {
     const channel = supabase
       .channel(`wishlist-sync-${accountKey}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "wishlist" }, refresh)
+      .on("postgres_changes", { event: "*", schema: "public", table: "wishlist_entries" }, refresh)
       .subscribe();
 
     window.addEventListener("focus", refresh);
@@ -190,9 +201,16 @@ export function useWishlist() {
     enabled: Boolean(auth.email || auth.phone),
     refetchInterval: 10_000,
     queryFn: async () => {
-      const { data, error } = await (supabase as any).from("wishlist").select("product_id,created_at").order("created_at", { ascending: false });
-      if (error) throw error;
-      return data ?? [];
+      const [savedProducts, savedEntries] = await Promise.all([
+        (supabase as any).from("wishlist").select("product_id,created_at").order("created_at", { ascending: false }),
+        (supabase as any).from("wishlist_entries").select("item_key,created_at").order("created_at", { ascending: false }),
+      ]);
+      if (savedProducts.error) throw savedProducts.error;
+      if (savedEntries.error) throw savedEntries.error;
+      return [
+        ...(savedProducts.data ?? []).map((row: { product_id: string; created_at: string }) => ({ product_id: row.product_id, created_at: row.created_at })),
+        ...(savedEntries.data ?? []).map((row: { item_key: string; created_at: string }) => ({ product_id: row.item_key, created_at: row.created_at })),
+      ].sort((a, b) => b.created_at.localeCompare(a.created_at));
     },
   });
 }
@@ -205,12 +223,44 @@ export function useWishlistProducts() {
     queryFn: async () => {
       const ids = (wishlist.data ?? []).map((item: { product_id: string }) => item.product_id);
       if (!ids.length) return [] as MerchandisingProduct[];
-      const { data, error } = await (supabase as any)
-        .from("public_merchandising_products")
-        .select(productSelect)
-        .in("id", ids);
-      if (error) throw error;
-      const byId = new Map((data ?? []).map((product: MerchandisingProduct) => [product.id, product]));
+      const isUuid = (id: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id);
+      const liveIds = ids.filter(isUuid);
+      const catalogIds = ids.filter((id: string) => !isUuid(id));
+      const [liveProducts, catalogEntries] = await Promise.all([
+        liveIds.length
+          ? (supabase as any).from("public_merchandising_products").select(productSelect).in("id", liveIds)
+          : Promise.resolve({ data: [], error: null }),
+        catalogIds.length
+          ? (supabase as any).from("wishlist_entries").select("item_key,product_name,shop_name,category,price,image_url,seller_id,created_at").in("item_key", catalogIds)
+          : Promise.resolve({ data: [], error: null }),
+      ]);
+      if (liveProducts.error) throw liveProducts.error;
+      if (catalogEntries.error) throw catalogEntries.error;
+      const byId = new Map<string, MerchandisingProduct>();
+      for (const product of liveProducts.data ?? []) byId.set(product.id, product as MerchandisingProduct);
+      for (const entry of catalogEntries.data ?? []) {
+        byId.set(entry.item_key, {
+          id: entry.item_key,
+          seller_id: entry.seller_id ?? entry.item_key.split("-p")[0],
+          name: entry.product_name,
+          brand: null,
+          brand_id: null,
+          brand_name: null,
+          category: entry.category,
+          selling_price: Number(entry.price),
+          mrp: Number(entry.price),
+          discount_price: null,
+          discount_starts_at: null,
+          discount_ends_at: null,
+          clearance: false,
+          stock: 1,
+          image_url: entry.image_url,
+          created_at: entry.created_at,
+          average_rating: 0,
+          review_count: 0,
+          shop_name: entry.shop_name,
+        });
+      }
       return ids.map((id: string) => byId.get(id)).filter(Boolean) as MerchandisingProduct[];
     },
   });
@@ -220,21 +270,38 @@ export function useToggleWishlist() {
   const queryClient = useQueryClient();
   const auth = useAuth();
   return useMutation({
-    mutationFn: async ({ productId, active }: { productId: string; active: boolean }) => {
+    mutationFn: async ({ productId, active, item }: { productId: string; active: boolean; item?: WishlistCatalogItem }) => {
       if (!auth.email && !auth.phone) throw new Error("Sign in to use your wishlist.");
+      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(productId);
       if (active) {
-        const { error } = await (supabase as any).from("wishlist").delete().eq("product_id", productId);
-        if (error) throw error;
+        const result = isUuid
+          ? await (supabase as any).from("wishlist").delete().eq("product_id", productId)
+          : await (supabase as any).from("wishlist_entries").delete().eq("item_key", productId);
+        if (result.error) throw result.error;
       } else {
-        const { data: userData, error: userError } = await supabase.auth.getUser();
-        if (userError || !userData.user) throw userError ?? new Error("Sign in to use your wishlist.");
-        const { error } = await (supabase as any).from("wishlist").insert({
-          user_id: userData.user.id,
-          product_id: productId,
-        });
-        if (error) throw error;
+        if (isUuid) {
+          const { data: userData, error: userError } = await supabase.auth.getUser();
+          if (userError || !userData.user) throw userError ?? new Error("Sign in to use your wishlist.");
+          const { error } = await (supabase as any).from("wishlist").insert({ user_id: userData.user.id, product_id: productId });
+          if (error) throw error;
+        } else {
+          if (!item) throw new Error("Product details are required for this catalog item.");
+          const { data: userData, error: userError } = await supabase.auth.getUser();
+          if (userError || !userData.user) throw userError ?? new Error("Sign in to use your wishlist.");
+          const { error } = await (supabase as any).from("wishlist_entries").insert({
+            user_id: userData.user.id,
+            item_key: productId,
+            product_name: item.name,
+            shop_name: item.shopName,
+            category: item.category,
+            price: item.price,
+            image_url: item.imageUrl ?? null,
+            seller_id: item.sellerId ?? null,
+          });
+          if (error) throw error;
+        }
       }
-      if (!active) await (supabase as any).from("product_views").insert({ product_id: productId, event_type: "wishlist" });
+      if (!active && isUuid) await (supabase as any).from("product_views").insert({ product_id: productId, event_type: "wishlist" });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["wishlist"] });

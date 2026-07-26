@@ -1,9 +1,9 @@
 import { Heart } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/lib/auth-store";
-import { useToggleWishlist, useWishlist } from "@/lib/merchandising";
+import { useToggleWishlist, useWishlist, type WishlistCatalogItem } from "@/lib/merchandising";
 
-export function WishlistButton({ productId, productName }: { productId: string; productName: string }) {
+export function WishlistButton({ productId, productName, item }: { productId: string; productName: string; item?: WishlistCatalogItem }) {
   const auth = useAuth();
   const wishlist = useWishlist();
   const toggle = useToggleWishlist();
@@ -21,7 +21,7 @@ export function WishlistButton({ productId, productName }: { productId: string; 
           return;
         }
         toggle.mutate(
-          { productId, active: isSaved },
+          { productId, active: isSaved, item },
           {
             onSuccess: () => toast.success(isSaved ? "Removed from wishlist" : "Added to wishlist"),
             onError: (error) => toast.error(error.message || "Could not update wishlist"),

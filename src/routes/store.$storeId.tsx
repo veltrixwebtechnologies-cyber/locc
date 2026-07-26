@@ -192,9 +192,11 @@ function StorePage() {
                           <p className="text-xs text-muted-foreground">{p.unit}</p>
                         </div>
                         <span className="font-mono text-sm">₹{p.price}</span>
-                        {store.id === APPROVED_STORE.id && (
-                          <WishlistButton productId={p.id} productName={p.name} />
-                        )}
+                        <WishlistButton
+                          productId={p.id}
+                          productName={p.name}
+                          item={{ productId: p.id, name: p.name, shopName: store.name, category: p.category, price: p.price, imageUrl: p.imageUrl, sellerId: p.storeId }}
+                        />
                         <QtyStepper
                           qty={q}
                           onAdd={() => { void recordProductEvent(p.id, "add_to_cart"); cartStore.add(p.storeId, store.name, p); }}
@@ -211,7 +213,7 @@ function StorePage() {
       </div>
 
       {/* Sticky cart bar */}
-      {totals.itemCount > 0 && cart.storeId === store.id && (
+      {totals.itemCount > 0 && (cart.storeId === store.id || store.id === APPROVED_STORE.id) && (
         <div className="fixed inset-x-0 bottom-0 z-40 border-t hairline bg-primary text-primary-foreground">
           <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-5 py-3 md:px-6">
             <div className="text-sm">
