@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useId } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth-store";
@@ -175,6 +175,7 @@ export function useRecommendedProducts() {
 export function useWishlist() {
   const auth = useAuth();
   const queryClient = useQueryClient();
+  const channelId = useId();
   const accountKey = auth.email || auth.phone || "signed-out";
 
   useEffect(() => {
@@ -184,7 +185,7 @@ export function useWishlist() {
       void queryClient.invalidateQueries({ queryKey: ["wishlist", accountKey] });
     };
     const channel = supabase
-      .channel(`wishlist-sync-${accountKey}`)
+      .channel(`wishlist-sync-${accountKey}-${channelId}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "wishlist" }, refresh)
       .on("postgres_changes", { event: "*", schema: "public", table: "wishlist_entries" }, refresh)
       .subscribe();
@@ -194,7 +195,7 @@ export function useWishlist() {
       window.removeEventListener("focus", refresh);
       void supabase.removeChannel(channel);
     };
-  }, [accountKey, auth.email, auth.phone, queryClient]);
+  }, [accountKey, auth.email, auth.phone, queryClient, channelId]);
 
   return useQuery({
     queryKey: ["wishlist", accountKey],
