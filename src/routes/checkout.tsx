@@ -13,6 +13,8 @@ import { Crosshair, Plus, Check } from "lucide-react";
 import { toast } from "sonner";
 
 const CURRENT_LOCATION_ID = "__current_location";
+const isProductUuid = (value: string) =>
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
 
 export const Route = createFileRoute("/checkout")({
   beforeLoad: async () => {
@@ -27,11 +29,16 @@ export const Route = createFileRoute("/checkout")({
 function CheckoutPage() {
   const cart = useCart();
   const totals = cartTotals(cart.lines);
-  const store = cart.storeId === APPROVED_STORE.id
+  const knownStore = cart.storeId === APPROVED_STORE.id
     ? APPROVED_STORE
     : cart.storeId
       ? getStore(cart.storeId)
-      : null;
+      : undefined;
+  const store = knownStore ?? (cart.storeId && cart.lines.length > 0 ? {
+    ...APPROVED_STORE,
+    id: cart.storeId,
+    name: cart.storeName ?? "Local Shore shop",
+  } : null);
   const navigate = useNavigate();
   const reverseGeocodeFn = useServerFn(reverseGeocode);
 
@@ -51,6 +58,7 @@ function CheckoutPage() {
   const [newLine, setNewLine] = useState("");
   const [manualAddress, setManualAddress] = useState("");
   const [isPlacing, setIsPlacing] = useState(false);
+  const [isCheckingStock, setIsCheckingStock] = useState(true);
   const [showDemoPayment, setShowDemoPayment] = useState(false);
   const watchIdRef = useRef<number | null>(null);
 
@@ -249,6 +257,69 @@ function CheckoutPage() {
     return () => stopLiveLocation();
   }, []);
 
+  const cartProductIds = cart.lines.map((line) => line.productId).sort().join(",");
+  useEffect(() => {
+    let active = true;
+    if (!cartProductIds) {
+      setIsCheckingStock(false);
+      return;
+    }
+
+    setIsCheckingStock(true);
+    const validateStock = async () => {
+      const productIds = cartProductIds.split(",");
+      const databaseProductIds = productIds.filter(isProductUuid);
+      if (databaseProductIds.length === 0) return;
+      let { data, error } = await (supabase as any)
+        .from("approved_product_catalog")
+        .select("id,stock")
+        .in("id", databaseProductIds);
+      if (error) {
+        const fallback = await (supabase as any)
+          .from("products")
+          .select("id,stock")
+          .in("id", databaseProductIds);
+        data = fallback.data;
+        error = fallback.error;
+      }
+
+      if (!active) return;
+      if (error) {
+        console.error("[checkout] stock validation failed", error);
+        toast.error("Product availability could not be checked. Please try again.");
+        return;
+      }
+      const stockByProduct = Object.fromEntries(
+        (data ?? []).map((product: { id: string; stock: number }) => [
+          product.id,
+          Number(product.stock),
+        ]),
+      );
+      cart.lines
+        .filter((line) => !isProductUuid(line.productId))
+        .forEach((line) => {
+          stockByProduct[line.productId] = line.availableStock ?? line.qty;
+        });
+      if (cartStore.reconcileStock(stockByProduct)) {
+        toast.info("Your cart was updated to match current stock.");
+      }
+    };
+
+    void validateStock()
+      .catch((error) => {
+        if (!active) return;
+        console.error("[checkout] stock validation failed", error);
+        toast.error("Product availability could not be checked. Please try again.");
+      })
+      .finally(() => {
+        if (active) setIsCheckingStock(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [cartProductIds]);
+
   const deliveryFee =
     totals.subtotal > 0 ? (store ? Math.round(20 + store.distanceKm * 6) : 25) : 0;
   const total = totals.subtotal + deliveryFee;
@@ -279,12 +350,13 @@ function CheckoutPage() {
       : "";
   const canPlace = !!selectedAddressLine;
 
+  const openPaymentConfirmation = () => {
+    if (!selectedAddressLine || isPlacing || isCheckingStock) return;
+    setShowDemoPayment(true);
+  };
+
   const placeOrder = async () => {
     if (!selectedAddressLine || isPlacing) return;
-    if (pay !== "cod" && !showDemoPayment) {
-      setShowDemoPayment(true);
-      return;
-    }
     setIsPlacing(true);
     try {
       const order = await ordersStore.place({
@@ -301,13 +373,16 @@ function CheckoutPage() {
         distanceKm: store.distanceKm,
       });
       cartStore.clear();
+      toast.success("Payment simulated successfully. Order placed.");
       navigate({ to: "/order/$orderId", params: { orderId: order.id } });
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Could not place the order. Try again.");
+      setIsPlacing(false);
+      return;
     } finally {
       setIsPlacing(false);
-      setShowDemoPayment(false);
     }
+    setShowDemoPayment(false);
   };
 
   return (
@@ -498,11 +573,12 @@ function CheckoutPage() {
 
       <div className="sticky bottom-16 z-30 mt-5 px-5">
         <button
-          onClick={placeOrder}
-          disabled={!canPlace || isPlacing}
+          type="button"
+          onClick={openPaymentConfirmation}
+          disabled={!canPlace || isPlacing || isCheckingStock}
           className="w-full rounded-xl bg-[var(--marigold)] py-3.5 font-display text-lg text-ink shadow-lg hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:brightness-100"
         >
-          {isPlacing ? "Placing order…" : canPlace ? `Place order · ₹${total}` : "Add a delivery address"}
+          {isCheckingStock ? "Checking availability…" : isPlacing ? "Placing order…" : canPlace ? `Place order · ₹${total}` : "Add a delivery address"}
         </button>
       </div>
 
@@ -511,11 +587,11 @@ function CheckoutPage() {
           <div className="w-full max-w-md rounded-xl bg-card p-5 shadow-xl ring-1 ring-black/[0.08]">
             <h2 id="demo-payment-title" className="font-display text-xl">Confirm demo payment</h2>
             <p className="mt-2 text-sm text-muted-foreground">
-              This is a simulated {pay === "upi" ? "UPI" : "Card"} payment for ₹{total}. No money will be charged.
+              This is a simulated {pay === "upi" ? "UPI" : pay === "card" ? "Card" : "Cash on delivery"} payment for ₹{total}. No money will be charged.
             </p>
             <div className="mt-4 flex justify-end gap-2">
               <button type="button" onClick={() => setShowDemoPayment(false)} className="rounded-lg border hairline px-4 py-2 text-sm">Cancel</button>
-              <button type="button" onClick={() => { setShowDemoPayment(false); void placeOrder(); }} disabled={isPlacing} className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-60">Confirm payment</button>
+              <button type="button" onClick={() => void placeOrder()} disabled={isPlacing} className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-60">{isPlacing ? "Processing…" : "Confirm payment"}</button>
             </div>
           </div>
         </div>

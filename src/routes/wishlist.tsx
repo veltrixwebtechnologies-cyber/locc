@@ -95,6 +95,7 @@ function WishlistRow({ product }: { product: MerchandisingProduct }) {
               name: product.name,
               unit: product.category ?? "",
               price,
+              stock: product.stock,
             });
             try {
               await remove();

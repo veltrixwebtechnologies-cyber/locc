@@ -7,6 +7,7 @@ export interface CartLine {
   unit: string;
   price: number;
   qty: number;
+  availableStock?: number;
 }
 
 interface CartState {
@@ -63,14 +64,22 @@ export const cartStore = {
   add(
     storeId: string,
     storeName: string,
-    product: { id: string; name: string; unit: string; price: number },
+    product: { id: string; name: string; unit: string; price: number; stock?: number },
   ) {
     ensureHydrated();
     const sameStore = state.storeId === storeId;
     const baseLines = sameStore ? state.lines : [];
     const existing = baseLines.find((l) => l.productId === product.id);
     const lines = existing
-      ? baseLines.map((l) => (l.productId === product.id ? { ...l, qty: l.qty + 1 } : l))
+      ? baseLines.map((l) => {
+          if (l.productId !== product.id) return l;
+          const availableStock = product.stock ?? l.availableStock;
+          return {
+            ...l,
+            availableStock,
+            qty: Math.min(l.qty + 1, availableStock ?? l.qty + 1),
+          };
+        })
       : [
           ...baseLines,
           {
@@ -80,6 +89,7 @@ export const cartStore = {
             unit: product.unit,
             price: product.price,
             qty: 1,
+            availableStock: product.stock,
           },
         ];
     state = { storeId, storeName, lines };
@@ -89,7 +99,11 @@ export const cartStore = {
     ensureHydrated();
     let lines: CartLine[];
     if (qty <= 0) lines = state.lines.filter((l) => l.productId !== productId);
-    else lines = state.lines.map((l) => (l.productId === productId ? { ...l, qty } : l));
+    else lines = state.lines.map((l) =>
+      l.productId === productId
+        ? { ...l, qty: Math.min(qty, l.availableStock ?? qty) }
+        : l,
+    );
     state =
       lines.length === 0 ? { storeId: null, storeName: null, lines: [] } : { ...state, lines };
     persist();
@@ -97,6 +111,30 @@ export const cartStore = {
   clear() {
     state = { storeId: null, storeName: null, lines: [] };
     persist();
+  },
+  reconcileStock(stockByProduct: Record<string, number>) {
+    ensureHydrated();
+    const lines = state.lines
+      .filter((line) => (stockByProduct[line.productId] ?? 0) > 0)
+      .map((line) => {
+        const availableStock = stockByProduct[line.productId];
+        return {
+          ...line,
+          availableStock,
+          qty: Math.min(line.qty, availableStock),
+        };
+      });
+    const changed =
+      lines.length !== state.lines.length ||
+      lines.some((line, index) =>
+        line.qty !== state.lines[index]?.qty ||
+        line.availableStock !== state.lines[index]?.availableStock,
+      );
+    if (!changed) return false;
+    state =
+      lines.length === 0 ? { storeId: null, storeName: null, lines: [] } : { ...state, lines };
+    persist();
+    return true;
   },
 };
 

@@ -207,10 +207,11 @@ export function useWishlist() {
         (supabase as any).from("wishlist_entries").select("item_key,created_at").order("created_at", { ascending: false }),
       ]);
       if (savedProducts.error) throw savedProducts.error;
-      if (savedEntries.error) throw savedEntries.error;
+      const entriesMissing = savedEntries.error?.code === "PGRST205" || savedEntries.error?.status === 404;
+      if (savedEntries.error && !entriesMissing) throw savedEntries.error;
       return [
         ...(savedProducts.data ?? []).map((row: { product_id: string; created_at: string }) => ({ product_id: row.product_id, created_at: row.created_at })),
-        ...(savedEntries.data ?? []).map((row: { item_key: string; created_at: string }) => ({ product_id: row.item_key, created_at: row.created_at })),
+        ...(entriesMissing ? [] : (savedEntries.data ?? []).map((row: { item_key: string; created_at: string }) => ({ product_id: row.item_key, created_at: row.created_at }))),
       ].sort((a, b) => b.created_at.localeCompare(a.created_at));
     },
   });
@@ -236,7 +237,8 @@ export function useWishlistProducts() {
           : Promise.resolve({ data: [], error: null }),
       ]);
       if (liveProducts.error) throw liveProducts.error;
-      if (catalogEntries.error) throw catalogEntries.error;
+      const entriesMissing = catalogEntries.error?.code === "PGRST205" || catalogEntries.error?.status === 404;
+      if (catalogEntries.error && !entriesMissing) throw catalogEntries.error;
       const byId = new Map<string, MerchandisingProduct>();
       for (const product of liveProducts.data ?? []) byId.set(product.id, product as MerchandisingProduct);
       for (const entry of catalogEntries.data ?? []) {
@@ -270,6 +272,7 @@ export function useWishlistProducts() {
 export function useToggleWishlist() {
   const queryClient = useQueryClient();
   const auth = useAuth();
+  const accountKey = auth.email || auth.phone || "signed-out";
   return useMutation({
     mutationFn: async ({ productId, active, item }: { productId: string; active: boolean; item?: WishlistCatalogItem }) => {
       if (!auth.email && !auth.phone) throw new Error("Sign in to use your wishlist.");
@@ -304,8 +307,20 @@ export function useToggleWishlist() {
       }
       if (!active && isUuid) await (supabase as any).from("product_views").insert({ product_id: productId, event_type: "wishlist" });
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["wishlist"] });
+    onMutate: async ({ productId, active }) => {
+      await queryClient.cancelQueries({ queryKey: ["wishlist", accountKey] });
+      const previous = queryClient.getQueryData<Array<{ product_id: string; created_at: string }>>(["wishlist", accountKey]);
+      const next = active
+        ? (previous ?? []).filter((item) => item.product_id !== productId)
+        : [{ product_id: productId, created_at: new Date().toISOString() }, ...(previous ?? []).filter((item) => item.product_id !== productId)];
+      queryClient.setQueryData(["wishlist", accountKey], next);
+      return { previous };
+    },
+    onError: (_error, _variables, context) => {
+      if (context?.previous) queryClient.setQueryData(["wishlist", accountKey], context.previous);
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ["wishlist", accountKey] });
       queryClient.invalidateQueries({ queryKey: ["wishlist-products"] });
     },
   });

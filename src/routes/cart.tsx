@@ -14,11 +14,16 @@ function CartPage() {
   const cart = useCart();
   const auth = useAuth();
   const totals = cartTotals(cart.lines);
-  const store = cart.storeId === APPROVED_STORE.id
+  const knownStore = cart.storeId === APPROVED_STORE.id
     ? APPROVED_STORE
     : cart.storeId
       ? getStore(cart.storeId)
-      : null;
+      : undefined;
+  const store = knownStore ?? (cart.storeId && cart.lines.length > 0 ? {
+    ...APPROVED_STORE,
+    id: cart.storeId,
+    name: cart.storeName ?? "Local Shore shop",
+  } : null);
   const navigate = useNavigate();
   const isSignedIn = !!(auth.phone || auth.email);
 

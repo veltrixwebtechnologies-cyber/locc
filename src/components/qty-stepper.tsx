@@ -5,10 +5,12 @@ export function QtyStepper({
   qty,
   onChange,
   onAdd,
+  max,
 }: {
   qty: number;
   onChange: (n: number) => void;
   onAdd: () => void;
+  max?: number;
 }) {
   const [pop, setPop] = useState(false);
   useEffect(() => {
@@ -46,8 +48,9 @@ export function QtyStepper({
       <button
         type="button"
         aria-label="Increase"
+        disabled={max != null && qty >= max}
         onClick={() => onChange(qty + 1)}
-        className="grid h-7 w-7 place-items-center hover:bg-teal-deep"
+        className="grid h-7 w-7 place-items-center hover:bg-teal-deep disabled:cursor-not-allowed disabled:opacity-40"
       >
         <Plus className="h-3.5 w-3.5" />
       </button>

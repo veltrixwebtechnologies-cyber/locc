@@ -70,7 +70,7 @@ function StorePage() {
             .createSignedUrl(rawImage, 60 * 60);
           imageUrl = signed?.signedUrl ?? "";
         }
-        return { id: p.id, storeId: p.seller_id ?? APPROVED_STORE.id, name: p.name, unit: p.category ?? "", price: Number(p.selling_price), imageUrl, category: p.category ?? "Other" };
+        return { id: p.id, storeId: p.seller_id ?? APPROVED_STORE.id, name: p.name, unit: p.category ?? "", price: Number(p.selling_price), imageUrl, category: p.category ?? "Other", stock: Number(p.stock) };
       }));
     },
   });
@@ -199,6 +199,7 @@ function StorePage() {
                         />
                         <QtyStepper
                           qty={q}
+                          max={p.stock}
                           onAdd={() => { void recordProductEvent(p.id, "add_to_cart"); cartStore.add(p.storeId, store.name, p); }}
                           onChange={(n) => cartStore.setQty(p.id, n)}
                         />

@@ -1,11 +1,10 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo } from "react";
 import { AppShell } from "@/components/app-shell";
-import { useOrders, orderStatusFlow, orderStatusLabel, type OrderStatus } from "@/lib/orders-store";
+import { useOrders, advanceDemoOrder, orderStatusFlow, orderStatusLabel, type OrderStatus } from "@/lib/orders-store";
 import { getStore } from "@/lib/mock-data";
 import { DeliveryMap } from "@/components/delivery-map";
 import { MessageCircle, Phone, Star } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/order/$orderId")({
@@ -26,7 +25,9 @@ function OrderPage() {
     if (!order || order.status === "delivered" || order.status === "cancelled" || order.status === "returned") return;
 
     const timer = window.setTimeout(() => {
-      void (supabase as any).rpc("advance_demo_order", { p_order_id: order.id });
+      void advanceDemoOrder(order.id).catch((error) => {
+        toast.error(error instanceof Error ? error.message : "Order tracking could not update.");
+      });
     }, 5_000);
 
     return () => window.clearTimeout(timer);

@@ -105,6 +105,7 @@ export interface Product {
   price: number;
   category: string;
   imageUrl?: string;
+  stock?: number;
 }
 
 export const categoryColor: Record<StoreCategory, string> = {
