@@ -6,6 +6,7 @@ import { getStore } from "@/lib/mock-data";
 import { DeliveryMap } from "@/components/delivery-map";
 import { MessageCircle, Phone, Star } from "lucide-react";
 import { toast } from "sonner";
+import { m } from "motion/react";
 
 export const Route = createFileRoute("/order/$orderId")({
   component: OrderPage,
@@ -108,9 +109,11 @@ function OrderPage() {
       {/* Progress */}
       <section className="mx-5 mt-4 rounded-xl bg-card p-4 ring-1 ring-black/[0.04]">
         <div className="h-1 w-full overflow-hidden rounded-full bg-[color-mix(in_oklab,var(--teal)_15%,transparent)]">
-          <div
-            className="progress-fill h-full bg-primary"
-            style={{ ["--w" as string]: `${progress}%` }}
+          <m.div
+            className="h-full bg-primary"
+            initial={{ width: 0 }}
+            animate={{ width: `${progress}%` }}
+            transition={{ duration: 0.65, ease: [0.22, 1, 0.36, 1] }}
           />
         </div>
         <ol className="mt-4 space-y-3">
@@ -118,8 +121,16 @@ function OrderPage() {
             const done = i <= currentIndex;
             const active = i === currentIndex && s !== "delivered";
             return (
-              <li key={s} className="flex items-center gap-3">
-                <span
+              <m.li
+                key={s}
+                initial={{ opacity: 0, x: -8 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: i * 0.045 }}
+                className="flex items-center gap-3"
+              >
+                <m.span
+                  animate={done ? { scale: [1, 1.08, 1] } : { scale: 1 }}
+                  transition={{ duration: 0.24 }}
                   className={`grid h-6 w-6 place-items-center rounded-full text-[10px] font-mono ${
                     done
                       ? "bg-primary text-primary-foreground"
@@ -127,7 +138,7 @@ function OrderPage() {
                   }`}
                 >
                   {i + 1}
-                </span>
+                </m.span>
                 <span
                   className={`text-sm ${done ? "text-foreground" : "text-muted-foreground"} ${active ? "font-semibold" : ""}`}
                 >
@@ -136,7 +147,7 @@ function OrderPage() {
                 {active && (
                   <span className="ml-2 h-1.5 w-1.5 animate-pulse rounded-full bg-[var(--marigold)]" />
                 )}
-              </li>
+              </m.li>
             );
           })}
         </ol>

@@ -21,7 +21,7 @@ export function ProductThumb({ src, alt, category }: Props) {
   const showPlaceholder = !src || failed;
 
   return (
-    <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-lg bg-[var(--sand)] ring-1 ring-black/[0.04]">
+    <div data-product-image className="relative h-14 w-14 shrink-0 overflow-hidden rounded-lg bg-[var(--sand)] ring-1 ring-black/[0.04]">
       {showPlaceholder ? (
         <div className="flex h-full w-full items-center justify-center bg-[color-mix(in_oklab,var(--teal)_10%,var(--sand))]">
           <Icon className="h-6 w-6 text-[var(--teal)] opacity-70" />

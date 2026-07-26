@@ -9,6 +9,8 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { reverseGeocode } from "@/lib/geocoding.functions";
 import { MerchandisingSections } from "@/components/merchandising-sections";
+import { m, useScroll, useTransform } from "motion/react";
+import { Reveal } from "@/components/motion/presets";
 
 export const Route = createFileRoute("/")({
   validateSearch: (s: Record<string, unknown>) => ({
@@ -28,6 +30,8 @@ function Home() {
   const [locError, setLocError] = useState("");
   const [query, setQuery] = useState(search.q ?? "");
   const [cat, setCat] = useState<string>(search.category ?? "all");
+  const { scrollY } = useScroll();
+  const heroY = useTransform(scrollY, [0, 420], [0, 24]);
   const approvedProducts = useQuery({
     queryKey: ["approved-product-catalog"],
     queryFn: async () => {
@@ -196,16 +200,34 @@ function Home() {
       </div>
 
       {/* Hero */}
-      <section className="px-5 pt-2 pb-4 md:px-8 md:pt-4 md:pb-8">
+      <m.section style={{ y: heroY }} className="px-5 pt-2 pb-4 md:px-8 md:pt-4 md:pb-8">
         <h1 className="font-display text-[28px] font-extrabold leading-[1.1] text-foreground md:text-6xl md:leading-[1.05]">
-          Pick your own local shop, <br className="hidden md:block" />
-          <span className="text-primary">we just deliver.</span>
+          {"Pick your own local shop,".split(" ").map((word, index) => (
+            <m.span
+              key={word}
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.045, duration: 0.36 }}
+              className="mr-[0.25em] inline-block"
+            >
+              {word}
+            </m.span>
+          ))}
+          <br className="hidden md:block" />
+          <m.span
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3, duration: 0.4 }}
+            className="inline-block text-primary"
+          >
+            we just deliver.
+          </m.span>
         </h1>
         <p className="mt-3 max-w-2xl text-sm text-muted-foreground md:text-base">
           No dark stores. Real neighborhood shops — a partner picks it up and brings it to your
           door.
         </p>
-      </section>
+      </m.section>
 
       {/* Search */}
       <div className="px-5 md:px-8">
@@ -286,12 +308,12 @@ function Home() {
 
 function EmptyState() {
   return (
-    <div className="rounded-xl border hairline bg-card p-6 text-center animate-fade-in">
+    <Reveal className="rounded-xl border hairline bg-card p-6 text-center">
       <p className="font-display text-lg">No shops match that.</p>
       <p className="mt-1 text-sm text-muted-foreground">
         No stores near you yet — try expanding your search radius or clearing filters.
       </p>
-    </div>
+    </Reveal>
   );
 }
 
@@ -369,11 +391,13 @@ function CategoryStrip({ cat, setCat }: { cat: string; setCat: (v: string) => vo
         {deliveryCategories.map((c, i) => {
           const active = c.id === cat;
           return (
-            <button
+            <m.button
               key={c.id}
               onClick={() => setCat(active ? "all" : c.id)}
               style={{ animationDelay: `${i * 40}ms` }}
               className="group/tile flex w-[88px] shrink-0 flex-col items-center gap-1.5 animate-fade-in md:w-[104px]"
+              whileHover={{ scale: 1.035 }}
+              whileTap={{ scale: 0.97 }}
             >
               <div
                 className={`relative aspect-square w-full overflow-hidden rounded-2xl bg-[var(--sand)] ring-1 transition-all duration-300 ease-out group-hover/tile:-translate-y-0.5 group-hover/tile:shadow-md ${
@@ -396,7 +420,7 @@ function CategoryStrip({ cat, setCat }: { cat: string; setCat: (v: string) => vo
               >
                 {c.label}
               </span>
-            </button>
+            </m.button>
           );
         })}
       </div>

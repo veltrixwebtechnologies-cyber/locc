@@ -184,9 +184,78 @@
   animation: progress-fill 700ms ease-out forwards;
 }
 
+@keyframes premium-shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+.premium-skeleton {
+  background-image: linear-gradient(
+    100deg,
+    color-mix(in oklab, var(--primary) 7%, transparent) 20%,
+    color-mix(in oklab, var(--primary) 16%, white) 42%,
+    color-mix(in oklab, var(--primary) 7%, transparent) 64%
+  );
+  background-size: 220% 100%;
+  animation: premium-shimmer 1.35s linear infinite;
+}
+
+.premium-button {
+  position: relative;
+  overflow: hidden;
+  transform: translateZ(0);
+  transition:
+    color 180ms ease,
+    background-color 180ms ease,
+    border-color 180ms ease,
+    box-shadow 220ms ease,
+    opacity 180ms ease;
+}
+
+.premium-button::after {
+  position: absolute;
+  inset: 50% auto auto 50%;
+  width: 8px;
+  height: 8px;
+  content: "";
+  border-radius: 999px;
+  background: currentColor;
+  opacity: 0;
+  transform: translate(-50%, -50%) scale(0);
+  pointer-events: none;
+}
+
+.premium-button:active::after {
+  opacity: 0.12;
+  transform: translate(-50%, -50%) scale(18);
+  transition: transform 360ms ease-out, opacity 420ms ease-out;
+}
+
+input,
+textarea,
+select {
+  transition: border-color 180ms ease, box-shadow 180ms ease, background-color 180ms ease;
+}
+
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--primary) 14%, transparent);
+}
+
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 220ms;
+}
+
 @media (prefers-reduced-motion: reduce) {
   * {
     animation-duration: 0.001ms !important;
     transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
   }
 }

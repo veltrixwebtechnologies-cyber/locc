@@ -16,6 +16,8 @@ import { QtyStepper } from "@/components/qty-stepper";
 import { ProductThumb } from "@/components/product-thumb";
 import { recordProductEvent } from "@/lib/merchandising";
 import { WishlistButton } from "@/components/wishlist-button";
+import { flyProductToCart } from "@/lib/fly-to-cart";
+import { m } from "motion/react";
 
 export const Route = createFileRoute("/store/$storeId")({
   loader: ({ params }): { store: Store; products: Product[] } => {
@@ -182,8 +184,13 @@ function StorePage() {
                   {items.map((p) => {
                     const q = qtyOf(p.id);
                     return (
-                      <li
+                      <m.li
                         key={p.id}
+                        data-product-id={p.id}
+                        initial={{ opacity: 0, y: 10 }}
+                        whileInView={{ opacity: 1, y: 0 }}
+                        viewport={{ once: true, amount: 0.15 }}
+                        whileHover={{ y: -2 }}
                         className="flex items-center gap-3 p-3 md:rounded-xl md:bg-card md:ring-1 md:ring-black/[0.04]"
                       >
                         <ProductThumb src={p.imageUrl} alt={p.name} category={store.category} />
@@ -200,10 +207,14 @@ function StorePage() {
                         <QtyStepper
                           qty={q}
                           max={p.stock}
-                          onAdd={() => { void recordProductEvent(p.id, "add_to_cart"); cartStore.add(p.storeId, store.name, p); }}
+                          onAdd={() => {
+                            void recordProductEvent(p.id, "add_to_cart");
+                            flyProductToCart(p.id);
+                            cartStore.add(p.storeId, store.name, p);
+                          }}
                           onChange={(n) => cartStore.setQty(p.id, n)}
                         />
-                      </li>
+                      </m.li>
                     );
                   })}
                 </ul>

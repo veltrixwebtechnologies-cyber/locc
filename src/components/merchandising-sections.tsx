@@ -14,6 +14,8 @@ import {
 } from "@/lib/merchandising";
 import { supabase } from "@/integrations/supabase/client";
 import { WishlistButton } from "@/components/wishlist-button";
+import { m } from "motion/react";
+import { Reveal } from "@/components/motion/presets";
 
 type ProductSectionProps = { title: string; products: MerchandisingProduct[] | undefined };
 
@@ -32,10 +34,18 @@ function ProductCard({ product }: { product: MerchandisingProduct }) {
     ? Math.round(((product.mrp - product.discount_price) / product.mrp) * 100)
     : 0;
   return (
-    <div className="relative min-w-[190px] overflow-hidden rounded-xl bg-card ring-1 ring-black/[0.05]">
+    <m.div
+      variants={{
+        hidden: { opacity: 0, x: 12 },
+        visible: { opacity: 1, x: 0 },
+      }}
+      whileHover={{ y: -4 }}
+      transition={{ duration: 0.3 }}
+      className="group relative min-w-[190px] overflow-hidden rounded-xl bg-card ring-1 ring-black/[0.05] transition-shadow duration-300 hover:shadow-lg"
+    >
       <Link to="/store/$storeId" params={{ storeId: "approved-catalog" }} className="block">
         <div className="aspect-square bg-[var(--sand)]">
-          {imageUrl ? <img src={imageUrl} alt={product.name} loading="lazy" className="h-full w-full object-cover" /> : null}
+          {imageUrl ? <img src={imageUrl} alt={product.name} loading="lazy" className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" /> : null}
         </div>
         <div className="p-3">
           <p className="truncate text-sm font-medium">{product.name}</p>
@@ -43,7 +53,15 @@ function ProductCard({ product }: { product: MerchandisingProduct }) {
           <div className="mt-2 flex items-center gap-2">
             <span className="font-mono text-sm">₹{product.discount_price ?? product.selling_price}</span>
             {product.discount_price && <span className="text-xs text-muted-foreground line-through">₹{product.mrp}</span>}
-            {discount > 0 && <span className="text-[10px] font-semibold text-emerald-700">{discount}% off</span>}
+            {discount > 0 && (
+              <m.span
+                initial={{ scale: 0.7, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                className="text-[10px] font-semibold text-emerald-700"
+              >
+                {discount}% off
+              </m.span>
+            )}
           </div>
           <span className="mt-2 inline-flex items-center gap-1 text-xs text-muted-foreground">
             <Star className="h-3 w-3 fill-[var(--marigold)] text-[var(--marigold)]" /> {Number(product.average_rating).toFixed(1)}
@@ -53,19 +71,25 @@ function ProductCard({ product }: { product: MerchandisingProduct }) {
       <div className="absolute right-2 top-2">
         <WishlistButton productId={product.id} productName={product.name} />
       </div>
-    </div>
+    </m.div>
   );
 }
 
 function ProductSection({ title, products }: ProductSectionProps) {
   if (!products?.length) return null;
   return (
-    <section className="mt-8 px-5 md:px-8">
+    <Reveal className="mt-8 px-5 md:px-8">
       <h2 className="font-display text-base font-bold md:text-xl">{title}</h2>
-      <div className="mt-3 flex gap-3 overflow-x-auto pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <m.div
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true, amount: 0.1 }}
+        variants={{ visible: { transition: { staggerChildren: 0.055 } } }}
+        className="mt-3 flex gap-3 overflow-x-auto pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      >
         {products.map((product) => <ProductCard key={product.id} product={product} />)}
-      </div>
-    </section>
+      </m.div>
+    </Reveal>
   );
 }
 

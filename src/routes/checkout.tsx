@@ -11,6 +11,7 @@ import { DeliveryMap } from "@/components/delivery-map";
 import { reverseGeocode } from "@/lib/geocoding.functions";
 import { Crosshair, Plus, Check } from "lucide-react";
 import { toast } from "sonner";
+import { AnimatePresence, m } from "motion/react";
 
 const CURRENT_LOCATION_ID = "__current_location";
 const isProductUuid = (value: string) =>
@@ -61,6 +62,15 @@ function CheckoutPage() {
   const [isCheckingStock, setIsCheckingStock] = useState(true);
   const [showDemoPayment, setShowDemoPayment] = useState(false);
   const watchIdRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (!showDemoPayment) return;
+    const close = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && !isPlacing) setShowDemoPayment(false);
+    };
+    window.addEventListener("keydown", close);
+    return () => window.removeEventListener("keydown", close);
+  }, [isPlacing, showDemoPayment]);
 
   const chooseAddr = (id: string) => {
     setAddr(id);
@@ -274,6 +284,7 @@ function CheckoutPage() {
         .from("approved_product_catalog")
         .select("id,stock")
         .in("id", databaseProductIds);
+
       if (error) {
         const fallback = await (supabase as any)
           .from("products")
@@ -281,6 +292,29 @@ function CheckoutPage() {
           .in("id", databaseProductIds);
         data = fallback.data;
         error = fallback.error;
+      } else {
+        const returnedIds = new Set(
+          (data ?? []).map((product: { id: string }) => product.id),
+        );
+        const missingProductIds = databaseProductIds.filter(
+          (productId) => !returnedIds.has(productId),
+        );
+
+        if (missingProductIds.length > 0) {
+          const fallback = await (supabase as any)
+            .from("products")
+            .select("id,stock")
+            .in("id", missingProductIds);
+
+          if (!fallback.error) {
+            data = [...(data ?? []), ...(fallback.data ?? [])];
+          } else {
+            console.warn(
+              "[checkout] Could not validate missing catalog products:",
+              fallback.error,
+            );
+          }
+        }
       }
 
       if (!active) return;
@@ -290,10 +324,12 @@ function CheckoutPage() {
         return;
       }
       const stockByProduct = Object.fromEntries(
-        (data ?? []).map((product: { id: string; stock: number }) => [
-          product.id,
-          Number(product.stock),
-        ]),
+        (data ?? []).flatMap(
+          (product: { id: string; stock: number | null }) => {
+            const stock = Number(product.stock);
+            return Number.isFinite(stock) ? [[product.id, stock]] : [];
+          },
+        ),
       );
       cart.lines
         .filter((line) => !isProductUuid(line.productId))
@@ -543,13 +579,15 @@ function CheckoutPage() {
             { id: "card" as const, label: "Card" },
             { id: "cod" as const, label: "Cash" },
           ].map((p) => (
-            <button
+            <m.button
               key={p.id}
               onClick={() => setPay(p.id)}
               className={`rounded-lg border py-2.5 font-medium transition-colors ${pay === p.id ? "border-primary bg-primary text-primary-foreground" : "hairline hover:border-primary/40"}`}
+              whileHover={{ scale: 1.015 }}
+              whileTap={{ scale: 0.975 }}
             >
               {p.label}
-            </button>
+            </m.button>
           ))}
         </div>
         <p className="mt-3 text-[11px] text-muted-foreground">
@@ -582,9 +620,27 @@ function CheckoutPage() {
         </button>
       </div>
 
-      {showDemoPayment && (
-        <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 px-5" role="dialog" aria-modal="true" aria-labelledby="demo-payment-title">
-          <div className="w-full max-w-md rounded-xl bg-card p-5 shadow-xl ring-1 ring-black/[0.08]">
+      <AnimatePresence>
+        {showDemoPayment && (
+        <m.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 z-50 grid place-items-center bg-black/40 px-5 backdrop-blur-sm"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="demo-payment-title"
+          onMouseDown={(event) => {
+            if (event.currentTarget === event.target && !isPlacing) setShowDemoPayment(false);
+          }}
+        >
+          <m.div
+            initial={{ opacity: 0, scale: 0.96, y: 12 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.97, y: 8 }}
+            transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+            className="w-full max-w-md rounded-xl bg-card p-5 shadow-xl ring-1 ring-black/[0.08]"
+          >
             <h2 id="demo-payment-title" className="font-display text-xl">Confirm demo payment</h2>
             <p className="mt-2 text-sm text-muted-foreground">
               This is a simulated {pay === "upi" ? "UPI" : pay === "card" ? "Card" : "Cash on delivery"} payment for ₹{total}. No money will be charged.
@@ -593,9 +649,10 @@ function CheckoutPage() {
               <button type="button" onClick={() => setShowDemoPayment(false)} className="rounded-lg border hairline px-4 py-2 text-sm">Cancel</button>
               <button type="button" onClick={() => void placeOrder()} disabled={isPlacing} className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-60">{isPlacing ? "Processing…" : "Confirm payment"}</button>
             </div>
-          </div>
-        </div>
-      )}
+          </m.div>
+        </m.div>
+        )}
+      </AnimatePresence>
     </AppShell>
   );
 }

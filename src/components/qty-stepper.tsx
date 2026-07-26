@@ -1,5 +1,6 @@
 import { Minus, Plus } from "lucide-react";
 import { useEffect, useState } from "react";
+import { AnimatePresence, m } from "motion/react";
 
 export function QtyStepper({
   qty,
@@ -23,13 +24,15 @@ export function QtyStepper({
 
   if (qty === 0) {
     return (
-      <button
+      <m.button
         type="button"
         onClick={onAdd}
         className="rounded-lg border border-primary/30 bg-transparent px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-primary hover:bg-primary hover:text-primary-foreground transition-colors"
+        whileHover={{ scale: 1.04 }}
+        whileTap={{ scale: 0.94 }}
       >
         Add
-      </button>
+      </m.button>
     );
   }
   return (
@@ -44,7 +47,19 @@ export function QtyStepper({
       >
         <Minus className="h-3.5 w-3.5" />
       </button>
-      <span className="w-6 text-center font-mono text-xs">{qty}</span>
+      <span className="relative grid h-7 w-6 place-items-center overflow-hidden text-center font-mono text-xs">
+        <AnimatePresence mode="popLayout" initial={false}>
+          <m.span
+            key={qty}
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.16 }}
+          >
+            {qty}
+          </m.span>
+        </AnimatePresence>
+      </span>
       <button
         type="button"
         aria-label="Increase"

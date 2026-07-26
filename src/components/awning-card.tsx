@@ -1,15 +1,23 @@
 import { Link } from "@tanstack/react-router";
 import { Star } from "lucide-react";
 import { categoryLabel, type Store } from "@/lib/mock-data";
+import { m } from "motion/react";
 
 export function AwningCard({ store }: { store: Store }) {
   return (
-    <Link
-      to="/store/$storeId"
-      params={{ storeId: store.id }}
-      className="group block overflow-hidden rounded-xl border border-black/[0.06] bg-card transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-md"
+    <m.div
+      initial={{ opacity: 0, y: 16 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, amount: 0.15 }}
+      whileHover={{ y: -4 }}
+      transition={{ duration: 0.38, ease: [0.22, 1, 0.36, 1] }}
     >
-      <div className="relative aspect-[16/10] w-full overflow-hidden bg-[var(--sand)]">
+      <Link
+        to="/store/$storeId"
+        params={{ storeId: store.id }}
+        className="group block overflow-hidden rounded-xl border border-black/[0.06] bg-card transition-all duration-300 hover:border-primary/30 hover:shadow-lg"
+      >
+        <div className="relative aspect-[16/10] w-full overflow-hidden bg-[var(--sand)]">
         <img
           src={store.imageUrl}
           alt={store.name}
@@ -28,9 +36,9 @@ export function AwningCard({ store }: { store: Store }) {
             </span>
           )}
         </span>
-      </div>
+        </div>
 
-      <div className="p-4">
+        <div className="p-4">
         <h3 className="truncate font-display text-lg font-bold leading-tight text-foreground">
           {store.name}
         </h3>
@@ -51,7 +59,8 @@ export function AwningCard({ store }: { store: Store }) {
           <span aria-hidden>·</span>
           <span className="font-mono">~{store.etaMin} min</span>
         </div>
-      </div>
-    </Link>
+        </div>
+      </Link>
+    </m.div>
   );
 }
