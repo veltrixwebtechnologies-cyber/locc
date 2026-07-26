@@ -4,6 +4,7 @@ import { useAuth } from "@/lib/auth-store";
 
 export type MerchandisingProduct = {
   id: string;
+  seller_id: string;
   name: string;
   brand: string | null;
   brand_id: string | null;
@@ -23,7 +24,7 @@ export type MerchandisingProduct = {
   shop_name: string;
 };
 
-const productSelect = "id,name,brand,brand_id,brand_name,category,selling_price,mrp,discount_price,discount_starts_at,discount_ends_at,clearance,stock,image_url,average_rating,review_count,shop_name,created_at";
+const productSelect = "id,seller_id,name,brand,brand_id,brand_name,category,selling_price,mrp,discount_price,discount_starts_at,discount_ends_at,clearance,stock,image_url,average_rating,review_count,shop_name,created_at";
 
 export function useNewArrivals() {
   return useQuery({

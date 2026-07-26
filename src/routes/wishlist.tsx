@@ -34,6 +34,12 @@ function WishlistPage() {
         </EmptyState>
       ) : wishlist.isLoading || products.isLoading ? (
         <div className="py-16 text-center"><Loader2 className="mx-auto h-5 w-5 animate-spin text-primary" /></div>
+      ) : wishlist.error || products.error ? (
+        <EmptyState title="Wishlist could not be loaded">
+          <button type="button" onClick={() => { void wishlist.refetch(); void products.refetch(); }} className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground">
+            Try again
+          </button>
+        </EmptyState>
       ) : !products.data?.length ? (
         <EmptyState title="Your wishlist is empty">
           <Link to="/" search={{ category: undefined, q: undefined }} className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground">
@@ -84,7 +90,7 @@ function WishlistRow({ product }: { product: MerchandisingProduct }) {
           title="Move to cart"
           aria-label={`Move ${product.name} to cart`}
           onClick={async () => {
-            cartStore.add(APPROVED_STORE.id, product.shop_name || APPROVED_STORE.name, {
+            cartStore.add(product.seller_id || APPROVED_STORE.id, product.shop_name || APPROVED_STORE.name, {
               id: product.id,
               name: product.name,
               unit: product.category ?? "",

@@ -85,13 +85,15 @@ export const ordersStore = {
     const paymentParams = {
       ...baseParams,
       p_payment_method: order.paymentMethod === "UPI" ? "upi" : order.paymentMethod === "Card" ? "card" : "cod",
+      p_is_demo: true,
     };
 
     let result = await (supabase as any).rpc("place_order", paymentParams);
     const missingPaymentAwareRpc =
       result.error?.code === "PGRST202" ||
       result.error?.message?.includes("schema cache") ||
-      result.error?.message?.includes("p_payment_method");
+      result.error?.message?.includes("p_payment_method") ||
+      result.error?.message?.includes("p_is_demo");
 
     if (missingPaymentAwareRpc) {
       result = await (supabase as any).rpc("place_order", baseParams);

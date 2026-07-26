@@ -48,13 +48,13 @@ function StorePage() {
     queryFn: async () => {
       let { data, error } = await (supabase as any)
         .from("approved_product_catalog")
-        .select("id,name,category,selling_price,image_url,stock")
+        .select("id,seller_id,name,category,selling_price,image_url,stock")
         .order("created_at", { ascending: false });
       // Keep existing deployments working until the catalog view migration is applied.
       if (error) {
         const fallback = await (supabase as any)
           .from("products")
-          .select("id,name,category,selling_price,image_url,stock")
+          .select("id,seller_id,name,category,selling_price,image_url,stock")
           .in("status", ["active", "approved"])
           .order("created_at", { ascending: false });
         data = fallback.data;
@@ -70,7 +70,7 @@ function StorePage() {
             .createSignedUrl(rawImage, 60 * 60);
           imageUrl = signed?.signedUrl ?? "";
         }
-        return { id: p.id, storeId: APPROVED_STORE.id, name: p.name, unit: p.category ?? "", price: Number(p.selling_price), imageUrl, category: p.category ?? "Other" };
+        return { id: p.id, storeId: p.seller_id ?? APPROVED_STORE.id, name: p.name, unit: p.category ?? "", price: Number(p.selling_price), imageUrl, category: p.category ?? "Other" };
       }));
     },
   });
@@ -197,7 +197,7 @@ function StorePage() {
                         )}
                         <QtyStepper
                           qty={q}
-                          onAdd={() => { void recordProductEvent(p.id, "add_to_cart"); cartStore.add(store.id, store.name, p); }}
+                          onAdd={() => { void recordProductEvent(p.id, "add_to_cart"); cartStore.add(p.storeId, store.name, p); }}
                           onChange={(n) => cartStore.setQty(p.id, n)}
                         />
                       </li>
