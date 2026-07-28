@@ -32,6 +32,8 @@ export interface Order {
   address: string;
   destination: { lat: number; lng: number };
   paymentMethod: string;
+  couponCode?: string;
+  discountAmount?: number;
   createdAt: number;
   status: OrderStatus;
   partner?: { name: string; rating: number };
@@ -60,6 +62,8 @@ function fromRow(row: any): Order {
     address: row.buyer_address ?? "",
     destination: { lat: 9.9816, lng: 76.2999 },
     paymentMethod: row.payment_method === "upi" ? "UPI" : row.payment_method === "card" ? "Card" : "Cash on delivery",
+    couponCode: row.coupon_code ?? undefined,
+    discountAmount: Number(row.discount_amount ?? 0),
     createdAt: new Date(row.placed_at ?? row.created_at).getTime(),
     status: normalizedStatus,
     etaMin: 30,
@@ -156,6 +160,7 @@ export const ordersStore = {
       ...baseParams,
       p_payment_method: order.paymentMethod === "UPI" ? "upi" : order.paymentMethod === "Card" ? "card" : "cod",
       p_is_demo: true,
+      p_coupon_code: order.couponCode ?? null,
     };
 
     const { data: created, error } = await (supabase as any).rpc("place_order", rpcPayload);
@@ -181,6 +186,8 @@ export const ordersStore = {
       subtotal: Number(created.subtotal),
       deliveryFee: Number(created.shipping_fee),
       total: Number(created.total),
+      couponCode: created.coupon_code ?? undefined,
+      discountAmount: Number(created.discount_amount ?? 0),
     };
   },
 };

@@ -9,13 +9,23 @@ import { supabase } from "@/integrations/supabase/client";
 import { addressesStore, useAddresses } from "@/lib/addresses-store";
 import { DeliveryMap } from "@/components/delivery-map";
 import { reverseGeocode } from "@/lib/geocoding.functions";
-import { Crosshair, Plus, Check } from "lucide-react";
+import { Crosshair, Plus, Check, TicketPercent, X } from "lucide-react";
 import { toast } from "sonner";
 import { AnimatePresence, m } from "motion/react";
 
 const CURRENT_LOCATION_ID = "__current_location";
 const isProductUuid = (value: string) =>
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+
+type CouponQuote = {
+  coupon_id: string;
+  code: string;
+  discount_type: "percent" | "flat" | "free_shipping";
+  discount_amount: number;
+  subtotal: number;
+  shipping_fee: number;
+  total: number;
+};
 
 export const Route = createFileRoute("/checkout")({
   beforeLoad: async () => {
@@ -61,6 +71,9 @@ function CheckoutPage() {
   const [isPlacing, setIsPlacing] = useState(false);
   const [isCheckingStock, setIsCheckingStock] = useState(true);
   const [showDemoPayment, setShowDemoPayment] = useState(false);
+  const [couponCode, setCouponCode] = useState("");
+  const [couponQuote, setCouponQuote] = useState<CouponQuote | null>(null);
+  const [isApplyingCoupon, setIsApplyingCoupon] = useState(false);
   const watchIdRef = useRef<number | null>(null);
 
   useEffect(() => {
@@ -268,6 +281,15 @@ function CheckoutPage() {
   }, []);
 
   const cartProductIds = cart.lines.map((line) => line.productId).sort().join(",");
+  const cartSignature = cart.lines
+    .map((line) => `${line.productId}:${line.qty}`)
+    .sort()
+    .join(",");
+
+  useEffect(() => {
+    setCouponQuote(null);
+  }, [cartSignature]);
+
   useEffect(() => {
     let active = true;
     if (!cartProductIds) {
@@ -359,6 +381,9 @@ function CheckoutPage() {
   const deliveryFee =
     totals.subtotal > 0 ? (store ? Math.round(20 + store.distanceKm * 6) : 25) : 0;
   const total = totals.subtotal + deliveryFee;
+  const displayDeliveryFee = couponQuote?.shipping_fee ?? deliveryFee;
+  const discountAmount = couponQuote?.discount_amount ?? 0;
+  const displayTotal = couponQuote?.total ?? total;
 
   if (!store || cart.lines.length === 0) {
     return (
@@ -386,6 +411,48 @@ function CheckoutPage() {
       : "";
   const canPlace = !!selectedAddressLine;
 
+  const applyCoupon = async () => {
+    const code = couponCode.trim().toUpperCase();
+    if (!code) {
+      toast.error("Enter a coupon code.");
+      return;
+    }
+    if (cart.lines.some((line) => !isProductUuid(line.productId))) {
+      toast.error("Coupons are available for approved marketplace products.");
+      return;
+    }
+
+    setIsApplyingCoupon(true);
+    const { data, error } = await (supabase as any).rpc("quote_coupon", {
+      p_code: code,
+      p_items: cart.lines.map((line) => ({ product_id: line.productId, qty: line.qty })),
+    });
+    setIsApplyingCoupon(false);
+
+    if (error) {
+      console.error("[checkout] quote_coupon failed", {
+        code: error.code,
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+      });
+      setCouponQuote(null);
+      toast.error(error.message || "This coupon could not be applied.");
+      return;
+    }
+
+    const quote = data as CouponQuote;
+    setCouponCode(quote.code);
+    setCouponQuote({
+      ...quote,
+      discount_amount: Number(quote.discount_amount),
+      subtotal: Number(quote.subtotal),
+      shipping_fee: Number(quote.shipping_fee),
+      total: Number(quote.total),
+    });
+    toast.success(`Coupon ${quote.code} applied.`);
+  };
+
   const openPaymentConfirmation = () => {
     if (!selectedAddressLine || isPlacing || isCheckingStock) return;
     setShowDemoPayment(true);
@@ -400,11 +467,13 @@ function CheckoutPage() {
         storeName: store.name,
         lines: cart.lines,
         subtotal: totals.subtotal,
-        deliveryFee,
-        total,
+        deliveryFee: displayDeliveryFee,
+        total: displayTotal,
         address: selectedAddressLine,
         destination: pinCoords,
         paymentMethod: pay === "upi" ? "UPI" : pay === "card" ? "Card" : "Cash on delivery",
+        couponCode: couponQuote?.code,
+        discountAmount,
         etaMin: store.etaMin,
         distanceKm: store.distanceKm,
       });
@@ -595,6 +664,54 @@ function CheckoutPage() {
         </p>
       </section>
 
+      {/* Coupon */}
+      <section className="mx-5 mt-4 rounded-xl bg-card p-4 ring-1 ring-black/[0.04]">
+        <div className="flex items-center gap-2">
+          <TicketPercent className="h-4 w-4 text-primary" />
+          <h2 className="font-display text-base">Apply coupon</h2>
+        </div>
+        {couponQuote ? (
+          <div className="mt-3 flex items-center justify-between rounded-lg border border-primary/30 bg-primary/5 px-3 py-2.5">
+            <div>
+              <p className="text-sm font-semibold">{couponQuote.code}</p>
+              <p className="text-xs text-primary">You save ₹{discountAmount}</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setCouponQuote(null);
+                setCouponCode("");
+              }}
+              className="rounded-md p-1.5 text-muted-foreground hover:bg-background hover:text-foreground"
+              aria-label="Remove coupon"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        ) : (
+          <div className="mt-3 flex gap-2">
+            <input
+              value={couponCode}
+              onChange={(event) => setCouponCode(event.target.value.toUpperCase())}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") void applyCoupon();
+              }}
+              placeholder="Enter coupon code"
+              className="min-w-0 flex-1 rounded-lg border border-input bg-background px-3 py-2.5 text-sm uppercase"
+              aria-label="Coupon code"
+            />
+            <button
+              type="button"
+              onClick={() => void applyCoupon()}
+              disabled={isApplyingCoupon || !couponCode.trim()}
+              className="rounded-lg border border-primary px-4 py-2.5 text-sm font-semibold text-primary disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {isApplyingCoupon ? "Applying…" : "Apply"}
+            </button>
+          </div>
+        )}
+      </section>
+
       {/* Summary */}
       <section className="mx-5 mt-4 rounded-xl bg-card p-4 ring-1 ring-black/[0.04] font-mono text-sm">
         <div className="mb-2 flex items-center justify-between text-xs text-muted-foreground">
@@ -604,9 +721,15 @@ function CheckoutPage() {
           </span>
         </div>
         <Row label={`Items (${totals.itemCount})`} value={`₹${totals.subtotal}`} />
-        <Row label="Delivery fee" value={`₹${deliveryFee}`} />
+        <Row
+          label="Delivery fee"
+          value={displayDeliveryFee === 0 ? "FREE" : `₹${displayDeliveryFee}`}
+        />
+        {couponQuote && discountAmount > 0 && couponQuote.discount_type !== "free_shipping" && (
+          <Row label={`Coupon (${couponQuote.code})`} value={`−₹${discountAmount}`} />
+        )}
         <div className="my-2 h-px bg-[color-mix(in_oklab,var(--teal)_20%,transparent)]" />
-        <Row label="Total" value={`₹${total}`} bold />
+        <Row label="Total" value={`₹${displayTotal}`} bold />
       </section>
 
       <div className="sticky bottom-16 z-30 mt-5 px-5">
@@ -616,7 +739,7 @@ function CheckoutPage() {
           disabled={!canPlace || isPlacing || isCheckingStock}
           className="w-full rounded-xl bg-[var(--marigold)] py-3.5 font-display text-lg text-ink shadow-lg hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:brightness-100"
         >
-          {isCheckingStock ? "Checking availability…" : isPlacing ? "Placing order…" : canPlace ? `Place order · ₹${total}` : "Add a delivery address"}
+          {isCheckingStock ? "Checking availability…" : isPlacing ? "Placing order…" : canPlace ? `Place order · ₹${displayTotal}` : "Add a delivery address"}
         </button>
       </div>
 
@@ -643,7 +766,7 @@ function CheckoutPage() {
           >
             <h2 id="demo-payment-title" className="font-display text-xl">Confirm demo payment</h2>
             <p className="mt-2 text-sm text-muted-foreground">
-              This is a simulated {pay === "upi" ? "UPI" : pay === "card" ? "Card" : "Cash on delivery"} payment for ₹{total}. No money will be charged.
+              This is a simulated {pay === "upi" ? "UPI" : pay === "card" ? "Card" : "Cash on delivery"} payment for ₹{displayTotal}. No money will be charged.
             </p>
             <div className="mt-4 flex justify-end gap-2">
               <button type="button" onClick={() => setShowDemoPayment(false)} className="rounded-lg border hairline px-4 py-2 text-sm">Cancel</button>

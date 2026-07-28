@@ -1,5 +1,5 @@
-import { Link, useRouterState } from "@tanstack/react-router";
-import { Home, ClipboardList, User, ShoppingBag, LogIn, Heart } from "lucide-react";
+import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
+import { Home, ClipboardList, User, ShoppingBag, LogIn, Heart, MapPin, Search } from "lucide-react";
 import { useCart, cartTotals } from "@/lib/cart-store";
 import { useAuth } from "@/lib/auth-store";
 import { HeaderCategoryMenu, MobileCategoryStrip } from "@/components/category-mega-menu";
@@ -9,10 +9,12 @@ import { AnimatePresence, m } from "motion/react";
 
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const navigate = useNavigate();
   const cart = useCart();
   const auth = useAuth();
   const wishlistProducts = useWishlistProducts();
   const [scrolled, setScrolled] = useState(false);
+  const [headerQuery, setHeaderQuery] = useState("");
   const { itemCount } = cartTotals(cart.lines);
   const isSignedIn = !!(auth.phone || auth.email);
 
@@ -59,11 +61,11 @@ export function AppShell({ children }: { children: ReactNode }) {
           scrolled ? "shadow-[0_8px_28px_-22px_rgba(42,27,74,0.55)]" : "shadow-none"
         }`}
       >
-        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
+        <div className="mx-auto flex h-[72px] max-w-7xl items-center gap-5 px-6">
           <Link
             to="/"
             search={{ category: undefined, q: undefined }}
-            className="flex items-center gap-2"
+            className="flex shrink-0 items-center gap-2"
           >
             <m.span
               whileHover={{ scale: 1.07, rotate: -2 }}
@@ -74,7 +76,47 @@ export function AppShell({ children }: { children: ReactNode }) {
             </m.span>
             <span className="font-display text-lg font-bold text-foreground">Local Shore</span>
           </Link>
-          <nav className="flex items-center gap-1">
+          <button
+            type="button"
+            onClick={() =>
+              navigate({
+                to: "/",
+                search: { category: undefined, q: undefined },
+              })
+            }
+            className="hidden min-w-0 shrink-0 items-center gap-2 border-l hairline pl-4 text-left 2xl:flex"
+          >
+            <MapPin className="h-4 w-4 shrink-0 text-primary" />
+            <span>
+              <span className="block text-xs font-bold text-foreground">Delivery in 20-40 min</span>
+              <span className="block max-w-36 truncate text-[11px] text-muted-foreground">
+                Select delivery location
+              </span>
+            </span>
+          </button>
+          <form
+            className="flex min-w-[240px] flex-1 items-center gap-2 rounded-lg border hairline bg-muted/70 px-3 py-2.5 transition-colors focus-within:border-primary/40 focus-within:bg-background"
+            onSubmit={(event) => {
+              event.preventDefault();
+              void navigate({
+                to: "/",
+                search: {
+                  category: undefined,
+                  q: headerQuery.trim() || undefined,
+                },
+              });
+            }}
+          >
+            <Search className="h-4 w-4 shrink-0 text-muted-foreground" />
+            <input
+              value={headerQuery}
+              onChange={(event) => setHeaderQuery(event.target.value)}
+              placeholder="Search for products, brands and shops"
+              aria-label="Search products, brands and shops"
+              className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+            />
+          </form>
+          <nav className="flex shrink-0 items-center gap-1">
             {tabs.map((t) => {
               const active = t.match(pathname);
               const Icon = t.icon;
@@ -145,7 +187,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         <MobileCategoryStrip />
       </div>
 
-      <main className="mx-auto w-full max-w-6xl">{children}</main>
+      <main className="mx-auto w-full max-w-7xl">{children}</main>
 
       {/* Mobile bottom tab bar */}
       <nav className="fixed inset-x-0 bottom-0 z-40 border-t hairline bg-background/95 backdrop-blur md:hidden">

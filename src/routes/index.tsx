@@ -9,7 +9,9 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { reverseGeocode } from "@/lib/geocoding.functions";
 import { MerchandisingSections } from "@/components/merchandising-sections";
-import { m, useScroll, useTransform } from "motion/react";
+import { PromoCarousel } from "@/components/promo-carousel";
+import type { MerchandisingProduct } from "@/lib/merchandising";
+import { m } from "motion/react";
 import { Reveal } from "@/components/motion/presets";
 
 export const Route = createFileRoute("/")({
@@ -30,14 +32,14 @@ function Home() {
   const [locError, setLocError] = useState("");
   const [query, setQuery] = useState(search.q ?? "");
   const [cat, setCat] = useState<string>(search.category ?? "all");
-  const { scrollY } = useScroll();
-  const heroY = useTransform(scrollY, [0, 420], [0, 24]);
   const approvedProducts = useQuery({
     queryKey: ["approved-product-catalog"],
     queryFn: async () => {
       let { data, error } = await (supabase as any)
         .from("approved_product_catalog")
-        .select("id,seller_id,name,category,selling_price,image_url,stock,shop_name,business_type,city,state,address_line1")
+        .select(
+          "id,seller_id,name,category,selling_price,image_url,stock,shop_name,business_type,city,state,address_line1",
+        )
         .order("created_at", { ascending: false });
       // Keep existing deployments working until the catalog view migration is applied.
       if (error) {
@@ -116,6 +118,12 @@ function Home() {
 
   const filtered = useMemo(() => {
     const liveProducts = approvedProducts.data ?? [];
+    const normalizedQuery = query.trim().toLowerCase();
+    const liveProductMatch = liveProducts.some(
+      (product: any) =>
+        product.name?.toLowerCase().includes(normalizedQuery) ||
+        product.category?.toLowerCase().includes(normalizedQuery),
+    );
     const productVendor = liveProducts[0];
     const vendor = approvedVendors.data?.[0] ?? productVendor;
     const vendorStore = vendor
@@ -123,17 +131,52 @@ function Home() {
           ...APPROVED_STORE,
           name: vendor.shop_name || APPROVED_STORE.name,
           tagline: vendor.business_type || "Approved local vendor",
-          address: [vendor.address_line1, vendor.city, vendor.state].filter(Boolean).join(", ") || APPROVED_STORE.address,
+          address:
+            [vendor.address_line1, vendor.city, vendor.state].filter(Boolean).join(", ") ||
+            APPROVED_STORE.address,
         }
       : APPROVED_STORE;
     const allStores = liveProducts.length > 0 ? [vendorStore, ...stores] : stores;
     return allStores.filter((s) => {
       if (cat !== "all" && !activeFilter) return false;
       if (activeFilter && s.category !== activeFilter) return false;
-      if (query && !s.name.toLowerCase().includes(query.toLowerCase())) return false;
+      if (
+        normalizedQuery &&
+        !s.name.toLowerCase().includes(normalizedQuery) &&
+        !s.tagline.toLowerCase().includes(normalizedQuery) &&
+        !(s.id === APPROVED_STORE.id && liveProductMatch)
+      ) {
+        return false;
+      }
       return true;
     });
   }, [cat, activeFilter, query, approvedProducts.data, approvedVendors.data]);
+
+  const homepageProducts = useMemo<MerchandisingProduct[]>(
+    () =>
+      (approvedProducts.data ?? []).map((product: any) => ({
+        id: product.id,
+        seller_id: product.seller_id,
+        name: product.name,
+        brand: null,
+        brand_id: null,
+        brand_name: null,
+        category: product.category ?? null,
+        selling_price: Number(product.selling_price ?? 0),
+        mrp: Number(product.selling_price ?? 0),
+        discount_price: null,
+        discount_starts_at: null,
+        discount_ends_at: null,
+        clearance: false,
+        stock: Number(product.stock ?? 0),
+        image_url: product.image_url ?? null,
+        created_at: "",
+        average_rating: 0,
+        review_count: 0,
+        shop_name: product.shop_name || "Approved local seller",
+      })),
+    [approvedProducts.data],
+  );
 
   return (
     <AppShell>
@@ -199,51 +242,25 @@ function Home() {
         </div>
       </div>
 
-      {/* Hero */}
-      <m.section style={{ y: heroY }} className="px-5 pt-2 pb-4 md:px-8 md:pt-4 md:pb-8">
-        <h1 className="font-display text-[28px] font-extrabold leading-[1.1] text-foreground md:text-6xl md:leading-[1.05]">
-          {"Pick your own local shop,".split(" ").map((word, index) => (
-            <m.span
-              key={word}
-              initial={{ opacity: 0, y: 16 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.045, duration: 0.36 }}
-              className="mr-[0.25em] inline-block"
-            >
-              {word}
-            </m.span>
-          ))}
-          <br className="hidden md:block" />
-          <m.span
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3, duration: 0.4 }}
-            className="inline-block text-primary"
-          >
-            we just deliver.
-          </m.span>
-        </h1>
-        <p className="mt-3 max-w-2xl text-sm text-muted-foreground md:text-base">
-          No dark stores. Real neighborhood shops — a partner picks it up and brings it to your
-          door.
-        </p>
-      </m.section>
+      <PromoCarousel />
 
-      {/* Search */}
-      <div className="px-5 md:px-8">
+      {/* Mobile search. Desktop search remains in the commerce header. */}
+      <div className="px-5 pb-2 md:hidden">
         <label className="flex items-center gap-2 rounded-xl bg-card px-3 py-2.5 ring-1 ring-black/[0.04] md:px-4 md:py-3.5">
           <Search className="h-4 w-4 text-muted-foreground md:h-5 md:w-5" />
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search shops near you"
+            placeholder="Search products, categories or shops"
             className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground md:text-base"
           />
         </label>
       </div>
 
+      <MerchandisingSections fallbackProducts={homepageProducts} />
+
       {/* Category tiles */}
-      <div className="mt-5 md:mt-8">
+      <div className="mt-3 md:mt-6">
         <div className="mb-2 flex items-center justify-between px-5 md:px-8">
           <h2 className="font-display text-base font-bold text-foreground md:text-lg">
             Shop by category
@@ -279,8 +296,6 @@ function Home() {
           filtered.map((s) => <AwningCard key={s.id} store={s} />)
         )}
       </div>
-
-      <MerchandisingSections />
 
       <p className="px-5 pb-6 text-center font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
         · Local Shore · Coastal India ·
