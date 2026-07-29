@@ -14,6 +14,14 @@ import type { MerchandisingProduct } from "@/lib/merchandising";
 import { m } from "motion/react";
 import { Reveal } from "@/components/motion/presets";
 
+const toStoreCategory = (value?: string | null): StoreCategory => {
+  const category = (value ?? "").toLowerCase();
+  if (category.includes("pharma") || category.includes("wellness")) return "pharmacy";
+  if (category.includes("station") || category.includes("book")) return "stationery";
+  if (category.includes("bake") || category.includes("food")) return "bakery";
+  return "grocery";
+};
+
 export const Route = createFileRoute("/")({
   validateSearch: (s: Record<string, unknown>) => ({
     category: typeof s.category === "string" ? s.category : undefined,
@@ -60,9 +68,28 @@ function Home() {
     queryFn: async () => {
       const { data, error } = await (supabase as any)
         .from("approved_vendor_catalog")
-        .select("id,shop_name,business_type,city,state,address_line1,category");
+        .select("id,shop_name,business_type,city,state,address_line1,category,shop_logo_path,shop_banner_path");
       if (error) throw error;
-      return data ?? [];
+      const rows = data ?? [];
+      const paths = Array.from(new Set(
+        rows.flatMap((vendor: any) => [vendor.shop_banner_path, vendor.shop_logo_path]).filter(Boolean),
+      )) as string[];
+      const signedByPath = new Map<string, string>();
+      if (paths.length > 0) {
+        const { data: signed } = await supabase.storage
+          .from("seller-docs")
+          .createSignedUrls(paths, 60 * 60);
+        for (const item of signed ?? []) {
+          if (item.path && item.signedUrl) signedByPath.set(item.path, item.signedUrl);
+        }
+      }
+      return rows.map((vendor: any) => ({
+        ...vendor,
+        storefront_image_url:
+          signedByPath.get(vendor.shop_banner_path) ??
+          signedByPath.get(vendor.shop_logo_path) ??
+          null,
+      }));
     },
   });
 
@@ -119,24 +146,22 @@ function Home() {
   const filtered = useMemo(() => {
     const liveProducts = approvedProducts.data ?? [];
     const normalizedQuery = query.trim().toLowerCase();
-    const liveProductMatch = liveProducts.some(
-      (product: any) =>
-        product.name?.toLowerCase().includes(normalizedQuery) ||
-        product.category?.toLowerCase().includes(normalizedQuery),
-    );
-    const productVendor = liveProducts[0];
-    const vendor = approvedVendors.data?.[0] ?? productVendor;
-    const vendorStore = vendor
-      ? {
+    const liveSellerIds = new Set(liveProducts.map((product: any) => product.seller_id));
+    const liveVendorStores = (approvedVendors.data ?? [])
+      .filter((vendor: any) => liveSellerIds.has(vendor.id))
+      .map((vendor: any, index: number) => ({
           ...APPROVED_STORE,
+          id: vendor.id,
           name: vendor.shop_name || APPROVED_STORE.name,
           tagline: vendor.business_type || "Approved local vendor",
+          category: toStoreCategory(vendor.category),
           address:
             [vendor.address_line1, vendor.city, vendor.state].filter(Boolean).join(", ") ||
             APPROVED_STORE.address,
-        }
-      : APPROVED_STORE;
-    const allStores = liveProducts.length > 0 ? [vendorStore, ...stores] : stores;
+          imageUrl: vendor.storefront_image_url || APPROVED_STORE.imageUrl,
+          distanceKm: 2 + index * 0.2,
+        }));
+    const allStores = liveVendorStores.length > 0 ? [...liveVendorStores, ...stores] : stores;
     return allStores.filter((s) => {
       if (cat !== "all" && !activeFilter) return false;
       if (activeFilter && s.category !== activeFilter) return false;
@@ -144,7 +169,12 @@ function Home() {
         normalizedQuery &&
         !s.name.toLowerCase().includes(normalizedQuery) &&
         !s.tagline.toLowerCase().includes(normalizedQuery) &&
-        !(s.id === APPROVED_STORE.id && liveProductMatch)
+        !liveProducts.some(
+          (product: any) =>
+            product.seller_id === s.id &&
+            (product.name?.toLowerCase().includes(normalizedQuery) ||
+              product.category?.toLowerCase().includes(normalizedQuery)),
+        )
       ) {
         return false;
       }

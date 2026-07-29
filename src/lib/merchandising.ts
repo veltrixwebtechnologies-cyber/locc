@@ -61,9 +61,9 @@ export function useDeals() {
         .select(productSelect).not("discount_price", "is", null)
         .or(`discount_starts_at.is.null,discount_starts_at.lte.${now}`)
         .or(`discount_ends_at.is.null,discount_ends_at.gt.${now}`)
-        .order("discount_price", { ascending: true }).limit(12);
+        .limit(50);
       if (error) throw error;
-      return (data ?? []) as MerchandisingProduct[];
+      return (data ?? []).sort((a: MerchandisingProduct, b: MerchandisingProduct) => discountPercent(b) - discountPercent(a)).slice(0, 12) as MerchandisingProduct[];
     },
   });
 }
@@ -73,9 +73,9 @@ export function useClearance() {
     queryKey: ["merchandising", "clearance"],
     queryFn: async () => {
       const { data, error } = await (supabase as any).from("public_merchandising_products")
-        .select(productSelect).eq("clearance", true).order("discount_price", { ascending: true }).limit(12);
+        .select(productSelect).eq("clearance", true).limit(50);
       if (error) throw error;
-      return (data ?? []) as MerchandisingProduct[];
+      return (data ?? []).sort((a: MerchandisingProduct, b: MerchandisingProduct) => discountPercent(b) - discountPercent(a)).slice(0, 12) as MerchandisingProduct[];
     },
   });
 }
@@ -170,6 +170,60 @@ export function useRecommendedProducts() {
     data: recent.data?.length ? recent.data : best.data,
     isLoading: recent.isLoading || (!recent.data?.length && best.isLoading),
   };
+}
+
+function discountPercent(product: Pick<MerchandisingProduct, "mrp" | "discount_price">) {
+  if (!product.discount_price || !product.mrp || product.discount_price >= product.mrp) return 0;
+  return ((product.mrp - product.discount_price) / product.mrp) * 100;
+}
+
+export function useActiveFlashSales() {
+  return useQuery({
+    queryKey: ["merchandising", "flash-sales"],
+    queryFn: async () => {
+      const now = new Date().toISOString();
+      const { data, error } = await (supabase as any)
+        .from("flash_sales")
+        .select("id,title,discount_type,discount_value,starts_at,ends_at,is_active,flash_sale_products(product_id)")
+        .eq("is_active", true)
+        .lte("starts_at", now)
+        .gt("ends_at", now)
+        .order("ends_at", { ascending: true });
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+}
+
+export function useFlashSaleProducts(productIds: string[]) {
+  return useQuery({
+    queryKey: ["merchandising", "flash-sale-products", productIds.join(",")],
+    enabled: productIds.length > 0,
+    queryFn: async () => {
+      const { data, error } = await (supabase as any).from("public_merchandising_products").select(productSelect).in("id", productIds);
+      if (error) throw error;
+      const byId = new Map((data ?? []).map((row: MerchandisingProduct) => [row.id, row]));
+      return productIds.map(id => byId.get(id)).filter(Boolean) as MerchandisingProduct[];
+    },
+  });
+}
+
+export function useCollectionProducts(collectionId: string | undefined, kind: "gift" | "seasonal") {
+  return useQuery({
+    queryKey: ["merchandising", kind, "products", collectionId],
+    enabled: Boolean(collectionId),
+    queryFn: async () => {
+      const table = kind === "gift" ? "gift_collection_products" : "seasonal_collection_products";
+      const key = kind === "gift" ? "gift_collection_id" : "seasonal_collection_id";
+      const { data, error } = await (supabase as any).from(table).select("product_id").eq(key, collectionId);
+      if (error) throw error;
+      const ids = (data ?? []).map((row: { product_id: string }) => row.product_id);
+      if (!ids.length) return [] as MerchandisingProduct[];
+      const products = await (supabase as any).from("public_merchandising_products").select(productSelect).in("id", ids);
+      if (products.error) throw products.error;
+      return (products.data ?? []) as MerchandisingProduct[];
+    },
+  });
 }
 
 export function useWishlist() {
@@ -328,4 +382,9 @@ export function useToggleWishlist() {
 
 export async function recordProductEvent(productId: string, eventType: "view" | "add_to_cart") {
   await (supabase as any).from("product_views").insert({ product_id: productId, event_type: eventType });
+}
+
+export async function recordRecentProductView(productId: string) {
+  const { error } = await (supabase as any).rpc("record_recent_product_view", { p_product_id: productId });
+  if (error) console.warn("Unable to record recent product view", error);
 }

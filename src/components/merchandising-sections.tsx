@@ -9,8 +9,12 @@ import {
   useFeaturedBrands,
   useNewArrivals,
   useRecommendedProducts,
+  useRecentlyViewed,
   useTrending,
+  useActiveFlashSales,
+  useFlashSaleProducts,
   recordProductEvent,
+  recordRecentProductView,
   type MerchandisingProduct,
 } from "@/lib/merchandising";
 import { supabase } from "@/integrations/supabase/client";
@@ -23,7 +27,7 @@ import { flyProductToCart } from "@/lib/fly-to-cart";
 
 type ProductSectionProps = { title: string; products: MerchandisingProduct[] | undefined };
 
-function ProductCard({ product }: { product: MerchandisingProduct }) {
+export function ProductCard({ product }: { product: MerchandisingProduct }) {
   const [imageUrl, setImageUrl] = useState(product.image_url ?? "");
   const cart = useCart();
   const quantity = cart.lines.find((line) => line.productId === product.id)?.qty ?? 0;
@@ -56,7 +60,15 @@ function ProductCard({ product }: { product: MerchandisingProduct }) {
       data-product-id={product.id}
       className="group relative min-w-[164px] max-w-[164px] overflow-hidden rounded-lg bg-card ring-1 ring-black/[0.06] transition-shadow duration-300 hover:shadow-lg md:min-w-[184px] md:max-w-[184px]"
     >
-      <Link to="/store/$storeId" params={{ storeId: "approved-catalog" }} className="block">
+      <Link
+        to="/product/$productId"
+        params={{ productId: product.id }}
+        className="block"
+        onClick={() => {
+          void recordProductEvent(product.id, "view");
+          void recordRecentProductView(product.id);
+        }}
+      >
         <div className="relative aspect-square bg-[var(--sand)]">
           {imageUrl ? (
             <img
@@ -99,7 +111,11 @@ function ProductCard({ product }: { product: MerchandisingProduct }) {
         </div>
       </Link>
       <div className="absolute right-2 top-2">
-        <WishlistButton productId={product.id} productName={product.name} />
+        <WishlistButton
+          productId={product.id}
+          productName={product.name}
+          item={{ productId: product.id, name: product.name, shopName: product.shop_name, category: product.category ?? "Other", price: Number(product.discount_price ?? product.selling_price), imageUrl: product.image_url ?? undefined, sellerId: product.seller_id }}
+        />
       </div>
       <div className="flex items-center justify-between gap-2 px-3 pb-3 pt-2">
         <p className="min-w-0 truncate text-[10px] text-muted-foreground">{product.shop_name}</p>
@@ -154,8 +170,12 @@ export function MerchandisingSections({
   const clearance = useClearance();
   const trending = useTrending();
   const recommendations = useRecommendedProducts();
+  const recentlyViewed = useRecentlyViewed();
   const collections = useActiveCollections();
   const brands = useFeaturedBrands();
+  const flashSales = useActiveFlashSales();
+  const flashProductIds = (flashSales.data ?? []).flatMap((sale: any) => (sale.flash_sale_products ?? []).map((item: any) => item.product_id));
+  const flashProducts = useFlashSaleProducts(flashProductIds);
   const [period, setPeriod] = useState<"today" | "this_week" | "this_month" | "all_time">(
     "all_time",
   );
@@ -189,6 +209,8 @@ export function MerchandisingSections({
       <ProductSection title="Trending" products={trending.data} />
       <ProductSection title="Deals & Discounts" products={deals.data} />
       <ProductSection title="Clearance Sale" products={clearance.data} />
+      <ProductSection title="Flash Sales" products={flashProducts.data} />
+      <ProductSection title="Recently viewed" products={recentlyViewed.data} />
       <ProductSection title="Recommended for you" products={recommendations.data} />
       {brands.data?.length || collections.data?.gift.length || collections.data?.seasonal.length ? (
         <section className="mt-8 px-5 pb-6 md:px-8">
@@ -196,22 +218,25 @@ export function MerchandisingSections({
           <div className="mt-3 grid grid-cols-2 gap-3 md:grid-cols-4">
             {[...(collections.data?.gift ?? []), ...(collections.data?.seasonal ?? [])].map(
               (collection: any) => (
-                <div
+                <Link
                   key={collection.id}
+                  to="/collection/$collectionId"
+                  params={{ collectionId: collection.id }}
+                  search={{ kind: (collections.data?.gift.some((item: any) => item.id === collection.id) ? "gift" : "seasonal") as "gift" | "seasonal" }}
                   className="rounded-xl bg-card p-4 ring-1 ring-black/[0.05]"
                 >
                   <p className="font-medium">{collection.name}</p>
                   <p className="mt-1 text-xs text-muted-foreground">
                     {collection.description ?? "Shop the collection"}
                   </p>
-                </div>
+                </Link>
               ),
             )}
             {(brands.data ?? []).map((brand: any) => (
-              <div key={brand.brand_id} className="rounded-xl bg-card p-4 ring-1 ring-black/[0.05]">
+              <Link to="/brand/$brandId" params={{ brandId: brand.brand_id }} key={brand.brand_id} className="rounded-xl bg-card p-4 ring-1 ring-black/[0.05]">
                 <p className="font-medium">{brand.brands?.name ?? "Featured brand"}</p>
                 <p className="mt-1 text-xs text-muted-foreground">Featured brand</p>
-              </div>
+              </Link>
             ))}
           </div>
         </section>

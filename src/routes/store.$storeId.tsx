@@ -14,14 +14,28 @@ import {
 import { cartStore, useCart, cartTotals } from "@/lib/cart-store";
 import { QtyStepper } from "@/components/qty-stepper";
 import { ProductThumb } from "@/components/product-thumb";
-import { recordProductEvent } from "@/lib/merchandising";
+import { recordProductEvent, recordRecentProductView } from "@/lib/merchandising";
 import { WishlistButton } from "@/components/wishlist-button";
 import { flyProductToCart } from "@/lib/fly-to-cart";
 import { m } from "motion/react";
 
+const isUuid = (value: string) =>
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+
+const toStoreCategory = (value?: string | null): Store["category"] => {
+  const category = (value ?? "").toLowerCase();
+  if (category.includes("pharma") || category.includes("wellness")) return "pharmacy";
+  if (category.includes("station") || category.includes("book")) return "stationery";
+  if (category.includes("bake") || category.includes("food")) return "bakery";
+  return "grocery";
+};
+
 export const Route = createFileRoute("/store/$storeId")({
   loader: ({ params }): { store: Store; products: Product[] } => {
-    const store = params.storeId === APPROVED_STORE.id ? APPROVED_STORE : getStore(params.storeId);
+    const store = params.storeId === APPROVED_STORE.id
+      ? APPROVED_STORE
+      : getStore(params.storeId) ??
+        (isUuid(params.storeId) ? { ...APPROVED_STORE, id: params.storeId } : undefined);
     if (!store) throw notFound();
     return { store, products: productsByStore[store.id] ?? [] };
   },
@@ -45,25 +59,33 @@ export const Route = createFileRoute("/store/$storeId")({
 function StorePage() {
   const loaded = Route.useLoaderData() as { store: Store; products: Product[] };
   const approved = useQuery({
-    queryKey: ["approved-products"],
-    enabled: loaded.store.id === APPROVED_STORE.id,
+    queryKey: ["approved-store", loaded.store.id],
+    enabled: loaded.store.id === APPROVED_STORE.id || isUuid(loaded.store.id),
     queryFn: async () => {
-      let { data, error } = await (supabase as any)
+      let productQuery = (supabase as any)
         .from("approved_product_catalog")
         .select("id,seller_id,name,category,selling_price,image_url,stock")
         .order("created_at", { ascending: false });
+      if (loaded.store.id !== APPROVED_STORE.id) {
+        productQuery = productQuery.eq("seller_id", loaded.store.id);
+      }
+      let { data, error } = await productQuery;
       // Keep existing deployments working until the catalog view migration is applied.
       if (error) {
-        const fallback = await (supabase as any)
+        let fallbackQuery = (supabase as any)
           .from("products")
           .select("id,seller_id,name,category,selling_price,image_url,stock")
           .in("status", ["active", "approved"])
           .order("created_at", { ascending: false });
+        if (loaded.store.id !== APPROVED_STORE.id) {
+          fallbackQuery = fallbackQuery.eq("seller_id", loaded.store.id);
+        }
+        const fallback = await fallbackQuery;
         data = fallback.data;
         error = fallback.error;
       }
       if (error) throw error;
-      return Promise.all((data ?? []).map(async (p: any) => {
+      const products = await Promise.all((data ?? []).map(async (p: any) => {
         const rawImage = p.image_url ?? "";
         let imageUrl = rawImage;
         if (rawImage && !/^(https?:|data:)/i.test(rawImage)) {
@@ -74,10 +96,47 @@ function StorePage() {
         }
         return { id: p.id, storeId: p.seller_id ?? APPROVED_STORE.id, name: p.name, unit: p.category ?? "", price: Number(p.selling_price), imageUrl, category: p.category ?? "Other", stock: Number(p.stock) };
       }));
+
+      if (loaded.store.id === APPROVED_STORE.id) return { products, store: null };
+
+      const { data: vendor, error: vendorError } = await (supabase as any)
+        .from("approved_vendor_catalog")
+        .select("id,shop_name,business_type,city,state,address_line1,category,shop_logo_path,shop_banner_path")
+        .eq("id", loaded.store.id)
+        .maybeSingle();
+      if (vendorError) throw vendorError;
+
+      let imageUrl = APPROVED_STORE.imageUrl;
+      const storefrontPath = vendor?.shop_banner_path || vendor?.shop_logo_path;
+      if (storefrontPath) {
+        const { data: signed } = await supabase.storage
+          .from("seller-docs")
+          .createSignedUrl(storefrontPath, 60 * 60);
+        imageUrl = signed?.signedUrl ?? imageUrl;
+      }
+
+      return {
+        products,
+        store: vendor ? {
+          ...APPROVED_STORE,
+          id: vendor.id,
+          name: vendor.shop_name || APPROVED_STORE.name,
+          category: toStoreCategory(vendor.category),
+          tagline: vendor.business_type || "Approved local vendor",
+          address:
+            [vendor.address_line1, vendor.city, vendor.state].filter(Boolean).join(", ") ||
+            APPROVED_STORE.address,
+          imageUrl,
+        } as Store : null,
+      };
     },
   });
-  const store = loaded.store;
-  const products = (loaded.store.id === APPROVED_STORE.id ? (approved.data ?? []) : loaded.products) as Product[];
+  const store = approved.data?.store ?? loaded.store;
+  const products = (
+    loaded.store.id === APPROVED_STORE.id || isUuid(loaded.store.id)
+      ? (approved.data?.products ?? [])
+      : loaded.products
+  ) as Product[];
   const navigate = useNavigate();
   const [query, setQuery] = useState("");
   const cart = useCart();
@@ -96,10 +155,6 @@ function StorePage() {
 
   const qtyOf = (id: string) => cart.lines.find((l) => l.productId === id)?.qty ?? 0;
   const color = categoryColor[store.category];
-
-  useEffect(() => {
-    products.forEach((product) => { void recordProductEvent(product.id, "view"); });
-  }, [products]);
 
   return (
     <div className="min-h-screen bg-background pb-32">
@@ -195,7 +250,7 @@ function StorePage() {
                       >
                         <ProductThumb src={p.imageUrl} alt={p.name} category={store.category} />
                         <div className="min-w-0 flex-1">
-                          <p className="truncate text-sm font-medium">{p.name}</p>
+                          <Link to="/product/$productId" params={{ productId: p.id }} onClick={() => { void recordProductEvent(p.id, "view"); void recordRecentProductView(p.id); }} className="truncate text-sm font-medium hover:text-primary hover:underline">{p.name}</Link>
                           <p className="text-xs text-muted-foreground">{p.unit}</p>
                         </div>
                         <span className="font-mono text-sm">₹{p.price}</span>

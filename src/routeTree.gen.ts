@@ -10,23 +10,33 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as WishlistRouteImport } from './routes/wishlist'
+import { Route as SupportRouteImport } from './routes/support'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as OrdersRouteImport } from './routes/orders'
 import { Route as NotificationsRouteImport } from './routes/notifications'
 import { Route as HelpRouteImport } from './routes/help'
+import { Route as CompareRouteImport } from './routes/compare'
 import { Route as CheckoutRouteImport } from './routes/checkout'
 import { Route as CartRouteImport } from './routes/cart'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AddressesRouteImport } from './routes/addresses'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as StoreStoreIdRouteImport } from './routes/store.$storeId'
+import { Route as ProductProductIdRouteImport } from './routes/product.$productId'
 import { Route as OrderOrderIdRouteImport } from './routes/order.$orderId'
+import { Route as CollectionCollectionIdRouteImport } from './routes/collection.$collectionId'
+import { Route as BrandBrandIdRouteImport } from './routes/brand.$brandId'
 import { Route as LovableEmailAuthWebhookRouteImport } from './routes/lovable/email/auth/webhook'
 import { Route as LovableEmailAuthPreviewRouteImport } from './routes/lovable/email/auth/preview'
 
 const WishlistRoute = WishlistRouteImport.update({
   id: '/wishlist',
   path: '/wishlist',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SupportRoute = SupportRouteImport.update({
+  id: '/support',
+  path: '/support',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ProfileRoute = ProfileRouteImport.update({
@@ -47,6 +57,11 @@ const NotificationsRoute = NotificationsRouteImport.update({
 const HelpRoute = HelpRouteImport.update({
   id: '/help',
   path: '/help',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CompareRoute = CompareRouteImport.update({
+  id: '/compare',
+  path: '/compare',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CheckoutRoute = CheckoutRouteImport.update({
@@ -79,9 +94,24 @@ const StoreStoreIdRoute = StoreStoreIdRouteImport.update({
   path: '/store/$storeId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ProductProductIdRoute = ProductProductIdRouteImport.update({
+  id: '/product/$productId',
+  path: '/product/$productId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const OrderOrderIdRoute = OrderOrderIdRouteImport.update({
   id: '/order/$orderId',
   path: '/order/$orderId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CollectionCollectionIdRoute = CollectionCollectionIdRouteImport.update({
+  id: '/collection/$collectionId',
+  path: '/collection/$collectionId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BrandBrandIdRoute = BrandBrandIdRouteImport.update({
+  id: '/brand/$brandId',
+  path: '/brand/$brandId',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LovableEmailAuthWebhookRoute = LovableEmailAuthWebhookRouteImport.update({
@@ -101,12 +131,17 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/cart': typeof CartRoute
   '/checkout': typeof CheckoutRoute
+  '/compare': typeof CompareRoute
   '/help': typeof HelpRoute
   '/notifications': typeof NotificationsRoute
   '/orders': typeof OrdersRoute
   '/profile': typeof ProfileRoute
+  '/support': typeof SupportRoute
   '/wishlist': typeof WishlistRoute
+  '/brand/$brandId': typeof BrandBrandIdRoute
+  '/collection/$collectionId': typeof CollectionCollectionIdRoute
   '/order/$orderId': typeof OrderOrderIdRoute
+  '/product/$productId': typeof ProductProductIdRoute
   '/store/$storeId': typeof StoreStoreIdRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
@@ -117,12 +152,17 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/cart': typeof CartRoute
   '/checkout': typeof CheckoutRoute
+  '/compare': typeof CompareRoute
   '/help': typeof HelpRoute
   '/notifications': typeof NotificationsRoute
   '/orders': typeof OrdersRoute
   '/profile': typeof ProfileRoute
+  '/support': typeof SupportRoute
   '/wishlist': typeof WishlistRoute
+  '/brand/$brandId': typeof BrandBrandIdRoute
+  '/collection/$collectionId': typeof CollectionCollectionIdRoute
   '/order/$orderId': typeof OrderOrderIdRoute
+  '/product/$productId': typeof ProductProductIdRoute
   '/store/$storeId': typeof StoreStoreIdRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
@@ -134,12 +174,17 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/cart': typeof CartRoute
   '/checkout': typeof CheckoutRoute
+  '/compare': typeof CompareRoute
   '/help': typeof HelpRoute
   '/notifications': typeof NotificationsRoute
   '/orders': typeof OrdersRoute
   '/profile': typeof ProfileRoute
+  '/support': typeof SupportRoute
   '/wishlist': typeof WishlistRoute
+  '/brand/$brandId': typeof BrandBrandIdRoute
+  '/collection/$collectionId': typeof CollectionCollectionIdRoute
   '/order/$orderId': typeof OrderOrderIdRoute
+  '/product/$productId': typeof ProductProductIdRoute
   '/store/$storeId': typeof StoreStoreIdRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
@@ -152,12 +197,17 @@ export interface FileRouteTypes {
     | '/auth'
     | '/cart'
     | '/checkout'
+    | '/compare'
     | '/help'
     | '/notifications'
     | '/orders'
     | '/profile'
+    | '/support'
     | '/wishlist'
+    | '/brand/$brandId'
+    | '/collection/$collectionId'
     | '/order/$orderId'
+    | '/product/$productId'
     | '/store/$storeId'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
@@ -168,12 +218,17 @@ export interface FileRouteTypes {
     | '/auth'
     | '/cart'
     | '/checkout'
+    | '/compare'
     | '/help'
     | '/notifications'
     | '/orders'
     | '/profile'
+    | '/support'
     | '/wishlist'
+    | '/brand/$brandId'
+    | '/collection/$collectionId'
     | '/order/$orderId'
+    | '/product/$productId'
     | '/store/$storeId'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
@@ -184,12 +239,17 @@ export interface FileRouteTypes {
     | '/auth'
     | '/cart'
     | '/checkout'
+    | '/compare'
     | '/help'
     | '/notifications'
     | '/orders'
     | '/profile'
+    | '/support'
     | '/wishlist'
+    | '/brand/$brandId'
+    | '/collection/$collectionId'
     | '/order/$orderId'
+    | '/product/$productId'
     | '/store/$storeId'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
@@ -201,12 +261,17 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRoute
   CartRoute: typeof CartRoute
   CheckoutRoute: typeof CheckoutRoute
+  CompareRoute: typeof CompareRoute
   HelpRoute: typeof HelpRoute
   NotificationsRoute: typeof NotificationsRoute
   OrdersRoute: typeof OrdersRoute
   ProfileRoute: typeof ProfileRoute
+  SupportRoute: typeof SupportRoute
   WishlistRoute: typeof WishlistRoute
+  BrandBrandIdRoute: typeof BrandBrandIdRoute
+  CollectionCollectionIdRoute: typeof CollectionCollectionIdRoute
   OrderOrderIdRoute: typeof OrderOrderIdRoute
+  ProductProductIdRoute: typeof ProductProductIdRoute
   StoreStoreIdRoute: typeof StoreStoreIdRoute
   LovableEmailAuthPreviewRoute: typeof LovableEmailAuthPreviewRoute
   LovableEmailAuthWebhookRoute: typeof LovableEmailAuthWebhookRoute
@@ -219,6 +284,13 @@ declare module '@tanstack/react-router' {
       path: '/wishlist'
       fullPath: '/wishlist'
       preLoaderRoute: typeof WishlistRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/support': {
+      id: '/support'
+      path: '/support'
+      fullPath: '/support'
+      preLoaderRoute: typeof SupportRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/profile': {
@@ -247,6 +319,13 @@ declare module '@tanstack/react-router' {
       path: '/help'
       fullPath: '/help'
       preLoaderRoute: typeof HelpRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/compare': {
+      id: '/compare'
+      path: '/compare'
+      fullPath: '/compare'
+      preLoaderRoute: typeof CompareRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/checkout': {
@@ -291,11 +370,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof StoreStoreIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/product/$productId': {
+      id: '/product/$productId'
+      path: '/product/$productId'
+      fullPath: '/product/$productId'
+      preLoaderRoute: typeof ProductProductIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/order/$orderId': {
       id: '/order/$orderId'
       path: '/order/$orderId'
       fullPath: '/order/$orderId'
       preLoaderRoute: typeof OrderOrderIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/collection/$collectionId': {
+      id: '/collection/$collectionId'
+      path: '/collection/$collectionId'
+      fullPath: '/collection/$collectionId'
+      preLoaderRoute: typeof CollectionCollectionIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/brand/$brandId': {
+      id: '/brand/$brandId'
+      path: '/brand/$brandId'
+      fullPath: '/brand/$brandId'
+      preLoaderRoute: typeof BrandBrandIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/lovable/email/auth/webhook': {
@@ -321,12 +421,17 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRoute,
   CartRoute: CartRoute,
   CheckoutRoute: CheckoutRoute,
+  CompareRoute: CompareRoute,
   HelpRoute: HelpRoute,
   NotificationsRoute: NotificationsRoute,
   OrdersRoute: OrdersRoute,
   ProfileRoute: ProfileRoute,
+  SupportRoute: SupportRoute,
   WishlistRoute: WishlistRoute,
+  BrandBrandIdRoute: BrandBrandIdRoute,
+  CollectionCollectionIdRoute: CollectionCollectionIdRoute,
   OrderOrderIdRoute: OrderOrderIdRoute,
+  ProductProductIdRoute: ProductProductIdRoute,
   StoreStoreIdRoute: StoreStoreIdRoute,
   LovableEmailAuthPreviewRoute: LovableEmailAuthPreviewRoute,
   LovableEmailAuthWebhookRoute: LovableEmailAuthWebhookRoute,
