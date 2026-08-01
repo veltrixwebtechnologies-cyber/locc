@@ -114,6 +114,11 @@ type BannerRow = {
   ends_at: string | null;
 };
 
+function resolveBannerImage(imageUrl: string) {
+  if (/^(https?:|data:|blob:)/i.test(imageUrl)) return imageUrl;
+  return supabase.storage.from("banner-images").getPublicUrl(imageUrl).data.publicUrl;
+}
+
 const campaignPalette = [
   { background: "#f1ecff", accent: "#6d28d9" },
   { background: "#fff2cc", accent: "#9a6500" },
@@ -169,7 +174,7 @@ export function PromoCarousel() {
       action: "Explore offer",
       offer: "Featured offer",
       category: categoryFromLink(banner.link_url),
-      imageUrl: banner.image_url,
+      imageUrl: resolveBannerImage(banner.image_url),
       background: palette.background,
       accent: palette.accent,
     };

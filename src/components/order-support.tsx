@@ -52,6 +52,7 @@ export function OrderSupport({ order }: { order: Order }) {
   const [comment, setComment] = useState("");
   const [files, setFiles] = useState<File[]>([]);
   const [submitting, setSubmitting] = useState(false);
+  const [submitStage, setSubmitStage] = useState<"uploading" | "creating">("uploading");
   const [submittedId, setSubmittedId] = useState<string>();
 
   const images = files.filter((file) => file.type.startsWith("image/"));
@@ -84,14 +85,17 @@ export function OrderSupport({ order }: { order: Order }) {
       const user = auth.user;
       if (!user) throw new Error("Sign in to report an order issue.");
       const paths: string[] = [];
-      for (const file of files) {
+      setSubmitStage("uploading");
+      const uploaded = await Promise.all(files.map(async (file) => {
         const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
         const path = `${user.id}/${crypto.randomUUID()}-${safeName}`;
         const { error } = await withTimeout(supabase.storage.from("support-evidence").upload(path, file, { upsert: false }), "Evidence upload timed out. Check that the support-evidence bucket migration is applied.");
         if (error) throw error;
-        paths.push(path);
-      }
+        return path;
+      }));
+      paths.push(...uploaded);
       const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(order.id);
+      setSubmitStage("creating");
       const { data, error } = await withTimeout((supabase as any).from("support_tickets").insert({
         user_id: user.id, raised_by: "customer", subject: `${labelFor(issue)} · ${order.code}`,
         body: comment.trim() || labelFor(issue), priority: issue.startsWith("payment") ? "high" : "normal",
@@ -99,17 +103,23 @@ export function OrderSupport({ order }: { order: Order }) {
         selected_product_ids: selectedItems.filter((id) => /^[0-9a-f-]{36}$/i.test(id)), evidence_urls: paths.filter((path) => path !== (video ? paths[files.indexOf(video)] : "")),
         video_url: video ? paths[files.indexOf(video)] ?? null : null, customer_comment: comment.trim() || null,
         eligible: true, reporting_deadline: new Date(order.createdAt + 48 * 60 * 60 * 1000).toISOString(),
-      }).select("id").single(), "Support service timed out. Apply the support migration and try again.");
+      }).select("id").single(), "Support ticket creation timed out. Apply the support migration and try again.");
       if (error) throw error;
-      await (supabase as any).from("notifications").insert({
-        user_id: user.id,
-        title: "Support request received",
-        body: `We received your ${labelFor(issue)} request for order ${order.code}.`,
-        kind: "info",
-        link: "/support",
-      });
       setSubmittedId(data.id);
       toast.success("Your issue has been sent to support.");
+      void withTimeout(
+        (supabase as any).from("notifications").insert({
+          user_id: user.id,
+          title: "Support request received",
+          body: `We received your ${labelFor(issue)} request for order ${order.code}.`,
+          kind: "info",
+          link: "/support",
+        }),
+        "Support notification delivery timed out.",
+        5_000,
+      ).catch((notificationError) => {
+        console.warn("Support ticket created, but notification delivery failed", notificationError);
+      });
     } catch (error) {
       console.error("support case submission failed", error);
       toast.error(error instanceof Error ? error.message : "Could not submit the support request.");
@@ -135,7 +145,7 @@ export function OrderSupport({ order }: { order: Order }) {
         {step === 1 && <div className="mt-4"><p className="text-sm font-medium">Which items are affected?</p><p className="mt-1 text-xs text-muted-foreground">Select one or more items, or continue for a delivery or payment issue.</p><div className="mt-3 space-y-2">{order.lines.map((line) => <label key={line.productId} className="flex cursor-pointer items-center gap-3 rounded-lg border hairline p-3 text-sm hover:bg-muted"><input type="checkbox" checked={selectedItems.includes(line.productId)} onChange={(e) => setSelectedItems((current) => e.target.checked ? [...current, line.productId] : current.filter((id) => id !== line.productId))} /> <span className="flex-1">{line.name}</span><span className="font-mono text-xs text-muted-foreground">{line.qty}×</span></label>)}</div></div>}
         {step === 2 && <div className="mt-4 space-y-4"><p className="text-sm font-medium">What went wrong?</p>{issueGroups.map((group) => <div key={group.label}><p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{group.label}</p><div className="grid gap-2 sm:grid-cols-2">{group.items.map((item) => <button type="button" key={item.id} onClick={() => setIssue(item.id)} className={`rounded-lg border p-3 text-left text-sm transition-colors ${issue === item.id ? "border-primary bg-primary/10 font-medium" : "hairline hover:bg-muted"}`}>{item.label}</button>)}</div></div>)}</div>}
         {step === 3 && <div className="mt-4 space-y-4"><div><p className="text-sm font-medium">Add details</p><p className="mt-1 text-xs text-muted-foreground">{itemNames.length ? itemNames.join(", ") : "Order-level issue"}</p></div><label className="block text-sm">Additional comments<textarea value={comment} maxLength={1000} onChange={(e) => setComment(e.target.value)} rows={4} className="mt-2 w-full rounded-lg border hairline bg-background p-3 text-sm outline-none focus:border-primary" placeholder="Tell us what happened..." /><span className="mt-1 block text-right text-xs text-muted-foreground">{comment.length}/1000</span></label><div><label className="flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed p-4 text-sm hover:bg-muted"><Upload className="h-4 w-4" /> Add photos or one short video<input type="file" hidden multiple accept="image/*,video/*" onChange={(e) => chooseFiles(e.target.files)} /></label><p className="mt-1 text-xs text-muted-foreground">Up to 5 photos and 1 video.{imageRequired.has(issue!) ? " A photo is required for this issue." : ""}</p>{files.length > 0 && <div className="mt-2 flex flex-wrap gap-2">{files.map((file, index) => <span key={`${file.name}-${index}`} className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-1 text-xs">{file.name.slice(0, 22)}<button type="button" aria-label={`Remove ${file.name}`} onClick={() => setFiles((current) => current.filter((_, i) => i !== index))}><X className="h-3 w-3" /></button></span>)}</div>}</div></div>}
-        <div className="mt-5 flex justify-between gap-2"><button type="button" onClick={() => step === 1 ? (setOpen(false), reset()) : setStep((current) => current - 1)} className="inline-flex items-center gap-1 rounded-lg border hairline px-3 py-2 text-sm hover:bg-muted"><ChevronLeft className="h-4 w-4" /> Back</button>{step < 3 ? <button type="button" disabled={!canContinue} onClick={() => setStep((current) => current + 1)} className="inline-flex items-center gap-1 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-50">Continue <ChevronRight className="h-4 w-4" /></button> : <button type="button" disabled={!canContinue || submitting || !withinWindow} onClick={() => void submit()} className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-50">{submitting ? "Submitting..." : "Submit to support"}</button>}</div>
+        <div className="mt-5 flex justify-between gap-2"><button type="button" disabled={submitting} onClick={() => step === 1 ? (setOpen(false), reset()) : setStep((current) => current - 1)} className="inline-flex items-center gap-1 rounded-lg border hairline px-3 py-2 text-sm hover:bg-muted disabled:opacity-50"><ChevronLeft className="h-4 w-4" /> Back</button>{step < 3 ? <button type="button" disabled={!canContinue} onClick={() => setStep((current) => current + 1)} className="inline-flex items-center gap-1 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-50">Continue <ChevronRight className="h-4 w-4" /></button> : <button type="button" disabled={!canContinue || submitting || !withinWindow} onClick={() => void submit()} className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-50">{submitting ? submitStage === "uploading" ? "Uploading evidence..." : "Creating request..." : "Submit to support"}</button>}</div>
       </>}
     </section>
   );

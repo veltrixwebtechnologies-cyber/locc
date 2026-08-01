@@ -256,9 +256,12 @@ export function useWishlist() {
     enabled: Boolean(auth.email || auth.phone),
     refetchInterval: 10_000,
     queryFn: async () => {
+      const { data: userData, error: userError } = await supabase.auth.getUser();
+      if (userError || !userData.user) throw userError ?? new Error("Sign in to use your wishlist.");
+      const userId = userData.user.id;
       const [savedProducts, savedEntries] = await Promise.all([
-        (supabase as any).from("wishlist").select("product_id,created_at").order("created_at", { ascending: false }),
-        (supabase as any).from("wishlist_entries").select("item_key,created_at").order("created_at", { ascending: false }),
+        (supabase as any).from("wishlist").select("product_id,created_at").eq("user_id", userId).order("created_at", { ascending: false }),
+        (supabase as any).from("wishlist_entries").select("item_key,created_at").eq("user_id", userId).order("created_at", { ascending: false }),
       ]);
       if (savedProducts.error) throw savedProducts.error;
       const entriesMissing = savedEntries.error?.code === "PGRST205" || savedEntries.error?.status === 404;
@@ -332,9 +335,11 @@ export function useToggleWishlist() {
       if (!auth.email && !auth.phone) throw new Error("Sign in to use your wishlist.");
       const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(productId);
       if (active) {
+        const { data: userData, error: userError } = await supabase.auth.getUser();
+        if (userError || !userData.user) throw userError ?? new Error("Sign in to use your wishlist.");
         const result = isUuid
-          ? await (supabase as any).from("wishlist").delete().eq("product_id", productId)
-          : await (supabase as any).from("wishlist_entries").delete().eq("item_key", productId);
+          ? await (supabase as any).from("wishlist").delete().eq("user_id", userData.user.id).eq("product_id", productId)
+          : await (supabase as any).from("wishlist_entries").delete().eq("user_id", userData.user.id).eq("item_key", productId);
         if (result.error) throw result.error;
       } else {
         if (isUuid) {

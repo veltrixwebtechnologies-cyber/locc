@@ -4,7 +4,7 @@ import { useCart, cartTotals } from "@/lib/cart-store";
 import { useAuth } from "@/lib/auth-store";
 import { HeaderCategoryMenu, MobileCategoryStrip } from "@/components/category-mega-menu";
 import { Fragment, type ReactNode, useEffect, useState } from "react";
-import { useWishlistProducts } from "@/lib/merchandising";
+import { useWishlist } from "@/lib/merchandising";
 import { AnimatePresence, m } from "motion/react";
 
 export function AppShell({ children }: { children: ReactNode }) {
@@ -12,7 +12,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
   const cart = useCart();
   const auth = useAuth();
-  const wishlistProducts = useWishlistProducts();
+  const wishlist = useWishlist();
   const [scrolled, setScrolled] = useState(false);
   const [headerQuery, setHeaderQuery] = useState("");
   const { itemCount } = cartTotals(cart.lines);
@@ -124,7 +124,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                 t.to === "/cart"
                   ? itemCount
                   : t.to === "/wishlist"
-                    ? (wishlistProducts.data?.length ?? 0)
+                    ? (wishlist.data?.length ?? 0)
                     : 0;
               const showBadge = badgeCount > 0;
               return (
@@ -199,7 +199,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               t.to === "/cart"
                 ? itemCount
                 : t.to === "/wishlist"
-                  ? (wishlistProducts.data?.length ?? 0)
+                  ? (wishlist.data?.length ?? 0)
                   : 0;
             const showBadge = badgeCount > 0;
             return (
