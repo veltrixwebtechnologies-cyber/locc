@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo } from "react";
 import { AppShell } from "@/components/app-shell";
-import { useOrders, advanceDemoOrder, orderStatusFlow, orderStatusLabel, type OrderStatus } from "@/lib/orders-store";
+import { useOrdersState, advanceDemoOrder, orderStatusFlow, orderStatusLabel, type OrderStatus } from "@/lib/orders-store";
 import { getStore } from "@/lib/mock-data";
 import { DeliveryMap } from "@/components/delivery-map";
 import { MessageCircle, Phone, Star } from "lucide-react";
@@ -15,7 +15,7 @@ export const Route = createFileRoute("/order/$orderId")({
 
 function OrderPage() {
   const { orderId } = Route.useParams();
-  const orders = useOrders();
+  const { orders, isLoading } = useOrdersState();
   const order = orders.find((o) => o.id === orderId);
 
   const store = order ? getStore(order.storeId) : undefined;
@@ -51,6 +51,17 @@ function OrderPage() {
       lng: store.lng + (destination.lng - store.lng) * t,
     };
   }, [store, destination, currentIndex, status]);
+
+  if (isLoading) {
+    return (
+      <AppShell>
+        <div className="mx-5 mt-8 rounded-xl border hairline bg-card p-6 text-center">
+          <p className="font-display text-lg">Loading your order…</p>
+          <p className="mt-1 text-sm text-muted-foreground">Syncing the latest order status.</p>
+        </div>
+      </AppShell>
+    );
+  }
 
   if (!order) {
     return (
@@ -188,6 +199,14 @@ function OrderPage() {
                 : `Finding a delivery partner near ${order.storeName}…`}
         </section>
       )}
+
+      {order.deliveryOtp && order.status !== "delivered" && order.status !== "cancelled" && order.status !== "returned" ? (
+        <section className="mx-5 mt-4 rounded-xl border border-primary/30 bg-primary/5 p-4 text-center">
+          <p className="text-xs font-semibold uppercase tracking-widest text-primary">Delivery OTP</p>
+          <p className="mt-2 font-mono text-3xl font-bold tracking-[0.35em] text-foreground">{order.deliveryOtp}</p>
+          <p className="mt-2 text-xs text-muted-foreground">Share this code with the delivery partner when your order arrives.</p>
+        </section>
+      ) : null}
 
       {/* Items */}
       <section className="mx-5 mt-4 mb-8 rounded-xl bg-card p-4 ring-1 ring-black/[0.04]">

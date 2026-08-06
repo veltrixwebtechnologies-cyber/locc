@@ -2,18 +2,16 @@ import { useEffect, useState } from "react";
 import type { CartLine } from "./cart-store";
 import { supabase } from "@/integrations/supabase/client";
 
-const DEMO_ORDER_EVENT = "localshore:demo-orders-changed";
-const demoOrdersKey = (userId: string) => `localshore.demo-orders.v1.${userId}`;
-const isProductUuid = (value: string) =>
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
 
-export type OrderStatus = "new" | "accepted" | "packed" | "ready_for_pickup" | "out_for_delivery" | "delivered" | "cancelled" | "returned";
-export const orderStatusFlow: OrderStatus[] = ["new", "accepted", "packed", "ready_for_pickup", "out_for_delivery", "delivered"];
+export type OrderStatus = "new" | "accepted" | "packed" | "ready_for_pickup" | "assigned" | "picked_up" | "out_for_delivery" | "delivered" | "cancelled" | "returned";
+export const orderStatusFlow: OrderStatus[] = ["new", "accepted", "packed", "ready_for_pickup", "assigned", "picked_up", "out_for_delivery", "delivered"];
 export const orderStatusLabel: Record<OrderStatus, string> = {
   new: "Order placed",
   accepted: "Order accepted",
   packed: "Packed",
   ready_for_pickup: "Ready for pickup",
+  assigned: "Delivery partner assigned",
+  picked_up: "Picked up",
   out_for_delivery: "Out for delivery",
   delivered: "Delivered",
   cancelled: "Cancelled",
@@ -32,6 +30,7 @@ export interface Order {
   address: string;
   destination: { lat: number; lng: number };
   paymentMethod: string;
+  deliveryOtp?: string;
   couponCode?: string;
   discountAmount?: number;
   createdAt: number;
@@ -62,6 +61,7 @@ function fromRow(row: any): Order {
     address: row.buyer_address ?? "",
     destination: { lat: 9.9816, lng: 76.2999 },
     paymentMethod: row.payment_method === "upi" ? "UPI" : row.payment_method === "card" ? "Card" : "Cash on delivery",
+    deliveryOtp: row.delivery_otp ?? undefined,
     couponCode: row.coupon_code ?? undefined,
     discountAmount: Number(row.discount_amount ?? 0),
     createdAt: new Date(row.placed_at ?? row.created_at).getTime(),
@@ -71,56 +71,24 @@ function fromRow(row: any): Order {
   };
 }
 
-function readDemoOrders(userId: string): Order[] {
-  if (typeof window === "undefined") return [];
-  try {
-    const raw = window.localStorage.getItem(demoOrdersKey(userId));
-    return raw ? JSON.parse(raw) : [];
-  } catch {
-    return [];
-  }
-}
-
-function writeDemoOrders(userId: string, orders: Order[]) {
-  if (typeof window === "undefined") return;
-  window.localStorage.setItem(demoOrdersKey(userId), JSON.stringify(orders));
-  window.dispatchEvent(new Event(DEMO_ORDER_EVENT));
-}
-
-function createDemoOrder(
-  userId: string,
-  order: Omit<Order, "id" | "code" | "createdAt" | "status">,
-): Order {
-  const createdAt = Date.now();
-  const created: Order = {
-    ...order,
-    id: `demo_${crypto.randomUUID()}`,
-    code: `LS-${String(createdAt).slice(-8)}`,
-    createdAt,
-    status: "new",
-  };
-  writeDemoOrders(userId, [created, ...readDemoOrders(userId)]);
-  return created;
-}
-
 async function loadOrders(): Promise<Order[]> {
   const { data: session } = await supabase.auth.getSession();
   const userId = session.session?.user.id;
-  const { data, error } = await (supabase as any)
-    .from("orders")
-    .select("*, order_items(*), seller:sellers(business_name)")
-    .order("placed_at", { ascending: false });
-  if (error) throw error;
-  const remoteOrders = (data ?? []).map(fromRow);
-  const demoOrders = userId ? readDemoOrders(userId) : [];
-  return [...remoteOrders, ...demoOrders].sort((a, b) => b.createdAt - a.createdAt);
-}
+  if (!userId) return [];
 
-const isMissingRpc = (error: any) =>
-  error?.code === "PGRST202" ||
-  error?.status === 404 ||
-  error?.message?.includes("schema cache") ||
-  error?.message?.includes("Could not find the function");
+  try {
+    const { data, error } = await (supabase as any)
+      .from("orders")
+      .select("*, order_items(*), seller:sellers(business_name)")
+      .eq("user_id", userId)
+      .order("placed_at", { ascending: false });
+    if (error) throw error;
+    return (data ?? []).map(fromRow);
+  } catch (error) {
+    console.error("[orders] history query failed", error);
+    return [];
+  }
+}
 
 const orderErrorMessage = (error: any) => {
   const message = String(error?.message ?? "");
@@ -141,15 +109,6 @@ export const ordersStore = {
     if (!order.address.trim()) throw new Error("Add a delivery address before placing the order.");
     if (!order.lines.length) throw new Error("Your cart is empty.");
 
-    const hasDatabaseProducts = order.lines.some((line) => isProductUuid(line.productId));
-    const hasDemoProducts = order.lines.some((line) => !isProductUuid(line.productId));
-    if (hasDatabaseProducts && hasDemoProducts) {
-      throw new Error("Demo and marketplace products cannot be checked out together.");
-    }
-    if (hasDemoProducts) {
-      return createDemoOrder(user.id, order);
-    }
-
     const baseParams = {
       p_buyer_name: user.user_metadata?.display_name ?? user.email ?? "Customer",
       p_buyer_phone: user.phone ?? null,
@@ -159,8 +118,7 @@ export const ordersStore = {
     const rpcPayload = {
       ...baseParams,
       p_payment_method: order.paymentMethod === "UPI" ? "upi" : order.paymentMethod === "Card" ? "card" : "cod",
-      p_is_demo: true,
-      p_coupon_code: order.couponCode ?? null,
+      p_is_demo: false,
     };
 
     const { data: created, error } = await (supabase as any).rpc("place_order", rpcPayload);
@@ -193,71 +151,29 @@ export const ordersStore = {
 };
 
 export async function advanceDemoOrder(orderId: string) {
-  if (orderId.startsWith("demo_")) {
-    const { data: session } = await supabase.auth.getSession();
-    const userId = session.session?.user.id;
-    if (!userId) throw new Error("Your session expired. Please sign in again.");
-    const next: Partial<Record<OrderStatus, OrderStatus>> = {
-      new: "accepted",
-      accepted: "packed",
-      packed: "ready_for_pickup",
-      ready_for_pickup: "out_for_delivery",
-      out_for_delivery: "delivered",
-    };
-    const orders = readDemoOrders(userId);
-    const current = orders.find((order) => order.id === orderId);
-    if (!current) throw new Error("Order not found.");
-    const nextStatus = next[current.status];
-    if (nextStatus) {
-      writeDemoOrders(
-        userId,
-        orders.map((order) =>
-          order.id === orderId ? { ...order, status: nextStatus } : order,
-        ),
-      );
-    }
-    return;
-  }
-
-  const result = await (supabase as any).rpc("advance_demo_order", { p_order_id: orderId });
-  if (!result.error) return;
-  if (!isMissingRpc(result.error)) {
-    console.error("[orders] advance_demo_order RPC failed", {
-      orderId,
-      code: result.error.code,
-      status: result.error.status,
-      message: result.error.message,
-      details: result.error.details,
-      hint: result.error.hint,
-    });
-    throw new Error(orderErrorMessage(result.error));
-  }
-
-  const { data: current, error: readError } = await (supabase as any)
-    .from("orders")
-    .select("status")
-    .eq("id", orderId)
-    .single();
-  if (readError) throw readError;
-  const next: Record<string, OrderStatus> = {
-    new: "accepted",
-    accepted: "packed",
-    packed: "ready_for_pickup",
-    ready_for_pickup: "out_for_delivery",
-    out_for_delivery: "delivered",
-  };
-  const nextStatus = next[current.status];
-  if (nextStatus) {
-    const { error } = await (supabase as any).from("orders").update({ status: nextStatus }).eq("id", orderId);
-    if (error) throw error;
-  }
+  throw new Error("Order status is managed by the seller and delivery partner.");
 }
 
 export function useOrders() {
+  return useOrdersState().orders;
+}
+
+export function useOrdersState() {
   const [orders, setOrders] = useState<Order[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   useEffect(() => {
     let active = true;
-    const refresh = () => void loadOrders().then((rows) => { if (active) setOrders(rows); }).catch(() => undefined);
+    const refresh = () => void loadOrders()
+      .then((rows) => {
+        if (active) {
+          setOrders(rows);
+          setIsLoading(false);
+        }
+      })
+      .catch((error) => {
+        console.error("[orders] refresh failed", error);
+        if (active) setIsLoading(false);
+      });
     refresh();
     const channel = supabase.channel("shoreline-orders").on("postgres_changes", { event: "*", schema: "public", table: "orders" }, refresh).subscribe();
     const poll = window.setInterval(refresh, 5_000);
@@ -266,17 +182,15 @@ export function useOrders() {
     };
     window.addEventListener("focus", refresh);
     window.addEventListener("storage", refresh);
-    window.addEventListener(DEMO_ORDER_EVENT, refresh);
     document.addEventListener("visibilitychange", refreshWhenVisible);
     return () => {
       active = false;
       window.clearInterval(poll);
       window.removeEventListener("focus", refresh);
       window.removeEventListener("storage", refresh);
-      window.removeEventListener(DEMO_ORDER_EVENT, refresh);
       document.removeEventListener("visibilitychange", refreshWhenVisible);
       void supabase.removeChannel(channel);
     };
   }, []);
-  return orders;
+  return { orders, isLoading };
 }

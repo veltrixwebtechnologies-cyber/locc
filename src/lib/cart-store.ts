@@ -114,35 +114,30 @@ export const cartStore = {
   },
   reconcileStock(stockByProduct: Record<string, number>) {
     ensureHydrated();
-    const lines = state.lines.flatMap((line) => {
+    // Keep persisted cart lines intact while checking stock. The server-side
+    // place_order RPC is authoritative and must decide whether inventory is
+    // still available at order time.
+    const lines = state.lines.map((line) => {
       const reportedStock = stockByProduct[line.productId];
 
       // A missing row can be caused by catalog visibility or a transient query
       // failure. Only explicit stock values may alter a persisted cart line.
       if (reportedStock == null || !Number.isFinite(reportedStock)) {
-        return [line];
+        return line;
       }
 
       const availableStock = Math.max(0, Math.floor(reportedStock));
-      if (availableStock === 0) {
-        return [];
-      }
-
-      return [{
+      return {
         ...line,
         availableStock,
-        qty: Math.min(line.qty, availableStock),
-      }];
+      };
     });
-    const changed =
-      lines.length !== state.lines.length ||
-      lines.some((line, index) =>
+    const changed = lines.some((line, index) =>
         line.qty !== state.lines[index]?.qty ||
         line.availableStock !== state.lines[index]?.availableStock,
-      );
+    );
     if (!changed) return false;
-    state =
-      lines.length === 0 ? { storeId: null, storeName: null, lines: [] } : { ...state, lines };
+    state = { ...state, lines };
     persist();
     return true;
   },

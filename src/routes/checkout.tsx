@@ -301,7 +301,12 @@ function CheckoutPage() {
     const validateStock = async () => {
       const productIds = cartProductIds.split(",");
       const databaseProductIds = productIds.filter(isProductUuid);
-      if (databaseProductIds.length === 0) return;
+      // Demo catalog items do not have a database stock row. They are still
+      // valid for the simulated checkout flow, so release the loading guard.
+      if (databaseProductIds.length === 0) {
+        if (active) setIsCheckingStock(false);
+        return;
+      }
       let { data, error } = await (supabase as any)
         .from("approved_product_catalog")
         .select("id,stock")
@@ -358,9 +363,9 @@ function CheckoutPage() {
         .forEach((line) => {
           stockByProduct[line.productId] = line.availableStock ?? line.qty;
         });
-      if (cartStore.reconcileStock(stockByProduct)) {
-        toast.info("Your cart was updated to match current stock.");
-      }
+      // Do not clear or rewrite the cart from a client-side stock snapshot.
+      // The place_order RPC performs the authoritative inventory check.
+      cartStore.reconcileStock(stockByProduct);
     };
 
     void validateStock()
