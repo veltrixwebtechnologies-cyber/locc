@@ -4,6 +4,13 @@ import { createHash, randomInt } from "crypto";
 const OTP_TTL_MS = 10 * 60 * 1000; // 10 minutes
 const RESEND_COOLDOWN_MS = 30 * 1000; // 30s between sends
 const MAX_ATTEMPTS = 5;
+let globalOtpWindow = { startedAt: 0, count: 0 };
+function enforceGlobalOtpLimit() {
+  const now = Date.now();
+  if (now - globalOtpWindow.startedAt >= 60_000) globalOtpWindow = { startedAt: now, count: 0 };
+  if (globalOtpWindow.count >= 60) throw new Error("Verification service is temporarily busy. Try again later.");
+  globalOtpWindow.count += 1;
+}
 
 const hashCode = (code: string, email: string) =>
   createHash("sha256").update(`${email.toLowerCase()}:${code}`).digest("hex");
@@ -30,6 +37,7 @@ export const sendResendEmailOtp = createServerFn({ method: "POST" })
   })
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    enforceGlobalOtpLimit();
 
     // Cooldown check
     const { data: recent } = await supabaseAdmin

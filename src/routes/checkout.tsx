@@ -460,6 +460,10 @@ function CheckoutPage() {
 
   const openPaymentConfirmation = () => {
     if (!selectedAddressLine || isPlacing || isCheckingStock) return;
+    if (pay !== "cod") {
+      toast.error("Online payments are temporarily unavailable. Choose Cash on delivery.");
+      return;
+    }
     setShowDemoPayment(true);
   };
 
@@ -483,7 +487,7 @@ function CheckoutPage() {
         distanceKm: store.distanceKm,
       });
       cartStore.clear();
-      toast.success("Payment simulated successfully. Order placed.");
+      toast.success("Order placed. Payment is due on delivery.");
       navigate({ to: "/order/$orderId", params: { orderId: order.id } });
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Could not place the order. Try again.");
@@ -665,7 +669,7 @@ function CheckoutPage() {
           ))}
         </div>
         <p className="mt-3 text-[11px] text-muted-foreground">
-          Demo payment mode is active — no real charge will be made.
+          Online payment is unavailable until a verified payment provider is configured.
         </p>
       </section>
 
@@ -769,13 +773,13 @@ function CheckoutPage() {
             transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
             className="w-full max-w-md rounded-xl bg-card p-5 shadow-xl ring-1 ring-black/[0.08]"
           >
-            <h2 id="demo-payment-title" className="font-display text-xl">Confirm demo payment</h2>
+            <h2 id="demo-payment-title" className="font-display text-xl">Confirm cash on delivery</h2>
             <p className="mt-2 text-sm text-muted-foreground">
-              This is a simulated {pay === "upi" ? "UPI" : pay === "card" ? "Card" : "Cash on delivery"} payment for ₹{displayTotal}. No money will be charged.
+              Your order total is ₹{displayTotal}. No online payment is being recorded.
             </p>
             <div className="mt-4 flex justify-end gap-2">
               <button type="button" onClick={() => setShowDemoPayment(false)} className="rounded-lg border hairline px-4 py-2 text-sm">Cancel</button>
-              <button type="button" onClick={() => void placeOrder()} disabled={isPlacing} className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-60">{isPlacing ? "Processing…" : "Confirm payment"}</button>
+              <button type="button" onClick={() => void placeOrder()} disabled={isPlacing} className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-60">{isPlacing ? "Processing…" : "Place cash order"}</button>
             </div>
           </m.div>
         </m.div>

@@ -119,9 +119,14 @@ export const ordersStore = {
       ...baseParams,
       p_payment_method: order.paymentMethod === "UPI" ? "upi" : order.paymentMethod === "Card" ? "card" : "cod",
       p_is_demo: false,
+      p_coupon_code: order.couponCode ?? null,
     };
 
-    const { data: created, error } = await (supabase as any).rpc("place_order", rpcPayload);
+    const { data: created, error } = await (supabase as any).rpc("place_order_once", {
+      p_request_id: crypto.randomUUID(),
+      ...rpcPayload,
+      p_coupon_code: order.couponCode ?? null,
+    });
     if (error) {
       console.error("[orders] place_order RPC failed", {
         code: error.code,
