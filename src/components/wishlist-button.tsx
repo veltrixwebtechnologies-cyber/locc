@@ -17,7 +17,7 @@ export function WishlistButton({ productId, productName, item }: { productId: st
       title={isSaved ? "Remove from wishlist" : "Add to wishlist"}
       disabled={toggle.isPending}
       onClick={() => {
-        if (!auth.email && !auth.phone) {
+        if (!auth.id) {
           toast.error("Sign in to use your wishlist.");
           return;
         }

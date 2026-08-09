@@ -2,23 +2,25 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
 interface AuthState {
+  id: string | null;
   phone: string | null;
   email: string | null;
   name: string;
 }
 
-const EMPTY_AUTH: AuthState = { phone: null, email: null, name: "Guest" };
+const EMPTY_AUTH: AuthState = { id: null, phone: null, email: null, name: "Guest" };
 let state = EMPTY_AUTH;
 let initialized = false;
 const listeners = new Set<() => void>();
 
-function fromUser(user: { phone?: string | null; email?: string | null; user_metadata?: Record<string, unknown> } | null): AuthState {
+function fromUser(user: { id?: string; phone?: string | null; email?: string | null; user_metadata?: Record<string, unknown> } | null): AuthState {
   const displayName = typeof user?.user_metadata?.display_name === "string"
     ? user.user_metadata.display_name
     : typeof user?.user_metadata?.name === "string"
       ? user.user_metadata.name
       : user?.email?.split("@")[0] ?? "Guest";
   return {
+    id: user?.id ?? null,
     phone: user?.phone ?? null,
     email: user?.email ?? null,
     name: displayName || "Guest",

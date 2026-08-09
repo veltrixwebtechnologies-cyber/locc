@@ -230,10 +230,13 @@ export function useWishlist() {
   const auth = useAuth();
   const queryClient = useQueryClient();
   const channelId = useId();
-  const accountKey = auth.email || auth.phone || "signed-out";
+  // Use the immutable Supabase user id for cache isolation. Email/phone can be
+  // edited and may be absent for phone-only accounts, which could otherwise
+  // leave wishlist state under the wrong cache key after account changes.
+  const accountKey = auth.id || "signed-out";
 
   useEffect(() => {
-    if (!auth.email && !auth.phone) return;
+    if (!auth.id) return;
 
     const refresh = () => {
       void queryClient.invalidateQueries({ queryKey: ["wishlist", accountKey] });
@@ -249,11 +252,11 @@ export function useWishlist() {
       window.removeEventListener("focus", refresh);
       void supabase.removeChannel(channel);
     };
-  }, [accountKey, auth.email, auth.phone, queryClient, channelId]);
+  }, [accountKey, auth.id, queryClient, channelId]);
 
   return useQuery({
     queryKey: ["wishlist", accountKey],
-    enabled: Boolean(auth.email || auth.phone),
+    enabled: Boolean(auth.id),
     refetchInterval: 10_000,
     queryFn: async () => {
       const { data: userData, error: userError } = await supabase.auth.getUser();
@@ -329,10 +332,10 @@ export function useWishlistProducts() {
 export function useToggleWishlist() {
   const queryClient = useQueryClient();
   const auth = useAuth();
-  const accountKey = auth.email || auth.phone || "signed-out";
+  const accountKey = auth.id || "signed-out";
   return useMutation({
     mutationFn: async ({ productId, active, item }: { productId: string; active: boolean; item?: WishlistCatalogItem }) => {
-      if (!auth.email && !auth.phone) throw new Error("Sign in to use your wishlist.");
+      if (!auth.id) throw new Error("Sign in to use your wishlist.");
       const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(productId);
       if (active) {
         const { data: userData, error: userError } = await supabase.auth.getUser();

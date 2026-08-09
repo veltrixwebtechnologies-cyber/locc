@@ -16,7 +16,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const [scrolled, setScrolled] = useState(false);
   const [headerQuery, setHeaderQuery] = useState("");
   const { itemCount } = cartTotals(cart.lines);
-  const isSignedIn = !!(auth.phone || auth.email);
+  const isSignedIn = Boolean(auth.id);
 
   useEffect(() => {
     const update = () => setScrolled(window.scrollY > 8);
@@ -189,6 +189,8 @@ export function AppShell({ children }: { children: ReactNode }) {
 
       <main className="mx-auto w-full max-w-7xl">{children}</main>
 
+      <ShopperFooter />
+
       {/* Mobile bottom tab bar */}
       <nav className="fixed inset-x-0 bottom-0 z-40 border-t hairline bg-background/95 backdrop-blur md:hidden">
         <div className="mx-auto grid max-w-xl grid-cols-5">
@@ -236,5 +238,73 @@ export function AppShell({ children }: { children: ReactNode }) {
         </div>
       </nav>
     </div>
+  );
+}
+
+const footerLinks = [
+  ["Blog", "Privacy", "Terms", "FAQs", "Security", "Contact"],
+  ["Partner", "Franchise", "Seller", "Warehouse", "Deliver", "Resources"],
+  ["Recipes", "Bistro", "District", "Blinkit Ambulance", "Feeding India"],
+];
+
+const footerCategories = [
+  ["Bath & Body", "Beauty & Cosmetics", "Health & Pharma", "Atta, Rice & Dal", "Bakery & Biscuits", "Kitchenware & Appliances", "Drinks & Juices", "Sauces & Spreads", "Home & Lifestyle", "Stationery & Games", "Rakhi Gifts"],
+  ["Hair", "Feminine Hygiene", "Sexual Wellness", "Oil, Ghee & Masala", "Dry Fruits & Cereals", "Chips & Namkeen", "Tea, Coffee & Milk Drinks", "Paan Corner", "Cleaners & Repellents", "Print Store"],
+  ["Skin & Face", "Baby Care", "Vegetables & Fruits", "Dairy, Bread & Eggs", "Chicken, Meat & Fish", "Sweets & Chocolates", "Instant Food", "Ice Creams & More", "Electronics", "E-Gift Cards"],
+];
+
+function ShopperFooter() {
+  return (
+    <footer className="mt-16 border-t border-border bg-muted/20 px-5 pb-8 pt-10 md:px-8 lg:px-10">
+      <div className="mx-auto max-w-7xl">
+        <div className="grid gap-10 lg:grid-cols-[1fr_2fr]">
+          <section>
+            <h2 className="text-base font-semibold text-foreground">Useful links</h2>
+            <div className="mt-5 grid grid-cols-3 gap-x-6 gap-y-3 text-sm text-muted-foreground">
+              {footerLinks.map((column, columnIndex) => (
+                <div key={columnIndex} className="space-y-3">
+                  {column.map((label) => (
+                    <a key={label} href="#" className="block transition-colors hover:text-primary">
+                      {label}
+                    </a>
+                  ))}
+                </div>
+              ))}
+            </div>
+          </section>
+          <section>
+            <div className="flex items-center gap-3">
+              <h2 className="text-base font-semibold text-foreground">Categories</h2>
+              <Link to="/" search={{ category: undefined, q: undefined }} className="text-sm font-medium text-emerald-600 hover:underline">
+                See all
+              </Link>
+            </div>
+            <div className="mt-5 grid grid-cols-1 gap-x-8 gap-y-3 text-sm text-muted-foreground sm:grid-cols-3">
+              {footerCategories.map((column, columnIndex) => (
+                <div key={columnIndex} className="space-y-3">
+                  {column.map((label) => (
+                    <Link key={label} to="/" search={{ category: undefined, q: label }} className="block transition-colors hover:text-primary">
+                      {label}
+                    </Link>
+                  ))}
+                </div>
+              ))}
+            </div>
+          </section>
+        </div>
+
+        <div className="mt-10 flex flex-col gap-5 border-t border-border pt-6 text-sm text-muted-foreground md:flex-row md:items-center md:justify-between">
+          <p>© Local Shore, 2026. Your neighborhood, delivered.</p>
+          <div className="flex flex-wrap items-center gap-3">
+            <span className="font-semibold text-foreground">Download the app</span>
+            <a href="#" aria-label="Download on the App Store" className="rounded-md bg-foreground px-3 py-2 text-xs font-medium text-background hover:opacity-90">App Store</a>
+            <a href="#" aria-label="Get it on Google Play" className="rounded-md bg-foreground px-3 py-2 text-xs font-medium text-background hover:opacity-90">Google Play</a>
+            {["f", "𝕏", "◎", "in", "◉"].map((icon) => <a key={icon} href="#" aria-label="Social media" className="grid h-8 w-8 place-items-center rounded-full bg-foreground text-xs font-semibold text-background hover:bg-primary">{icon}</a>)}
+          </div>
+        </div>
+
+        <p className="mt-6 text-center text-xs leading-6 text-muted-foreground">Local Shore connects customers with approved neighborhood sellers and delivery partners. Product availability, pricing and delivery times may vary by location.</p>
+      </div>
+    </footer>
   );
 }

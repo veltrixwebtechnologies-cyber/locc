@@ -17,7 +17,7 @@ function WishlistPage() {
   const auth = useAuth();
   const wishlist = useWishlist();
   const products = useWishlistProducts();
-  const signedIn = Boolean(auth.email || auth.phone);
+  const signedIn = Boolean(auth.id);
 
   return (
     <AppShell>
