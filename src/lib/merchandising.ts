@@ -37,6 +37,45 @@ export type WishlistCatalogItem = {
 
 const productSelect = "id,seller_id,name,brand,brand_id,brand_name,category,selling_price,mrp,discount_price,discount_starts_at,discount_ends_at,clearance,stock,image_url,average_rating,review_count,shop_name,created_at";
 
+type CachedImage = { url: string; expiresAt: number };
+const imageCache = new Map<string, CachedImage>();
+const imageCacheKey = (path: string) => `localshore:image:${path}`;
+
+/** Resolve private product images once per hour instead of once per card/page. */
+export async function resolveProductImageUrl(raw: string | null | undefined): Promise<string> {
+  if (!raw) return "";
+  if (/^(https?:|data:|blob:)/i.test(raw)) return raw;
+
+  const now = Date.now();
+  const memory = imageCache.get(raw);
+  if (memory && memory.expiresAt > now + 60_000) return memory.url;
+
+  try {
+    const stored = window.localStorage.getItem(imageCacheKey(raw));
+    if (stored) {
+      const cached = JSON.parse(stored) as CachedImage;
+      if (cached.url && cached.expiresAt > now + 60_000) {
+        imageCache.set(raw, cached);
+        return cached.url;
+      }
+      window.localStorage.removeItem(imageCacheKey(raw));
+    }
+  } catch {
+    // Storage can be disabled; the network path below still works.
+  }
+
+  const { data } = await supabase.storage.from("product-images").createSignedUrl(raw, 3600);
+  if (!data?.signedUrl) return "";
+  const cached = { url: data.signedUrl, expiresAt: now + 55 * 60_000 };
+  imageCache.set(raw, cached);
+  try {
+    window.localStorage.setItem(imageCacheKey(raw), JSON.stringify(cached));
+  } catch {
+    // Ignore quota/private-mode errors.
+  }
+  return data.signedUrl;
+}
+
 export function useNewArrivals() {
   return useQuery({
     queryKey: ["merchandising", "new-arrivals"],

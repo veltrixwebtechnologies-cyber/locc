@@ -5,9 +5,8 @@ import { toast } from "sonner";
 import { AppShell } from "@/components/app-shell";
 import { useAuth } from "@/lib/auth-store";
 import { cartStore } from "@/lib/cart-store";
-import { useToggleWishlist, useWishlist, useWishlistProducts, type MerchandisingProduct } from "@/lib/merchandising";
+import { resolveProductImageUrl, useToggleWishlist, useWishlist, useWishlistProducts, type MerchandisingProduct } from "@/lib/merchandising";
 import { APPROVED_STORE } from "@/lib/mock-data";
-import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/wishlist")({
   component: WishlistPage,
@@ -62,8 +61,8 @@ function WishlistRow({ product }: { product: MerchandisingProduct }) {
   useEffect(() => {
     let active = true;
     if (product.image_url && !/^(https?:|data:)/i.test(product.image_url)) {
-      void supabase.storage.from("product-images").createSignedUrl(product.image_url, 3600).then(({ data }) => {
-        if (active && data?.signedUrl) setImageUrl(data.signedUrl);
+      void resolveProductImageUrl(product.image_url).then((url) => {
+        if (active && url) setImageUrl(url);
       });
     }
     return () => { active = false; };

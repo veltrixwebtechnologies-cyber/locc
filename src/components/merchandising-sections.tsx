@@ -15,9 +15,9 @@ import {
   useFlashSaleProducts,
   recordProductEvent,
   recordRecentProductView,
+  resolveProductImageUrl,
   type MerchandisingProduct,
 } from "@/lib/merchandising";
-import { supabase } from "@/integrations/supabase/client";
 import { WishlistButton } from "@/components/wishlist-button";
 import { m } from "motion/react";
 import { Reveal } from "@/components/motion/presets";
@@ -34,12 +34,9 @@ export function ProductCard({ product }: { product: MerchandisingProduct }) {
   useEffect(() => {
     let mounted = true;
     if (product.image_url && !/^(https?:|data:)/i.test(product.image_url)) {
-      void supabase.storage
-        .from("product-images")
-        .createSignedUrl(product.image_url, 3600)
-        .then(({ data }) => {
-          if (mounted && data?.signedUrl) setImageUrl(data.signedUrl);
-        });
+      void resolveProductImageUrl(product.image_url).then((url) => {
+        if (mounted && url) setImageUrl(url);
+      });
     }
     return () => {
       mounted = false;
