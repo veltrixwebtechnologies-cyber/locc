@@ -242,29 +242,39 @@ export function AppShell({ children }: { children: ReactNode }) {
 }
 
 const footerLinks = [
-  ["Blog", "Privacy", "Terms", "FAQs", "Security", "Contact"],
-  ["Partner", "Franchise", "Seller", "Warehouse", "Deliver", "Resources"],
-  ["Recipes", "Bistro", "District", "Blinkit Ambulance", "Feeding India"],
+  ["About Local Shore", "Our neighborhoods", "Community notes", "Careers"],
+  ["Sell with us", "Deliver with us", "Partner help", "Merchant resources"],
+  ["Help center", "Contact support", "Privacy center", "Terms of use"],
 ];
 
 const footerCategories = [
-  ["Bath & Body", "Beauty & Cosmetics", "Health & Pharma", "Atta, Rice & Dal", "Bakery & Biscuits", "Kitchenware & Appliances", "Drinks & Juices", "Sauces & Spreads", "Home & Lifestyle", "Stationery & Games", "Rakhi Gifts"],
-  ["Hair", "Feminine Hygiene", "Sexual Wellness", "Oil, Ghee & Masala", "Dry Fruits & Cereals", "Chips & Namkeen", "Tea, Coffee & Milk Drinks", "Paan Corner", "Cleaners & Repellents", "Print Store"],
-  ["Skin & Face", "Baby Care", "Vegetables & Fruits", "Dairy, Bread & Eggs", "Chicken, Meat & Fish", "Sweets & Chocolates", "Instant Food", "Ice Creams & More", "Electronics", "E-Gift Cards"],
+  ["Daily groceries", "Fresh produce", "Pantry staples", "Breakfast", "Beverages", "Snacks"],
+  ["Personal care", "Home essentials", "Health & wellness", "Baby care", "Kitchen", "Stationery"],
+  ["Local favorites", "Bakery", "Ready to cook", "Gifts", "Electronics", "Seasonal picks"],
 ];
 
 function ShopperFooter() {
   return (
-    <footer className="mt-16 border-t border-border bg-muted/20 px-5 pb-8 pt-10 md:px-8 lg:px-10">
+    <footer className="mt-16 bg-[#132238] px-5 pb-8 pt-12 text-slate-200 md:px-8 lg:px-10">
       <div className="mx-auto max-w-7xl">
-        <div className="grid gap-10 lg:grid-cols-[1fr_2fr]">
+        <div className="grid gap-10 lg:grid-cols-[1.1fr_2fr]">
           <section>
-            <h2 className="text-base font-semibold text-foreground">Useful links</h2>
-            <div className="mt-5 grid grid-cols-3 gap-x-6 gap-y-3 text-sm text-muted-foreground">
+            <div className="flex items-center gap-2">
+              <span className="grid h-9 w-9 place-items-center rounded-xl bg-[#f5b942] font-display font-bold text-[#132238]">LS</span>
+              <span className="font-display text-xl font-bold text-white">Local Shore</span>
+            </div>
+            <p className="mt-4 max-w-sm text-sm leading-6 text-slate-300">Small shops, thoughtful sellers, and everyday essentials brought closer to home.</p>
+            <div className="mt-6 flex flex-wrap gap-2">
+              {["Fresh", "Nearby", "Trusted"].map((label) => <span key={label} className="rounded-full border border-slate-500/60 px-3 py-1 text-xs text-slate-200">{label}</span>)}
+            </div>
+          </section>
+          <section>
+            <h2 className="text-sm font-semibold uppercase tracking-[0.18em] text-[#f5b942]">Explore Local Shore</h2>
+            <div className="mt-5 grid grid-cols-1 gap-8 sm:grid-cols-3 text-sm text-slate-300">
               {footerLinks.map((column, columnIndex) => (
                 <div key={columnIndex} className="space-y-3">
                   {column.map((label) => (
-                    <a key={label} href="#" className="block transition-colors hover:text-primary">
+                    <a key={label} href="#" className="block transition-colors hover:text-white">
                       {label}
                     </a>
                   ))}
@@ -272,38 +282,35 @@ function ShopperFooter() {
               ))}
             </div>
           </section>
-          <section>
-            <div className="flex items-center gap-3">
-              <h2 className="text-base font-semibold text-foreground">Categories</h2>
-              <Link to="/" search={{ category: undefined, q: undefined }} className="text-sm font-medium text-emerald-600 hover:underline">
-                See all
-              </Link>
-            </div>
-            <div className="mt-5 grid grid-cols-1 gap-x-8 gap-y-3 text-sm text-muted-foreground sm:grid-cols-3">
-              {footerCategories.map((column, columnIndex) => (
-                <div key={columnIndex} className="space-y-3">
-                  {column.map((label) => (
-                    <Link key={label} to="/" search={{ category: undefined, q: label }} className="block transition-colors hover:text-primary">
-                      {label}
-                    </Link>
-                  ))}
-                </div>
-              ))}
-            </div>
-          </section>
         </div>
 
-        <div className="mt-10 flex flex-col gap-5 border-t border-border pt-6 text-sm text-muted-foreground md:flex-row md:items-center md:justify-between">
-          <p>© Local Shore, 2026. Your neighborhood, delivered.</p>
-          <div className="flex flex-wrap items-center gap-3">
-            <span className="font-semibold text-foreground">Download the app</span>
-            <a href="#" aria-label="Download on the App Store" className="rounded-md bg-foreground px-3 py-2 text-xs font-medium text-background hover:opacity-90">App Store</a>
-            <a href="#" aria-label="Get it on Google Play" className="rounded-md bg-foreground px-3 py-2 text-xs font-medium text-background hover:opacity-90">Google Play</a>
-            {["f", "𝕏", "◎", "in", "◉"].map((icon) => <a key={icon} href="#" aria-label="Social media" className="grid h-8 w-8 place-items-center rounded-full bg-foreground text-xs font-semibold text-background hover:bg-primary">{icon}</a>)}
+        <div className="mt-12 border-t border-slate-500/30 pt-8">
+          <div className="grid gap-8 lg:grid-cols-[1fr_2fr]">
+            <div>
+              <div className="flex items-center justify-between gap-3">
+                <h2 className="text-sm font-semibold uppercase tracking-[0.18em] text-[#f5b942]">Shop by need</h2>
+                <Link to="/" search={{ category: undefined, q: undefined }} className="text-xs text-slate-300 hover:text-white">Browse all</Link>
+              </div>
+              <div className="mt-4 flex flex-wrap gap-2">
+                {footerCategories.flat().map((label) => <Link key={label} to="/" search={{ category: undefined, q: label }} className="rounded-lg bg-white/10 px-3 py-2 text-xs text-slate-200 transition-colors hover:bg-white/20">{label}</Link>)}
+              </div>
+            </div>
+            <div className="rounded-2xl bg-[#1e3551] p-5">
+              <p className="text-sm font-semibold text-white">Keep Local Shore close</p>
+              <p className="mt-1 text-sm text-slate-300">Get delivery updates and neighborhood picks.</p>
+              <div className="mt-4 flex flex-wrap gap-2">
+                <a href="#" className="rounded-lg bg-white px-4 py-2 text-xs font-semibold text-[#132238] hover:bg-slate-100">iOS app</a>
+                <a href="#" className="rounded-lg bg-[#f5b942] px-4 py-2 text-xs font-semibold text-[#132238] hover:bg-[#ffd477]">Android app</a>
+                {['Instagram', 'LinkedIn', 'X'].map((label) => <a key={label} href="#" className="rounded-lg border border-slate-400/50 px-3 py-2 text-xs text-slate-200 hover:border-white hover:text-white">{label}</a>)}
+              </div>
+            </div>
           </div>
         </div>
 
-        <p className="mt-6 text-center text-xs leading-6 text-muted-foreground">Local Shore connects customers with approved neighborhood sellers and delivery partners. Product availability, pricing and delivery times may vary by location.</p>
+        <div className="mt-8 flex flex-col gap-2 border-t border-slate-500/30 pt-5 text-xs text-slate-400 sm:flex-row sm:items-center sm:justify-between">
+          <p>© Local Shore, 2026 · Made for nearby living.</p>
+          <p>Availability and delivery times vary by neighborhood.</p>
+        </div>
       </div>
     </footer>
   );
