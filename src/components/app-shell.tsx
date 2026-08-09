@@ -255,26 +255,22 @@ const footerCategories = [
 
 function ShopperFooter() {
   return (
-    <footer className="mt-16 bg-primary px-5 pb-8 pt-12 text-primary-foreground md:px-8 lg:px-10">
+    <footer className="mt-16 border-t border-border bg-background px-5 pb-7 pt-9 md:px-8 lg:px-10">
       <div className="mx-auto max-w-7xl">
-        <div className="grid gap-10 lg:grid-cols-[1.1fr_2fr]">
+        <div className="grid gap-8 md:grid-cols-[1fr_2fr]">
           <section>
             <div className="flex items-center gap-2">
               <span className="grid h-9 w-9 place-items-center rounded-xl bg-marigold font-display font-bold text-marigold-foreground">LS</span>
-              <span className="font-display text-xl font-bold text-primary-foreground">Local Shore</span>
+              <span className="font-display text-xl font-bold text-foreground">Local Shore</span>
             </div>
-            <p className="mt-4 max-w-sm text-sm leading-6 text-primary-foreground/75">Small shops, thoughtful sellers, and everyday essentials brought closer to home.</p>
-            <div className="mt-6 flex flex-wrap gap-2">
-              {["Fresh", "Nearby", "Trusted"].map((label) => <span key={label} className="rounded-full border border-primary-foreground/30 px-3 py-1 text-xs text-primary-foreground/85">{label}</span>)}
-            </div>
+            <p className="mt-3 max-w-sm text-sm leading-6 text-muted-foreground">Everyday essentials from trusted neighborhood sellers.</p>
           </section>
           <section>
-            <h2 className="text-sm font-semibold uppercase tracking-[0.18em] text-marigold">Explore Local Shore</h2>
-            <div className="mt-5 grid grid-cols-1 gap-8 text-sm text-primary-foreground/75 sm:grid-cols-3">
+            <div className="grid grid-cols-1 gap-7 text-sm text-muted-foreground sm:grid-cols-3">
               {footerLinks.map((column, columnIndex) => (
                 <div key={columnIndex} className="space-y-3">
                   {column.map((label) => (
-                    <a key={label} href="#" className="block transition-colors hover:text-primary-foreground">
+                    <a key={label} href="#" className="block transition-colors hover:text-primary">
                       {label}
                     </a>
                   ))}
@@ -284,30 +280,19 @@ function ShopperFooter() {
           </section>
         </div>
 
-        <div className="mt-12 border-t border-primary-foreground/20 pt-8">
-          <div className="grid gap-8 lg:grid-cols-[1fr_2fr]">
-            <div>
-              <div className="flex items-center justify-between gap-3">
-                <h2 className="text-sm font-semibold uppercase tracking-[0.18em] text-marigold">Shop by need</h2>
-                <Link to="/" search={{ category: undefined, q: undefined }} className="text-xs text-primary-foreground/75 hover:text-primary-foreground">Browse all</Link>
-              </div>
-              <div className="mt-4 flex flex-wrap gap-2">
-                {footerCategories.flat().map((label) => <Link key={label} to="/" search={{ category: undefined, q: label }} className="rounded-lg bg-primary-foreground/10 px-3 py-2 text-xs text-primary-foreground/85 transition-colors hover:bg-primary-foreground/20">{label}</Link>)}
-              </div>
+        <div className="mt-8 border-t border-border pt-6">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <span className="text-sm font-semibold text-foreground">Shop by need</span>
+              <Link to="/" search={{ category: undefined, q: undefined }} className="text-xs text-primary hover:underline">Browse all</Link>
             </div>
-            <div className="rounded-2xl bg-primary-foreground/10 p-5">
-              <p className="text-sm font-semibold text-primary-foreground">Keep Local Shore close</p>
-              <p className="mt-1 text-sm text-primary-foreground/75">Get delivery updates and neighborhood picks.</p>
-              <div className="mt-4 flex flex-wrap gap-2">
-                <a href="#" className="rounded-lg bg-background px-4 py-2 text-xs font-semibold text-foreground hover:bg-muted">iOS app</a>
-                <a href="#" className="rounded-lg bg-marigold px-4 py-2 text-xs font-semibold text-marigold-foreground hover:brightness-105">Android app</a>
-                {['Instagram', 'LinkedIn', 'X'].map((label) => <a key={label} href="#" className="rounded-lg border border-primary-foreground/35 px-3 py-2 text-xs text-primary-foreground/85 hover:border-primary-foreground hover:text-primary-foreground">{label}</a>)}
-              </div>
+            <div className="flex flex-wrap gap-x-4 gap-y-2 text-xs text-muted-foreground">
+              {footerCategories.flat().slice(0, 8).map((label) => <Link key={label} to="/" search={{ category: undefined, q: label }} className="hover:text-primary">{label}</Link>)}
             </div>
           </div>
         </div>
 
-        <div className="mt-8 flex flex-col gap-2 border-t border-primary-foreground/20 pt-5 text-xs text-primary-foreground/60 sm:flex-row sm:items-center sm:justify-between">
+        <div className="mt-6 flex flex-col gap-2 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
           <p>© Local Shore, 2026 · Made for nearby living.</p>
           <p>Availability and delivery times vary by neighborhood.</p>
         </div>
