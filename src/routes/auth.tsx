@@ -59,7 +59,9 @@ function AuthPage() {
   const [emailStep, setEmailStep] = useState<"email" | "otp">("email");
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
-  const [emailOtp, setEmailOtp] = useState("");
+const [emailOtp, setEmailOtp] = useState("");
+
+  const PENDING_OTP_KEY = "localshore.pending-otp.v1";
 
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -71,6 +73,22 @@ function AuthPage() {
     }
     navigate({ to: "/", search: { category: undefined, q: undefined } });
   }, [navigate, redirect]);
+
+  useEffect(() => {
+    try {
+      const pending = JSON.parse(localStorage.getItem(PENDING_OTP_KEY) ?? "null") as {
+        mode?: Mode; intent?: AuthIntent; phone?: string; countryCode?: string; email?: string; name?: string;
+        step?: "phone" | "otp"; emailStep?: "email" | "otp";
+      } | null;
+      if (pending?.mode === "phone" && pending.step === "otp" && pending.phone && pending.countryCode) {
+        setMode("phone"); setIntent(pending.intent === "signup" ? "signup" : "login");
+        setPhone(pending.phone); setCountryCode(pending.countryCode); setName(pending.name ?? ""); setStep("otp");
+      } else if (pending?.mode === "email" && pending.emailStep === "otp" && pending.email) {
+        setMode("email"); setIntent(pending.intent === "signup" ? "signup" : "login");
+        setEmail(pending.email); setName(pending.name ?? ""); setEmailStep("otp");
+      }
+    } catch { localStorage.removeItem(PENDING_OTP_KEY); }
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -98,7 +116,7 @@ function AuthPage() {
       { id: userId, ...profile },
       { onConflict: "id" },
     );
-    if (profileError) throw new Error("Your account was created, but your profile could not be saved.");
+    if (profileError) throw new Error("Verification succeeded, but your profile could not be saved. Please try again.");
   };
 
   // 30s resend cooldown ticker
@@ -146,6 +164,7 @@ function AuthPage() {
       if (authError) throw authError;
       setStep("otp");
       setCooldown(30);
+      localStorage.setItem(PENDING_OTP_KEY, JSON.stringify({ mode: "phone", intent, phone, countryCode, name, step: "otp" }));
     } catch (err) {
       console.error("Supabase phone OTP error", err);
       setError(authFriendlyError(err, "Could not send the verification code. Check Supabase Auth SMS settings."));
@@ -197,6 +216,7 @@ function AuthPage() {
       } else {
         toast.success("Welcome back!");
       }
+      localStorage.removeItem(PENDING_OTP_KEY);
       done();
     } catch (err) {
       console.error("Supabase phone OTP verification error", err);
@@ -242,6 +262,7 @@ function AuthPage() {
       if (authError) throw authError;
       setEmailStep("otp");
       setCooldown(30);
+      localStorage.setItem(PENDING_OTP_KEY, JSON.stringify({ mode: "email", intent, email: email.trim(), name, emailStep: "otp" }));
     } catch (err) {
       console.error("Supabase email OTP error", err);
       setError(authFriendlyError(err, "Could not send the verification code. Check Supabase SMTP settings."));
@@ -272,6 +293,7 @@ function AuthPage() {
       } else {
         toast.success("Welcome back!");
       }
+      localStorage.removeItem(PENDING_OTP_KEY);
       done();
     } catch (err) {
       console.error("Supabase email OTP verification error", err);
@@ -312,6 +334,7 @@ function AuthPage() {
     setEmailStep("email");
     setOtp("");
     setEmailOtp("");
+    localStorage.removeItem(PENDING_OTP_KEY);
   };
 
   const switchIntent = (next: AuthIntent) => {
@@ -321,6 +344,7 @@ function AuthPage() {
     setEmailStep("email");
     setOtp("");
     setEmailOtp("");
+    localStorage.removeItem(PENDING_OTP_KEY);
   };
 
   return (

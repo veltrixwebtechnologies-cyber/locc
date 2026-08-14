@@ -59,7 +59,10 @@ function fromRow(row: any): Order {
     deliveryFee: Number(row.shipping_fee),
     total: Number(row.total),
     address: row.buyer_address ?? "",
-    destination: { lat: 9.9816, lng: 76.2999 },
+    destination:
+      Number.isFinite(Number(row.customer_latitude)) && Number.isFinite(Number(row.customer_longitude))
+        ? { lat: Number(row.customer_latitude), lng: Number(row.customer_longitude) }
+        : { lat: 9.9816, lng: 76.2999 },
     paymentMethod: row.payment_method === "upi" ? "UPI" : row.payment_method === "card" ? "Card" : "Cash on delivery",
     deliveryOtp: row.delivery_otp ?? undefined,
     couponCode: row.coupon_code ?? undefined,
@@ -118,23 +121,18 @@ export const ordersStore = {
     const rpcPayload = {
       ...baseParams,
       p_payment_method: order.paymentMethod === "UPI" ? "upi" : order.paymentMethod === "Card" ? "card" : "cod",
-      p_is_demo: false,
       p_coupon_code: order.couponCode ?? null,
     };
 
-    const { data: created, error } = await (supabase as any).rpc("place_order_once", {
+    let { data: created, error } = await (supabase as any).rpc("place_order_once", {
       p_request_id: crypto.randomUUID(),
       ...rpcPayload,
-      p_coupon_code: order.couponCode ?? null,
     });
     if (error) {
+      const correlationId = crypto.randomUUID();
       console.error("[orders] place_order RPC failed", {
+        correlationId,
         code: error.code,
-        status: error.status,
-        message: error.message,
-        details: error.details,
-        hint: error.hint,
-        payload: rpcPayload,
       });
       throw new Error(orderErrorMessage(error));
     }

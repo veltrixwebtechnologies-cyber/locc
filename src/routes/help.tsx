@@ -22,10 +22,24 @@ const FAQS = [
   },
 ];
 
+const TOPIC_CONTENT: Record<string, { title: string; body: string }> = {
+  about: { title: "About Local Shore", body: "Local Shore brings trusted neighborhood shops, everyday essentials, and dependable delivery together in one simple place." },
+  neighborhoods: { title: "Our neighborhoods", body: "We work with nearby stores so your order supports local businesses and reaches you with a shorter, more thoughtful route." },
+  community: { title: "Community notes", body: "Discover local favorites, seasonal picks, and practical updates from the neighborhoods we serve." },
+  sell: { title: "Sell with us", body: "Have a local shop? Contact us to list your catalog, reach nearby customers, and grow without losing your neighborhood identity." },
+  deliver: { title: "Deliver with us", body: "Delivery partners help local orders move safely and on time. Contact support to learn about eligibility and onboarding." },
+  partner: { title: "Partner help", body: "Partners can contact support for account, delivery, payout, and document assistance." },
+  merchant: { title: "Merchant resources", body: "Find guidance for catalog setup, inventory, order handoff, customer care, and store growth." },
+  privacy: { title: "Privacy center", body: "We use your account, address, and order details to provide delivery, support, and safety features. Contact us for access or deletion requests." },
+  terms: { title: "Terms of use", body: "Use Local Shore respectfully, provide accurate delivery details, and follow the policies shown during checkout and account setup." },
+};
+
 export const Route = createFileRoute("/help")({ component: HelpPage });
 
 function HelpPage() {
   const [open, setOpen] = useState<number | null>(0);
+  const topic = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("topic") : null;
+  const topicContent = topic ? TOPIC_CONTENT[topic] : undefined;
 
   return (
     <AppShell>
@@ -40,6 +54,12 @@ function HelpPage() {
           Profile
         </p>
         <h1 className="mt-1 font-display text-3xl">Help & support</h1>
+        {topicContent && (
+          <section className="mt-5 rounded-xl bg-card p-4 ring-1 ring-black/[0.04]">
+            <h2 className="font-semibold">{topicContent.title}</h2>
+            <p className="mt-2 text-sm leading-6 text-muted-foreground">{topicContent.body}</p>
+          </section>
+        )}
       </div>
 
       <div className="mx-5 mt-6 grid grid-cols-2 gap-3">

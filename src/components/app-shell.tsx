@@ -242,9 +242,24 @@ export function AppShell({ children }: { children: ReactNode }) {
 }
 
 const footerLinks = [
-  ["About Local Shore", "Our neighborhoods", "Community notes", "Careers"],
-  ["Sell with us", "Deliver with us", "Partner help", "Merchant resources"],
-  ["Help center", "Contact support", "Privacy center", "Terms of use"],
+  [
+    ["About Local Shore", "/help?topic=about"],
+    ["Our neighborhoods", "/help?topic=neighborhoods"],
+    ["Community notes", "/help?topic=community"],
+    ["Careers", "mailto:careers@localshore.in"],
+  ],
+  [
+    ["Sell with us", "/help?topic=sell"],
+    ["Deliver with us", "/help?topic=deliver"],
+    ["Partner help", "/help?topic=partner"],
+    ["Merchant resources", "/help?topic=merchant"],
+  ],
+  [
+    ["Help center", "/help"],
+    ["Contact support", "/support"],
+    ["Privacy center", "/help?topic=privacy"],
+    ["Terms of use", "/help?topic=terms"],
+  ],
 ];
 
 const footerCategories = [
@@ -269,8 +284,8 @@ function ShopperFooter() {
             <div className="grid grid-cols-1 gap-7 text-sm text-muted-foreground sm:grid-cols-3">
               {footerLinks.map((column, columnIndex) => (
                 <div key={columnIndex} className="space-y-3">
-                  {column.map((label) => (
-                    <a key={label} href="#" className="block transition-colors hover:text-primary">
+                  {column.map(([label, href]) => (
+                    <a key={label} href={href} className="block transition-colors hover:text-primary">
                       {label}
                     </a>
                   ))}

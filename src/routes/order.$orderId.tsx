@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useMemo } from "react";
+import { useMemo } from "react";
 import { AppShell } from "@/components/app-shell";
-import { useOrdersState, advanceDemoOrder, orderStatusFlow, orderStatusLabel, type OrderStatus } from "@/lib/orders-store";
+import { useOrdersState, orderStatusFlow, orderStatusLabel, type OrderStatus } from "@/lib/orders-store";
 import { getStore } from "@/lib/mock-data";
 import { DeliveryMap } from "@/components/delivery-map";
 import { MessageCircle, Phone, Star } from "lucide-react";
@@ -21,18 +21,6 @@ function OrderPage() {
   const store = order ? getStore(order.storeId) : undefined;
   const currentIndex = order ? orderStatusFlow.indexOf(order.status) : 0;
   const status = order?.status;
-
-  useEffect(() => {
-    if (!order || order.status === "delivered" || order.status === "cancelled" || order.status === "returned") return;
-
-    const timer = window.setTimeout(() => {
-      void advanceDemoOrder(order.id).catch((error) => {
-        toast.error(error instanceof Error ? error.message : "Order tracking could not update.");
-      });
-    }, 5_000);
-
-    return () => window.clearTimeout(timer);
-  }, [order?.id, order?.status]);
 
   const destination = useMemo(() => {
     if (order?.destination) return order.destination;

@@ -460,10 +460,6 @@ function CheckoutPage() {
 
   const openPaymentConfirmation = () => {
     if (!selectedAddressLine || isPlacing || isCheckingStock) return;
-    if (pay !== "cod") {
-      toast.error("Online payments are temporarily unavailable. Choose Cash on delivery.");
-      return;
-    }
     setShowDemoPayment(true);
   };
 
@@ -487,7 +483,7 @@ function CheckoutPage() {
         distanceKm: store.distanceKm,
       });
       cartStore.clear();
-      toast.success("Order placed. Payment is due on delivery.");
+      toast.success(pay === "cod" ? "Order placed. Payment is due on delivery." : "Demo payment completed. Order placed as unpaid/pending.");
       navigate({ to: "/order/$orderId", params: { orderId: order.id } });
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Could not place the order. Try again.");
@@ -669,7 +665,7 @@ function CheckoutPage() {
           ))}
         </div>
         <p className="mt-3 text-[11px] text-muted-foreground">
-          Online payment is unavailable until a verified payment provider is configured.
+          UPI and Card use a demo checkout. They never mark the order as paid; real payment remains pending until a verified provider confirms it.
         </p>
       </section>
 
@@ -773,13 +769,17 @@ function CheckoutPage() {
             transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
             className="w-full max-w-md rounded-xl bg-card p-5 shadow-xl ring-1 ring-black/[0.08]"
           >
-            <h2 id="demo-payment-title" className="font-display text-xl">Confirm cash on delivery</h2>
+            <h2 id="demo-payment-title" className="font-display text-xl">
+              {pay === "cod" ? "Confirm cash on delivery" : `Demo ${pay === "upi" ? "UPI" : "card"} payment`}
+            </h2>
             <p className="mt-2 text-sm text-muted-foreground">
-              Your order total is ₹{displayTotal}. No online payment is being recorded.
+              {pay === "cod"
+                ? `Your order total is ₹${displayTotal}. Payment will be collected on delivery.`
+                : `Simulate a successful ${pay === "upi" ? "UPI" : "card"} checkout for ₹${displayTotal}. This demo does not record a real payment or mark the order paid.`}
             </p>
             <div className="mt-4 flex justify-end gap-2">
               <button type="button" onClick={() => setShowDemoPayment(false)} className="rounded-lg border hairline px-4 py-2 text-sm">Cancel</button>
-              <button type="button" onClick={() => void placeOrder()} disabled={isPlacing} className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-60">{isPlacing ? "Processing…" : "Place cash order"}</button>
+              <button type="button" onClick={() => void placeOrder()} disabled={isPlacing} className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-60">{isPlacing ? "Processing…" : pay === "cod" ? "Place cash order" : "Complete demo payment"}</button>
             </div>
           </m.div>
         </m.div>
