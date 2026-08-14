@@ -102,15 +102,6 @@ const [emailOtp, setEmailOtp] = useState("");
     };
   }, [done]);
 
-  const accountExists = async (value: { email?: string; phone?: string }) => {
-    const { data, error: lookupError } = await (supabase as any).rpc("account_exists", {
-      p_email: value.email ?? null,
-      p_phone: value.phone ?? null,
-    });
-    if (lookupError) throw new Error("Could not verify the account right now.");
-    return data === true;
-  };
-
   const saveProfile = async (userId: string, profile: { email?: string; phone?: string; display_name: string }) => {
     const { error: profileError } = await (supabase as any).from("profiles").upsert(
       { id: userId, ...profile },
@@ -148,15 +139,6 @@ const [emailOtp, setEmailOtp] = useState("");
     setLoading(true);
     try {
       const normalizedPhone = `${countryCode}${phone}`;
-      const exists = await accountExists({ phone: normalizedPhone });
-      if (intent === "login" && !exists) {
-        setError("No account found with this phone number.");
-        return;
-      }
-      if (intent === "signup" && exists) {
-        setError("This phone number is already registered. Please log in instead.");
-        return;
-      }
       const { error: authError } = await supabase.auth.signInWithOtp({
         phone: normalizedPhone,
         options: { shouldCreateUser: intent === "signup" },
@@ -242,15 +224,6 @@ const [emailOtp, setEmailOtp] = useState("");
     setError(null);
     setLoading(true);
     try {
-      const exists = await accountExists({ email: email.trim() });
-      if (intent === "login" && !exists) {
-        setError("No account found with this email.");
-        return;
-      }
-      if (intent === "signup" && exists) {
-        setError("This email is already registered. Please log in instead.");
-        return;
-      }
       const { error: authError } = await supabase.auth.signInWithOtp({
         email: email.trim(),
         options: {
