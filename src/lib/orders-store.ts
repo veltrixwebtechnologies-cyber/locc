@@ -94,6 +94,9 @@ async function loadOrders(): Promise<Order[]> {
 }
 
 const orderErrorMessage = (error: any) => {
+  if (error?.code === "PGRST202" || String(error?.message ?? "").includes("Could not find the function public.place_order_once")) {
+    return "Checkout is temporarily unavailable because the secure order service is not deployed. Please contact support.";
+  }
   const message = String(error?.message ?? "");
   if (message.includes("Authentication required")) return "Your session expired. Please sign in again.";
   if (message.includes("Delivery address is required")) return "Add a delivery address before placing the order.";
