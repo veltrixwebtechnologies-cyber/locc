@@ -10,6 +10,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { recordProductEvent, recordRecentProductView, type MerchandisingProduct } from "@/lib/merchandising";
 import { useAuth } from "@/lib/auth-store";
 import { toast } from "sonner";
+import { m } from "motion/react";
+import { SkeletonCard } from "@/components/motion/presets";
 
 export const Route = createFileRoute("/product/$productId")({ component: ProductPage });
 
@@ -50,14 +52,14 @@ function ProductPage() {
     onError: (error: Error) => toast.error(error.message),
   });
 
-  if (product.isLoading) return <AppShell><div className="p-8 text-center text-sm text-muted-foreground">Loading product...</div></AppShell>;
+  if (product.isLoading) return <AppShell><div className="grid gap-6 p-5 md:grid-cols-[minmax(260px,380px)_1fr] md:p-8"><SkeletonCard className="h-[380px]" /><div className="space-y-4"><div className="premium-skeleton h-4 w-1/3 rounded" /><div className="premium-skeleton h-10 w-4/5 rounded" /><div className="premium-skeleton h-5 w-1/2 rounded" /><div className="premium-skeleton h-12 w-2/5 rounded-xl" /></div></div></AppShell>;
   if (product.error || !product.data) return <AppShell><div className="p-8 text-center"><p className="font-display text-xl">Product unavailable</p><Link className="mt-3 inline-block text-primary underline" to="/">Back to shops</Link></div></AppShell>;
   const item = product.data;
   return <AppShell>
     <div className="px-5 py-6 md:px-8">
       <Link to="/" search={{ category: undefined, q: undefined }} className="inline-flex items-center gap-1 text-sm text-muted-foreground"><ArrowLeft className="h-4 w-4" /> Back to shops</Link>
       <div className="mt-5 grid gap-6 md:grid-cols-[minmax(260px,380px)_1fr]">
-        <div className="rounded-xl bg-card p-4 ring-1 ring-black/[0.05]"><ProductThumb src={item.image_url ?? undefined} alt={item.name} category="grocery" /></div>
+        <m.div layoutId={`product-image-${item.id}`} className="rounded-xl bg-card p-4 ring-1 ring-black/[0.05]"><ProductThumb src={item.image_url ?? undefined} alt={item.name} category="grocery" /></m.div>
         <div>
           <div className="flex items-start justify-between gap-3"><div><p className="text-xs text-muted-foreground">{item.shop_name}</p><h1 className="mt-1 font-display text-3xl">{item.name}</h1></div><WishlistButton productId={item.id} productName={item.name} item={{ productId: item.id, name: item.name, shopName: item.shop_name, category: item.category ?? "Other", price: Number(item.discount_price ?? item.selling_price), imageUrl: item.image_url ?? undefined, sellerId: item.seller_id }} /></div>
           <p className="mt-3 text-sm text-muted-foreground">{item.category ?? "Product"} {item.brand_name ? `· ${item.brand_name}` : ""}</p>

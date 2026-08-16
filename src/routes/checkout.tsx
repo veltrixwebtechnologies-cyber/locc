@@ -69,6 +69,7 @@ function CheckoutPage() {
   const [newLine, setNewLine] = useState("");
   const [manualAddress, setManualAddress] = useState("");
   const [isPlacing, setIsPlacing] = useState(false);
+  const [showOrderSuccess, setShowOrderSuccess] = useState(false);
   const [isCheckingStock, setIsCheckingStock] = useState(true);
   const [showDemoPayment, setShowDemoPayment] = useState(false);
   const [couponCode, setCouponCode] = useState("");
@@ -484,7 +485,8 @@ function CheckoutPage() {
       });
       cartStore.clear();
       toast.success(pay === "cod" ? "Order placed. Payment is due on delivery." : "Demo payment completed. Order placed as unpaid/pending.");
-      navigate({ to: "/order/$orderId", params: { orderId: order.id } });
+      setShowOrderSuccess(true);
+      window.setTimeout(() => navigate({ to: "/order/$orderId", params: { orderId: order.id } }), 1000);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Could not place the order. Try again.");
       setIsPlacing(false);
@@ -747,6 +749,21 @@ function CheckoutPage() {
           {isCheckingStock ? "Checking availability…" : isPlacing ? "Placing order…" : canPlace ? `Place order · ₹${displayTotal}` : "Add a delivery address"}
         </button>
       </div>
+
+      <AnimatePresence>
+        {showOrderSuccess && (
+          <m.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[60] grid place-items-center bg-background/80 px-5 backdrop-blur-sm" role="status" aria-live="polite">
+            <m.div initial={{ scale: 0.78, y: 12 }} animate={{ scale: 1, y: 0 }} transition={{ type: "spring", stiffness: 360, damping: 20 }} className="relative w-full max-w-sm overflow-hidden rounded-2xl bg-card p-8 text-center shadow-2xl ring-1 ring-black/[0.06]">
+              <div className="success-check mx-auto grid h-16 w-16 place-items-center rounded-full bg-primary text-primary-foreground"><Check className="h-9 w-9" strokeWidth={3} /></div>
+              <h2 className="mt-5 font-display text-2xl">Order confirmed</h2>
+              <p className="mt-2 text-sm text-muted-foreground">Your local shop is getting everything ready.</p>
+              <div className="pointer-events-none absolute inset-0" aria-hidden="true">
+                {Array.from({ length: 14 }, (_, i) => <i key={i} className="confetti" style={{ left: `${8 + ((i * 37) % 84)}%`, animationDelay: `${(i % 5) * 55}ms`, backgroundColor: i % 2 ? "var(--marigold)" : "var(--coral)" }} />)}
+              </div>
+            </m.div>
+          </m.div>
+        )}
+      </AnimatePresence>
 
       <AnimatePresence>
         {showDemoPayment && (

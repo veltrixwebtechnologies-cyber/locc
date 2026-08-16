@@ -61,7 +61,7 @@ function FallbackMap({
         <Store className="h-4 w-4" />
       </div>
       {courier && (
-        <div className="absolute left-[52%] top-[42%] grid h-8 w-8 place-items-center rounded-full bg-[var(--coral)] text-primary-foreground shadow-sm ring-2 ring-card">
+        <div className="delivery-pulse absolute left-[52%] top-[42%] grid h-8 w-8 place-items-center rounded-full bg-[var(--coral)] text-primary-foreground shadow-sm ring-2 ring-card">
           <Navigation className="h-4 w-4" />
         </div>
       )}
@@ -208,7 +208,19 @@ export function DeliveryMap({
           });
         }
       } else {
-        m.setLatLng([pos.lat, pos.lng]);
+        const current = m.getLatLng();
+        const started = performance.now();
+        const duration = 520;
+        const animate = (now: number) => {
+          const t = Math.min(1, (now - started) / duration);
+          const eased = 1 - Math.pow(1 - t, 3);
+          m.setLatLng([
+            current.lat + (pos.lat - current.lat) * eased,
+            current.lng + (pos.lng - current.lng) * eased,
+          ]);
+          if (t < 1) requestAnimationFrame(animate);
+        };
+        requestAnimationFrame(animate);
       }
     };
 

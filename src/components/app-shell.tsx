@@ -15,6 +15,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const wishlist = useWishlist();
   const [scrolled, setScrolled] = useState(false);
   const [headerQuery, setHeaderQuery] = useState("");
+  const [searchFocused, setSearchFocused] = useState(false);
   const { itemCount } = cartTotals(cart.lines);
   const isSignedIn = Boolean(auth.id);
 
@@ -94,8 +95,10 @@ export function AppShell({ children }: { children: ReactNode }) {
               </span>
             </span>
           </button>
-          <form
-            className="flex min-w-[240px] flex-1 items-center gap-2 rounded-lg border hairline bg-muted/70 px-3 py-2.5 transition-colors focus-within:border-primary/40 focus-within:bg-background"
+          <m.form
+            animate={{ scale: searchFocused ? 1.015 : 1 }}
+            transition={{ type: "spring", stiffness: 420, damping: 34 }}
+            className="relative flex min-w-[240px] flex-1 items-center gap-2 rounded-lg border hairline bg-muted/70 px-3 py-2.5 transition-colors focus-within:border-primary/40 focus-within:bg-background"
             onSubmit={(event) => {
               event.preventDefault();
               void navigate({
@@ -106,6 +109,8 @@ export function AppShell({ children }: { children: ReactNode }) {
                 },
               });
             }}
+            onFocus={() => setSearchFocused(true)}
+            onBlur={() => window.setTimeout(() => setSearchFocused(false), 120)}
           >
             <Search className="h-4 w-4 shrink-0 text-muted-foreground" />
             <input
@@ -115,7 +120,22 @@ export function AppShell({ children }: { children: ReactNode }) {
               aria-label="Search products, brands and shops"
               className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
             />
-          </form>
+            <AnimatePresence>
+              {searchFocused && headerQuery.length === 0 && (
+                <m.div
+                  initial={{ opacity: 0, y: -6, scale: 0.98 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: -6, scale: 0.98 }}
+                  className="absolute left-0 right-0 top-full z-50 mt-2 rounded-xl border hairline bg-background p-2 shadow-xl"
+                >
+                  <p className="px-2 py-1 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Try searching</p>
+                  {["Fresh groceries", "Milk and breakfast", "Local bakery"].map((suggestion) => (
+                    <button key={suggestion} type="button" onMouseDown={() => setHeaderQuery(suggestion)} className="block w-full rounded-lg px-2 py-2 text-left text-sm hover:bg-muted">{suggestion}</button>
+                  ))}
+                </m.div>
+              )}
+            </AnimatePresence>
+          </m.form>
           <nav className="flex shrink-0 items-center gap-1">
             {tabs.map((t) => {
               const active = t.match(pathname);
@@ -139,7 +159,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                         : "text-foreground hover:bg-muted"
                     }`}
                   >
-                    <m.span whileHover={{ y: -1 }} className="relative z-10 inline-flex">
+                    <m.span whileHover={{ y: -1 }} animate={t.to === "/cart" && itemCount > 0 ? { scale: [1, 1.18, 1] } : { scale: 1 }} transition={{ duration: 0.42 }} className="relative z-10 inline-flex">
                       <Icon className="h-4 w-4" strokeWidth={active ? 2.2 : 1.8} />
                     </m.span>
                     {t.label}

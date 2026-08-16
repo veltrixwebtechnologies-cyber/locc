@@ -20,7 +20,7 @@ import {
 } from "@/lib/merchandising";
 import { WishlistButton } from "@/components/wishlist-button";
 import { m } from "motion/react";
-import { Reveal } from "@/components/motion/presets";
+import { Reveal, cardMotion, spring } from "@/components/motion/presets";
 import { cartStore, useCart } from "@/lib/cart-store";
 import { QtyStepper } from "@/components/qty-stepper";
 import { flyProductToCart } from "@/lib/fly-to-cart";
@@ -48,12 +48,10 @@ export function ProductCard({ product }: { product: MerchandisingProduct }) {
       : 0;
   return (
     <m.div
-      variants={{
-        hidden: { opacity: 0, x: 12 },
-        visible: { opacity: 1, x: 0 },
-      }}
-      whileHover={{ y: -4 }}
-      transition={{ duration: 0.3 }}
+      variants={cardMotion}
+      whileHover={{ y: -4, scale: 1.012 }}
+      whileTap={{ scale: 0.965 }}
+      transition={spring}
       data-product-id={product.id}
       className="group relative min-w-[164px] max-w-[164px] overflow-hidden rounded-lg bg-card ring-1 ring-black/[0.06] transition-shadow duration-300 hover:shadow-lg md:min-w-[184px] md:max-w-[184px]"
     >
@@ -68,13 +66,16 @@ export function ProductCard({ product }: { product: MerchandisingProduct }) {
       >
         <div className="relative aspect-square bg-[var(--sand)]">
           {imageUrl ? (
-            <img
-              src={imageUrl}
-              alt={product.name}
-              loading="lazy"
-              decoding="async"
-              className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-            />
+            <m.div layoutId={`product-image-${product.id}`} className="h-full w-full">
+              <img
+                src={imageUrl}
+                alt={product.name}
+                loading="lazy"
+                decoding="async"
+                data-product-image
+                className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+              />
+            </m.div>
           ) : null}
           <span className="absolute bottom-2 left-2 rounded bg-background/95 px-1.5 py-1 text-[9px] font-bold text-foreground shadow-sm">
             20-40 min

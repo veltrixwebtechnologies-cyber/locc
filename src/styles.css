@@ -204,6 +204,37 @@
   animation: premium-shimmer 1.35s linear infinite;
 }
 
+@keyframes delivery-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 color-mix(in oklab, var(--coral) 34%, transparent); }
+  55% { box-shadow: 0 0 0 12px transparent; }
+}
+
+.delivery-pulse {
+  animation: delivery-pulse 1.8s ease-out infinite;
+}
+
+@keyframes success-check {
+  from { transform: scale(0.5) rotate(-12deg); opacity: 0; }
+  to { transform: scale(1) rotate(0); opacity: 1; }
+}
+
+.success-check { animation: success-check 420ms cubic-bezier(.22, 1, .36, 1) both; }
+
+@keyframes confetti-fall {
+  from { transform: translate3d(0, -12px, 0) rotate(0); opacity: 0; }
+  12% { opacity: 1; }
+  to { transform: translate3d(0, 190px, 0) rotate(280deg); opacity: 0; }
+}
+
+.confetti {
+  position: absolute;
+  top: 8%;
+  width: 7px;
+  height: 12px;
+  border-radius: 2px;
+  animation: confetti-fall 900ms cubic-bezier(.22, 1, .36, 1) both;
+}
+
 .premium-button {
   position: relative;
   overflow: hidden;
