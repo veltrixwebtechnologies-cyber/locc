@@ -152,6 +152,7 @@ function StorePage() {
     });
     return Array.from(g.entries());
   }, [products, query]);
+  const catalogItems = useMemo(() => grouped.flatMap(([, items]) => items), [grouped]);
 
   const qtyOf = (id: string) => cart.lines.find((l) => l.productId === id)?.qty ?? 0;
   const color = categoryColor[store.category];
@@ -211,8 +212,8 @@ function StorePage() {
         </div>
 
         {/* Search */}
-        <div className="sticky top-0 z-20 bg-background/95 px-5 py-3 backdrop-blur md:top-16 md:px-0 md:pt-6">
-          <label className="flex items-center gap-2 rounded-xl bg-card px-3 py-2.5 ring-1 ring-black/[0.04]">
+        <div className="relative z-10 bg-background px-5 py-3 md:px-0 md:pt-4">
+          <label className="flex items-center gap-2 rounded-xl border border-border/70 bg-card px-3 py-2.5 shadow-sm">
             <Search className="h-4 w-4 text-muted-foreground" />
             <input
               value={query}
@@ -224,19 +225,37 @@ function StorePage() {
         </div>
 
         {/* Products */}
-        <div className="px-5 pb-6 md:px-0">
-          {grouped.length === 0 ? (
-            <p className="rounded-xl border hairline bg-card p-6 text-center text-sm text-muted-foreground">
-              Nothing matches that in this shop. Try another word.
-            </p>
-          ) : (
-            grouped.map(([cat, items]) => (
-              <section key={cat} className="mt-5">
-                <h2 className="font-display text-sm uppercase tracking-wide text-muted-foreground">
-                  {cat}
-                </h2>
-                <ul className="mt-2 grid grid-cols-1 gap-0 divide-y divide-[color-mix(in_oklab,var(--teal)_15%,transparent)] rounded-xl bg-card ring-1 ring-black/[0.04] md:grid-cols-2 md:divide-y-0 md:gap-3 md:bg-transparent md:ring-0">
-                  {items.map((p) => {
+        <div className="grid gap-5 px-5 pb-6 md:grid-cols-[150px_minmax(0,1fr)] md:px-0">
+          <aside className="hidden md:block">
+            <div className="sticky top-28 rounded-xl border border-[#ead9a8] bg-card p-2">
+              <p className="px-2 py-2 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Categories</p>
+              <nav className="space-y-1">
+                {grouped.map(([cat, items]) => (
+                  <a key={`rail-${cat}`} href="#catalog" className="block rounded-lg px-2 py-2 text-xs font-medium text-foreground/75 hover:bg-muted hover:text-primary">
+                    {cat}
+                    <span className="mt-0.5 block text-[10px] text-muted-foreground">{items.length} items</span>
+                  </a>
+                ))}
+              </nav>
+            </div>
+          </aside>
+
+          <main>
+            {grouped.length === 0 ? (
+              <p className="rounded-xl border hairline bg-card p-6 text-center text-sm text-muted-foreground">
+                Nothing matches that in this shop. Try another word.
+              </p>
+            ) : (
+              [{ cat: "All products", items: catalogItems }].map(({ cat, items }) => (
+                <section key={cat} id="catalog" className="mt-5 scroll-mt-28">
+                  <div className="flex items-center justify-between">
+                    <h2 className="font-display text-sm uppercase tracking-wide text-muted-foreground">
+                      {cat}
+                    </h2>
+                    <span className="text-[10px] text-muted-foreground">{items.length} items</span>
+                  </div>
+                  <ul className="mt-2 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+                    {items.map((p) => {
                     const q = qtyOf(p.id);
                     return (
                       <m.li
@@ -246,36 +265,44 @@ function StorePage() {
                         whileInView={{ opacity: 1, y: 0 }}
                         viewport={{ once: true, amount: 0.15 }}
                         whileHover={{ y: -2 }}
-                        className="flex items-center gap-3 p-3 md:rounded-xl md:bg-card md:ring-1 md:ring-black/[0.04]"
+                        className="flex min-h-[260px] flex-col rounded-xl border border-[#ead9a8] bg-card p-3 transition-all hover:-translate-y-0.5 hover:border-[#d9bd70] hover:shadow-md"
                       >
-                        <ProductThumb src={p.imageUrl} alt={p.name} category={store.category} />
-                        <div className="min-w-0 flex-1">
-                          <Link to="/product/$productId" params={{ productId: p.id }} onClick={() => { void recordProductEvent(p.id, "view"); void recordRecentProductView(p.id); }} className="truncate text-sm font-medium hover:text-primary hover:underline">{p.name}</Link>
-                          <p className="text-xs text-muted-foreground">{p.unit}</p>
+                        <div className="relative flex h-32 items-center justify-center rounded-lg bg-[#f8f8f8] p-2">
+                          <ProductThumb src={p.imageUrl} alt={p.name} category={store.category} size="lg" />
+                          <span className="absolute bottom-2 left-2 rounded bg-background/95 px-1.5 py-1 text-[9px] font-semibold text-foreground">{store.etaMin} mins</span>
+                          <div className="absolute right-2 top-2">
+                            <WishlistButton
+                              productId={p.id}
+                              productName={p.name}
+                              item={{ productId: p.id, name: p.name, shopName: store.name, category: p.category, price: p.price, imageUrl: p.imageUrl, sellerId: p.storeId }}
+                            />
+                          </div>
                         </div>
-                        <span className="font-mono text-sm">₹{p.price}</span>
-                        <WishlistButton
-                          productId={p.id}
-                          productName={p.name}
-                          item={{ productId: p.id, name: p.name, shopName: store.name, category: p.category, price: p.price, imageUrl: p.imageUrl, sellerId: p.storeId }}
-                        />
-                        <QtyStepper
-                          qty={q}
-                          max={p.stock}
-                          onAdd={() => {
-                            void recordProductEvent(p.id, "add_to_cart");
-                            flyProductToCart(p.id);
-                            cartStore.add(p.storeId, store.name, p);
-                          }}
-                          onChange={(n) => cartStore.setQty(p.id, n)}
-                        />
+                        <div className="mt-3 min-w-0 flex-1">
+                          <Link to="/product/$productId" params={{ productId: p.id }} onClick={() => { void recordProductEvent(p.id, "view"); void recordRecentProductView(p.id); }} className="line-clamp-2 text-xs font-semibold leading-4 hover:text-primary hover:underline">{p.name}</Link>
+                          <p className="mt-1 truncate text-[11px] text-muted-foreground">{p.unit || p.category}</p>
+                        </div>
+                        <div className="mt-3 flex items-center justify-between gap-2">
+                          <span className="font-mono text-sm font-bold">₹{p.price}</span>
+                          <QtyStepper
+                            qty={q}
+                            max={p.stock}
+                            onAdd={() => {
+                              void recordProductEvent(p.id, "add_to_cart");
+                              flyProductToCart(p.id);
+                              cartStore.add(p.storeId, store.name, p);
+                            }}
+                            onChange={(n) => cartStore.setQty(p.id, n)}
+                          />
+                        </div>
                       </m.li>
                     );
-                  })}
-                </ul>
-              </section>
-            ))
-          )}
+                    })}
+                  </ul>
+                </section>
+              ))
+            )}
+          </main>
         </div>
       </div>
 

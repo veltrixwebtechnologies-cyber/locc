@@ -1,18 +1,18 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { MapPin, Search, LocateFixed, ChevronLeft, ChevronRight } from "lucide-react";
+import { MapPin, Search, LocateFixed } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { AwningCard } from "@/components/awning-card";
-import { stores, deliveryCategories, APPROVED_STORE, type StoreCategory } from "@/lib/mock-data";
+import { stores, deliveryCategories, productsByStore, APPROVED_STORE, type StoreCategory } from "@/lib/mock-data";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { reverseGeocode } from "@/lib/geocoding.functions";
 import { MerchandisingSections } from "@/components/merchandising-sections";
 import { PromoCarousel } from "@/components/promo-carousel";
 import type { MerchandisingProduct } from "@/lib/merchandising";
-import { m } from "motion/react";
 import { Reveal } from "@/components/motion/presets";
+import { MarketplaceDiscovery } from "@/components/marketplace-discovery";
 
 const toStoreCategory = (value?: string | null): StoreCategory => {
   const category = (value ?? "").toLowerCase();
@@ -183,8 +183,8 @@ function Home() {
   }, [cat, activeFilter, query, approvedProducts.data, approvedVendors.data]);
 
   const homepageProducts = useMemo<MerchandisingProduct[]>(
-    () =>
-      (approvedProducts.data ?? []).map((product: any) => ({
+    () => {
+      const liveProducts = (approvedProducts.data ?? []).map((product: any) => ({
         id: product.id,
         seller_id: product.seller_id,
         name: product.name,
@@ -204,7 +204,39 @@ function Home() {
         average_rating: 0,
         review_count: 0,
         shop_name: product.shop_name || "Approved local seller",
-      })),
+      }));
+
+      // Keep the storefront useful while a new project is still being stocked.
+      // Once the approved catalog has enough live products, only live products are shown.
+      if (liveProducts.length >= 4) return liveProducts;
+      const existingIds = new Set(liveProducts.map((product) => product.id));
+      const localFallback = Object.values(productsByStore)
+        .flat()
+        .filter((product) => !existingIds.has(product.id))
+        .slice(0, 12)
+        .map((product) => ({
+          id: product.id,
+          seller_id: product.storeId,
+          name: product.name,
+          brand: null,
+          brand_id: null,
+          brand_name: null,
+          category: product.category,
+          selling_price: Number(product.price),
+          mrp: Number(product.price),
+          discount_price: null,
+          discount_starts_at: null,
+          discount_ends_at: null,
+          clearance: false,
+          stock: Number(product.stock ?? 20),
+          image_url: product.imageUrl ?? null,
+          created_at: "",
+          average_rating: 4.5,
+          review_count: 0,
+          shop_name: stores.find((store) => store.id === product.storeId)?.name ?? "Local Shore seller",
+        }));
+      return [...liveProducts, ...localFallback];
+    },
     [approvedProducts.data],
   );
 
@@ -274,6 +306,8 @@ function Home() {
 
       <PromoCarousel />
 
+      <MarketplaceDiscovery products={homepageProducts} />
+
       {/* Mobile search. Desktop search remains in the commerce header. */}
       <div className="px-5 pb-2 md:hidden">
         <label className="flex items-center gap-2 rounded-xl bg-card px-3 py-2.5 ring-1 ring-black/[0.04] md:px-4 md:py-3.5">
@@ -288,24 +322,6 @@ function Home() {
       </div>
 
       <MerchandisingSections fallbackProducts={homepageProducts} />
-
-      {/* Category tiles */}
-      <div className="mt-3 md:mt-6">
-        <div className="mb-2 flex items-center justify-between px-5 md:px-8">
-          <h2 className="font-display text-base font-bold text-foreground md:text-lg">
-            Shop by category
-          </h2>
-          {cat !== "all" && (
-            <button
-              onClick={() => setCat("all")}
-              className="text-xs text-primary underline-offset-4 hover:underline"
-            >
-              Clear
-            </button>
-          )}
-        </div>
-        <CategoryStrip cat={cat} setCat={setCat} />
-      </div>
 
       {/* Store list */}
       <div className="mt-2 flex items-center justify-between px-5 pt-2 md:mt-6 md:px-8">
@@ -359,116 +375,5 @@ function EmptyState() {
         No stores near you yet — try expanding your search radius or clearing filters.
       </p>
     </Reveal>
-  );
-}
-
-function CategoryStrip({ cat, setCat }: { cat: string; setCat: (v: string) => void }) {
-  const scrollerRef = useRef<HTMLDivElement>(null);
-  const [canLeft, setCanLeft] = useState(false);
-  const [canRight, setCanRight] = useState(false);
-
-  const update = () => {
-    const el = scrollerRef.current;
-    if (!el) return;
-    setCanLeft(el.scrollLeft > 4);
-    setCanRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 4);
-  };
-
-  useEffect(() => {
-    update();
-    const el = scrollerRef.current;
-    if (!el) return;
-    el.addEventListener("scroll", update, { passive: true });
-    window.addEventListener("resize", update);
-    return () => {
-      el.removeEventListener("scroll", update);
-      window.removeEventListener("resize", update);
-    };
-  }, []);
-
-  const scrollBy = (dir: 1 | -1) => {
-    const el = scrollerRef.current;
-    if (!el) return;
-    el.scrollBy({ left: dir * Math.max(240, el.clientWidth * 0.7), behavior: "smooth" });
-  };
-
-  return (
-    <div className="relative group">
-      {/* Left arrow */}
-      <button
-        type="button"
-        aria-label="Scroll categories left"
-        onClick={() => scrollBy(-1)}
-        className={`absolute left-2 top-[38%] z-10 hidden -translate-y-1/2 items-center justify-center rounded-full border border-black/[0.06] bg-background/95 p-2 shadow-md backdrop-blur transition-all duration-200 hover:scale-110 hover:bg-primary hover:text-primary-foreground md:flex ${
-          canLeft ? "opacity-100" : "pointer-events-none opacity-0"
-        }`}
-      >
-        <ChevronLeft className="h-4 w-4" />
-      </button>
-      {/* Right arrow */}
-      <button
-        type="button"
-        aria-label="Scroll categories right"
-        onClick={() => scrollBy(1)}
-        className={`absolute right-2 top-[38%] z-10 hidden -translate-y-1/2 items-center justify-center rounded-full border border-black/[0.06] bg-background/95 p-2 shadow-md backdrop-blur transition-all duration-200 hover:scale-110 hover:bg-primary hover:text-primary-foreground md:flex ${
-          canRight ? "opacity-100" : "pointer-events-none opacity-0"
-        }`}
-      >
-        <ChevronRight className="h-4 w-4" />
-      </button>
-
-      {/* Edge fades */}
-      <div
-        className={`pointer-events-none absolute left-0 top-0 z-[5] hidden h-full w-12 bg-gradient-to-r from-background to-transparent transition-opacity duration-200 md:block ${
-          canLeft ? "opacity-100" : "opacity-0"
-        }`}
-      />
-      <div
-        className={`pointer-events-none absolute right-0 top-0 z-[5] hidden h-full w-12 bg-gradient-to-l from-background to-transparent transition-opacity duration-200 md:block ${
-          canRight ? "opacity-100" : "opacity-0"
-        }`}
-      />
-
-      <div
-        ref={scrollerRef}
-        className="flex gap-3 overflow-x-auto scroll-smooth px-5 pb-3 md:gap-4 md:px-8 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-      >
-        {deliveryCategories.map((c, i) => {
-          const active = c.id === cat;
-          return (
-            <m.button
-              key={c.id}
-              onClick={() => setCat(active ? "all" : c.id)}
-              style={{ animationDelay: `${i * 40}ms` }}
-              className="group/tile flex w-[88px] shrink-0 flex-col items-center gap-1.5 animate-fade-in md:w-[104px]"
-              whileHover={{ scale: 1.035 }}
-              whileTap={{ scale: 0.97 }}
-            >
-              <div
-                className={`relative aspect-square w-full overflow-hidden rounded-2xl bg-[var(--sand)] ring-1 transition-all duration-300 ease-out group-hover/tile:-translate-y-0.5 group-hover/tile:shadow-md ${
-                  active
-                    ? "ring-2 ring-primary scale-[1.03]"
-                    : "ring-black/[0.05] group-hover/tile:ring-primary/40"
-                }`}
-              >
-                <img
-                  src={c.imageUrl}
-                  alt={c.label}
-                  loading="lazy"
-                  className="h-full w-full object-cover transition-transform duration-500 ease-out group-hover/tile:scale-110"
-                />
-              </div>
-              <span
-                className={`text-center text-[11px] font-medium leading-tight transition-colors md:text-xs ${
-                  active ? "text-primary" : "text-foreground"
-                }`}
-              >
-                {c.label}
-              </span>
-            </m.button>
-          );
-        })}
-      </div>
-    </div>
   );
 }

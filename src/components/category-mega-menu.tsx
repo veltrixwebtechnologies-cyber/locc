@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
-import { useState } from "react";
-import { ChevronDown, PackageSearch } from "lucide-react";
+import { useState, type ReactNode } from "react";
+import { ChevronDown, ChevronRight, Menu, PackageSearch, X } from "lucide-react";
 import { deliveryCategories } from "@/lib/mock-data";
 
 const menuGroups = [
@@ -118,6 +118,82 @@ const menuGroups = [
       },
     ],
   },
+  {
+    id: "electronics",
+    label: "Electronics",
+    categoryId: "electronics",
+    columns: [
+      {
+        heading: "Mobile",
+        items: ["Phone accessories", "Chargers", "Cables", "Power banks", "Screen guards"],
+      },
+      {
+        heading: "Home Tech",
+        items: ["LED bulbs", "Extension boards", "Batteries", "Adapters", "Smart devices"],
+      },
+      {
+        heading: "Small Appliances",
+        items: ["Fans", "Torches", "Speakers", "Clocks", "Kitchen gadgets"],
+      },
+    ],
+  },
+  {
+    id: "fashion",
+    label: "Fashion",
+    categoryId: "fashion",
+    columns: [
+      {
+        heading: "Clothing",
+        items: ["Men's wear", "Women's wear", "Kids' wear", "Sleepwear", "Seasonal wear"],
+      },
+      {
+        heading: "Accessories",
+        items: ["Bags", "Wallets", "Belts", "Watches", "Sunglasses"],
+      },
+      {
+        heading: "Footwear",
+        items: ["Sandals", "Slippers", "Shoes", "Kids footwear", "Socks"],
+      },
+    ],
+  },
+  {
+    id: "beauty",
+    label: "Beauty & Care",
+    categoryId: "personal",
+    columns: [
+      {
+        heading: "Bath & Body",
+        items: ["Soaps", "Body wash", "Deodorants", "Lotions", "Hand care"],
+      },
+      {
+        heading: "Hair Care",
+        items: ["Shampoo", "Conditioner", "Hair oil", "Combs", "Styling"],
+      },
+      {
+        heading: "Oral & Skin",
+        items: ["Toothpaste", "Toothbrushes", "Face care", "Sunscreen", "Makeup"],
+      },
+    ],
+  },
+  {
+    id: "local-favorites",
+    label: "Local Favorites",
+    categoryId: "snacks",
+    columns: [
+      {
+        heading: "Kerala Specials",
+        items: ["Banana chips", "Spice mixes", "Pickles", "Halwa", "Coconut products"],
+      },
+      {
+        heading: "Gifting",
+        items: ["Gift boxes", "Festival packs", "Flowers", "Greeting cards", "Party supplies"],
+      },
+      {
+        heading: "Everyday Picks",
+        items: ["Best sellers", "New arrivals", "Under ₹99", "Family packs", "Combo offers"],
+      },
+    ],
+  },
 ];
 
 const imageFor = (categoryId: string) =>
@@ -125,99 +201,141 @@ const imageFor = (categoryId: string) =>
   deliveryCategories[0]?.imageUrl;
 
 export function CategoryMegaMenu() {
+  const [drawerOpen, setDrawerOpen] = useState(false);
+
   return (
-    <div className="hidden border-b hairline bg-background/95 backdrop-blur md:block">
-      <div className="mx-auto max-w-6xl px-6 py-4">
-        <div className="mb-3 flex items-center justify-between">
-          <div>
-            <p className="font-mono text-[10px] uppercase tracking-widest text-primary">Browse</p>
-            <h2 className="font-display text-xl leading-tight text-foreground">Categories</h2>
-          </div>
-          <Link
-            to="/"
-            search={{ category: undefined, q: undefined }}
-            className="text-xs font-medium text-muted-foreground underline-offset-4 hover:text-primary hover:underline"
+    <>
+      <div className="w-full border-b border-primary-foreground/10 bg-primary text-primary-foreground shadow-sm">
+        <div className="flex h-11 w-full items-center gap-1 overflow-visible px-6 lg:px-8">
+          <button
+            type="button"
+            onClick={() => setDrawerOpen(true)}
+            aria-expanded={drawerOpen}
+            className="inline-flex shrink-0 items-center gap-2 rounded-md px-3 py-2 text-xs font-bold transition-colors hover:bg-primary-foreground/10"
           >
-            View all shops
-          </Link>
-        </div>
-        <nav aria-label="Shop categories" className="grid grid-cols-6 items-stretch gap-3">
+            <Menu className="h-4 w-4" />
+            All categories
+          </button>
+        <nav aria-label="Shop categories" className="flex min-w-0 items-center gap-0 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {menuGroups.map((group) => (
-            <div key={group.id} className="group relative">
+            <div key={group.id} className="group relative shrink-0">
               <Link
                 to="/"
                 search={{ category: group.categoryId, q: undefined }}
-                className="flex min-h-[98px] flex-col items-center justify-center gap-2 rounded-lg border hairline bg-card px-3 py-3 text-center text-sm font-semibold text-foreground shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/40 hover:bg-muted hover:shadow-md"
+                className="inline-flex items-center gap-1 rounded-md px-3 py-2 text-xs font-medium whitespace-nowrap transition-colors hover:bg-primary-foreground/10"
               >
-                <span className="relative h-12 w-12 overflow-hidden rounded-full border hairline bg-card ring-0 transition-all duration-200 group-hover:ring-2 group-hover:ring-primary/20">
-                  {imageFor(group.categoryId) ? (
-                    <img
-                      src={imageFor(group.categoryId)}
-                      alt=""
-                      loading="lazy"
-                      className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-110"
-                    />
-                  ) : (
-                    <PackageSearch className="m-3 h-5 w-5 text-primary" />
-                  )}
-                </span>
-                <span className="flex items-center gap-1 leading-none">
-                  {group.label}
-                  <ChevronDown className="h-3.5 w-3.5 text-muted-foreground transition-transform group-hover:rotate-180" />
-                </span>
+                {group.label}
+                <ChevronDown className="h-3 w-3 opacity-70 transition-transform group-hover:rotate-180" />
               </Link>
-
-              <div className="pointer-events-none absolute left-0 top-full z-50 w-[min(940px,calc(100vw-3rem))] translate-y-2 opacity-0 transition-all duration-150 group-hover:pointer-events-auto group-hover:translate-y-0 group-hover:opacity-100">
-                <div className="overflow-hidden rounded-xl border hairline bg-card shadow-2xl">
-                  <div
-                    className="awning h-2"
-                    style={{ ["--awning-color" as string]: "var(--teal)" }}
-                    aria-hidden
-                  />
-                  <div className="grid grid-cols-[180px_1fr]">
-                    <div className="bg-primary p-5 text-primary-foreground">
-                      <p className="font-mono text-[10px] uppercase tracking-widest opacity-80">
-                        Shop Local
-                      </p>
-                      <p className="mt-2 font-display text-2xl leading-tight">{group.label}</p>
-                      <p className="mt-3 text-xs leading-5 opacity-85">
-                        Delivered from real neighborhood stores near your shoreline.
-                      </p>
-                    </div>
-                    <div className="grid grid-cols-3 gap-5 p-5">
-                      {group.columns.map((column) => (
-                        <div key={column.heading}>
-                          <Link
-                            to="/"
-                            search={{ category: group.categoryId, q: undefined }}
-                            className="text-sm font-bold text-primary underline-offset-4 hover:underline"
-                          >
-                            {column.heading}
-                          </Link>
-                          <ul className="mt-3 space-y-2">
-                            {column.items.map((item) => (
-                              <li key={item}>
-                                <Link
-                                  to="/"
-                                  search={{ category: group.categoryId, q: item }}
-                                  className="text-sm font-medium text-foreground/85 underline-offset-4 hover:text-primary hover:underline"
-                                >
-                                  {item}
-                                </Link>
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      ))}
-                    </div>
+              <div className="pointer-events-none absolute left-0 top-full z-50 w-[min(760px,calc(100vw-3rem))] translate-y-2 opacity-0 transition-all duration-150 group-hover:pointer-events-auto group-hover:translate-y-0 group-hover:opacity-100">
+                <div className="overflow-hidden rounded-b-xl border hairline bg-card text-foreground shadow-2xl">
+                  <div className="grid grid-cols-3 gap-5 p-5">
+                    {group.columns.map((column) => (
+                      <div key={column.heading}>
+                        <Link to="/" search={{ category: group.categoryId, q: undefined }} className="text-sm font-bold text-primary hover:underline">
+                          {column.heading}
+                        </Link>
+                        <ul className="mt-2 space-y-1.5">
+                          {column.items.map((item) => (
+                            <li key={item}>
+                              <Link to="/" search={{ category: group.categoryId, q: item }} className="text-xs text-foreground/80 hover:text-primary hover:underline">
+                                {item}
+                              </Link>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    ))}
                   </div>
                 </div>
               </div>
             </div>
           ))}
         </nav>
+        </div>
       </div>
-    </div>
+
+      {drawerOpen ? (
+        <div className="fixed inset-0 z-[100]">
+          <button
+            type="button"
+            aria-label="Close categories"
+            onClick={() => setDrawerOpen(false)}
+            className="absolute inset-0 cursor-default bg-black/60"
+          />
+          <aside className="relative flex h-full w-[min(360px,88vw)] flex-col overflow-y-auto bg-background text-foreground shadow-2xl">
+            <div className="flex items-center justify-between bg-primary px-5 py-5 text-primary-foreground">
+              <Link
+                to="/"
+                search={{ category: undefined, q: undefined }}
+                onClick={() => setDrawerOpen(false)}
+                className="font-display text-lg font-bold"
+              >
+                Browse LocalShoree
+              </Link>
+              <button
+                type="button"
+                aria-label="Close categories"
+                onClick={() => setDrawerOpen(false)}
+                className="rounded-full p-2 hover:bg-primary-foreground/15"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <DrawerSection title="Trending">
+              <DrawerLink label="Best sellers" onClick={() => setDrawerOpen(false)} />
+              <DrawerLink label="New arrivals" onClick={() => setDrawerOpen(false)} />
+              <DrawerLink label="Deals & discounts" onClick={() => setDrawerOpen(false)} />
+            </DrawerSection>
+            <DrawerSection title="Digital Content & Devices">
+              <DrawerLink label="Mobile & small electronics" category="electronics" onClick={() => setDrawerOpen(false)} />
+              <DrawerLink label="Chargers, cables & accessories" category="electronics" onClick={() => setDrawerOpen(false)} />
+              <DrawerLink label="Batteries, bulbs & home tech" category="electronics" onClick={() => setDrawerOpen(false)} />
+            </DrawerSection>
+            <DrawerSection title="Shop by Category">
+              {[
+                ["Fresh & daily needs", "fresh"],
+                ["Home & kitchen", "home"],
+                ["Beauty & personal care", "personal"],
+                ["Fashion & footwear", "fashion"],
+                ["Stationery & office", "stationery"],
+                ["Snacks & beverages", "snacks"],
+              ].map(([label, category]) => (
+                <DrawerLink key={category} label={label} category={category} onClick={() => setDrawerOpen(false)} />
+              ))}
+            </DrawerSection>
+            <DrawerSection title="Programs & Features">
+              <DrawerLink label="Sell with LocalShoree" onClick={() => setDrawerOpen(false)} />
+              <DrawerLink label="Deliver with LocalShoree" onClick={() => setDrawerOpen(false)} />
+              <DrawerLink label="Help & customer support" onClick={() => setDrawerOpen(false)} />
+            </DrawerSection>
+          </aside>
+        </div>
+      ) : null}
+    </>
+  );
+}
+
+function DrawerSection({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <section className="border-b border-border px-5 py-5">
+      <h2 className="mb-3 text-base font-bold">{title}</h2>
+      <div className="space-y-1">{children}</div>
+    </section>
+  );
+}
+
+function DrawerLink({ label, category, onClick }: { label: string; category?: string; onClick: () => void }) {
+  return (
+    <Link
+      to="/"
+      search={{ category, q: category ? undefined : label }}
+      onClick={onClick}
+      className="flex items-center justify-between rounded-md px-0 py-2 text-sm text-foreground/80 hover:text-primary"
+    >
+      {label}
+      <ChevronRight className="h-4 w-4 text-muted-foreground" />
+    </Link>
   );
 }
 

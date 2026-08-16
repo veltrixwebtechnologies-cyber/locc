@@ -8,6 +8,7 @@ import { ordersStore } from "@/lib/orders-store";
 import { supabase } from "@/integrations/supabase/client";
 import { addressesStore, useAddresses } from "@/lib/addresses-store";
 import { DeliveryMap } from "@/components/delivery-map";
+import { DeliveryAnimation } from "@/components/delivery-animation";
 import { reverseGeocode } from "@/lib/geocoding.functions";
 import { Crosshair, Plus, Check, TicketPercent, X } from "lucide-react";
 import { toast } from "sonner";
@@ -754,6 +755,7 @@ function CheckoutPage() {
         {showOrderSuccess && (
           <m.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[60] grid place-items-center bg-background/80 px-5 backdrop-blur-sm" role="status" aria-live="polite">
             <m.div initial={{ scale: 0.78, y: 12 }} animate={{ scale: 1, y: 0 }} transition={{ type: "spring", stiffness: 360, damping: 20 }} className="relative w-full max-w-sm overflow-hidden rounded-2xl bg-card p-8 text-center shadow-2xl ring-1 ring-black/[0.06]">
+              <DeliveryAnimation className="pointer-events-none absolute inset-x-2 top-0 h-36 opacity-95" />
               <div className="success-check mx-auto grid h-16 w-16 place-items-center rounded-full bg-primary text-primary-foreground"><Check className="h-9 w-9" strokeWidth={3} /></div>
               <h2 className="mt-5 font-display text-2xl">Order confirmed</h2>
               <p className="mt-2 text-sm text-muted-foreground">Your local shop is getting everything ready.</p>

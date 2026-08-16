@@ -47,12 +47,15 @@
   --radius: 0.75rem;
 
   /* Brand — Localshore reference palette */
-  --teal: oklch(0.48 0.22 295); /* Violet primary #6D28D9 */
-  --teal-deep: oklch(0.38 0.22 295); /* Deeper violet */
+  --teal: oklch(0.46 0.24 330); /* Orchid primary #981495 */
+  --teal-deep: oklch(0.36 0.23 330); /* Deep orchid */
+  --orchid-deep: #7d0d76;
+  --orchid: #981495;
+  --orchid-light: #b52bab;
   --sand: oklch(0.98 0.01 300); /* Near-white lavender tint */
-  --ink: oklch(0.22 0.08 295); /* Deep purple-ink #2A1B4A */
+  --ink: oklch(0.22 0.08 330); /* Deep orchid-ink */
   --marigold: oklch(0.78 0.14 78); /* Amber accent #E8A93A */
-  --marigold-foreground: oklch(0.22 0.08 295);
+  --marigold-foreground: oklch(0.22 0.08 330);
   --coral: oklch(0.72 0.14 30); /* Muted coral #E88A7A */
   --success: oklch(0.64 0.15 155);
 

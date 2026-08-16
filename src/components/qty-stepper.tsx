@@ -7,11 +7,13 @@ export function QtyStepper({
   onChange,
   onAdd,
   max,
+  addClassName,
 }: {
   qty: number;
   onChange: (n: number) => void;
   onAdd: () => void;
   max?: number;
+  addClassName?: string;
 }) {
   const [pop, setPop] = useState(false);
   useEffect(() => {
@@ -27,7 +29,7 @@ export function QtyStepper({
       <m.button
         type="button"
         onClick={onAdd}
-        className="rounded-lg border border-primary/30 bg-transparent px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-primary hover:bg-primary hover:text-primary-foreground transition-colors"
+        className={addClassName ?? "rounded-lg border border-primary/30 bg-transparent px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-primary hover:bg-primary hover:text-primary-foreground transition-colors"}
         whileHover={{ scale: 1.04 }}
         whileTap={{ scale: 0.94 }}
       >
@@ -37,13 +39,13 @@ export function QtyStepper({
   }
   return (
     <div
-      className={`inline-flex items-center overflow-hidden rounded-lg bg-primary text-primary-foreground ${pop ? "cart-pop" : ""}`}
+      className={`inline-flex items-center overflow-hidden rounded-lg bg-[var(--orchid)] text-primary-foreground ${pop ? "cart-pop" : ""}`}
     >
       <button
         type="button"
         aria-label="Decrease"
         onClick={() => onChange(qty - 1)}
-        className="grid h-7 w-7 place-items-center hover:bg-teal-deep"
+        className="grid h-7 w-7 place-items-center hover:bg-[var(--orchid-deep)]"
       >
         <Minus className="h-3.5 w-3.5" />
       </button>
@@ -65,7 +67,7 @@ export function QtyStepper({
         aria-label="Increase"
         disabled={max != null && qty >= max}
         onClick={() => onChange(qty + 1)}
-        className="grid h-7 w-7 place-items-center hover:bg-teal-deep disabled:cursor-not-allowed disabled:opacity-40"
+        className="grid h-7 w-7 place-items-center hover:bg-[var(--orchid-deep)] disabled:cursor-not-allowed disabled:opacity-40"
       >
         <Plus className="h-3.5 w-3.5" />
       </button>

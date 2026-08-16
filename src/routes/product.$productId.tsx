@@ -12,6 +12,7 @@ import { useAuth } from "@/lib/auth-store";
 import { toast } from "sonner";
 import { m } from "motion/react";
 import { SkeletonCard } from "@/components/motion/presets";
+import { productsByStore, stores } from "@/lib/mock-data";
 
 export const Route = createFileRoute("/product/$productId")({ component: ProductPage });
 
@@ -25,7 +26,36 @@ function ProductPage() {
     queryKey: ["product", productId],
     queryFn: async () => {
       const { data, error } = await (supabase as any).from("public_merchandising_products").select("*").eq("id", productId).single();
-      if (error) throw error;
+      if (error) {
+        const localProduct = Object.values(productsByStore)
+          .flat()
+          .find((candidate) => candidate.id === productId);
+        if (!localProduct) throw error;
+        const localStore = stores.find((store) => store.id === localProduct.storeId);
+        const fallback: MerchandisingProduct = {
+          id: localProduct.id,
+          seller_id: localProduct.storeId,
+          name: localProduct.name,
+          brand: null,
+          brand_id: null,
+          brand_name: null,
+          category: localProduct.category,
+          selling_price: localProduct.price,
+          mrp: localProduct.price,
+          discount_price: null,
+          discount_starts_at: null,
+          discount_ends_at: null,
+          clearance: false,
+          stock: localProduct.stock ?? 20,
+          image_url: localProduct.imageUrl ?? null,
+          created_at: new Date().toISOString(),
+          average_rating: localStore?.rating ?? 4.5,
+          review_count: 0,
+          shop_name: localStore?.name ?? "Local Shore seller",
+        };
+        void recordProductEvent(productId, "view");
+        return fallback;
+      }
       void recordProductEvent(productId, "view");
       void recordRecentProductView(productId);
       return data as MerchandisingProduct;

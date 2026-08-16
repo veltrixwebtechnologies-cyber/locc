@@ -235,9 +235,9 @@ export function DeliveryMap({
     if (interactive && typeof accuracyMeters === "number" && Number.isFinite(accuracyMeters)) {
       accuracyRef.current = L.circle([destination.lat, destination.lng], {
         radius: accuracyMeters,
-        color: "#6D28D9",
+        color: "#981495",
         weight: 1.5,
-        fillColor: "#6D28D9",
+        fillColor: "#981495",
         fillOpacity: 0.12,
         opacity: 0.55,
       }).addTo(map);

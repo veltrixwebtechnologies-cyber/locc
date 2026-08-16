@@ -464,7 +464,7 @@ const [emailOtp, setEmailOtp] = useState("");
                       className="w-full rounded-xl bg-card px-3.5 py-3.5 text-sm outline-none ring-1 ring-black/[0.06] focus:ring-2 focus:ring-primary"
                     />
                   )}
-                  <label className="flex items-center gap-2 rounded-xl bg-card px-3 py-3.5 ring-1 ring-black/[0.06] focus-within:ring-2 focus-within:ring-primary">
+                  <label className="flex items-center gap-2 rounded-2xl border border-border/70 bg-card px-3 py-3.5 transition-all focus-within:border-primary focus-within:ring-4 focus-within:ring-primary/10">
                     <input
                       inputMode="tel"
                       maxLength={4}
@@ -474,7 +474,7 @@ const [emailOtp, setEmailOtp] = useState("");
                         if (!v.startsWith("+")) v = "+" + v.replace(/\+/g, "");
                         setCountryCode(v.slice(0, 4));
                       }}
-                      className="w-14 bg-transparent font-mono text-sm outline-none"
+                      className="w-14 border-0 bg-transparent font-mono text-sm outline-none shadow-none focus:outline-none focus:ring-0 focus-visible:outline-none focus-visible:ring-0 focus-visible:shadow-none"
                       aria-label="Country code"
                     />
                     <span className="h-5 w-px bg-black/10" />
@@ -484,7 +484,7 @@ const [emailOtp, setEmailOtp] = useState("");
                       value={phone}
                       onChange={(e) => setPhone(e.target.value.replace(/\D/g, ""))}
                       placeholder="98765 43210"
-                      className="w-full bg-transparent font-mono text-base outline-none tracking-wider"
+                      className="w-full border-0 bg-transparent font-mono text-base outline-none tracking-wider shadow-none focus:outline-none focus:ring-0 focus-visible:outline-none focus-visible:ring-0 focus-visible:shadow-none"
                       autoFocus
                     />
                   </label>

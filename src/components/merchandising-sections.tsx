@@ -20,12 +20,12 @@ import {
 } from "@/lib/merchandising";
 import { WishlistButton } from "@/components/wishlist-button";
 import { m } from "motion/react";
-import { Reveal, cardMotion, spring } from "@/components/motion/presets";
+import { Reveal, SkeletonCard, cardMotion, spring } from "@/components/motion/presets";
 import { cartStore, useCart } from "@/lib/cart-store";
 import { QtyStepper } from "@/components/qty-stepper";
 import { flyProductToCart } from "@/lib/fly-to-cart";
 
-type ProductSectionProps = { title: string; products: MerchandisingProduct[] | undefined };
+type ProductSectionProps = { title: string; products: MerchandisingProduct[] | undefined; loading?: boolean };
 
 export function ProductCard({ product }: { product: MerchandisingProduct }) {
   const [imageUrl, setImageUrl] = useState(product.image_url ?? "");
@@ -53,7 +53,7 @@ export function ProductCard({ product }: { product: MerchandisingProduct }) {
       whileTap={{ scale: 0.965 }}
       transition={spring}
       data-product-id={product.id}
-      className="group relative min-w-[164px] max-w-[164px] overflow-hidden rounded-lg bg-card ring-1 ring-black/[0.06] transition-shadow duration-300 hover:shadow-lg md:min-w-[184px] md:max-w-[184px]"
+      className="group relative flex min-w-0 flex-col overflow-hidden rounded-lg border border-[#ead9a8] bg-card transition-shadow duration-300 hover:border-[#d9bd70] hover:shadow-lg"
     >
       <Link
         to="/product/$productId"
@@ -64,7 +64,7 @@ export function ProductCard({ product }: { product: MerchandisingProduct }) {
           void recordRecentProductView(product.id);
         }}
       >
-        <div className="relative aspect-square bg-[var(--sand)]">
+        <div className="relative aspect-[1.08] bg-[#f7f7f7] p-3">
           {imageUrl ? (
             <m.div layoutId={`product-image-${product.id}`} className="h-full w-full">
               <img
@@ -73,7 +73,7 @@ export function ProductCard({ product }: { product: MerchandisingProduct }) {
                 loading="lazy"
                 decoding="async"
                 data-product-image
-                className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                className="h-full w-full object-contain mix-blend-multiply transition-transform duration-500 group-hover:scale-105"
               />
             </m.div>
           ) : null}
@@ -86,12 +86,12 @@ export function ProductCard({ product }: { product: MerchandisingProduct }) {
           <p className="mt-1 truncate text-[11px] text-muted-foreground">
             {product.category || product.shop_name}
           </p>
-          <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1">
-            <span className="font-mono text-sm font-bold">
+          <div className="mt-2 flex flex-wrap items-baseline gap-x-2 gap-y-1">
+            <span className="font-mono text-xl font-bold">
               ₹{product.discount_price ?? product.selling_price}
             </span>
             {product.discount_price && (
-              <span className="text-xs text-muted-foreground line-through">₹{product.mrp}</span>
+              <span className="text-xs text-muted-foreground line-through">M.R.P. ₹{product.mrp}</span>
             )}
             {discount > 0 && (
               <m.span
@@ -105,8 +105,11 @@ export function ProductCard({ product }: { product: MerchandisingProduct }) {
           </div>
           <span className="mt-1.5 inline-flex items-center gap-1 text-[11px] text-muted-foreground">
             <Star className="h-3 w-3 fill-[var(--marigold)] text-[var(--marigold)]" />{" "}
-            {Number(product.average_rating).toFixed(1)}
+            {Number(product.average_rating).toFixed(1)} ({product.review_count ?? 0})
           </span>
+          <p className="mt-2 text-xs leading-5 text-foreground/80">
+            FREE delivery in <strong>20-40 min</strong>
+          </p>
         </div>
       </Link>
       <div className="absolute right-2 top-2">
@@ -116,8 +119,8 @@ export function ProductCard({ product }: { product: MerchandisingProduct }) {
           item={{ productId: product.id, name: product.name, shopName: product.shop_name, category: product.category ?? "Other", price: Number(product.discount_price ?? product.selling_price), imageUrl: product.image_url ?? undefined, sellerId: product.seller_id }}
         />
       </div>
-      <div className="flex items-center justify-between gap-2 px-3 pb-3 pt-2">
-        <p className="min-w-0 truncate text-[10px] text-muted-foreground">{product.shop_name}</p>
+      <div className="mt-auto flex flex-col gap-2 px-3 pb-3 pt-2">
+        <p className="min-w-0 truncate text-[10px] text-muted-foreground">Sold by {product.shop_name}</p>
         <QtyStepper
           qty={quantity}
           max={product.stock}
@@ -133,14 +136,30 @@ export function ProductCard({ product }: { product: MerchandisingProduct }) {
             });
           }}
           onChange={(nextQuantity) => cartStore.setQty(product.id, nextQuantity)}
+          addClassName="w-full rounded-full bg-[var(--orchid)] px-3 py-2 text-xs font-semibold text-white transition-colors hover:bg-[var(--orchid-deep)]"
         />
       </div>
     </m.div>
   );
 }
 
-function ProductSection({ title, products }: ProductSectionProps) {
-  if (!products?.length) return null;
+function ProductSection({ title, products, loading = false }: ProductSectionProps) {
+  if (loading) {
+    return (
+      <section className="mt-8 px-5 md:px-8" aria-label={`Loading ${title}`}>
+        <div className="flex items-center justify-between">
+          <h2 className="font-display text-lg font-bold md:text-xl">{title}</h2>
+          <span className="inline-flex items-center gap-1.5 text-[10px] text-muted-foreground">
+            <span className="h-2 w-2 animate-pulse rounded-full bg-primary" /> Loading
+          </span>
+        </div>
+        <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+          {[0, 1, 2, 3, 4].map((item) => <SkeletonCard key={item} />)}
+        </div>
+      </section>
+    );
+  }
+  if (!products.length) return null;
   return (
     <Reveal className="mt-8 px-5 md:px-8">
       <h2 className="font-display text-lg font-bold md:text-xl">{title}</h2>
@@ -149,7 +168,7 @@ function ProductSection({ title, products }: ProductSectionProps) {
         whileInView="visible"
         viewport={{ once: true, amount: 0.1 }}
         variants={{ visible: { transition: { staggerChildren: 0.055 } } }}
-        className="mt-3 flex gap-3 overflow-x-auto pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        className="mt-3 grid grid-cols-2 gap-3 pb-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5"
       >
         {products.map((product) => (
           <ProductCard key={product.id} product={product} />
@@ -198,19 +217,19 @@ export function MerchandisingSections({
               <option value="all_time">All time</option>
             </select>
           </div>
-          <div className="mt-3 flex gap-3 overflow-x-auto pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
             {best.data.map((product) => (
               <ProductCard key={product.id} product={product} />
             ))}
           </div>
         </section>
       ) : null}
-      <ProductSection title="Trending" products={trending.data} />
-      <ProductSection title="Deals & Discounts" products={deals.data} />
-      <ProductSection title="Clearance Sale" products={clearance.data} />
-      <ProductSection title="Flash Sales" products={flashProducts.data} />
-      <ProductSection title="Recently viewed" products={recentlyViewed.data} />
-      <ProductSection title="Recommended for you" products={recommendations.data} />
+      <ProductSection title="Trending" products={trending.data ?? []} loading={trending.isLoading} />
+      <ProductSection title="Deals & Discounts" products={deals.data ?? []} loading={deals.isLoading} />
+      <ProductSection title="Clearance Sale" products={clearance.data ?? []} loading={clearance.isLoading} />
+      <ProductSection title="Flash Sales" products={flashProducts.data ?? []} loading={flashProducts.isLoading} />
+      <ProductSection title="Recently viewed" products={recentlyViewed.data ?? []} loading={recentlyViewed.isLoading} />
+      <ProductSection title="Recommended for you" products={recommendations.data ?? []} loading={recommendations.isLoading} />
       {brands.data?.length || collections.data?.gift.length || collections.data?.seasonal.length ? (
         <section className="mt-8 px-5 pb-6 md:px-8">
           <h2 className="font-display text-base font-bold md:text-xl">Explore collections</h2>
@@ -240,7 +259,7 @@ export function MerchandisingSections({
           </div>
         </section>
       ) : null}
-      <ProductSection title="New Arrivals" products={arrivals.data} />
+      <ProductSection title="New Arrivals" products={arrivals.data ?? []} loading={arrivals.isLoading} />
     </div>
   );
 }

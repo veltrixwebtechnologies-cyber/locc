@@ -32,7 +32,7 @@ const campaigns: Campaign[] = [
     imageUrl:
       "https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=1200&q=82",
     background: "#f1ecff",
-    accent: "#6d28d9",
+    accent: "#981495",
   },
   {
     id: "quick-kitchen",
@@ -120,7 +120,7 @@ function resolveBannerImage(imageUrl: string) {
 }
 
 const campaignPalette = [
-  { background: "#f1ecff", accent: "#6d28d9" },
+  { background: "#f9e8f8", accent: "#981495" },
   { background: "#fff2cc", accent: "#9a6500" },
   { background: "#e5f6ee", accent: "#087a55" },
   { background: "#ffeaf1", accent: "#be185d" },

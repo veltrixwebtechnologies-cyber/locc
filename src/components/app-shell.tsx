@@ -1,8 +1,8 @@
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
-import { Home, ClipboardList, User, ShoppingBag, LogIn, Heart, MapPin, Search, ArrowRight } from "lucide-react";
+import { Home, ClipboardList, User, ShoppingBag, LogIn, Heart, MapPin, Search, ArrowRight, Clock3, ShieldCheck, Headphones } from "lucide-react";
 import { useCart, cartTotals } from "@/lib/cart-store";
 import { useAuth } from "@/lib/auth-store";
-import { HeaderCategoryMenu, MobileCategoryStrip } from "@/components/category-mega-menu";
+import { CategoryMegaMenu, HeaderCategoryMenu, MobileCategoryStrip } from "@/components/category-mega-menu";
 import { Fragment, type ReactNode, useEffect, useState } from "react";
 import { useWishlist } from "@/lib/merchandising";
 import { AnimatePresence, m } from "motion/react";
@@ -58,11 +58,11 @@ export function AppShell({ children }: { children: ReactNode }) {
     <div className={`min-h-screen bg-background pb-20 md:pb-0 ${itemCount > 0 && !pathname.startsWith("/cart") && !pathname.startsWith("/checkout") ? "pb-24 md:pb-24" : ""}`}>
       {/* Desktop top nav */}
       <header
-        className={`sticky top-0 z-40 hidden border-b hairline bg-background/90 backdrop-blur transition-shadow duration-300 md:block ${
+        className={`sticky top-0 z-50 hidden border-b hairline bg-background/90 backdrop-blur transition-shadow duration-300 md:block ${
           scrolled ? "shadow-[0_8px_28px_-22px_rgba(42,27,74,0.55)]" : "shadow-none"
         }`}
       >
-        <div className="mx-auto flex h-[72px] max-w-7xl items-center gap-5 px-6">
+        <div className="flex h-[72px] w-full items-center gap-5 px-6 lg:px-8">
           <Link
             to="/"
             search={{ category: undefined, q: undefined }}
@@ -202,6 +202,24 @@ export function AppShell({ children }: { children: ReactNode }) {
           </nav>
         </div>
       </header>
+
+      <div className="relative z-30 hidden md:block">
+        <CategoryMegaMenu />
+      </div>
+
+      <div className="hidden border-b border-[#ead9a8]/70 bg-[#fffaf0] md:block">
+        <div className="flex h-9 w-full items-center justify-between gap-6 px-6 text-[11px] text-foreground/75 lg:px-8">
+          <div className="flex items-center gap-2">
+            <MapPin className="h-3.5 w-3.5 text-primary" />
+            <span>Delivering to <strong className="font-semibold text-foreground">Marine Drive, Kochi</strong></span>
+          </div>
+          <div className="flex items-center gap-5">
+            <span className="inline-flex items-center gap-1.5"><Clock3 className="h-3.5 w-3.5 text-primary" />20-40 min delivery</span>
+            <span className="inline-flex items-center gap-1.5"><ShieldCheck className="h-3.5 w-3.5 text-primary" />Trusted local sellers</span>
+            <Link to="/help" className="inline-flex items-center gap-1.5 hover:text-primary"><Headphones className="h-3.5 w-3.5 text-primary" />Need help?</Link>
+          </div>
+        </div>
+      </div>
 
       <div className="sticky top-0 z-30 md:top-16">
         <MobileCategoryStrip />

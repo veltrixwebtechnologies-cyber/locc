@@ -8,6 +8,7 @@ import { MessageCircle, Phone, Star } from "lucide-react";
 import { toast } from "sonner";
 import { m } from "motion/react";
 import { OrderSupport } from "@/components/order-support";
+import { DeliveryAnimation } from "@/components/delivery-animation";
 
 export const Route = createFileRoute("/order/$orderId")({
   component: OrderPage,
@@ -76,10 +77,20 @@ function OrderPage() {
           Order {order.code}
         </p>
         <h1 className="mt-1 font-display text-2xl">{orderStatusLabel[order.status]}</h1>
-        <p className="mt-1 text-xs text-muted-foreground">
+      <p className="mt-1 text-xs text-muted-foreground">
           From {order.storeName} · <span className="font-mono">₹{order.total}</span>
         </p>
       </div>
+
+      {order.status === "delivered" && (
+        <section className="mx-5 mt-4 overflow-hidden rounded-2xl bg-primary/5 ring-1 ring-primary/15" aria-label="Delivery completed">
+          <DeliveryAnimation className="h-32 w-full" />
+          <div className="-mt-2 px-4 pb-4 text-center">
+            <p className="font-display text-lg font-semibold text-primary">Delivered with care</p>
+            <p className="mt-1 text-xs text-muted-foreground">Thanks for shopping local with Local Shore.</p>
+          </div>
+        </section>
+      )}
 
       {/* Live delivery map */}
       <div className="mx-5 mt-4">
