@@ -10,7 +10,13 @@ type OtpInputProps = {
 
 export const OTP_LENGTH = 8;
 
-export function OtpInput({ value, onChange, disabled, autoFocus = true, "aria-label": ariaLabel }: OtpInputProps) {
+export function OtpInput({
+  value,
+  onChange,
+  disabled,
+  autoFocus = true,
+  "aria-label": ariaLabel,
+}: OtpInputProps) {
   const refs = useRef<Array<HTMLInputElement | null>>([]);
   const digits = value.padEnd(OTP_LENGTH, "").slice(0, OTP_LENGTH).split("");
 
@@ -34,11 +40,17 @@ export function OtpInput({ value, onChange, disabled, autoFocus = true, "aria-la
   };
 
   return (
-    <div className="grid grid-cols-8 gap-1.5 sm:gap-2" role="group" aria-label={ariaLabel ?? "Verification code"}>
+    <div
+      className="grid grid-cols-8 gap-1.5 sm:gap-2"
+      role="group"
+      aria-label={ariaLabel ?? "Verification code"}
+    >
       {Array.from({ length: OTP_LENGTH }, (_, index) => (
         <input
           key={index}
-          ref={(element) => { refs.current[index] = element; }}
+          ref={(element) => {
+            refs.current[index] = element;
+          }}
           inputMode="numeric"
           autoComplete={index === 0 ? "one-time-code" : "off"}
           maxLength={1}
@@ -52,7 +64,8 @@ export function OtpInput({ value, onChange, disabled, autoFocus = true, "aria-la
               refs.current[index - 1]?.focus();
             }
             if (event.key === "ArrowLeft" && index > 0) refs.current[index - 1]?.focus();
-            if (event.key === "ArrowRight" && index < OTP_LENGTH - 1) refs.current[index + 1]?.focus();
+            if (event.key === "ArrowRight" && index < OTP_LENGTH - 1)
+              refs.current[index + 1]?.focus();
           }}
           className="h-12 w-full rounded-xl bg-card text-center font-mono text-xl outline-none ring-1 ring-black/[0.06] transition focus:ring-2 focus:ring-primary disabled:opacity-60"
         />

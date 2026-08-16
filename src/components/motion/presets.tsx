@@ -89,7 +89,10 @@ export function StaggerItem({
 
 export function SkeletonCard({ className = "" }: { className?: string }) {
   return (
-    <div className={`rounded-xl bg-card p-3 ring-1 ring-black/[0.05] ${className}`} aria-hidden="true">
+    <div
+      className={`rounded-xl bg-card p-3 ring-1 ring-black/[0.05] ${className}`}
+      aria-hidden="true"
+    >
       <div className="premium-skeleton aspect-square rounded-lg" />
       <div className="premium-skeleton mt-3 h-4 w-4/5 rounded" />
       <div className="premium-skeleton mt-2 h-3 w-2/5 rounded" />

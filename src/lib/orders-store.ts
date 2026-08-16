@@ -2,9 +2,27 @@ import { useEffect, useState } from "react";
 import type { CartLine } from "./cart-store";
 import { supabase } from "@/integrations/supabase/client";
 
-
-export type OrderStatus = "new" | "accepted" | "packed" | "ready_for_pickup" | "assigned" | "picked_up" | "out_for_delivery" | "delivered" | "cancelled" | "returned";
-export const orderStatusFlow: OrderStatus[] = ["new", "accepted", "packed", "ready_for_pickup", "assigned", "picked_up", "out_for_delivery", "delivered"];
+export type OrderStatus =
+  | "new"
+  | "accepted"
+  | "packed"
+  | "ready_for_pickup"
+  | "assigned"
+  | "picked_up"
+  | "out_for_delivery"
+  | "delivered"
+  | "cancelled"
+  | "returned";
+export const orderStatusFlow: OrderStatus[] = [
+  "new",
+  "accepted",
+  "packed",
+  "ready_for_pickup",
+  "assigned",
+  "picked_up",
+  "out_for_delivery",
+  "delivered",
+];
 export const orderStatusLabel: Record<OrderStatus, string> = {
   new: "Order placed",
   accepted: "Order accepted",
@@ -60,10 +78,16 @@ function fromRow(row: any): Order {
     total: Number(row.total),
     address: row.buyer_address ?? "",
     destination:
-      Number.isFinite(Number(row.customer_latitude)) && Number.isFinite(Number(row.customer_longitude))
+      Number.isFinite(Number(row.customer_latitude)) &&
+      Number.isFinite(Number(row.customer_longitude))
         ? { lat: Number(row.customer_latitude), lng: Number(row.customer_longitude) }
         : { lat: 9.9816, lng: 76.2999 },
-    paymentMethod: row.payment_method === "upi" ? "UPI" : row.payment_method === "card" ? "Card" : "Cash on delivery",
+    paymentMethod:
+      row.payment_method === "upi"
+        ? "UPI"
+        : row.payment_method === "card"
+          ? "Card"
+          : "Cash on delivery",
     deliveryOtp: row.delivery_otp ?? undefined,
     couponCode: row.coupon_code ?? undefined,
     discountAmount: Number(row.discount_amount ?? 0),
@@ -94,16 +118,24 @@ async function loadOrders(): Promise<Order[]> {
 }
 
 const orderErrorMessage = (error: any) => {
-  if (error?.code === "PGRST202" || String(error?.message ?? "").includes("Could not find the function public.place_order_once")) {
+  if (
+    error?.code === "PGRST202" ||
+    String(error?.message ?? "").includes("Could not find the function public.place_order_once")
+  ) {
     return "Checkout is temporarily unavailable because the secure order service is not deployed. Please contact support.";
   }
   const message = String(error?.message ?? "");
-  if (message.includes("Authentication required")) return "Your session expired. Please sign in again.";
-  if (message.includes("Delivery address is required")) return "Add a delivery address before placing the order.";
-  if (message.includes("Product is not available")) return "One or more items are no longer available.";
+  if (message.includes("Authentication required"))
+    return "Your session expired. Please sign in again.";
+  if (message.includes("Delivery address is required"))
+    return "Add a delivery address before placing the order.";
+  if (message.includes("Product is not available"))
+    return "One or more items are no longer available.";
   if (message.includes("Insufficient stock")) return message;
-  if (message.includes("Cart items must come from one approved shop")) return "Your cart contains items from different shops.";
-  if (message.includes("invalid input syntax for type uuid")) return "One cart item has an invalid product reference. Remove it and add the product again.";
+  if (message.includes("Cart items must come from one approved shop"))
+    return "Your cart contains items from different shops.";
+  if (message.includes("invalid input syntax for type uuid"))
+    return "One cart item has an invalid product reference. Remove it and add the product again.";
   return message || "The order could not be created. Please try again.";
 };
 
@@ -123,11 +155,12 @@ export const ordersStore = {
     };
     const rpcPayload = {
       ...baseParams,
-      p_payment_method: order.paymentMethod === "UPI" ? "upi" : order.paymentMethod === "Card" ? "card" : "cod",
+      p_payment_method:
+        order.paymentMethod === "UPI" ? "upi" : order.paymentMethod === "Card" ? "card" : "cod",
       p_coupon_code: order.couponCode ?? null,
     };
 
-    let { data: created, error } = await (supabase as any).rpc("place_order_once", {
+    const { data: created, error } = await (supabase as any).rpc("place_order_once", {
       p_request_id: crypto.randomUUID(),
       ...rpcPayload,
     });
@@ -169,19 +202,23 @@ export function useOrdersState() {
   const [isLoading, setIsLoading] = useState(true);
   useEffect(() => {
     let active = true;
-    const refresh = () => void loadOrders()
-      .then((rows) => {
-        if (active) {
-          setOrders(rows);
-          setIsLoading(false);
-        }
-      })
-      .catch((error) => {
-        console.error("[orders] refresh failed", error);
-        if (active) setIsLoading(false);
-      });
+    const refresh = () =>
+      void loadOrders()
+        .then((rows) => {
+          if (active) {
+            setOrders(rows);
+            setIsLoading(false);
+          }
+        })
+        .catch((error) => {
+          console.error("[orders] refresh failed", error);
+          if (active) setIsLoading(false);
+        });
     refresh();
-    const channel = supabase.channel("shoreline-orders").on("postgres_changes", { event: "*", schema: "public", table: "orders" }, refresh).subscribe();
+    const channel = supabase
+      .channel("shoreline-orders")
+      .on("postgres_changes", { event: "*", schema: "public", table: "orders" }, refresh)
+      .subscribe();
     const poll = window.setInterval(refresh, 5_000);
     const refreshWhenVisible = () => {
       if (document.visibilityState === "visible") refresh();

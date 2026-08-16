@@ -41,16 +41,21 @@ export const Route = createFileRoute("/checkout")({
 function CheckoutPage() {
   const cart = useCart();
   const totals = cartTotals(cart.lines);
-  const knownStore = cart.storeId === APPROVED_STORE.id
-    ? APPROVED_STORE
-    : cart.storeId
-      ? getStore(cart.storeId)
-      : undefined;
-  const store = knownStore ?? (cart.storeId && cart.lines.length > 0 ? {
-    ...APPROVED_STORE,
-    id: cart.storeId,
-    name: cart.storeName ?? "Local Shore shop",
-  } : null);
+  const knownStore =
+    cart.storeId === APPROVED_STORE.id
+      ? APPROVED_STORE
+      : cart.storeId
+        ? getStore(cart.storeId)
+        : undefined;
+  const store =
+    knownStore ??
+    (cart.storeId && cart.lines.length > 0
+      ? {
+          ...APPROVED_STORE,
+          id: cart.storeId,
+          name: cart.storeName ?? "Local Shore shop",
+        }
+      : null);
   const navigate = useNavigate();
   const reverseGeocodeFn = useServerFn(reverseGeocode);
 
@@ -282,7 +287,10 @@ function CheckoutPage() {
     return () => stopLiveLocation();
   }, []);
 
-  const cartProductIds = cart.lines.map((line) => line.productId).sort().join(",");
+  const cartProductIds = cart.lines
+    .map((line) => line.productId)
+    .sort()
+    .join(",");
   const cartSignature = cart.lines
     .map((line) => `${line.productId}:${line.qty}`)
     .sort()
@@ -322,9 +330,7 @@ function CheckoutPage() {
         data = fallback.data;
         error = fallback.error;
       } else {
-        const returnedIds = new Set(
-          (data ?? []).map((product: { id: string }) => product.id),
-        );
+        const returnedIds = new Set((data ?? []).map((product: { id: string }) => product.id));
         const missingProductIds = databaseProductIds.filter(
           (productId) => !returnedIds.has(productId),
         );
@@ -338,10 +344,7 @@ function CheckoutPage() {
           if (!fallback.error) {
             data = [...(data ?? []), ...(fallback.data ?? [])];
           } else {
-            console.warn(
-              "[checkout] Could not validate missing catalog products:",
-              fallback.error,
-            );
+            console.warn("[checkout] Could not validate missing catalog products:", fallback.error);
           }
         }
       }
@@ -353,12 +356,10 @@ function CheckoutPage() {
         return;
       }
       const stockByProduct = Object.fromEntries(
-        (data ?? []).flatMap(
-          (product: { id: string; stock: number | null }) => {
-            const stock = Number(product.stock);
-            return Number.isFinite(stock) ? [[product.id, stock]] : [];
-          },
-        ),
+        (data ?? []).flatMap((product: { id: string; stock: number | null }) => {
+          const stock = Number(product.stock);
+          return Number.isFinite(stock) ? [[product.id, stock]] : [];
+        }),
       );
       cart.lines
         .filter((line) => !isProductUuid(line.productId))
@@ -485,9 +486,16 @@ function CheckoutPage() {
         distanceKm: store.distanceKm,
       });
       cartStore.clear();
-      toast.success(pay === "cod" ? "Order placed. Payment is due on delivery." : "Demo payment completed. Order placed as unpaid/pending.");
+      toast.success(
+        pay === "cod"
+          ? "Order placed. Payment is due on delivery."
+          : "Demo payment completed. Order placed as unpaid/pending.",
+      );
       setShowOrderSuccess(true);
-      window.setTimeout(() => navigate({ to: "/order/$orderId", params: { orderId: order.id } }), 1000);
+      window.setTimeout(
+        () => navigate({ to: "/order/$orderId", params: { orderId: order.id } }),
+        1000,
+      );
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Could not place the order. Try again.");
       setIsPlacing(false);
@@ -668,7 +676,8 @@ function CheckoutPage() {
           ))}
         </div>
         <p className="mt-3 text-[11px] text-muted-foreground">
-          UPI and Card use a demo checkout. They never mark the order as paid; real payment remains pending until a verified provider confirms it.
+          UPI and Card use a demo checkout. They never mark the order as paid; real payment remains
+          pending until a verified provider confirms it.
         </p>
       </section>
 
@@ -747,20 +756,52 @@ function CheckoutPage() {
           disabled={!canPlace || isPlacing || isCheckingStock}
           className="w-full rounded-xl bg-[var(--marigold)] py-3.5 font-display text-lg text-ink shadow-lg hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:brightness-100"
         >
-          {isCheckingStock ? "Checking availability…" : isPlacing ? "Placing order…" : canPlace ? `Place order · ₹${displayTotal}` : "Add a delivery address"}
+          {isCheckingStock
+            ? "Checking availability…"
+            : isPlacing
+              ? "Placing order…"
+              : canPlace
+                ? `Place order · ₹${displayTotal}`
+                : "Add a delivery address"}
         </button>
       </div>
 
       <AnimatePresence>
         {showOrderSuccess && (
-          <m.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[60] grid place-items-center bg-background/80 px-5 backdrop-blur-sm" role="status" aria-live="polite">
-            <m.div initial={{ scale: 0.78, y: 12 }} animate={{ scale: 1, y: 0 }} transition={{ type: "spring", stiffness: 360, damping: 20 }} className="relative w-full max-w-sm overflow-hidden rounded-2xl bg-card p-8 text-center shadow-2xl ring-1 ring-black/[0.06]">
+          <m.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[60] grid place-items-center bg-background/80 px-5 backdrop-blur-sm"
+            role="status"
+            aria-live="polite"
+          >
+            <m.div
+              initial={{ scale: 0.78, y: 12 }}
+              animate={{ scale: 1, y: 0 }}
+              transition={{ type: "spring", stiffness: 360, damping: 20 }}
+              className="relative w-full max-w-sm overflow-hidden rounded-2xl bg-card p-8 text-center shadow-2xl ring-1 ring-black/[0.06]"
+            >
               <DeliveryAnimation className="pointer-events-none absolute inset-x-2 top-0 h-36 opacity-95" />
-              <div className="success-check mx-auto grid h-16 w-16 place-items-center rounded-full bg-primary text-primary-foreground"><Check className="h-9 w-9" strokeWidth={3} /></div>
+              <div className="success-check mx-auto grid h-16 w-16 place-items-center rounded-full bg-primary text-primary-foreground">
+                <Check className="h-9 w-9" strokeWidth={3} />
+              </div>
               <h2 className="mt-5 font-display text-2xl">Order confirmed</h2>
-              <p className="mt-2 text-sm text-muted-foreground">Your local shop is getting everything ready.</p>
+              <p className="mt-2 text-sm text-muted-foreground">
+                Your local shop is getting everything ready.
+              </p>
               <div className="pointer-events-none absolute inset-0" aria-hidden="true">
-                {Array.from({ length: 14 }, (_, i) => <i key={i} className="confetti" style={{ left: `${8 + ((i * 37) % 84)}%`, animationDelay: `${(i % 5) * 55}ms`, backgroundColor: i % 2 ? "var(--marigold)" : "var(--coral)" }} />)}
+                {Array.from({ length: 14 }, (_, i) => (
+                  <i
+                    key={i}
+                    className="confetti"
+                    style={{
+                      left: `${8 + ((i * 37) % 84)}%`,
+                      animationDelay: `${(i % 5) * 55}ms`,
+                      backgroundColor: i % 2 ? "var(--marigold)" : "var(--coral)",
+                    }}
+                  />
+                ))}
               </div>
             </m.div>
           </m.div>
@@ -769,39 +810,58 @@ function CheckoutPage() {
 
       <AnimatePresence>
         {showDemoPayment && (
-        <m.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          className="fixed inset-0 z-50 grid place-items-center bg-black/40 px-5 backdrop-blur-sm"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="demo-payment-title"
-          onMouseDown={(event) => {
-            if (event.currentTarget === event.target && !isPlacing) setShowDemoPayment(false);
-          }}
-        >
           <m.div
-            initial={{ opacity: 0, scale: 0.96, y: 12 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.97, y: 8 }}
-            transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
-            className="w-full max-w-md rounded-xl bg-card p-5 shadow-xl ring-1 ring-black/[0.08]"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 grid place-items-center bg-black/40 px-5 backdrop-blur-sm"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="demo-payment-title"
+            onMouseDown={(event) => {
+              if (event.currentTarget === event.target && !isPlacing) setShowDemoPayment(false);
+            }}
           >
-            <h2 id="demo-payment-title" className="font-display text-xl">
-              {pay === "cod" ? "Confirm cash on delivery" : `Demo ${pay === "upi" ? "UPI" : "card"} payment`}
-            </h2>
-            <p className="mt-2 text-sm text-muted-foreground">
-              {pay === "cod"
-                ? `Your order total is ₹${displayTotal}. Payment will be collected on delivery.`
-                : `Simulate a successful ${pay === "upi" ? "UPI" : "card"} checkout for ₹${displayTotal}. This demo does not record a real payment or mark the order paid.`}
-            </p>
-            <div className="mt-4 flex justify-end gap-2">
-              <button type="button" onClick={() => setShowDemoPayment(false)} className="rounded-lg border hairline px-4 py-2 text-sm">Cancel</button>
-              <button type="button" onClick={() => void placeOrder()} disabled={isPlacing} className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-60">{isPlacing ? "Processing…" : pay === "cod" ? "Place cash order" : "Complete demo payment"}</button>
-            </div>
+            <m.div
+              initial={{ opacity: 0, scale: 0.96, y: 12 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.97, y: 8 }}
+              transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+              className="w-full max-w-md rounded-xl bg-card p-5 shadow-xl ring-1 ring-black/[0.08]"
+            >
+              <h2 id="demo-payment-title" className="font-display text-xl">
+                {pay === "cod"
+                  ? "Confirm cash on delivery"
+                  : `Demo ${pay === "upi" ? "UPI" : "card"} payment`}
+              </h2>
+              <p className="mt-2 text-sm text-muted-foreground">
+                {pay === "cod"
+                  ? `Your order total is ₹${displayTotal}. Payment will be collected on delivery.`
+                  : `Simulate a successful ${pay === "upi" ? "UPI" : "card"} checkout for ₹${displayTotal}. This demo does not record a real payment or mark the order paid.`}
+              </p>
+              <div className="mt-4 flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowDemoPayment(false)}
+                  className="rounded-lg border hairline px-4 py-2 text-sm"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void placeOrder()}
+                  disabled={isPlacing}
+                  className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-60"
+                >
+                  {isPlacing
+                    ? "Processing…"
+                    : pay === "cod"
+                      ? "Place cash order"
+                      : "Complete demo payment"}
+                </button>
+              </div>
+            </m.div>
           </m.div>
-        </m.div>
         )}
       </AnimatePresence>
     </AppShell>

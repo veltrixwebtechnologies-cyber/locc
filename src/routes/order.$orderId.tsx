@@ -1,7 +1,12 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo } from "react";
 import { AppShell } from "@/components/app-shell";
-import { useOrdersState, orderStatusFlow, orderStatusLabel, type OrderStatus } from "@/lib/orders-store";
+import {
+  useOrdersState,
+  orderStatusFlow,
+  orderStatusLabel,
+  type OrderStatus,
+} from "@/lib/orders-store";
 import { getStore } from "@/lib/mock-data";
 import { DeliveryMap } from "@/components/delivery-map";
 import { MessageCircle, Phone, Star } from "lucide-react";
@@ -77,17 +82,22 @@ function OrderPage() {
           Order {order.code}
         </p>
         <h1 className="mt-1 font-display text-2xl">{orderStatusLabel[order.status]}</h1>
-      <p className="mt-1 text-xs text-muted-foreground">
+        <p className="mt-1 text-xs text-muted-foreground">
           From {order.storeName} · <span className="font-mono">₹{order.total}</span>
         </p>
       </div>
 
       {order.status === "delivered" && (
-        <section className="mx-5 mt-4 overflow-hidden rounded-2xl bg-primary/5 ring-1 ring-primary/15" aria-label="Delivery completed">
+        <section
+          className="mx-5 mt-4 overflow-hidden rounded-2xl bg-primary/5 ring-1 ring-primary/15"
+          aria-label="Delivery completed"
+        >
           <DeliveryAnimation className="h-32 w-full" />
           <div className="-mt-2 px-4 pb-4 text-center">
             <p className="font-display text-lg font-semibold text-primary">Delivered with care</p>
-            <p className="mt-1 text-xs text-muted-foreground">Thanks for shopping local with Local Shore.</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Thanks for shopping local with Local Shore.
+            </p>
           </div>
         </section>
       )}
@@ -190,7 +200,7 @@ function OrderPage() {
       ) : (
         <section className="mx-5 mt-4 rounded-xl bg-card p-4 text-sm text-muted-foreground ring-1 ring-black/[0.04]">
           {order.status === "delivered"
-          ? "Delivered successfully. Need help with anything?"
+            ? "Delivered successfully. Need help with anything?"
             : order.status === "cancelled"
               ? "This order was cancelled."
               : order.status === "returned"
@@ -199,11 +209,20 @@ function OrderPage() {
         </section>
       )}
 
-      {order.deliveryOtp && order.status !== "delivered" && order.status !== "cancelled" && order.status !== "returned" ? (
+      {order.deliveryOtp &&
+      order.status !== "delivered" &&
+      order.status !== "cancelled" &&
+      order.status !== "returned" ? (
         <section className="mx-5 mt-4 rounded-xl border border-primary/30 bg-primary/5 p-4 text-center">
-          <p className="text-xs font-semibold uppercase tracking-widest text-primary">Delivery OTP</p>
-          <p className="mt-2 font-mono text-3xl font-bold tracking-[0.35em] text-foreground">{order.deliveryOtp}</p>
-          <p className="mt-2 text-xs text-muted-foreground">Share this code with the delivery partner when your order arrives.</p>
+          <p className="text-xs font-semibold uppercase tracking-widest text-primary">
+            Delivery OTP
+          </p>
+          <p className="mt-2 font-mono text-3xl font-bold tracking-[0.35em] text-foreground">
+            {order.deliveryOtp}
+          </p>
+          <p className="mt-2 text-xs text-muted-foreground">
+            Share this code with the delivery partner when your order arrives.
+          </p>
         </section>
       ) : null}
 

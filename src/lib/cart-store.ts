@@ -99,11 +99,10 @@ export const cartStore = {
     ensureHydrated();
     let lines: CartLine[];
     if (qty <= 0) lines = state.lines.filter((l) => l.productId !== productId);
-    else lines = state.lines.map((l) =>
-      l.productId === productId
-        ? { ...l, qty: Math.min(qty, l.availableStock ?? qty) }
-        : l,
-    );
+    else
+      lines = state.lines.map((l) =>
+        l.productId === productId ? { ...l, qty: Math.min(qty, l.availableStock ?? qty) } : l,
+      );
     state =
       lines.length === 0 ? { storeId: null, storeName: null, lines: [] } : { ...state, lines };
     persist();
@@ -132,7 +131,8 @@ export const cartStore = {
         availableStock,
       };
     });
-    const changed = lines.some((line, index) =>
+    const changed = lines.some(
+      (line, index) =>
         line.qty !== state.lines[index]?.qty ||
         line.availableStock !== state.lines[index]?.availableStock,
     );

@@ -19,14 +19,25 @@ function authErrorMessage(error: unknown, fallback: string) {
   if (typeof error === "string" && error.trim()) return error;
   if (error instanceof Error && error.message) return error.message;
   if (error && typeof error === "object") {
-    const value = error as { message?: unknown; msg?: unknown; error_code?: unknown; code?: unknown };
-    const detail = typeof value.message === "string" && value.message.trim()
-      ? value.message
-      : typeof value.msg === "string" && value.msg.trim()
-        ? value.msg
-        : "";
+    const value = error as {
+      message?: unknown;
+      msg?: unknown;
+      error_code?: unknown;
+      code?: unknown;
+    };
+    const detail =
+      typeof value.message === "string" && value.message.trim()
+        ? value.message
+        : typeof value.msg === "string" && value.msg.trim()
+          ? value.msg
+          : "";
     if (detail) {
-      const code = typeof value.error_code === "string" ? value.error_code : typeof value.code === "string" ? value.code : "";
+      const code =
+        typeof value.error_code === "string"
+          ? value.error_code
+          : typeof value.code === "string"
+            ? value.code
+            : "";
       return code ? `${code}: ${detail}` : detail;
     }
   }
@@ -35,10 +46,14 @@ function authErrorMessage(error: unknown, fallback: string) {
 
 function authFriendlyError(error: unknown, fallback: string) {
   const message = authErrorMessage(error, fallback).toLowerCase();
-  if (message.includes("expired") || message.includes("otp_expired")) return "This code has expired. Request a new code.";
-  if (message.includes("invalid") || message.includes("token")) return "Invalid verification code. Check the code and try again.";
-  if (message.includes("rate") || message.includes("too many") || message.includes("limit")) return "Too many attempts. Wait a moment and try again.";
-  if (message.includes("network") || message.includes("fetch")) return "Network error. Check your connection and try again.";
+  if (message.includes("expired") || message.includes("otp_expired"))
+    return "This code has expired. Request a new code.";
+  if (message.includes("invalid") || message.includes("token"))
+    return "Invalid verification code. Check the code and try again.";
+  if (message.includes("rate") || message.includes("too many") || message.includes("limit"))
+    return "Too many attempts. Wait a moment and try again.";
+  if (message.includes("network") || message.includes("fetch"))
+    return "Network error. Check your connection and try again.";
   return fallback;
 }
 
@@ -59,7 +74,7 @@ function AuthPage() {
   const [emailStep, setEmailStep] = useState<"email" | "otp">("email");
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
-const [emailOtp, setEmailOtp] = useState("");
+  const [emailOtp, setEmailOtp] = useState("");
 
   const PENDING_OTP_KEY = "localshore.pending-otp.v1";
 
@@ -77,17 +92,37 @@ const [emailOtp, setEmailOtp] = useState("");
   useEffect(() => {
     try {
       const pending = JSON.parse(localStorage.getItem(PENDING_OTP_KEY) ?? "null") as {
-        mode?: Mode; intent?: AuthIntent; phone?: string; countryCode?: string; email?: string; name?: string;
-        step?: "phone" | "otp"; emailStep?: "email" | "otp";
+        mode?: Mode;
+        intent?: AuthIntent;
+        phone?: string;
+        countryCode?: string;
+        email?: string;
+        name?: string;
+        step?: "phone" | "otp";
+        emailStep?: "email" | "otp";
       } | null;
-      if (pending?.mode === "phone" && pending.step === "otp" && pending.phone && pending.countryCode) {
-        setMode("phone"); setIntent(pending.intent === "signup" ? "signup" : "login");
-        setPhone(pending.phone); setCountryCode(pending.countryCode); setName(pending.name ?? ""); setStep("otp");
+      if (
+        pending?.mode === "phone" &&
+        pending.step === "otp" &&
+        pending.phone &&
+        pending.countryCode
+      ) {
+        setMode("phone");
+        setIntent(pending.intent === "signup" ? "signup" : "login");
+        setPhone(pending.phone);
+        setCountryCode(pending.countryCode);
+        setName(pending.name ?? "");
+        setStep("otp");
       } else if (pending?.mode === "email" && pending.emailStep === "otp" && pending.email) {
-        setMode("email"); setIntent(pending.intent === "signup" ? "signup" : "login");
-        setEmail(pending.email); setName(pending.name ?? ""); setEmailStep("otp");
+        setMode("email");
+        setIntent(pending.intent === "signup" ? "signup" : "login");
+        setEmail(pending.email);
+        setName(pending.name ?? "");
+        setEmailStep("otp");
       }
-    } catch { localStorage.removeItem(PENDING_OTP_KEY); }
+    } catch {
+      localStorage.removeItem(PENDING_OTP_KEY);
+    }
   }, []);
 
   useEffect(() => {
@@ -102,12 +137,17 @@ const [emailOtp, setEmailOtp] = useState("");
     };
   }, [done]);
 
-  const saveProfile = async (userId: string, profile: { email?: string; phone?: string; display_name: string }) => {
-    const { error: profileError } = await (supabase as any).from("profiles").upsert(
-      { id: userId, ...profile },
-      { onConflict: "id" },
-    );
-    if (profileError) throw new Error("Verification succeeded, but your profile could not be saved. Please try again.");
+  const saveProfile = async (
+    userId: string,
+    profile: { email?: string; phone?: string; display_name: string },
+  ) => {
+    const { error: profileError } = await (supabase as any)
+      .from("profiles")
+      .upsert({ id: userId, ...profile }, { onConflict: "id" });
+    if (profileError)
+      throw new Error(
+        "Verification succeeded, but your profile could not be saved. Please try again.",
+      );
   };
 
   // 30s resend cooldown ticker
@@ -146,10 +186,18 @@ const [emailOtp, setEmailOtp] = useState("");
       if (authError) throw authError;
       setStep("otp");
       setCooldown(30);
-      localStorage.setItem(PENDING_OTP_KEY, JSON.stringify({ mode: "phone", intent, phone, countryCode, name, step: "otp" }));
+      localStorage.setItem(
+        PENDING_OTP_KEY,
+        JSON.stringify({ mode: "phone", intent, phone, countryCode, name, step: "otp" }),
+      );
     } catch (err) {
       console.error("Supabase phone OTP error", err);
-      setError(authFriendlyError(err, "Could not send the verification code. Check Supabase Auth SMS settings."));
+      setError(
+        authFriendlyError(
+          err,
+          "Could not send the verification code. Check Supabase Auth SMS settings.",
+        ),
+      );
     } finally {
       setLoading(false);
     }
@@ -169,7 +217,12 @@ const [emailOtp, setEmailOtp] = useState("");
       setOtp("");
     } catch (err) {
       console.error("Supabase phone OTP resend error", err);
-      setError(authFriendlyError(err, "Could not resend the verification code. Check Supabase Auth SMS settings."));
+      setError(
+        authFriendlyError(
+          err,
+          "Could not resend the verification code. Check Supabase Auth SMS settings.",
+        ),
+      );
     } finally {
       setLoading(false);
     }
@@ -193,7 +246,10 @@ const [emailOtp, setEmailOtp] = useState("");
       if (intent === "signup") {
         const { data } = await supabase.auth.getUser();
         if (!data.user) throw new Error("Could not finish creating your account.");
-        await saveProfile(data.user.id, { phone: `${countryCode}${phone}`, display_name: name.trim() || "Customer" });
+        await saveProfile(data.user.id, {
+          phone: `${countryCode}${phone}`,
+          display_name: name.trim() || "Customer",
+        });
         toast.success("Account created successfully!");
       } else {
         toast.success("Welcome back!");
@@ -228,17 +284,27 @@ const [emailOtp, setEmailOtp] = useState("");
         email: email.trim(),
         options: {
           shouldCreateUser: intent === "signup",
-          ...(intent === "signup" ? { data: { display_name: name.trim() || email.split("@")[0] } } : {}),
+          ...(intent === "signup"
+            ? { data: { display_name: name.trim() || email.split("@")[0] } }
+            : {}),
           emailRedirectTo: `${window.location.origin}/auth`,
         },
       });
       if (authError) throw authError;
       setEmailStep("otp");
       setCooldown(30);
-      localStorage.setItem(PENDING_OTP_KEY, JSON.stringify({ mode: "email", intent, email: email.trim(), name, emailStep: "otp" }));
+      localStorage.setItem(
+        PENDING_OTP_KEY,
+        JSON.stringify({ mode: "email", intent, email: email.trim(), name, emailStep: "otp" }),
+      );
     } catch (err) {
       console.error("Supabase email OTP error", err);
-      setError(authFriendlyError(err, "Could not send the verification code. Check Supabase SMTP settings."));
+      setError(
+        authFriendlyError(
+          err,
+          "Could not send the verification code. Check Supabase SMTP settings.",
+        ),
+      );
     } finally {
       setLoading(false);
     }
@@ -253,7 +319,11 @@ const [emailOtp, setEmailOtp] = useState("");
     setError(null);
     setLoading(true);
     try {
-      const { error: authError } = await supabase.auth.verifyOtp({ email: email.trim(), token: emailOtp, type: "email" });
+      const { error: authError } = await supabase.auth.verifyOtp({
+        email: email.trim(),
+        token: emailOtp,
+        type: "email",
+      });
       if (authError) throw authError;
       const { data } = await supabase.auth.getUser();
       if (!data.user) throw new Error("Could not finish creating your account.");
@@ -285,7 +355,9 @@ const [emailOtp, setEmailOtp] = useState("");
         email,
         options: {
           shouldCreateUser: intent === "signup",
-          ...(intent === "signup" ? { data: { display_name: name.trim() || email.split("@")[0] } } : {}),
+          ...(intent === "signup"
+            ? { data: { display_name: name.trim() || email.split("@")[0] } }
+            : {}),
           emailRedirectTo: `${window.location.origin}/auth`,
         },
       });
@@ -409,7 +481,9 @@ const [emailOtp, setEmailOtp] = useState("");
                 type="button"
                 onClick={() => switchIntent("login")}
                 className={`rounded-lg py-2 text-sm font-medium transition-colors ${
-                  intent === "login" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+                  intent === "login"
+                    ? "bg-background text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
                 }`}
               >
                 Login
@@ -418,7 +492,9 @@ const [emailOtp, setEmailOtp] = useState("");
                 type="button"
                 onClick={() => switchIntent("signup")}
                 className={`rounded-lg py-2 text-sm font-medium transition-colors ${
-                  intent === "signup" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+                  intent === "signup"
+                    ? "bg-background text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
                 }`}
               >
                 Sign up
@@ -568,12 +644,33 @@ const [emailOtp, setEmailOtp] = useState("");
                 {error && <p className="text-xs text-destructive">{error}</p>}
                 {error === "No account found with this email." && (
                   <div className="flex items-center justify-between text-xs">
-                    <button type="button" onClick={() => switchIntent("signup")} className="text-primary underline-offset-4 hover:underline">Create Account</button>
-                    <button type="button" onClick={() => { setEmail(""); setError(null); }} className="text-muted-foreground underline-offset-4 hover:underline">Change Email</button>
+                    <button
+                      type="button"
+                      onClick={() => switchIntent("signup")}
+                      className="text-primary underline-offset-4 hover:underline"
+                    >
+                      Create Account
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEmail("");
+                        setError(null);
+                      }}
+                      className="text-muted-foreground underline-offset-4 hover:underline"
+                    >
+                      Change Email
+                    </button>
                   </div>
                 )}
                 {error === "This email is already registered. Please log in instead." && (
-                  <button type="button" onClick={() => switchIntent("login")} className="text-xs text-primary underline-offset-4 hover:underline">Go to Login</button>
+                  <button
+                    type="button"
+                    onClick={() => switchIntent("login")}
+                    className="text-xs text-primary underline-offset-4 hover:underline"
+                  >
+                    Go to Login
+                  </button>
                 )}
                 <button
                   type="submit"
@@ -583,21 +680,35 @@ const [emailOtp, setEmailOtp] = useState("");
                   {loading && <Loader2 className="h-4 w-4 animate-spin" />}
                   {loading ? "Sending code…" : "Login"}
                 </button>
-                {intent === "signup" && <p className="pt-1 text-center text-xs text-muted-foreground">We&apos;ll create your account after verification.</p>}
+                {intent === "signup" && (
+                  <p className="pt-1 text-center text-xs text-muted-foreground">
+                    We&apos;ll create your account after verification.
+                  </p>
+                )}
               </form>
             ) : (
               <form onSubmit={verifyEmailOtp} className="mt-6 space-y-4">
-                <p className="text-xs text-muted-foreground">Code sent to <span className="font-mono">{email}</span></p>
+                <p className="text-xs text-muted-foreground">
+                  Code sent to <span className="font-mono">{email}</span>
+                </p>
                 <OtpInput value={emailOtp} onChange={setEmailOtp} disabled={loading} />
                 {error && <p className="text-xs text-destructive">{error}</p>}
-                <button type="submit" disabled={loading || emailOtp.length !== OTP_LENGTH} className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-3.5 text-sm font-semibold text-primary-foreground disabled:opacity-70">
+                <button
+                  type="submit"
+                  disabled={loading || emailOtp.length !== OTP_LENGTH}
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-3.5 text-sm font-semibold text-primary-foreground disabled:opacity-70"
+                >
                   {loading && <Loader2 className="h-4 w-4 animate-spin" />}
                   {loading ? "Verifying…" : "Verify"}
                 </button>
                 <div className="flex items-center justify-between text-xs">
                   <button
                     type="button"
-                    onClick={() => { setEmailStep("email"); setEmailOtp(""); setError(null); }}
+                    onClick={() => {
+                      setEmailStep("email");
+                      setEmailOtp("");
+                      setError(null);
+                    }}
                     className="text-muted-foreground underline-offset-4 hover:underline"
                   >
                     Use a different email

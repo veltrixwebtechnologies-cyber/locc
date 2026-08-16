@@ -13,12 +13,20 @@ let state = EMPTY_AUTH;
 let initialized = false;
 const listeners = new Set<() => void>();
 
-function fromUser(user: { id?: string; phone?: string | null; email?: string | null; user_metadata?: Record<string, unknown> } | null): AuthState {
-  const displayName = typeof user?.user_metadata?.display_name === "string"
-    ? user.user_metadata.display_name
-    : typeof user?.user_metadata?.name === "string"
-      ? user.user_metadata.name
-      : user?.email?.split("@")[0] ?? "Guest";
+function fromUser(
+  user: {
+    id?: string;
+    phone?: string | null;
+    email?: string | null;
+    user_metadata?: Record<string, unknown>;
+  } | null,
+): AuthState {
+  const displayName =
+    typeof user?.user_metadata?.display_name === "string"
+      ? user.user_metadata.display_name
+      : typeof user?.user_metadata?.name === "string"
+        ? user.user_metadata.name
+        : (user?.email?.split("@")[0] ?? "Guest");
   return {
     id: user?.id ?? null,
     phone: user?.phone ?? null,
@@ -36,7 +44,9 @@ function ensureAuthSubscription() {
   if (initialized || typeof window === "undefined") return;
   initialized = true;
   supabase.auth.onAuthStateChange((_event, session) => setState(fromUser(session?.user ?? null)));
-  void supabase.auth.getSession().then(({ data }) => setState(fromUser(data.session?.user ?? null)));
+  void supabase.auth
+    .getSession()
+    .then(({ data }) => setState(fromUser(data.session?.user ?? null)));
 }
 
 export const authStore = {

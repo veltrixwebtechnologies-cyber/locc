@@ -25,7 +25,11 @@ import { cartStore, useCart } from "@/lib/cart-store";
 import { QtyStepper } from "@/components/qty-stepper";
 import { flyProductToCart } from "@/lib/fly-to-cart";
 
-type ProductSectionProps = { title: string; products: MerchandisingProduct[] | undefined; loading?: boolean };
+type ProductSectionProps = {
+  title: string;
+  products: MerchandisingProduct[] | undefined;
+  loading?: boolean;
+};
 
 export function ProductCard({ product }: { product: MerchandisingProduct }) {
   const [imageUrl, setImageUrl] = useState(product.image_url ?? "");
@@ -91,7 +95,9 @@ export function ProductCard({ product }: { product: MerchandisingProduct }) {
               ₹{product.discount_price ?? product.selling_price}
             </span>
             {product.discount_price && (
-              <span className="text-xs text-muted-foreground line-through">M.R.P. ₹{product.mrp}</span>
+              <span className="text-xs text-muted-foreground line-through">
+                M.R.P. ₹{product.mrp}
+              </span>
             )}
             {discount > 0 && (
               <m.span
@@ -116,11 +122,21 @@ export function ProductCard({ product }: { product: MerchandisingProduct }) {
         <WishlistButton
           productId={product.id}
           productName={product.name}
-          item={{ productId: product.id, name: product.name, shopName: product.shop_name, category: product.category ?? "Other", price: Number(product.discount_price ?? product.selling_price), imageUrl: product.image_url ?? undefined, sellerId: product.seller_id }}
+          item={{
+            productId: product.id,
+            name: product.name,
+            shopName: product.shop_name,
+            category: product.category ?? "Other",
+            price: Number(product.discount_price ?? product.selling_price),
+            imageUrl: product.image_url ?? undefined,
+            sellerId: product.seller_id,
+          }}
         />
       </div>
       <div className="mt-auto flex flex-col gap-2 px-3 pb-3 pt-2">
-        <p className="min-w-0 truncate text-[10px] text-muted-foreground">Sold by {product.shop_name}</p>
+        <p className="min-w-0 truncate text-[10px] text-muted-foreground">
+          Sold by {product.shop_name}
+        </p>
         <QtyStepper
           qty={quantity}
           max={product.stock}
@@ -154,7 +170,9 @@ function ProductSection({ title, products, loading = false }: ProductSectionProp
           </span>
         </div>
         <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-          {[0, 1, 2, 3, 4].map((item) => <SkeletonCard key={item} />)}
+          {[0, 1, 2, 3, 4].map((item) => (
+            <SkeletonCard key={item} />
+          ))}
         </div>
       </section>
     );
@@ -192,7 +210,9 @@ export function MerchandisingSections({
   const collections = useActiveCollections();
   const brands = useFeaturedBrands();
   const flashSales = useActiveFlashSales();
-  const flashProductIds = (flashSales.data ?? []).flatMap((sale: any) => (sale.flash_sale_products ?? []).map((item: any) => item.product_id));
+  const flashProductIds = (flashSales.data ?? []).flatMap((sale: any) =>
+    (sale.flash_sale_products ?? []).map((item: any) => item.product_id),
+  );
   const flashProducts = useFlashSaleProducts(flashProductIds);
   const [period, setPeriod] = useState<"today" | "this_week" | "this_month" | "all_time">(
     "all_time",
@@ -224,12 +244,36 @@ export function MerchandisingSections({
           </div>
         </section>
       ) : null}
-      <ProductSection title="Trending" products={trending.data ?? []} loading={trending.isLoading} />
-      <ProductSection title="Deals & Discounts" products={deals.data ?? []} loading={deals.isLoading} />
-      <ProductSection title="Clearance Sale" products={clearance.data ?? []} loading={clearance.isLoading} />
-      <ProductSection title="Flash Sales" products={flashProducts.data ?? []} loading={flashProducts.isLoading} />
-      <ProductSection title="Recently viewed" products={recentlyViewed.data ?? []} loading={recentlyViewed.isLoading} />
-      <ProductSection title="Recommended for you" products={recommendations.data ?? []} loading={recommendations.isLoading} />
+      <ProductSection
+        title="Trending"
+        products={trending.data ?? []}
+        loading={trending.isLoading}
+      />
+      <ProductSection
+        title="Deals & Discounts"
+        products={deals.data ?? []}
+        loading={deals.isLoading}
+      />
+      <ProductSection
+        title="Clearance Sale"
+        products={clearance.data ?? []}
+        loading={clearance.isLoading}
+      />
+      <ProductSection
+        title="Flash Sales"
+        products={flashProducts.data ?? []}
+        loading={flashProducts.isLoading}
+      />
+      <ProductSection
+        title="Recently viewed"
+        products={recentlyViewed.data ?? []}
+        loading={recentlyViewed.isLoading}
+      />
+      <ProductSection
+        title="Recommended for you"
+        products={recommendations.data ?? []}
+        loading={recommendations.isLoading}
+      />
       {brands.data?.length || collections.data?.gift.length || collections.data?.seasonal.length ? (
         <section className="mt-8 px-5 pb-6 md:px-8">
           <h2 className="font-display text-base font-bold md:text-xl">Explore collections</h2>
@@ -240,7 +284,11 @@ export function MerchandisingSections({
                   key={collection.id}
                   to="/collection/$collectionId"
                   params={{ collectionId: collection.id }}
-                  search={{ kind: (collections.data?.gift.some((item: any) => item.id === collection.id) ? "gift" : "seasonal") as "gift" | "seasonal" }}
+                  search={{
+                    kind: (collections.data?.gift.some((item: any) => item.id === collection.id)
+                      ? "gift"
+                      : "seasonal") as "gift" | "seasonal",
+                  }}
                   className="rounded-xl bg-card p-4 ring-1 ring-black/[0.05]"
                 >
                   <p className="font-medium">{collection.name}</p>
@@ -251,7 +299,12 @@ export function MerchandisingSections({
               ),
             )}
             {(brands.data ?? []).map((brand: any) => (
-              <Link to="/brand/$brandId" params={{ brandId: brand.brand_id }} key={brand.brand_id} className="rounded-xl bg-card p-4 ring-1 ring-black/[0.05]">
+              <Link
+                to="/brand/$brandId"
+                params={{ brandId: brand.brand_id }}
+                key={brand.brand_id}
+                className="rounded-xl bg-card p-4 ring-1 ring-black/[0.05]"
+              >
                 <p className="font-medium">{brand.brands?.name ?? "Featured brand"}</p>
                 <p className="mt-1 text-xs text-muted-foreground">Featured brand</p>
               </Link>
@@ -259,7 +312,11 @@ export function MerchandisingSections({
           </div>
         </section>
       ) : null}
-      <ProductSection title="New Arrivals" products={arrivals.data ?? []} loading={arrivals.isLoading} />
+      <ProductSection
+        title="New Arrivals"
+        products={arrivals.data ?? []}
+        loading={arrivals.isLoading}
+      />
     </div>
   );
 }

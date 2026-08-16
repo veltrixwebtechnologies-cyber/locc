@@ -4,7 +4,8 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { ArrowLeft, Search, Star } from "lucide-react";
 import {
-  getStore, APPROVED_STORE,
+  getStore,
+  APPROVED_STORE,
   productsByStore,
   categoryColor,
   categoryLabel,
@@ -32,10 +33,11 @@ const toStoreCategory = (value?: string | null): Store["category"] => {
 
 export const Route = createFileRoute("/store/$storeId")({
   loader: ({ params }): { store: Store; products: Product[] } => {
-    const store = params.storeId === APPROVED_STORE.id
-      ? APPROVED_STORE
-      : getStore(params.storeId) ??
-        (isUuid(params.storeId) ? { ...APPROVED_STORE, id: params.storeId } : undefined);
+    const store =
+      params.storeId === APPROVED_STORE.id
+        ? APPROVED_STORE
+        : (getStore(params.storeId) ??
+          (isUuid(params.storeId) ? { ...APPROVED_STORE, id: params.storeId } : undefined));
     if (!store) throw notFound();
     return { store, products: productsByStore[store.id] ?? [] };
   },
@@ -85,23 +87,36 @@ function StorePage() {
         error = fallback.error;
       }
       if (error) throw error;
-      const products = await Promise.all((data ?? []).map(async (p: any) => {
-        const rawImage = p.image_url ?? "";
-        let imageUrl = rawImage;
-        if (rawImage && !/^(https?:|data:)/i.test(rawImage)) {
-          const { data: signed } = await supabase.storage
-            .from("product-images")
-            .createSignedUrl(rawImage, 60 * 60);
-          imageUrl = signed?.signedUrl ?? "";
-        }
-        return { id: p.id, storeId: p.seller_id ?? APPROVED_STORE.id, name: p.name, unit: p.category ?? "", price: Number(p.selling_price), imageUrl, category: p.category ?? "Other", stock: Number(p.stock) };
-      }));
+      const products = await Promise.all(
+        (data ?? []).map(async (p: any) => {
+          const rawImage = p.image_url ?? "";
+          let imageUrl = rawImage;
+          if (rawImage && !/^(https?:|data:)/i.test(rawImage)) {
+            const { data: signed } = await supabase.storage
+              .from("product-images")
+              .createSignedUrl(rawImage, 60 * 60);
+            imageUrl = signed?.signedUrl ?? "";
+          }
+          return {
+            id: p.id,
+            storeId: p.seller_id ?? APPROVED_STORE.id,
+            name: p.name,
+            unit: p.category ?? "",
+            price: Number(p.selling_price),
+            imageUrl,
+            category: p.category ?? "Other",
+            stock: Number(p.stock),
+          };
+        }),
+      );
 
       if (loaded.store.id === APPROVED_STORE.id) return { products, store: null };
 
       const { data: vendor, error: vendorError } = await (supabase as any)
         .from("approved_vendor_catalog")
-        .select("id,shop_name,business_type,city,state,address_line1,category,shop_logo_path,shop_banner_path")
+        .select(
+          "id,shop_name,business_type,city,state,address_line1,category,shop_logo_path,shop_banner_path",
+        )
         .eq("id", loaded.store.id)
         .maybeSingle();
       if (vendorError) throw vendorError;
@@ -117,17 +132,19 @@ function StorePage() {
 
       return {
         products,
-        store: vendor ? {
-          ...APPROVED_STORE,
-          id: vendor.id,
-          name: vendor.shop_name || APPROVED_STORE.name,
-          category: toStoreCategory(vendor.category),
-          tagline: vendor.business_type || "Approved local vendor",
-          address:
-            [vendor.address_line1, vendor.city, vendor.state].filter(Boolean).join(", ") ||
-            APPROVED_STORE.address,
-          imageUrl,
-        } as Store : null,
+        store: vendor
+          ? ({
+              ...APPROVED_STORE,
+              id: vendor.id,
+              name: vendor.shop_name || APPROVED_STORE.name,
+              category: toStoreCategory(vendor.category),
+              tagline: vendor.business_type || "Approved local vendor",
+              address:
+                [vendor.address_line1, vendor.city, vendor.state].filter(Boolean).join(", ") ||
+                APPROVED_STORE.address,
+              imageUrl,
+            } as Store)
+          : null,
       };
     },
   });
@@ -228,12 +245,20 @@ function StorePage() {
         <div className="grid gap-5 px-5 pb-6 md:grid-cols-[150px_minmax(0,1fr)] md:px-0">
           <aside className="hidden md:block">
             <div className="sticky top-28 rounded-xl border border-[#ead9a8] bg-card p-2">
-              <p className="px-2 py-2 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Categories</p>
+              <p className="px-2 py-2 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                Categories
+              </p>
               <nav className="space-y-1">
                 {grouped.map(([cat, items]) => (
-                  <a key={`rail-${cat}`} href="#catalog" className="block rounded-lg px-2 py-2 text-xs font-medium text-foreground/75 hover:bg-muted hover:text-primary">
+                  <a
+                    key={`rail-${cat}`}
+                    href="#catalog"
+                    className="block rounded-lg px-2 py-2 text-xs font-medium text-foreground/75 hover:bg-muted hover:text-primary"
+                  >
                     {cat}
-                    <span className="mt-0.5 block text-[10px] text-muted-foreground">{items.length} items</span>
+                    <span className="mt-0.5 block text-[10px] text-muted-foreground">
+                      {items.length} items
+                    </span>
                   </a>
                 ))}
               </nav>
@@ -256,47 +281,74 @@ function StorePage() {
                   </div>
                   <ul className="mt-2 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
                     {items.map((p) => {
-                    const q = qtyOf(p.id);
-                    return (
-                      <m.li
-                        key={p.id}
-                        data-product-id={p.id}
-                        initial={{ opacity: 0, y: 10 }}
-                        whileInView={{ opacity: 1, y: 0 }}
-                        viewport={{ once: true, amount: 0.15 }}
-                        whileHover={{ y: -2 }}
-                        className="flex min-h-[260px] flex-col rounded-xl border border-[#ead9a8] bg-card p-3 transition-all hover:-translate-y-0.5 hover:border-[#d9bd70] hover:shadow-md"
-                      >
-                        <div className="relative flex h-32 items-center justify-center rounded-lg bg-[#f8f8f8] p-2">
-                          <ProductThumb src={p.imageUrl} alt={p.name} category={store.category} size="lg" />
-                          <span className="absolute bottom-2 left-2 rounded bg-background/95 px-1.5 py-1 text-[9px] font-semibold text-foreground">{store.etaMin} mins</span>
-                          <div className="absolute right-2 top-2">
-                            <WishlistButton
-                              productId={p.id}
-                              productName={p.name}
-                              item={{ productId: p.id, name: p.name, shopName: store.name, category: p.category, price: p.price, imageUrl: p.imageUrl, sellerId: p.storeId }}
+                      const q = qtyOf(p.id);
+                      return (
+                        <m.li
+                          key={p.id}
+                          data-product-id={p.id}
+                          initial={{ opacity: 0, y: 10 }}
+                          whileInView={{ opacity: 1, y: 0 }}
+                          viewport={{ once: true, amount: 0.15 }}
+                          whileHover={{ y: -2 }}
+                          className="flex min-h-[260px] flex-col rounded-xl border border-[#ead9a8] bg-card p-3 transition-all hover:-translate-y-0.5 hover:border-[#d9bd70] hover:shadow-md"
+                        >
+                          <div className="relative flex h-32 items-center justify-center rounded-lg bg-[#f8f8f8] p-2">
+                            <ProductThumb
+                              src={p.imageUrl}
+                              alt={p.name}
+                              category={store.category}
+                              size="lg"
+                            />
+                            <span className="absolute bottom-2 left-2 rounded bg-background/95 px-1.5 py-1 text-[9px] font-semibold text-foreground">
+                              {store.etaMin} mins
+                            </span>
+                            <div className="absolute right-2 top-2">
+                              <WishlistButton
+                                productId={p.id}
+                                productName={p.name}
+                                item={{
+                                  productId: p.id,
+                                  name: p.name,
+                                  shopName: store.name,
+                                  category: p.category,
+                                  price: p.price,
+                                  imageUrl: p.imageUrl,
+                                  sellerId: p.storeId,
+                                }}
+                              />
+                            </div>
+                          </div>
+                          <div className="mt-3 min-w-0 flex-1">
+                            <Link
+                              to="/product/$productId"
+                              params={{ productId: p.id }}
+                              onClick={() => {
+                                void recordProductEvent(p.id, "view");
+                                void recordRecentProductView(p.id);
+                              }}
+                              className="line-clamp-2 text-xs font-semibold leading-4 hover:text-primary hover:underline"
+                            >
+                              {p.name}
+                            </Link>
+                            <p className="mt-1 truncate text-[11px] text-muted-foreground">
+                              {p.unit || p.category}
+                            </p>
+                          </div>
+                          <div className="mt-3 flex items-center justify-between gap-2">
+                            <span className="font-mono text-sm font-bold">₹{p.price}</span>
+                            <QtyStepper
+                              qty={q}
+                              max={p.stock}
+                              onAdd={() => {
+                                void recordProductEvent(p.id, "add_to_cart");
+                                flyProductToCart(p.id);
+                                cartStore.add(p.storeId, store.name, p);
+                              }}
+                              onChange={(n) => cartStore.setQty(p.id, n)}
                             />
                           </div>
-                        </div>
-                        <div className="mt-3 min-w-0 flex-1">
-                          <Link to="/product/$productId" params={{ productId: p.id }} onClick={() => { void recordProductEvent(p.id, "view"); void recordRecentProductView(p.id); }} className="line-clamp-2 text-xs font-semibold leading-4 hover:text-primary hover:underline">{p.name}</Link>
-                          <p className="mt-1 truncate text-[11px] text-muted-foreground">{p.unit || p.category}</p>
-                        </div>
-                        <div className="mt-3 flex items-center justify-between gap-2">
-                          <span className="font-mono text-sm font-bold">₹{p.price}</span>
-                          <QtyStepper
-                            qty={q}
-                            max={p.stock}
-                            onAdd={() => {
-                              void recordProductEvent(p.id, "add_to_cart");
-                              flyProductToCart(p.id);
-                              cartStore.add(p.storeId, store.name, p);
-                            }}
-                            onChange={(n) => cartStore.setQty(p.id, n)}
-                          />
-                        </div>
-                      </m.li>
-                    );
+                        </m.li>
+                      );
                     })}
                   </ul>
                 </section>

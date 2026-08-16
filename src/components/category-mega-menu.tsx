@@ -216,42 +216,53 @@ export function CategoryMegaMenu() {
             <Menu className="h-4 w-4" />
             All categories
           </button>
-        <nav aria-label="Shop categories" className="flex min-w-0 items-center gap-0 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          {menuGroups.map((group) => (
-            <div key={group.id} className="group relative shrink-0">
-              <Link
-                to="/"
-                search={{ category: group.categoryId, q: undefined }}
-                className="inline-flex items-center gap-1 rounded-md px-3 py-2 text-xs font-medium whitespace-nowrap transition-colors hover:bg-primary-foreground/10"
-              >
-                {group.label}
-                <ChevronDown className="h-3 w-3 opacity-70 transition-transform group-hover:rotate-180" />
-              </Link>
-              <div className="pointer-events-none absolute left-0 top-full z-50 w-[min(760px,calc(100vw-3rem))] translate-y-2 opacity-0 transition-all duration-150 group-hover:pointer-events-auto group-hover:translate-y-0 group-hover:opacity-100">
-                <div className="overflow-hidden rounded-b-xl border hairline bg-card text-foreground shadow-2xl">
-                  <div className="grid grid-cols-3 gap-5 p-5">
-                    {group.columns.map((column) => (
-                      <div key={column.heading}>
-                        <Link to="/" search={{ category: group.categoryId, q: undefined }} className="text-sm font-bold text-primary hover:underline">
-                          {column.heading}
-                        </Link>
-                        <ul className="mt-2 space-y-1.5">
-                          {column.items.map((item) => (
-                            <li key={item}>
-                              <Link to="/" search={{ category: group.categoryId, q: item }} className="text-xs text-foreground/80 hover:text-primary hover:underline">
-                                {item}
-                              </Link>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    ))}
+          <nav
+            aria-label="Shop categories"
+            className="flex min-w-0 items-center gap-0 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          >
+            {menuGroups.map((group) => (
+              <div key={group.id} className="group relative shrink-0">
+                <Link
+                  to="/"
+                  search={{ category: group.categoryId, q: undefined }}
+                  className="inline-flex items-center gap-1 rounded-md px-3 py-2 text-xs font-medium whitespace-nowrap transition-colors hover:bg-primary-foreground/10"
+                >
+                  {group.label}
+                  <ChevronDown className="h-3 w-3 opacity-70 transition-transform group-hover:rotate-180" />
+                </Link>
+                <div className="pointer-events-none absolute left-0 top-full z-50 w-[min(760px,calc(100vw-3rem))] translate-y-2 opacity-0 transition-all duration-150 group-hover:pointer-events-auto group-hover:translate-y-0 group-hover:opacity-100">
+                  <div className="overflow-hidden rounded-b-xl border hairline bg-card text-foreground shadow-2xl">
+                    <div className="grid grid-cols-3 gap-5 p-5">
+                      {group.columns.map((column) => (
+                        <div key={column.heading}>
+                          <Link
+                            to="/"
+                            search={{ category: group.categoryId, q: undefined }}
+                            className="text-sm font-bold text-primary hover:underline"
+                          >
+                            {column.heading}
+                          </Link>
+                          <ul className="mt-2 space-y-1.5">
+                            {column.items.map((item) => (
+                              <li key={item}>
+                                <Link
+                                  to="/"
+                                  search={{ category: group.categoryId, q: item }}
+                                  className="text-xs text-foreground/80 hover:text-primary hover:underline"
+                                >
+                                  {item}
+                                </Link>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-          ))}
-        </nav>
+            ))}
+          </nav>
         </div>
       </div>
 
@@ -288,9 +299,21 @@ export function CategoryMegaMenu() {
               <DrawerLink label="Deals & discounts" onClick={() => setDrawerOpen(false)} />
             </DrawerSection>
             <DrawerSection title="Digital Content & Devices">
-              <DrawerLink label="Mobile & small electronics" category="electronics" onClick={() => setDrawerOpen(false)} />
-              <DrawerLink label="Chargers, cables & accessories" category="electronics" onClick={() => setDrawerOpen(false)} />
-              <DrawerLink label="Batteries, bulbs & home tech" category="electronics" onClick={() => setDrawerOpen(false)} />
+              <DrawerLink
+                label="Mobile & small electronics"
+                category="electronics"
+                onClick={() => setDrawerOpen(false)}
+              />
+              <DrawerLink
+                label="Chargers, cables & accessories"
+                category="electronics"
+                onClick={() => setDrawerOpen(false)}
+              />
+              <DrawerLink
+                label="Batteries, bulbs & home tech"
+                category="electronics"
+                onClick={() => setDrawerOpen(false)}
+              />
             </DrawerSection>
             <DrawerSection title="Shop by Category">
               {[
@@ -301,7 +324,12 @@ export function CategoryMegaMenu() {
                 ["Stationery & office", "stationery"],
                 ["Snacks & beverages", "snacks"],
               ].map(([label, category]) => (
-                <DrawerLink key={category} label={label} category={category} onClick={() => setDrawerOpen(false)} />
+                <DrawerLink
+                  key={category}
+                  label={label}
+                  category={category}
+                  onClick={() => setDrawerOpen(false)}
+                />
               ))}
             </DrawerSection>
             <DrawerSection title="Programs & Features">
@@ -325,7 +353,15 @@ function DrawerSection({ title, children }: { title: string; children: ReactNode
   );
 }
 
-function DrawerLink({ label, category, onClick }: { label: string; category?: string; onClick: () => void }) {
+function DrawerLink({
+  label,
+  category,
+  onClick,
+}: {
+  label: string;
+  category?: string;
+  onClick: () => void;
+}) {
   return (
     <Link
       to="/"
@@ -434,7 +470,12 @@ export function MobileCategoryStrip() {
               >
                 <span className="h-11 w-11 overflow-hidden rounded-full border hairline bg-card">
                   {imageFor(group.categoryId) ? (
-                    <img src={imageFor(group.categoryId)} alt="" loading="lazy" className="h-full w-full object-cover" />
+                    <img
+                      src={imageFor(group.categoryId)}
+                      alt=""
+                      loading="lazy"
+                      className="h-full w-full object-cover"
+                    />
                   ) : (
                     <PackageSearch className="m-2.5 h-5 w-5 text-primary" />
                   )}
@@ -447,9 +488,15 @@ export function MobileCategoryStrip() {
 
         {isOpen && selected && (
           <div className="mt-3 overflow-hidden rounded-xl border hairline bg-card shadow-xl">
-            <div className="awning h-1.5" style={{ ["--awning-color" as string]: "var(--teal)" }} aria-hidden />
+            <div
+              className="awning h-1.5"
+              style={{ ["--awning-color" as string]: "var(--teal)" }}
+              aria-hidden
+            />
             <div className="bg-primary px-4 py-3 text-primary-foreground">
-              <p className="font-mono text-[10px] uppercase tracking-widest opacity-80">Shop Local</p>
+              <p className="font-mono text-[10px] uppercase tracking-widest opacity-80">
+                Shop Local
+              </p>
               <p className="mt-1 font-display text-xl leading-tight">{selected.label}</p>
             </div>
             <div className="grid grid-cols-2 gap-x-4 gap-y-4 p-4">

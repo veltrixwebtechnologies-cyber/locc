@@ -4,16 +4,27 @@ import { useAuth } from "@/lib/auth-store";
 import { useToggleWishlist, useWishlist, type WishlistCatalogItem } from "@/lib/merchandising";
 import { AnimatePresence, m } from "motion/react";
 
-export function WishlistButton({ productId, productName, item }: { productId: string; productName: string; item?: WishlistCatalogItem }) {
+export function WishlistButton({
+  productId,
+  productName,
+  item,
+}: {
+  productId: string;
+  productName: string;
+  item?: WishlistCatalogItem;
+}) {
   const auth = useAuth();
   const wishlist = useWishlist();
   const toggle = useToggleWishlist();
-  const isSaved = wishlist.data?.some((item: { product_id: string }) => item.product_id === productId) ?? false;
+  const isSaved =
+    wishlist.data?.some((item: { product_id: string }) => item.product_id === productId) ?? false;
 
   return (
     <m.button
       type="button"
-      aria-label={isSaved ? `Remove ${productName} from wishlist` : `Add ${productName} to wishlist`}
+      aria-label={
+        isSaved ? `Remove ${productName} from wishlist` : `Add ${productName} to wishlist`
+      }
       title={isSaved ? "Remove from wishlist" : "Add to wishlist"}
       disabled={toggle.isPending}
       onClick={() => {

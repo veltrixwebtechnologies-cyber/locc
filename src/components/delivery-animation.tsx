@@ -4,11 +4,9 @@ import { useEffect, useState, type ComponentType } from "react";
 // Some Vite/CJS combinations expose the package through its namespace object.
 // Resolve the actual React component explicitly so React never receives the module object.
 const lottieExports = LottieReact as unknown as { default?: unknown; Lottie?: unknown };
-const Lottie = (
-  (lottieExports.default as { default?: unknown } | undefined)?.default ??
+const Lottie = ((lottieExports.default as { default?: unknown } | undefined)?.default ??
   lottieExports.default ??
-  lottieExports.Lottie
-) as ComponentType<{
+  lottieExports.Lottie) as ComponentType<{
   animationData: Record<string, unknown>;
   loop: boolean;
   autoplay: boolean;
@@ -29,8 +27,18 @@ export function DeliveryAnimation({ className = "" }: { className?: string }) {
         if (active) setAnimationData(data);
       })
       .catch(() => undefined);
-    return () => { active = false; };
+    return () => {
+      active = false;
+    };
   }, []);
 
-  return animationData && LottieComponent ? <LottieComponent animationData={animationData} loop autoplay className={className} aria-hidden="true" /> : null;
+  return animationData && LottieComponent ? (
+    <LottieComponent
+      animationData={animationData}
+      loop
+      autoplay
+      className={className}
+      aria-hidden="true"
+    />
+  ) : null;
 }

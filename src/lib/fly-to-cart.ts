@@ -1,9 +1,14 @@
 export function flyProductToCart(productId: string) {
-  if (typeof window === "undefined" || window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+  if (
+    typeof window === "undefined" ||
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches
+  ) {
     return;
   }
 
-  const source = document.querySelector<HTMLElement>(`[data-product-id="${CSS.escape(productId)}"] [data-product-image]`);
+  const source = document.querySelector<HTMLElement>(
+    `[data-product-id="${CSS.escape(productId)}"] [data-product-image]`,
+  );
   const target = document.querySelector<HTMLElement>("[data-cart-target]");
   if (!source || !target) return;
 
@@ -32,7 +37,11 @@ export function flyProductToCart(productId: string) {
     .animate(
       [
         { transform: "translate3d(0,0,0) scale(1)", opacity: 1 },
-        { transform: `translate3d(${deltaX * 0.55}px,${deltaY * 0.35 - 42}px,0) scale(.72)`, opacity: 0.92, offset: 0.55 },
+        {
+          transform: `translate3d(${deltaX * 0.55}px,${deltaY * 0.35 - 42}px,0) scale(.72)`,
+          opacity: 0.92,
+          offset: 0.55,
+        },
         { transform: `translate3d(${deltaX}px,${deltaY}px,0) scale(.16)`, opacity: 0.15 },
       ],
       { duration: 620, easing: "cubic-bezier(.22,1,.36,1)" },

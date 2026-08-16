@@ -35,7 +35,8 @@ export type WishlistCatalogItem = {
   sellerId?: string;
 };
 
-const productSelect = "id,seller_id,name,brand,brand_id,brand_name,category,selling_price,mrp,discount_price,discount_starts_at,discount_ends_at,clearance,stock,image_url,average_rating,review_count,shop_name,created_at";
+const productSelect =
+  "id,seller_id,name,brand,brand_id,brand_name,category,selling_price,mrp,discount_price,discount_starts_at,discount_ends_at,clearance,stock,image_url,average_rating,review_count,shop_name,created_at";
 
 type CachedImage = { url: string; expiresAt: number };
 const imageCache = new Map<string, CachedImage>();
@@ -84,7 +85,8 @@ export function useNewArrivals() {
         .from("public_merchandising_products")
         .select(productSelect)
         .gte("created_at", new Date(Date.now() - 30 * 86400000).toISOString())
-        .order("created_at", { ascending: false }).limit(12);
+        .order("created_at", { ascending: false })
+        .limit(12);
       if (error) throw error;
       return (data ?? []) as MerchandisingProduct[];
     },
@@ -96,13 +98,20 @@ export function useDeals() {
     queryKey: ["merchandising", "deals"],
     queryFn: async () => {
       const now = new Date().toISOString();
-      const { data, error } = await (supabase as any).from("public_merchandising_products")
-        .select(productSelect).not("discount_price", "is", null)
+      const { data, error } = await (supabase as any)
+        .from("public_merchandising_products")
+        .select(productSelect)
+        .not("discount_price", "is", null)
         .or(`discount_starts_at.is.null,discount_starts_at.lte.${now}`)
         .or(`discount_ends_at.is.null,discount_ends_at.gt.${now}`)
         .limit(50);
       if (error) throw error;
-      return (data ?? []).sort((a: MerchandisingProduct, b: MerchandisingProduct) => discountPercent(b) - discountPercent(a)).slice(0, 12) as MerchandisingProduct[];
+      return (data ?? [])
+        .sort(
+          (a: MerchandisingProduct, b: MerchandisingProduct) =>
+            discountPercent(b) - discountPercent(a),
+        )
+        .slice(0, 12) as MerchandisingProduct[];
     },
   });
 }
@@ -111,23 +120,39 @@ export function useClearance() {
   return useQuery({
     queryKey: ["merchandising", "clearance"],
     queryFn: async () => {
-      const { data, error } = await (supabase as any).from("public_merchandising_products")
-        .select(productSelect).eq("clearance", true).limit(50);
+      const { data, error } = await (supabase as any)
+        .from("public_merchandising_products")
+        .select(productSelect)
+        .eq("clearance", true)
+        .limit(50);
       if (error) throw error;
-      return (data ?? []).sort((a: MerchandisingProduct, b: MerchandisingProduct) => discountPercent(b) - discountPercent(a)).slice(0, 12) as MerchandisingProduct[];
+      return (data ?? [])
+        .sort(
+          (a: MerchandisingProduct, b: MerchandisingProduct) =>
+            discountPercent(b) - discountPercent(a),
+        )
+        .slice(0, 12) as MerchandisingProduct[];
     },
   });
 }
 
-export function useBestSellers(period: "today" | "this_week" | "this_month" | "all_time" = "all_time") {
+export function useBestSellers(
+  period: "today" | "this_week" | "this_month" | "all_time" = "all_time",
+) {
   return useQuery({
     queryKey: ["merchandising", "best-sellers", period],
     queryFn: async () => {
-      const { data: rankings, error: rankingError } = await (supabase as any).rpc("get_best_sellers", { p_period: period });
+      const { data: rankings, error: rankingError } = await (supabase as any).rpc(
+        "get_best_sellers",
+        { p_period: period },
+      );
       if (rankingError) throw rankingError;
       const ids = (rankings ?? []).map((row: { product_id: string }) => row.product_id);
       if (ids.length === 0) return [] as MerchandisingProduct[];
-      const { data, error } = await (supabase as any).from("public_merchandising_products").select(productSelect).in("id", ids);
+      const { data, error } = await (supabase as any)
+        .from("public_merchandising_products")
+        .select(productSelect)
+        .in("id", ids);
       if (error) throw error;
       const byId = new Map((data ?? []).map((row: MerchandisingProduct) => [row.id, row]));
       return ids.map((id: string) => byId.get(id)).filter(Boolean) as MerchandisingProduct[];
@@ -139,11 +164,17 @@ export function useTrending() {
   return useQuery({
     queryKey: ["merchandising", "trending"],
     queryFn: async () => {
-      const { data: rankings, error: rankingError } = await (supabase as any).rpc("get_trending_products", { p_limit: 12 });
+      const { data: rankings, error: rankingError } = await (supabase as any).rpc(
+        "get_trending_products",
+        { p_limit: 12 },
+      );
       if (rankingError) throw rankingError;
       const ids = (rankings ?? []).map((row: { product_id: string }) => row.product_id);
       if (ids.length === 0) return [] as MerchandisingProduct[];
-      const { data, error } = await (supabase as any).from("public_merchandising_products").select(productSelect).in("id", ids);
+      const { data, error } = await (supabase as any)
+        .from("public_merchandising_products")
+        .select(productSelect)
+        .in("id", ids);
       if (error) throw error;
       const byId = new Map((data ?? []).map((row: MerchandisingProduct) => [row.id, row]));
       return ids.map((id: string) => byId.get(id)).filter(Boolean) as MerchandisingProduct[];
@@ -170,8 +201,18 @@ export function useActiveCollections() {
     queryKey: ["merchandising", "collections"],
     queryFn: async () => {
       const [gift, seasonal] = await Promise.all([
-        (supabase as any).from("gift_collections").select("id,name,description,image_url").eq("is_active", true).order("display_order").limit(8),
-        (supabase as any).from("seasonal_collections").select("id,name,description,image_url").eq("is_active", true).order("display_order").limit(8),
+        (supabase as any)
+          .from("gift_collections")
+          .select("id,name,description,image_url")
+          .eq("is_active", true)
+          .order("display_order")
+          .limit(8),
+        (supabase as any)
+          .from("seasonal_collections")
+          .select("id,name,description,image_url")
+          .eq("is_active", true)
+          .order("display_order")
+          .limit(8),
       ]);
       if (gift.error) throw gift.error;
       if (seasonal.error) throw seasonal.error;
@@ -189,11 +230,15 @@ export function useRecentlyViewed() {
       const { data, error } = await (supabase as any)
         .from("recently_viewed")
         .select("product_id,viewed_at")
-        .order("viewed_at", { ascending: false }).limit(30);
+        .order("viewed_at", { ascending: false })
+        .limit(30);
       if (error) throw error;
       const ids = (data ?? []).map((row: any) => row.product_id);
       if (!ids.length) return [] as MerchandisingProduct[];
-      const products = await (supabase as any).from("public_merchandising_products").select(productSelect).in("id", ids);
+      const products = await (supabase as any)
+        .from("public_merchandising_products")
+        .select(productSelect)
+        .in("id", ids);
       if (products.error) throw products.error;
       const byId = new Map((products.data ?? []).map((row: MerchandisingProduct) => [row.id, row]));
       return ids.map((id: string) => byId.get(id)).filter(Boolean) as MerchandisingProduct[];
@@ -223,7 +268,9 @@ export function useActiveFlashSales() {
       const now = new Date().toISOString();
       const { data, error } = await (supabase as any)
         .from("flash_sales")
-        .select("id,title,discount_type,discount_value,starts_at,ends_at,is_active,flash_sale_products(product_id)")
+        .select(
+          "id,title,discount_type,discount_value,starts_at,ends_at,is_active,flash_sale_products(product_id)",
+        )
         .eq("is_active", true)
         .lte("starts_at", now)
         .gt("ends_at", now)
@@ -239,10 +286,13 @@ export function useFlashSaleProducts(productIds: string[]) {
     queryKey: ["merchandising", "flash-sale-products", productIds.join(",")],
     enabled: productIds.length > 0,
     queryFn: async () => {
-      const { data, error } = await (supabase as any).from("public_merchandising_products").select(productSelect).in("id", productIds);
+      const { data, error } = await (supabase as any)
+        .from("public_merchandising_products")
+        .select(productSelect)
+        .in("id", productIds);
       if (error) throw error;
       const byId = new Map((data ?? []).map((row: MerchandisingProduct) => [row.id, row]));
-      return productIds.map(id => byId.get(id)).filter(Boolean) as MerchandisingProduct[];
+      return productIds.map((id) => byId.get(id)).filter(Boolean) as MerchandisingProduct[];
     },
   });
 }
@@ -254,11 +304,17 @@ export function useCollectionProducts(collectionId: string | undefined, kind: "g
     queryFn: async () => {
       const table = kind === "gift" ? "gift_collection_products" : "seasonal_collection_products";
       const key = kind === "gift" ? "gift_collection_id" : "seasonal_collection_id";
-      const { data, error } = await (supabase as any).from(table).select("product_id").eq(key, collectionId);
+      const { data, error } = await (supabase as any)
+        .from(table)
+        .select("product_id")
+        .eq(key, collectionId);
       if (error) throw error;
       const ids = (data ?? []).map((row: { product_id: string }) => row.product_id);
       if (!ids.length) return [] as MerchandisingProduct[];
-      const products = await (supabase as any).from("public_merchandising_products").select(productSelect).in("id", ids);
+      const products = await (supabase as any)
+        .from("public_merchandising_products")
+        .select(productSelect)
+        .in("id", ids);
       if (products.error) throw products.error;
       return (products.data ?? []) as MerchandisingProduct[];
     },
@@ -299,18 +355,36 @@ export function useWishlist() {
     refetchInterval: 10_000,
     queryFn: async () => {
       const { data: userData, error: userError } = await supabase.auth.getUser();
-      if (userError || !userData.user) throw userError ?? new Error("Sign in to use your wishlist.");
+      if (userError || !userData.user)
+        throw userError ?? new Error("Sign in to use your wishlist.");
       const userId = userData.user.id;
       const [savedProducts, savedEntries] = await Promise.all([
-        (supabase as any).from("wishlist").select("product_id,created_at").eq("user_id", userId).order("created_at", { ascending: false }),
-        (supabase as any).from("wishlist_entries").select("item_key,created_at").eq("user_id", userId).order("created_at", { ascending: false }),
+        (supabase as any)
+          .from("wishlist")
+          .select("product_id,created_at")
+          .eq("user_id", userId)
+          .order("created_at", { ascending: false }),
+        (supabase as any)
+          .from("wishlist_entries")
+          .select("item_key,created_at")
+          .eq("user_id", userId)
+          .order("created_at", { ascending: false }),
       ]);
       if (savedProducts.error) throw savedProducts.error;
-      const entriesMissing = savedEntries.error?.code === "PGRST205" || savedEntries.error?.status === 404;
+      const entriesMissing =
+        savedEntries.error?.code === "PGRST205" || savedEntries.error?.status === 404;
       if (savedEntries.error && !entriesMissing) throw savedEntries.error;
       return [
-        ...(savedProducts.data ?? []).map((row: { product_id: string; created_at: string }) => ({ product_id: row.product_id, created_at: row.created_at })),
-        ...(entriesMissing ? [] : (savedEntries.data ?? []).map((row: { item_key: string; created_at: string }) => ({ product_id: row.item_key, created_at: row.created_at }))),
+        ...(savedProducts.data ?? []).map((row: { product_id: string; created_at: string }) => ({
+          product_id: row.product_id,
+          created_at: row.created_at,
+        })),
+        ...(entriesMissing
+          ? []
+          : (savedEntries.data ?? []).map((row: { item_key: string; created_at: string }) => ({
+              product_id: row.item_key,
+              created_at: row.created_at,
+            }))),
       ].sort((a, b) => b.created_at.localeCompare(a.created_at));
     },
   });
@@ -319,27 +393,41 @@ export function useWishlist() {
 export function useWishlistProducts() {
   const wishlist = useWishlist();
   return useQuery({
-    queryKey: ["wishlist-products", wishlist.data?.map((item: { product_id: string }) => item.product_id).join(",")],
+    queryKey: [
+      "wishlist-products",
+      wishlist.data?.map((item: { product_id: string }) => item.product_id).join(","),
+    ],
     enabled: Boolean(wishlist.data?.length),
     queryFn: async () => {
       const ids = (wishlist.data ?? []).map((item: { product_id: string }) => item.product_id);
       if (!ids.length) return [] as MerchandisingProduct[];
-      const isUuid = (id: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id);
+      const isUuid = (id: string) =>
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id);
       const liveIds = ids.filter(isUuid);
       const catalogIds = ids.filter((id: string) => !isUuid(id));
       const [liveProducts, catalogEntries] = await Promise.all([
         liveIds.length
-          ? (supabase as any).from("public_merchandising_products").select(productSelect).in("id", liveIds)
+          ? (supabase as any)
+              .from("public_merchandising_products")
+              .select(productSelect)
+              .in("id", liveIds)
           : Promise.resolve({ data: [], error: null }),
         catalogIds.length
-          ? (supabase as any).from("wishlist_entries").select("item_key,product_name,shop_name,category,price,image_url,seller_id,created_at").in("item_key", catalogIds)
+          ? (supabase as any)
+              .from("wishlist_entries")
+              .select(
+                "item_key,product_name,shop_name,category,price,image_url,seller_id,created_at",
+              )
+              .in("item_key", catalogIds)
           : Promise.resolve({ data: [], error: null }),
       ]);
       if (liveProducts.error) throw liveProducts.error;
-      const entriesMissing = catalogEntries.error?.code === "PGRST205" || catalogEntries.error?.status === 404;
+      const entriesMissing =
+        catalogEntries.error?.code === "PGRST205" || catalogEntries.error?.status === 404;
       if (catalogEntries.error && !entriesMissing) throw catalogEntries.error;
       const byId = new Map<string, MerchandisingProduct>();
-      for (const product of liveProducts.data ?? []) byId.set(product.id, product as MerchandisingProduct);
+      for (const product of liveProducts.data ?? [])
+        byId.set(product.id, product as MerchandisingProduct);
       for (const entry of catalogEntries.data ?? []) {
         byId.set(entry.item_key, {
           id: entry.item_key,
@@ -373,26 +461,50 @@ export function useToggleWishlist() {
   const auth = useAuth();
   const accountKey = auth.id || "signed-out";
   return useMutation({
-    mutationFn: async ({ productId, active, item }: { productId: string; active: boolean; item?: WishlistCatalogItem }) => {
+    mutationFn: async ({
+      productId,
+      active,
+      item,
+    }: {
+      productId: string;
+      active: boolean;
+      item?: WishlistCatalogItem;
+    }) => {
       if (!auth.id) throw new Error("Sign in to use your wishlist.");
-      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(productId);
+      const isUuid =
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+          productId,
+        );
       if (active) {
         const { data: userData, error: userError } = await supabase.auth.getUser();
-        if (userError || !userData.user) throw userError ?? new Error("Sign in to use your wishlist.");
+        if (userError || !userData.user)
+          throw userError ?? new Error("Sign in to use your wishlist.");
         const result = isUuid
-          ? await (supabase as any).from("wishlist").delete().eq("user_id", userData.user.id).eq("product_id", productId)
-          : await (supabase as any).from("wishlist_entries").delete().eq("user_id", userData.user.id).eq("item_key", productId);
+          ? await (supabase as any)
+              .from("wishlist")
+              .delete()
+              .eq("user_id", userData.user.id)
+              .eq("product_id", productId)
+          : await (supabase as any)
+              .from("wishlist_entries")
+              .delete()
+              .eq("user_id", userData.user.id)
+              .eq("item_key", productId);
         if (result.error) throw result.error;
       } else {
         if (isUuid) {
           const { data: userData, error: userError } = await supabase.auth.getUser();
-          if (userError || !userData.user) throw userError ?? new Error("Sign in to use your wishlist.");
-          const { error } = await (supabase as any).from("wishlist").insert({ user_id: userData.user.id, product_id: productId });
+          if (userError || !userData.user)
+            throw userError ?? new Error("Sign in to use your wishlist.");
+          const { error } = await (supabase as any)
+            .from("wishlist")
+            .insert({ user_id: userData.user.id, product_id: productId });
           if (error) throw error;
         } else {
           if (!item) throw new Error("Product details are required for this catalog item.");
           const { data: userData, error: userError } = await supabase.auth.getUser();
-          if (userError || !userData.user) throw userError ?? new Error("Sign in to use your wishlist.");
+          if (userError || !userData.user)
+            throw userError ?? new Error("Sign in to use your wishlist.");
           const { error } = await (supabase as any).from("wishlist_entries").insert({
             user_id: userData.user.id,
             item_key: productId,
@@ -406,14 +518,23 @@ export function useToggleWishlist() {
           if (error) throw error;
         }
       }
-      if (!active && isUuid) await (supabase as any).from("product_views").insert({ product_id: productId, event_type: "wishlist" });
+      if (!active && isUuid)
+        await (supabase as any)
+          .from("product_views")
+          .insert({ product_id: productId, event_type: "wishlist" });
     },
     onMutate: async ({ productId, active }) => {
       await queryClient.cancelQueries({ queryKey: ["wishlist", accountKey] });
-      const previous = queryClient.getQueryData<Array<{ product_id: string; created_at: string }>>(["wishlist", accountKey]);
+      const previous = queryClient.getQueryData<Array<{ product_id: string; created_at: string }>>([
+        "wishlist",
+        accountKey,
+      ]);
       const next = active
         ? (previous ?? []).filter((item) => item.product_id !== productId)
-        : [{ product_id: productId, created_at: new Date().toISOString() }, ...(previous ?? []).filter((item) => item.product_id !== productId)];
+        : [
+            { product_id: productId, created_at: new Date().toISOString() },
+            ...(previous ?? []).filter((item) => item.product_id !== productId),
+          ];
       queryClient.setQueryData(["wishlist", accountKey], next);
       return { previous };
     },
@@ -428,10 +549,14 @@ export function useToggleWishlist() {
 }
 
 export async function recordProductEvent(productId: string, eventType: "view" | "add_to_cart") {
-  await (supabase as any).from("product_views").insert({ product_id: productId, event_type: eventType });
+  await (supabase as any)
+    .from("product_views")
+    .insert({ product_id: productId, event_type: eventType });
 }
 
 export async function recordRecentProductView(productId: string) {
-  const { error } = await (supabase as any).rpc("record_recent_product_view", { p_product_id: productId });
+  const { error } = await (supabase as any).rpc("record_recent_product_view", {
+    p_product_id: productId,
+  });
   if (error) console.warn("Unable to record recent product view", error);
 }

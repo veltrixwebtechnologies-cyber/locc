@@ -29,7 +29,10 @@ export function QtyStepper({
       <m.button
         type="button"
         onClick={onAdd}
-        className={addClassName ?? "rounded-lg border border-primary/30 bg-transparent px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-primary hover:bg-primary hover:text-primary-foreground transition-colors"}
+        className={
+          addClassName ??
+          "rounded-lg border border-primary/30 bg-transparent px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-primary hover:bg-primary hover:text-primary-foreground transition-colors"
+        }
         whileHover={{ scale: 1.04 }}
         whileTap={{ scale: 0.94 }}
       >

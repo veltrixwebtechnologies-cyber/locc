@@ -1,8 +1,25 @@
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
-import { Home, ClipboardList, User, ShoppingBag, LogIn, Heart, MapPin, Search, ArrowRight, Clock3, ShieldCheck, Headphones } from "lucide-react";
+import {
+  Home,
+  ClipboardList,
+  User,
+  ShoppingBag,
+  LogIn,
+  Heart,
+  MapPin,
+  Search,
+  ArrowRight,
+  Clock3,
+  ShieldCheck,
+  Headphones,
+} from "lucide-react";
 import { useCart, cartTotals } from "@/lib/cart-store";
 import { useAuth } from "@/lib/auth-store";
-import { CategoryMegaMenu, HeaderCategoryMenu, MobileCategoryStrip } from "@/components/category-mega-menu";
+import {
+  CategoryMegaMenu,
+  HeaderCategoryMenu,
+  MobileCategoryStrip,
+} from "@/components/category-mega-menu";
 import { Fragment, type ReactNode, useEffect, useState } from "react";
 import { useWishlist } from "@/lib/merchandising";
 import { AnimatePresence, m } from "motion/react";
@@ -55,7 +72,9 @@ export function AppShell({ children }: { children: ReactNode }) {
   ];
 
   return (
-    <div className={`min-h-screen bg-background pb-20 md:pb-0 ${itemCount > 0 && !pathname.startsWith("/cart") && !pathname.startsWith("/checkout") ? "pb-24 md:pb-24" : ""}`}>
+    <div
+      className={`min-h-screen bg-background pb-20 md:pb-0 ${itemCount > 0 && !pathname.startsWith("/cart") && !pathname.startsWith("/checkout") ? "pb-24 md:pb-24" : ""}`}
+    >
       {/* Desktop top nav */}
       <header
         className={`sticky top-0 z-50 hidden border-b hairline bg-background/90 backdrop-blur transition-shadow duration-300 md:block ${
@@ -128,9 +147,18 @@ export function AppShell({ children }: { children: ReactNode }) {
                   exit={{ opacity: 0, y: -6, scale: 0.98 }}
                   className="absolute left-0 right-0 top-full z-50 mt-2 rounded-xl border hairline bg-background p-2 shadow-xl"
                 >
-                  <p className="px-2 py-1 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Try searching</p>
+                  <p className="px-2 py-1 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+                    Try searching
+                  </p>
                   {["Fresh groceries", "Milk and breakfast", "Local bakery"].map((suggestion) => (
-                    <button key={suggestion} type="button" onMouseDown={() => setHeaderQuery(suggestion)} className="block w-full rounded-lg px-2 py-2 text-left text-sm hover:bg-muted">{suggestion}</button>
+                    <button
+                      key={suggestion}
+                      type="button"
+                      onMouseDown={() => setHeaderQuery(suggestion)}
+                      className="block w-full rounded-lg px-2 py-2 text-left text-sm hover:bg-muted"
+                    >
+                      {suggestion}
+                    </button>
                   ))}
                 </m.div>
               )}
@@ -159,7 +187,14 @@ export function AppShell({ children }: { children: ReactNode }) {
                         : "text-foreground hover:bg-muted"
                     }`}
                   >
-                    <m.span whileHover={{ y: -1 }} animate={t.to === "/cart" && itemCount > 0 ? { scale: [1, 1.18, 1] } : { scale: 1 }} transition={{ duration: 0.42 }} className="relative z-10 inline-flex">
+                    <m.span
+                      whileHover={{ y: -1 }}
+                      animate={
+                        t.to === "/cart" && itemCount > 0 ? { scale: [1, 1.18, 1] } : { scale: 1 }
+                      }
+                      transition={{ duration: 0.42 }}
+                      className="relative z-10 inline-flex"
+                    >
                       <Icon className="h-4 w-4" strokeWidth={active ? 2.2 : 1.8} />
                     </m.span>
                     {t.label}
@@ -211,12 +246,24 @@ export function AppShell({ children }: { children: ReactNode }) {
         <div className="flex h-9 w-full items-center justify-between gap-6 px-6 text-[11px] text-foreground/75 lg:px-8">
           <div className="flex items-center gap-2">
             <MapPin className="h-3.5 w-3.5 text-primary" />
-            <span>Delivering to <strong className="font-semibold text-foreground">Marine Drive, Kochi</strong></span>
+            <span>
+              Delivering to{" "}
+              <strong className="font-semibold text-foreground">Marine Drive, Kochi</strong>
+            </span>
           </div>
           <div className="flex items-center gap-5">
-            <span className="inline-flex items-center gap-1.5"><Clock3 className="h-3.5 w-3.5 text-primary" />20-40 min delivery</span>
-            <span className="inline-flex items-center gap-1.5"><ShieldCheck className="h-3.5 w-3.5 text-primary" />Trusted local sellers</span>
-            <Link to="/help" className="inline-flex items-center gap-1.5 hover:text-primary"><Headphones className="h-3.5 w-3.5 text-primary" />Need help?</Link>
+            <span className="inline-flex items-center gap-1.5">
+              <Clock3 className="h-3.5 w-3.5 text-primary" />
+              20-40 min delivery
+            </span>
+            <span className="inline-flex items-center gap-1.5">
+              <ShieldCheck className="h-3.5 w-3.5 text-primary" />
+              Trusted local sellers
+            </span>
+            <Link to="/help" className="inline-flex items-center gap-1.5 hover:text-primary">
+              <Headphones className="h-3.5 w-3.5 text-primary" />
+              Need help?
+            </Link>
           </div>
         </div>
       </div>
@@ -243,7 +290,9 @@ export function AppShell({ children }: { children: ReactNode }) {
                 <p className="text-xs font-medium text-primary-foreground/75">
                   {itemCount} {itemCount === 1 ? "item" : "items"} in cart
                 </p>
-                <p className="truncate font-display text-base font-bold">₹{cartTotals(cart.lines).subtotal}</p>
+                <p className="truncate font-display text-base font-bold">
+                  ₹{cartTotals(cart.lines).subtotal}
+                </p>
               </div>
               <Link
                 to="/cart"
@@ -342,17 +391,25 @@ function ShopperFooter() {
         <div className="grid gap-8 md:grid-cols-[1fr_2fr]">
           <section>
             <div className="flex items-center gap-2">
-              <span className="grid h-9 w-9 place-items-center rounded-xl bg-marigold font-display font-bold text-marigold-foreground">LS</span>
+              <span className="grid h-9 w-9 place-items-center rounded-xl bg-marigold font-display font-bold text-marigold-foreground">
+                LS
+              </span>
               <span className="font-display text-xl font-bold text-foreground">Local Shore</span>
             </div>
-            <p className="mt-3 max-w-sm text-sm leading-6 text-muted-foreground">Everyday essentials from trusted neighborhood sellers.</p>
+            <p className="mt-3 max-w-sm text-sm leading-6 text-muted-foreground">
+              Everyday essentials from trusted neighborhood sellers.
+            </p>
           </section>
           <section>
             <div className="grid grid-cols-1 gap-7 text-sm text-muted-foreground sm:grid-cols-3">
               {footerLinks.map((column, columnIndex) => (
                 <div key={columnIndex} className="space-y-3">
                   {column.map(([label, href]) => (
-                    <a key={label} href={href} className="block transition-colors hover:text-primary">
+                    <a
+                      key={label}
+                      href={href}
+                      className="block transition-colors hover:text-primary"
+                    >
                       {label}
                     </a>
                   ))}
@@ -366,10 +423,28 @@ function ShopperFooter() {
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-3">
               <span className="text-sm font-semibold text-foreground">Shop by need</span>
-              <Link to="/" search={{ category: undefined, q: undefined }} className="text-xs text-primary hover:underline">Browse all</Link>
+              <Link
+                to="/"
+                search={{ category: undefined, q: undefined }}
+                className="text-xs text-primary hover:underline"
+              >
+                Browse all
+              </Link>
             </div>
             <div className="flex flex-wrap gap-x-4 gap-y-2 text-xs text-muted-foreground">
-              {footerCategories.flat().slice(0, 8).map((label) => <Link key={label} to="/" search={{ category: undefined, q: label }} className="hover:text-primary">{label}</Link>)}
+              {footerCategories
+                .flat()
+                .slice(0, 8)
+                .map((label) => (
+                  <Link
+                    key={label}
+                    to="/"
+                    search={{ category: undefined, q: label }}
+                    className="hover:text-primary"
+                  >
+                    {label}
+                  </Link>
+                ))}
             </div>
           </div>
         </div>

@@ -4,7 +4,13 @@ import { useServerFn } from "@tanstack/react-start";
 import { MapPin, Search, LocateFixed } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { AwningCard } from "@/components/awning-card";
-import { stores, deliveryCategories, productsByStore, APPROVED_STORE, type StoreCategory } from "@/lib/mock-data";
+import {
+  stores,
+  deliveryCategories,
+  productsByStore,
+  APPROVED_STORE,
+  type StoreCategory,
+} from "@/lib/mock-data";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { reverseGeocode } from "@/lib/geocoding.functions";
@@ -68,12 +74,18 @@ function Home() {
     queryFn: async () => {
       const { data, error } = await (supabase as any)
         .from("approved_vendor_catalog")
-        .select("id,shop_name,business_type,city,state,address_line1,category,shop_logo_path,shop_banner_path");
+        .select(
+          "id,shop_name,business_type,city,state,address_line1,category,shop_logo_path,shop_banner_path",
+        );
       if (error) throw error;
       const rows = data ?? [];
-      const paths = Array.from(new Set(
-        rows.flatMap((vendor: any) => [vendor.shop_banner_path, vendor.shop_logo_path]).filter(Boolean),
-      )) as string[];
+      const paths = Array.from(
+        new Set(
+          rows
+            .flatMap((vendor: any) => [vendor.shop_banner_path, vendor.shop_logo_path])
+            .filter(Boolean),
+        ),
+      ) as string[];
       const signedByPath = new Map<string, string>();
       if (paths.length > 0) {
         const { data: signed } = await supabase.storage
@@ -150,17 +162,17 @@ function Home() {
     const liveVendorStores = (approvedVendors.data ?? [])
       .filter((vendor: any) => liveSellerIds.has(vendor.id))
       .map((vendor: any, index: number) => ({
-          ...APPROVED_STORE,
-          id: vendor.id,
-          name: vendor.shop_name || APPROVED_STORE.name,
-          tagline: vendor.business_type || "Approved local vendor",
-          category: toStoreCategory(vendor.category),
-          address:
-            [vendor.address_line1, vendor.city, vendor.state].filter(Boolean).join(", ") ||
-            APPROVED_STORE.address,
-          imageUrl: vendor.storefront_image_url || APPROVED_STORE.imageUrl,
-          distanceKm: 2 + index * 0.2,
-        }));
+        ...APPROVED_STORE,
+        id: vendor.id,
+        name: vendor.shop_name || APPROVED_STORE.name,
+        tagline: vendor.business_type || "Approved local vendor",
+        category: toStoreCategory(vendor.category),
+        address:
+          [vendor.address_line1, vendor.city, vendor.state].filter(Boolean).join(", ") ||
+          APPROVED_STORE.address,
+        imageUrl: vendor.storefront_image_url || APPROVED_STORE.imageUrl,
+        distanceKm: 2 + index * 0.2,
+      }));
     const allStores = liveVendorStores.length > 0 ? [...liveVendorStores, ...stores] : stores;
     return allStores.filter((s) => {
       if (cat !== "all" && !activeFilter) return false;
@@ -182,63 +194,61 @@ function Home() {
     });
   }, [cat, activeFilter, query, approvedProducts.data, approvedVendors.data]);
 
-  const homepageProducts = useMemo<MerchandisingProduct[]>(
-    () => {
-      const liveProducts = (approvedProducts.data ?? []).map((product: any) => ({
+  const homepageProducts = useMemo<MerchandisingProduct[]>(() => {
+    const liveProducts = (approvedProducts.data ?? []).map((product: any) => ({
+      id: product.id,
+      seller_id: product.seller_id,
+      name: product.name,
+      brand: null,
+      brand_id: null,
+      brand_name: null,
+      category: product.category ?? null,
+      selling_price: Number(product.selling_price ?? 0),
+      mrp: Number(product.selling_price ?? 0),
+      discount_price: null,
+      discount_starts_at: null,
+      discount_ends_at: null,
+      clearance: false,
+      stock: Number(product.stock ?? 0),
+      image_url: product.image_url ?? null,
+      created_at: "",
+      average_rating: 0,
+      review_count: 0,
+      shop_name: product.shop_name || "Approved local seller",
+    }));
+
+    // Keep the storefront useful while a new project is still being stocked.
+    // Once the approved catalog has enough live products, only live products are shown.
+    if (liveProducts.length >= 4) return liveProducts;
+    const existingIds = new Set(liveProducts.map((product) => product.id));
+    const localFallback = Object.values(productsByStore)
+      .flat()
+      .filter((product) => !existingIds.has(product.id))
+      .slice(0, 12)
+      .map((product) => ({
         id: product.id,
-        seller_id: product.seller_id,
+        seller_id: product.storeId,
         name: product.name,
         brand: null,
         brand_id: null,
         brand_name: null,
-        category: product.category ?? null,
-        selling_price: Number(product.selling_price ?? 0),
-        mrp: Number(product.selling_price ?? 0),
+        category: product.category,
+        selling_price: Number(product.price),
+        mrp: Number(product.price),
         discount_price: null,
         discount_starts_at: null,
         discount_ends_at: null,
         clearance: false,
-        stock: Number(product.stock ?? 0),
-        image_url: product.image_url ?? null,
+        stock: Number(product.stock ?? 20),
+        image_url: product.imageUrl ?? null,
         created_at: "",
-        average_rating: 0,
+        average_rating: 4.5,
         review_count: 0,
-        shop_name: product.shop_name || "Approved local seller",
+        shop_name:
+          stores.find((store) => store.id === product.storeId)?.name ?? "Local Shore seller",
       }));
-
-      // Keep the storefront useful while a new project is still being stocked.
-      // Once the approved catalog has enough live products, only live products are shown.
-      if (liveProducts.length >= 4) return liveProducts;
-      const existingIds = new Set(liveProducts.map((product) => product.id));
-      const localFallback = Object.values(productsByStore)
-        .flat()
-        .filter((product) => !existingIds.has(product.id))
-        .slice(0, 12)
-        .map((product) => ({
-          id: product.id,
-          seller_id: product.storeId,
-          name: product.name,
-          brand: null,
-          brand_id: null,
-          brand_name: null,
-          category: product.category,
-          selling_price: Number(product.price),
-          mrp: Number(product.price),
-          discount_price: null,
-          discount_starts_at: null,
-          discount_ends_at: null,
-          clearance: false,
-          stock: Number(product.stock ?? 20),
-          image_url: product.imageUrl ?? null,
-          created_at: "",
-          average_rating: 4.5,
-          review_count: 0,
-          shop_name: stores.find((store) => store.id === product.storeId)?.name ?? "Local Shore seller",
-        }));
-      return [...liveProducts, ...localFallback];
-    },
-    [approvedProducts.data],
-  );
+    return [...liveProducts, ...localFallback];
+  }, [approvedProducts.data]);
 
   return (
     <AppShell>
