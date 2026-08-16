@@ -1,5 +1,5 @@
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
-import { Home, ClipboardList, User, ShoppingBag, LogIn, Heart, MapPin, Search } from "lucide-react";
+import { Home, ClipboardList, User, ShoppingBag, LogIn, Heart, MapPin, Search, ArrowRight } from "lucide-react";
 import { useCart, cartTotals } from "@/lib/cart-store";
 import { useAuth } from "@/lib/auth-store";
 import { HeaderCategoryMenu, MobileCategoryStrip } from "@/components/category-mega-menu";
@@ -55,7 +55,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   ];
 
   return (
-    <div className="min-h-screen bg-background pb-20 md:pb-0">
+    <div className={`min-h-screen bg-background pb-20 md:pb-0 ${itemCount > 0 && !pathname.startsWith("/cart") && !pathname.startsWith("/checkout") ? "pb-24 md:pb-24" : ""}`}>
       {/* Desktop top nav */}
       <header
         className={`sticky top-0 z-40 hidden border-b hairline bg-background/90 backdrop-blur transition-shadow duration-300 md:block ${
@@ -210,6 +210,35 @@ export function AppShell({ children }: { children: ReactNode }) {
       <main className="mx-auto w-full max-w-7xl">{children}</main>
 
       <ShopperFooter />
+
+      <AnimatePresence>
+        {itemCount > 0 && !pathname.startsWith("/cart") && !pathname.startsWith("/checkout") ? (
+          <m.div
+            initial={{ opacity: 0, y: 28, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 28, scale: 0.98 }}
+            transition={{ type: "spring", stiffness: 360, damping: 28 }}
+            className="fixed inset-x-0 bottom-[66px] z-50 px-4 md:bottom-5"
+          >
+            <div className="mx-auto flex max-w-xl items-center justify-between gap-4 rounded-2xl bg-primary px-4 py-3 text-primary-foreground shadow-[0_14px_38px_-12px_rgba(42,27,74,0.6)] ring-1 ring-white/20 md:max-w-lg md:px-5">
+              <div className="min-w-0">
+                <p className="text-xs font-medium text-primary-foreground/75">
+                  {itemCount} {itemCount === 1 ? "item" : "items"} in cart
+                </p>
+                <p className="truncate font-display text-base font-bold">₹{cartTotals(cart.lines).subtotal}</p>
+              </div>
+              <Link
+                to="/cart"
+                className="inline-flex shrink-0 items-center gap-2 rounded-xl bg-background px-4 py-2.5 text-sm font-bold text-foreground transition-transform hover:scale-[1.02] active:scale-[0.98]"
+              >
+                <ShoppingBag className="h-4 w-4 text-primary" />
+                Review cart
+                <ArrowRight className="h-4 w-4 text-primary" />
+              </Link>
+            </div>
+          </m.div>
+        ) : null}
+      </AnimatePresence>
 
       {/* Mobile bottom tab bar */}
       <nav className="fixed inset-x-0 bottom-0 z-40 border-t hairline bg-background/95 backdrop-blur md:hidden">
