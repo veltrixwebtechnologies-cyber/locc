@@ -100,15 +100,15 @@ export function DeliveryMap({
   height = 200,
 }: Props) {
   const ref = useRef<HTMLDivElement>(null);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
   const mapRef = useRef<any>(null);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
   const LRef = useRef<any>(null);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
   const markersRef = useRef<Record<string, any>>({});
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
   const lineRef = useRef<any>(null);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
   const accuracyRef = useRef<any>(null);
   const tilesLoadedRef = useRef(false);
   const cbRef = useRef(onDestinationChange);
@@ -175,7 +175,6 @@ export function DeliveryMap({
       accuracyRef.current = null;
       tilesLoadedRef.current = false;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Sync markers + polyline whenever positions change.

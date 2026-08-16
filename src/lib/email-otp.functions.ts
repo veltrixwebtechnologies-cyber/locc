@@ -30,10 +30,13 @@ export const sendResendEmailOtp = createServerFn({ method: "POST" })
   })
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data: allowed, error: limitError } = await supabaseAdmin.rpc(
-      "consume_customer_otp_rate_limit",
-      { _account_key: data.email },
-    );
+    const rpc = supabaseAdmin.rpc as unknown as (
+      functionName: string,
+      args: { _account_key: string },
+    ) => Promise<{ data: boolean | null; error: { message: string } | null }>;
+    const { data: allowed, error: limitError } = await rpc("consume_customer_otp_rate_limit", {
+      _account_key: data.email,
+    });
     if (limitError || allowed !== true)
       throw new Error("Too many verification requests. Try again later.");
 

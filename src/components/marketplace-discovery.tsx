@@ -158,6 +158,7 @@ function DiscoveryProductCard({
   to: "/product/$productId" | "/";
   params?: { productId: string };
   search?: { category: string; q?: undefined };
+  className?: string;
 }) {
   const [imageUrl, setImageUrl] = useState(image ?? "");
 
@@ -176,7 +177,10 @@ function DiscoveryProductCard({
   return (
     <Link
       {...linkProps}
-      className="group overflow-hidden rounded-xl border border-[#ead9a8] bg-background transition-all hover:-translate-y-0.5 hover:border-[#d9bd70] hover:shadow-md"
+      className={
+        linkProps.className ??
+        "group overflow-hidden rounded-xl border border-[#ead9a8] bg-background transition-all hover:-translate-y-0.5 hover:border-[#d9bd70] hover:shadow-md"
+      }
     >
       <div className="flex aspect-[1.35] items-center justify-center bg-[#f7f7f7] p-3">
         {imageUrl ? (

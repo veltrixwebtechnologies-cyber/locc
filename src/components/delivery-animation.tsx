@@ -38,7 +38,7 @@ export function DeliveryAnimation({ className = "" }: { className?: string }) {
       loop
       autoplay
       className={className}
-      aria-hidden="true"
+      aria-hidden
     />
   ) : null;
 }

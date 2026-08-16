@@ -177,7 +177,7 @@ function ProductSection({ title, products, loading = false }: ProductSectionProp
       </section>
     );
   }
-  if (!products.length) return null;
+  if (!products?.length) return null;
   return (
     <Reveal className="mt-8 px-5 md:px-8">
       <h2 className="font-display text-lg font-bold md:text-xl">{title}</h2>

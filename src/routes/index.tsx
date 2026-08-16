@@ -220,12 +220,12 @@ function Home() {
     // Keep the storefront useful while a new project is still being stocked.
     // Once the approved catalog has enough live products, only live products are shown.
     if (liveProducts.length >= 4) return liveProducts;
-    const existingIds = new Set(liveProducts.map((product) => product.id));
+    const existingIds = new Set(liveProducts.map((product: MerchandisingProduct) => product.id));
     const localFallback = Object.values(productsByStore)
       .flat()
       .filter((product) => !existingIds.has(product.id))
       .slice(0, 12)
-      .map((product) => ({
+      .map((product: (typeof productsByStore)[string][number]) => ({
         id: product.id,
         seller_id: product.storeId,
         name: product.name,

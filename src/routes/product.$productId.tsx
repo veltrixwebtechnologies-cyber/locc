@@ -124,7 +124,11 @@ function ProductPage() {
       <AppShell>
         <div className="p-8 text-center">
           <p className="font-display text-xl">Product unavailable</p>
-          <Link className="mt-3 inline-block text-primary underline" to="/">
+          <Link
+            className="mt-3 inline-block text-primary underline"
+            to="/"
+            search={{ category: undefined, q: undefined }}
+          >
             Back to shops
           </Link>
         </div>

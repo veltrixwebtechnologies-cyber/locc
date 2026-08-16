@@ -187,7 +187,10 @@ export function OrderSupport({ order }: { order: Order }) {
       const isUuid =
         /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(order.id);
       setSubmitStage("creating");
-      const { data, error } = await withTimeout(
+      const { data, error } = await withTimeout<{
+        data: { id: string } | null;
+        error: Error | null;
+      }>(
         (supabase as any)
           .from("support_tickets")
           .insert({
@@ -214,6 +217,7 @@ export function OrderSupport({ order }: { order: Order }) {
         "Support ticket creation timed out. Apply the support migration and try again.",
       );
       if (error) throw error;
+      if (!data) throw new Error("Support ticket was created without an id.");
       setSubmittedId(data.id);
       toast.success("Your issue has been sent to support.");
       void withTimeout(

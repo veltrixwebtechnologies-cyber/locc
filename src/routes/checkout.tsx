@@ -280,7 +280,6 @@ function CheckoutPage() {
   // Auto-detect the user's location on first load so the map opens where they are.
   useEffect(() => {
     if (savedAddresses.length === 0) locateUser();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
