@@ -101,6 +101,42 @@ const campaigns: Campaign[] = [
     accent: "#c2410c",
     imagePosition: "center",
   },
+  {
+    id: "pharmacy-doorstep",
+    eyebrow: "Wellness at your doorstep",
+    title: "Everyday pharmacy essentials",
+    description: "Cough care, personal wellness and trusted essentials from nearby stores.",
+    action: "Shop wellness",
+    offer: "Wellness picks",
+    category: "pharmacy",
+    imageUrl: "/marketplace-ads/pharmacy.png",
+    background: "#e5fbfb",
+    accent: "#087f83",
+  },
+  {
+    id: "pet-care",
+    eyebrow: "For happy pets",
+    title: "Pet care supplies at your door",
+    description: "Food, treats, toys and care essentials for every kind of companion.",
+    action: "Shop pet care",
+    offer: "Pet favorites",
+    category: "grocery",
+    imageUrl: "/marketplace-ads/pet-care.png",
+    background: "#fff3c7",
+    accent: "#9a6500",
+  },
+  {
+    id: "baby-care",
+    eyebrow: "Gentle care, close by",
+    title: "Baby care when you need it",
+    description: "Diapers, bath care and everyday essentials delivered from local sellers.",
+    action: "Shop baby care",
+    offer: "Baby essentials",
+    category: "grocery",
+    imageUrl: "/marketplace-ads/baby-care.png",
+    background: "#e9f4fb",
+    accent: "#25627d",
+  },
 ];
 
 type BannerRow = {
@@ -115,7 +151,7 @@ type BannerRow = {
 };
 
 function resolveBannerImage(imageUrl: string) {
-  if (/^(https?:|data:|blob:)/i.test(imageUrl)) return imageUrl;
+  if (/^(https?:|data:|blob:)/i.test(imageUrl) || imageUrl.startsWith("/")) return imageUrl;
   return supabase.storage.from("banner-images").getPublicUrl(imageUrl).data.publicUrl;
 }
 
