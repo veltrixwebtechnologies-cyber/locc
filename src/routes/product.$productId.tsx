@@ -4,6 +4,7 @@ import { ArrowLeft, Star } from "lucide-react";
 import { useState } from "react";
 import { AppShell } from "@/components/app-shell";
 import { ProductThumb } from "@/components/product-thumb";
+import { ProductCard } from "@/components/merchandising-sections";
 import { CompareButton } from "@/components/compare-button";
 import { WishlistButton } from "@/components/wishlist-button";
 import { supabase } from "@/integrations/supabase/client";
@@ -83,10 +84,105 @@ function ProductPage() {
       return data ?? [];
     },
   });
+  const deliveredProductOrder = useQuery({
+    queryKey: ["delivered-product-order", auth.id, productId],
+    enabled: Boolean(auth.id && product.data),
+    queryFn: async () => {
+      const { data, error } = await (supabase as any)
+        .from("orders")
+        .select("id,status,order_items(product_id)")
+        .eq("user_id", auth.id)
+        .eq("status", "delivered");
+      if (error) throw error;
+      return (
+        (data ?? []).find((order: any) =>
+          (order.order_items ?? []).some((line: any) => line.product_id === productId),
+        ) ?? null
+      );
+    },
+  });
+  const existingReview = useQuery({
+    queryKey: ["my-product-review", auth.id, productId],
+    enabled: Boolean(auth.id && product.data),
+    queryFn: async () => {
+      const { data, error } = await (supabase as any)
+        .from("reviews")
+        .select("id")
+        .eq("product_id", productId)
+        .eq("user_id", auth.id)
+        .limit(1);
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+  const recommendations = useQuery({
+    queryKey: ["product-recommendations", productId, product.data?.category],
+    enabled: Boolean(product.data),
+    queryFn: async () => {
+      const current = product.data as MerchandisingProduct;
+      const { data, error } = await (supabase as any)
+        .from("public_merchandising_products")
+        .select("*")
+        .neq("id", productId)
+        .eq("category", current.category)
+        .gt("stock", 0)
+        .limit(24);
+      if (!error && data?.length) {
+        return (data as MerchandisingProduct[])
+          .sort(
+            (a, b) =>
+              Number(b.average_rating ?? 0) - Number(a.average_rating ?? 0) ||
+              Number(b.review_count ?? 0) - Number(a.review_count ?? 0),
+          )
+          .slice(0, 8);
+      }
+
+      const localProducts = Object.values(productsByStore)
+        .flat()
+        .filter(
+          (candidate) =>
+            candidate.id !== productId &&
+            candidate.category === current.category &&
+            (candidate.stock ?? 1) > 0,
+        )
+        .slice(0, 8);
+      return localProducts.map((candidate) => {
+        const store = stores.find((entry) => entry.id === candidate.storeId);
+        return {
+          id: candidate.id,
+          seller_id: candidate.storeId,
+          name: candidate.name,
+          brand: null,
+          brand_id: null,
+          brand_name: null,
+          category: candidate.category,
+          selling_price: candidate.price,
+          mrp: candidate.price,
+          discount_price: null,
+          discount_starts_at: null,
+          discount_ends_at: null,
+          clearance: false,
+          stock: candidate.stock ?? 20,
+          image_url: candidate.imageUrl ?? null,
+          created_at: new Date().toISOString(),
+          average_rating: store?.rating ?? 4.5,
+          review_count: 0,
+          shop_name: store?.name ?? "Nearby local seller",
+        } satisfies MerchandisingProduct;
+      });
+    },
+  });
+  const canReview = Boolean(
+    auth.id && deliveredProductOrder.data && !existingReview.data?.length,
+  );
   const submitReview = useMutation({
     mutationFn: async () => {
       const { data: session } = await supabase.auth.getSession();
       if (!session.session?.user) throw new Error("Sign in to review this product.");
+      if (!deliveredProductOrder.data)
+        throw new Error("You can review this product after it has been delivered.");
+      if (existingReview.data?.length)
+        throw new Error("You have already reviewed this product.");
       if (!body.trim()) throw new Error("Write a short review first.");
       const { error } = await (supabase as any).from("reviews").insert({
         product_id: productId,
@@ -101,6 +197,7 @@ function ProductPage() {
       setBody("");
       toast.success("Review submitted for approval");
       void queryClient.invalidateQueries({ queryKey: ["product-reviews", productId] });
+      void queryClient.invalidateQueries({ queryKey: ["my-product-review", auth.id, productId] });
     },
     onError: (error: Error) => toast.error(error.message),
   });
@@ -199,7 +296,19 @@ function ProductPage() {
         </div>
         <section className="mt-8 rounded-xl bg-card p-5 ring-1 ring-black/[0.05]">
           <h2 className="font-display text-xl font-bold">Customer reviews</h2>
-          {auth.email || auth.phone ? (
+          {!auth.id ? (
+            <p className="mt-3 text-sm text-muted-foreground">Sign in to write a review.</p>
+          ) : deliveredProductOrder.isLoading || existingReview.isLoading ? (
+            <p className="mt-3 text-sm text-muted-foreground">Checking your delivered orders…</p>
+          ) : existingReview.data?.length ? (
+            <p className="mt-3 text-sm text-muted-foreground">
+              You have already submitted a review for this product.
+            </p>
+          ) : !canReview ? (
+            <p className="mt-3 text-sm text-muted-foreground">
+              Purchase and receive this product to leave a review.
+            </p>
+          ) : (
             <div className="mt-4 grid gap-2 md:max-w-xl">
               <label className="text-sm">
                 Your rating{" "}
@@ -230,8 +339,6 @@ function ProductPage() {
                 {submitReview.isPending ? "Submitting..." : "Submit review"}
               </button>
             </div>
-          ) : (
-            <p className="mt-3 text-sm text-muted-foreground">Sign in to write a review.</p>
           )}
           <div className="mt-6 space-y-3">
             {reviews.data?.map((review: any) => (
@@ -248,6 +355,31 @@ function ProductPage() {
             )}
           </div>
         </section>
+        {recommendations.isLoading ? (
+          <section className="mt-8" aria-label="Loading suggested products">
+            <h2 className="font-display text-xl font-bold">You might also like</h2>
+            <p className="mt-1 text-sm text-muted-foreground">Finding similar products nearby…</p>
+          </section>
+        ) : recommendations.data?.length ? (
+          <section className="mt-8" aria-labelledby="suggested-products-heading">
+            <div className="flex items-end justify-between gap-3">
+              <div>
+                <h2 id="suggested-products-heading" className="font-display text-xl font-bold">
+                  You might also like
+                </h2>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Similar products from nearby sellers
+                </p>
+              </div>
+              <span className="hidden text-xs text-muted-foreground sm:inline">More to explore</span>
+            </div>
+            <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+              {recommendations.data.map((suggestedProduct) => (
+                <ProductCard key={suggestedProduct.id} product={suggestedProduct} compact />
+              ))}
+            </div>
+          </section>
+        ) : null}
       </div>
     </AppShell>
   );

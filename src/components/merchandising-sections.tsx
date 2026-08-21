@@ -31,7 +31,13 @@ type ProductSectionProps = {
   loading?: boolean;
 };
 
-export function ProductCard({ product }: { product: MerchandisingProduct }) {
+export function ProductCard({
+  product,
+  compact = false,
+}: {
+  product: MerchandisingProduct;
+  compact?: boolean;
+}) {
   const [imageUrl, setImageUrl] = useState(product.image_url ?? "");
   const cart = useCart();
   const quantity = cart.lines.find((line) => line.productId === product.id)?.qty ?? 0;
@@ -57,7 +63,7 @@ export function ProductCard({ product }: { product: MerchandisingProduct }) {
       whileTap={{ scale: 0.965 }}
       transition={spring}
       data-product-id={product.id}
-      className="group relative flex min-w-0 flex-col overflow-hidden rounded-lg border border-[#ead9a8] bg-card transition-shadow duration-300 hover:border-[#d9bd70] hover:shadow-lg"
+      className={`group relative flex min-w-0 flex-col overflow-hidden border border-[#ead9a8] bg-card transition-shadow duration-300 hover:border-[#d9bd70] hover:shadow-lg ${compact ? "rounded-md" : "rounded-lg"}`}
     >
       <Link
         to="/product/$productId"
@@ -68,7 +74,7 @@ export function ProductCard({ product }: { product: MerchandisingProduct }) {
           void recordRecentProductView(product.id);
         }}
       >
-        <div className="relative aspect-[1.08] bg-[#f7f7f7] p-3">
+        <div className={`relative bg-[#f7f7f7] ${compact ? "aspect-[1.2] p-2" : "aspect-[1.08] p-3"}`}>
           {imageUrl ? (
             <m.div layoutId={`product-image-${product.id}`} className="h-full w-full">
               <img
@@ -85,13 +91,15 @@ export function ProductCard({ product }: { product: MerchandisingProduct }) {
             20-40 min
           </span>
         </div>
-        <div className="px-3 pt-3">
-          <p className="line-clamp-2 min-h-10 text-sm font-semibold leading-5">{product.name}</p>
-          <p className="mt-1 truncate text-[11px] text-muted-foreground">
+        <div className={compact ? "px-2 pt-2" : "px-3 pt-3"}>
+          <p className={`line-clamp-2 font-semibold leading-5 ${compact ? "min-h-9 text-xs" : "min-h-10 text-sm"}`}>
+            {product.name}
+          </p>
+          <p className="mt-1 truncate text-[10px] text-muted-foreground">
             {product.category || product.shop_name}
           </p>
           <div className="mt-2 flex flex-wrap items-baseline gap-x-2 gap-y-1">
-            <span className="font-mono text-xl font-bold">
+            <span className={`font-mono font-bold ${compact ? "text-lg" : "text-xl"}`}>
               ₹{product.discount_price ?? product.selling_price}
             </span>
             {product.discount_price && (
@@ -113,7 +121,7 @@ export function ProductCard({ product }: { product: MerchandisingProduct }) {
             <Star className="h-3 w-3 fill-[var(--marigold)] text-[var(--marigold)]" />{" "}
             {Number(product.average_rating).toFixed(1)} ({product.review_count ?? 0})
           </span>
-          <p className="mt-2 text-xs leading-5 text-foreground/80">
+          <p className="mt-1 text-[10px] leading-4 text-foreground/80">
             FREE delivery in <strong>20-40 min</strong>
           </p>
         </div>
@@ -133,7 +141,7 @@ export function ProductCard({ product }: { product: MerchandisingProduct }) {
           }}
         />
       </div>
-      <div className="mt-auto flex flex-col gap-2 px-3 pb-3 pt-2">
+      <div className={`mt-auto flex flex-col gap-1.5 ${compact ? "px-2 pb-2 pt-1" : "px-3 pb-3 pt-2"}`}>
         <p className="min-w-0 truncate text-[10px] text-muted-foreground">
           Sold by {product.shop_name}
         </p>

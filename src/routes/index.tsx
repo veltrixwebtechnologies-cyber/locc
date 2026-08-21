@@ -16,6 +16,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { reverseGeocode } from "@/lib/geocoding.functions";
 import { MerchandisingSections } from "@/components/merchandising-sections";
 import { PromoCarousel } from "@/components/promo-carousel";
+import { MarketplaceAdStrip } from "@/components/marketplace-ad-strip";
 import type { MerchandisingProduct } from "@/lib/merchandising";
 import { Reveal } from "@/components/motion/presets";
 import { MarketplaceDiscovery } from "@/components/marketplace-discovery";
@@ -314,7 +315,7 @@ function Home() {
         </div>
       </div>
 
-      <PromoCarousel />
+      <MarketplaceAdStrip />
 
       <MarketplaceDiscovery products={homepageProducts} />
 
