@@ -1,7 +1,95 @@
 import { Link } from "@tanstack/react-router";
 import { useState, type ReactNode } from "react";
-import { ChevronDown, ChevronRight, Menu, PackageSearch, X } from "lucide-react";
+import { ChevronDown, ChevronRight, Menu, PackageSearch, X, Sparkles } from "lucide-react";
 import { deliveryCategories } from "@/lib/mock-data";
+
+type CategoryPromo = {
+  headline: string;
+  subtitle: string;
+  ctaText: string;
+  imageUrl: string;
+  badge: string;
+};
+
+const categoryPromos: Record<string, CategoryPromo> = {
+  fresh: {
+    headline: "Daily essentials starting at ₹19",
+    subtitle: "Get FREE 20-30 min delivery, fresh produce & daily dairy offers",
+    ctaText: "Shop Fresh Produce Now",
+    badge: "DAILY HARVEST",
+    imageUrl: "/marketplace-ads/groceries-hero.png",
+  },
+  ready: {
+    headline: "Quick meals & snacks starting at ₹29",
+    subtitle: "Instant breakfast, tea snacks & beverages delivered fast",
+    ctaText: "Explore Quick Kitchen",
+    badge: "INSTANT PICKS",
+    imageUrl:
+      "https://images.unsplash.com/photo-1621939514649-280e2ee25f60?auto=format&fit=crop&w=600&q=80",
+  },
+  wellness: {
+    headline: "Wellness & pharmacy at your doorstep",
+    subtitle: "Cough care, first-aid, personal care & everyday pharmacy essentials",
+    ctaText: "Shop Wellness Now",
+    badge: "PHARMACY CARE",
+    imageUrl: "/marketplace-ads/pharmacy.png",
+  },
+  home: {
+    headline: "Home care & cleaning starting at ₹49",
+    subtitle: "Detergents, dishwash, paper goods & household tools from local shops",
+    ctaText: "Explore Home Care",
+    badge: "HOME ESSENTIALS",
+    imageUrl:
+      "https://images.unsplash.com/photo-1583947215259-38e31be8751f?auto=format&fit=crop&w=600&q=80",
+  },
+  stationery: {
+    headline: "School & office supplies starting at ₹15",
+    subtitle: "Notebooks, pens, files & art supplies from neighborhood stores",
+    ctaText: "Shop Stationery Now",
+    badge: "OFFICE & SCHOOL",
+    imageUrl:
+      "https://images.unsplash.com/photo-1588072432836-e10032774350?auto=format&fit=crop&w=600&q=80",
+  },
+  bakery: {
+    headline: "Freshly baked breads & cakes starting at ₹35",
+    subtitle: "Artisanal breads, puffs, tea cakes & celebration cakes",
+    ctaText: "Shop Fresh Bakes",
+    badge: "LOCAL BAKERY",
+    imageUrl:
+      "https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=600&q=80",
+  },
+  electronics: {
+    headline: "Tech accessories starting at ₹99",
+    subtitle: "Chargers, cables, power banks & small home electronics",
+    ctaText: "Explore Tech Deals",
+    badge: "SMART TECH",
+    imageUrl:
+      "https://images.unsplash.com/photo-1498049794561-7780e7231661?auto=format&fit=crop&w=600&q=80",
+  },
+  fashion: {
+    headline: "Local fashion edit starting at ₹199",
+    subtitle: "Clothing, footwear & accessories from verified nearby shops",
+    ctaText: "Explore Fashion",
+    badge: "NEW STYLES",
+    imageUrl:
+      "https://images.unsplash.com/photo-1445205170230-053b83016050?auto=format&fit=crop&w=600&q=80",
+  },
+  beauty: {
+    headline: "Beauty & personal care starting at ₹49",
+    subtitle: "Skincare, hair care & body grooming essentials delivered nearby",
+    ctaText: "Shop Beauty Now",
+    badge: "PERSONAL CARE",
+    imageUrl:
+      "https://images.unsplash.com/photo-1596462502278-27bfdc403348?auto=format&fit=crop&w=600&q=80",
+  },
+  "local-favorites": {
+    headline: "Kerala & local specialties starting at ₹39",
+    subtitle: "Banana chips, authentic spice mixes, pickles & local sweets",
+    ctaText: "Shop Local Specials",
+    badge: "LOCAL SHORE EXCLUSIVE",
+    imageUrl: "/marketplace-ads/pet-care.png",
+  },
+};
 
 const menuGroups = [
   {
@@ -202,6 +290,7 @@ const imageFor = (categoryId: string) =>
 
 export function CategoryMegaMenu() {
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [activeGroup, setActiveGroup] = useState<string | null>(null);
 
   return (
     <>
@@ -216,52 +305,136 @@ export function CategoryMegaMenu() {
             <Menu className="h-4 w-4" />
             All categories
           </button>
+
           <nav
             aria-label="Shop categories"
             className="flex min-w-0 items-center gap-0 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
           >
-            {menuGroups.map((group) => (
-              <div key={group.id} className="group relative shrink-0">
-                <Link
-                  to="/"
-                  search={{ category: group.categoryId, q: undefined }}
-                  className="inline-flex items-center gap-1 rounded-md px-3 py-2 text-xs font-medium whitespace-nowrap transition-colors hover:bg-primary-foreground/10"
+            {menuGroups.map((group) => {
+              const promo = categoryPromos[group.id] ?? categoryPromos.fresh!;
+              const isSelected = activeGroup === group.id;
+
+              return (
+                <div
+                  key={group.id}
+                  className="group relative shrink-0"
+                  onMouseEnter={() => setActiveGroup(group.id)}
+                  onMouseLeave={() => setActiveGroup(null)}
                 >
-                  {group.label}
-                  <ChevronDown className="h-3 w-3 opacity-70 transition-transform group-hover:rotate-180" />
-                </Link>
-                <div className="pointer-events-none absolute left-0 top-full z-50 w-[min(760px,calc(100vw-3rem))] translate-y-2 opacity-0 transition-all duration-150 group-hover:pointer-events-auto group-hover:translate-y-0 group-hover:opacity-100">
-                  <div className="overflow-hidden rounded-b-xl border hairline bg-card text-foreground shadow-2xl">
-                    <div className="grid grid-cols-3 gap-5 p-5">
-                      {group.columns.map((column) => (
-                        <div key={column.heading}>
-                          <Link
-                            to="/"
-                            search={{ category: group.categoryId, q: undefined }}
-                            className="text-sm font-bold text-primary hover:underline"
-                          >
-                            {column.heading}
-                          </Link>
-                          <ul className="mt-2 space-y-1.5">
-                            {column.items.map((item) => (
-                              <li key={item}>
+                  <Link
+                    to="/"
+                    search={{ category: group.categoryId, q: undefined }}
+                    onClick={() => setActiveGroup(isSelected ? null : group.id)}
+                    className="inline-flex items-center gap-1 rounded-md px-3 py-2 text-xs font-medium whitespace-nowrap transition-colors hover:bg-primary-foreground/10"
+                  >
+                    {group.label}
+                    <ChevronDown className="h-3 w-3 opacity-70 transition-transform group-hover:rotate-180" />
+                  </Link>
+
+                  {/* Amazon Prime Style Popover Dropdown Card with Arrow Caret */}
+                  <div className="pointer-events-none absolute left-0 top-full z-50 w-[min(780px,calc(100vw-2rem))] translate-y-3 opacity-0 transition-all duration-200 group-hover:pointer-events-auto group-hover:translate-y-1 group-hover:opacity-100">
+                    <div className="relative">
+                      {/* Caret Arrow pointing up to the category tab */}
+                      <div className="absolute -top-2 left-6 h-4 w-4 rotate-45 border-l border-t border-slate-200 bg-amber-50 z-20 shadow-sm" />
+
+                      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white text-slate-900 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.3)]">
+                        <div className="grid grid-cols-[1fr_1.25fr]">
+                          {/* Amazon Prime-Style Feature Banner Card */}
+                          <div className="flex flex-col justify-between bg-gradient-to-br from-amber-50/90 via-orange-50/50 to-amber-100/70 p-6 border-r border-slate-100">
+                            <div>
+                              <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/15 px-3 py-1 text-[10px] font-extrabold uppercase tracking-widest text-amber-900">
+                                <Sparkles className="h-3 w-3 text-amber-700" />
+                                {promo.badge}
+                              </span>
+                              <h3 className="mt-3 font-display text-xl font-extrabold leading-snug tracking-tight text-slate-900">
+                                {promo.headline}
+                              </h3>
+                              <p className="mt-2 text-xs leading-relaxed text-slate-600">
+                                {promo.subtitle}
+                              </p>
+                            </div>
+
+                            <div className="my-4 relative h-36 w-full overflow-hidden rounded-xl shadow-sm border border-black/5">
+                              <img
+                                src={promo.imageUrl}
+                                alt={group.label}
+                                className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
+                              />
+                              <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
+                            </div>
+
+                            <div>
+                              <Link
+                                to="/"
+                                search={{ category: group.categoryId, q: undefined }}
+                                className="flex w-full items-center justify-center rounded-full bg-[#ffd814] hover:bg-[#f7ca00] px-5 py-2.5 text-center text-xs font-extrabold text-slate-900 shadow-sm transition-all hover:shadow-md active:scale-[0.99]"
+                              >
+                                {promo.ctaText}
+                              </Link>
+                              <p className="mt-2 text-center font-mono text-[9px] uppercase tracking-widest text-slate-400">
+                                Local Shore Prime Offers
+                              </p>
+                            </div>
+                          </div>
+
+                          {/* Subcategory Links Column */}
+                          <div className="p-6 bg-white flex flex-col justify-between">
+                            <div>
+                              <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
+                                <h4 className="font-display text-sm font-bold text-slate-900">
+                                  Top Categories in {group.label}
+                                </h4>
                                 <Link
                                   to="/"
-                                  search={{ category: group.categoryId, q: item }}
-                                  className="text-xs text-foreground/80 hover:text-primary hover:underline"
+                                  search={{ category: group.categoryId, q: undefined }}
+                                  className="text-xs font-bold text-teal-700 hover:underline"
                                 >
-                                  {item}
+                                  View all &rarr;
                                 </Link>
-                              </li>
-                            ))}
-                          </ul>
+                              </div>
+
+                              <div className="grid grid-cols-2 gap-x-4 gap-y-4">
+                                {group.columns.map((column) => (
+                                  <div key={column.heading}>
+                                    <Link
+                                      to="/"
+                                      search={{ category: group.categoryId, q: undefined }}
+                                      className="text-xs font-bold text-slate-900 hover:text-teal-700 hover:underline"
+                                    >
+                                      {column.heading}
+                                    </Link>
+                                    <ul className="mt-2 space-y-1.5">
+                                      {column.items.map((item) => (
+                                        <li key={item}>
+                                          <Link
+                                            to="/"
+                                            search={{ category: group.categoryId, q: item }}
+                                            className="flex items-center gap-1.5 text-xs text-slate-600 hover:text-teal-700 hover:underline"
+                                          >
+                                            <ChevronRight className="h-3 w-3 shrink-0 text-slate-400" />
+                                            {item}
+                                          </Link>
+                                        </li>
+                                      ))}
+                                    </ul>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+
+                            <div className="mt-4 pt-3 border-t border-slate-100 text-right">
+                              <span className="text-[10px] font-semibold text-slate-400">
+                                Powered by Local Shore Verified Sellers
+                              </span>
+                            </div>
+                          </div>
                         </div>
-                      ))}
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </nav>
         </div>
       </div>

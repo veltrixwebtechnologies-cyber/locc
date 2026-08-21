@@ -119,7 +119,7 @@ export function MarketplaceAdStrip() {
           </p>
           <Link
             to="/"
-            search={{ category: featured.category }}
+            search={{ category: featured.category, q: undefined }}
             className="mt-6 inline-flex rounded-lg bg-[#a96b00] px-4 py-2.5 text-sm font-bold text-white shadow-sm transition-transform hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
           >
             Explore offer
@@ -179,7 +179,7 @@ export function MarketplaceAdStrip() {
           <Link
             key={campaign.title}
             to="/"
-            search={{ category: campaign.category }}
+            search={{ category: campaign.category, q: undefined }}
             aria-label={`Explore ${campaign.title}`}
             className={cn(
               "group overflow-hidden rounded-2xl border border-black/5 bg-card shadow-soft transition-shadow hover:shadow-elegant focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
