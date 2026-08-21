@@ -238,7 +238,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         </div>
       </header>
 
-      <div className="relative z-30 hidden md:block">
+      <div className="relative z-40 hidden md:block overflow-visible">
         <CategoryMegaMenu />
       </div>
 

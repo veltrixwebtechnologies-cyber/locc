@@ -294,25 +294,28 @@ export function CategoryMegaMenu() {
 
   return (
     <>
-      <div className="w-full border-b border-primary-foreground/10 bg-primary text-primary-foreground shadow-sm">
-        <div className="flex h-11 w-full items-center gap-1 overflow-visible px-6 lg:px-8">
+      <div className="relative z-40 w-full border-b border-primary-foreground/10 bg-primary text-primary-foreground shadow-sm">
+        <div className="flex h-11 w-full items-center gap-1 px-4 lg:px-8">
           <button
             type="button"
             onClick={() => setDrawerOpen(true)}
             aria-expanded={drawerOpen}
-            className="inline-flex shrink-0 items-center gap-2 rounded-md px-3 py-2 text-xs font-bold transition-colors hover:bg-primary-foreground/10"
+            className="inline-flex shrink-0 items-center gap-2 rounded-md px-3 py-1.5 text-xs font-bold transition-colors hover:bg-primary-foreground/10"
           >
             <Menu className="h-4 w-4" />
             All categories
           </button>
 
+          <div className="h-4 w-px bg-primary-foreground/20 mx-1 shrink-0" />
+
           <nav
             aria-label="Shop categories"
-            className="flex min-w-0 items-center gap-0 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            className="flex flex-1 items-center gap-0.5 overflow-visible"
           >
-            {menuGroups.map((group) => {
+            {menuGroups.map((group, index) => {
               const promo = categoryPromos[group.id] ?? categoryPromos.fresh!;
-              const isSelected = activeGroup === group.id;
+              const isOpen = activeGroup === group.id;
+              const isRightSide = index >= 5;
 
               return (
                 <div
@@ -324,41 +327,61 @@ export function CategoryMegaMenu() {
                   <Link
                     to="/"
                     search={{ category: group.categoryId, q: undefined }}
-                    onClick={() => setActiveGroup(isSelected ? null : group.id)}
-                    className="inline-flex items-center gap-1 rounded-md px-3 py-2 text-xs font-medium whitespace-nowrap transition-colors hover:bg-primary-foreground/10"
+                    onClick={() => setActiveGroup((prev) => (prev === group.id ? null : group.id))}
+                    className={`inline-flex items-center gap-1 rounded-md px-2.5 py-1.5 text-xs font-medium whitespace-nowrap transition-colors ${
+                      isOpen
+                        ? "bg-primary-foreground/15 text-white font-bold"
+                        : "hover:bg-primary-foreground/10"
+                    }`}
                   >
                     {group.label}
-                    <ChevronDown className="h-3 w-3 opacity-70 transition-transform group-hover:rotate-180" />
+                    <ChevronDown
+                      className={`h-3 w-3 opacity-70 transition-transform duration-200 ${
+                        isOpen ? "rotate-180 opacity-100" : "group-hover:rotate-180"
+                      }`}
+                    />
                   </Link>
 
-                  {/* Amazon Prime Style Popover Dropdown Card with Arrow Caret */}
-                  <div className="pointer-events-none absolute left-0 top-full z-50 w-[min(780px,calc(100vw-2rem))] translate-y-3 opacity-0 transition-all duration-200 group-hover:pointer-events-auto group-hover:translate-y-1 group-hover:opacity-100">
-                    <div className="relative">
-                      {/* Caret Arrow pointing up to the category tab */}
-                      <div className="absolute -top-2 left-6 h-4 w-4 rotate-45 border-l border-t border-slate-200 bg-amber-50 z-20 shadow-sm" />
+                  {/* Amazon Prime-Style Popover Dropdown Card with Arrow Caret */}
+                  <div
+                    className={`absolute top-full z-50 pt-2 transition-all duration-200 ${
+                      isRightSide ? "right-0" : "left-0"
+                    } ${
+                      isOpen
+                        ? "opacity-100 pointer-events-auto translate-y-0"
+                        : "opacity-0 pointer-events-none translate-y-2 group-hover:opacity-100 group-hover:pointer-events-auto group-hover:translate-y-0"
+                    }`}
+                  >
+                    <div className="relative w-[min(760px,calc(100vw-2rem))]">
+                      {/* Pointer Arrow Caret pointing up to the category tab */}
+                      <div
+                        className={`absolute -top-1.5 h-3.5 w-3.5 rotate-45 border-l border-t border-slate-200 bg-amber-50 z-20 shadow-sm ${
+                          isRightSide ? "right-8" : "left-8"
+                        }`}
+                      />
 
-                      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white text-slate-900 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.3)]">
-                        <div className="grid grid-cols-[1fr_1.25fr]">
+                      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white text-slate-900 shadow-[0_20px_50px_-10px_rgba(0,0,0,0.3)]">
+                        <div className="grid grid-cols-[1fr_1.2fr]">
                           {/* Amazon Prime-Style Feature Banner Card */}
-                          <div className="flex flex-col justify-between bg-gradient-to-br from-amber-50/90 via-orange-50/50 to-amber-100/70 p-6 border-r border-slate-100">
+                          <div className="flex flex-col justify-between bg-gradient-to-br from-amber-50/90 via-orange-50/40 to-amber-100/60 p-5 border-r border-slate-100">
                             <div>
-                              <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/15 px-3 py-1 text-[10px] font-extrabold uppercase tracking-widest text-amber-900">
+                              <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/15 px-2.5 py-0.5 text-[10px] font-extrabold uppercase tracking-widest text-amber-900">
                                 <Sparkles className="h-3 w-3 text-amber-700" />
                                 {promo.badge}
                               </span>
-                              <h3 className="mt-3 font-display text-xl font-extrabold leading-snug tracking-tight text-slate-900">
+                              <h3 className="mt-2.5 font-display text-lg font-extrabold leading-snug tracking-tight text-slate-900">
                                 {promo.headline}
                               </h3>
-                              <p className="mt-2 text-xs leading-relaxed text-slate-600">
+                              <p className="mt-1.5 text-xs leading-relaxed text-slate-600">
                                 {promo.subtitle}
                               </p>
                             </div>
 
-                            <div className="my-4 relative h-36 w-full overflow-hidden rounded-xl shadow-sm border border-black/5">
+                            <div className="my-3 relative h-32 w-full overflow-hidden rounded-xl shadow-sm border border-black/5">
                               <img
                                 src={promo.imageUrl}
                                 alt={group.label}
-                                className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
+                                className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
                               />
                               <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
                             </div>
@@ -367,49 +390,53 @@ export function CategoryMegaMenu() {
                               <Link
                                 to="/"
                                 search={{ category: group.categoryId, q: undefined }}
-                                className="flex w-full items-center justify-center rounded-full bg-[#ffd814] hover:bg-[#f7ca00] px-5 py-2.5 text-center text-xs font-extrabold text-slate-900 shadow-sm transition-all hover:shadow-md active:scale-[0.99]"
+                                onClick={() => setActiveGroup(null)}
+                                className="flex w-full items-center justify-center rounded-full bg-[#ffd814] hover:bg-[#f7ca00] px-4 py-2 text-center text-xs font-extrabold text-slate-900 shadow-sm transition-all hover:shadow active:scale-[0.99]"
                               >
                                 {promo.ctaText}
                               </Link>
-                              <p className="mt-2 text-center font-mono text-[9px] uppercase tracking-widest text-slate-400">
-                                Local Shore Prime Offers
+                              <p className="mt-1.5 text-center font-mono text-[9px] uppercase tracking-widest text-slate-400">
+                                Local Shore Offers
                               </p>
                             </div>
                           </div>
 
                           {/* Subcategory Links Column */}
-                          <div className="p-6 bg-white flex flex-col justify-between">
+                          <div className="p-5 bg-white flex flex-col justify-between">
                             <div>
-                              <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
-                                <h4 className="font-display text-sm font-bold text-slate-900">
+                              <div className="flex items-center justify-between border-b border-slate-100 pb-2.5 mb-3">
+                                <h4 className="font-display text-xs font-bold text-slate-900 uppercase tracking-wider">
                                   Top Categories in {group.label}
                                 </h4>
                                 <Link
                                   to="/"
                                   search={{ category: group.categoryId, q: undefined }}
+                                  onClick={() => setActiveGroup(null)}
                                   className="text-xs font-bold text-teal-700 hover:underline"
                                 >
                                   View all &rarr;
                                 </Link>
                               </div>
 
-                              <div className="grid grid-cols-2 gap-x-4 gap-y-4">
+                              <div className="grid grid-cols-2 gap-x-4 gap-y-3">
                                 {group.columns.map((column) => (
                                   <div key={column.heading}>
                                     <Link
                                       to="/"
                                       search={{ category: group.categoryId, q: undefined }}
+                                      onClick={() => setActiveGroup(null)}
                                       className="text-xs font-bold text-slate-900 hover:text-teal-700 hover:underline"
                                     >
                                       {column.heading}
                                     </Link>
-                                    <ul className="mt-2 space-y-1.5">
+                                    <ul className="mt-1.5 space-y-1">
                                       {column.items.map((item) => (
                                         <li key={item}>
                                           <Link
                                             to="/"
                                             search={{ category: group.categoryId, q: item }}
-                                            className="flex items-center gap-1.5 text-xs text-slate-600 hover:text-teal-700 hover:underline"
+                                            onClick={() => setActiveGroup(null)}
+                                            className="flex items-center gap-1 text-xs text-slate-600 hover:text-teal-700 hover:underline"
                                           >
                                             <ChevronRight className="h-3 w-3 shrink-0 text-slate-400" />
                                             {item}
@@ -422,9 +449,9 @@ export function CategoryMegaMenu() {
                               </div>
                             </div>
 
-                            <div className="mt-4 pt-3 border-t border-slate-100 text-right">
+                            <div className="mt-3 pt-2 border-t border-slate-100 text-right">
                               <span className="text-[10px] font-semibold text-slate-400">
-                                Powered by Local Shore Verified Sellers
+                                Verified Neighborhood Shops
                               </span>
                             </div>
                           </div>
