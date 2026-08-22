@@ -20,6 +20,7 @@ import { MarketplaceAdStrip } from "@/components/marketplace-ad-strip";
 import type { MerchandisingProduct } from "@/lib/merchandising";
 import { Reveal } from "@/components/motion/presets";
 import { MarketplaceDiscovery } from "@/components/marketplace-discovery";
+import { SwiggyShopRow, SwiggyQuickCategories } from "@/components/swiggy-shop-row";
 
 const toStoreCategory = (value?: string | null): StoreCategory => {
   const category = (value ?? "").toLowerCase();
@@ -317,6 +318,15 @@ function Home() {
 
       <MarketplaceAdStrip />
 
+      {/* Swiggy-style quick category icon strip */}
+      <SwiggyQuickCategories />
+
+      {/* Swiggy-style horizontal shop discovery row */}
+      <SwiggyShopRow
+        stores={filtered}
+        title="Discover best shops near you"
+      />
+
       <MarketplaceDiscovery products={homepageProducts} />
 
       {/* Mobile search. Desktop search remains in the commerce header. */}
@@ -334,10 +344,10 @@ function Home() {
 
       <MerchandisingSections fallbackProducts={homepageProducts} />
 
-      {/* Store list */}
-      <div className="mt-2 flex items-center justify-between px-5 pt-2 md:mt-6 md:px-8">
+      {/* All shops grid — shown below the Swiggy row as secondary listing */}
+      <div className="mt-6 flex items-center justify-between px-5 pt-2 md:mt-8 md:px-8">
         <h2 className="font-display text-base font-bold text-foreground md:text-xl">
-          Verified local shops near you
+          All verified shops
         </h2>
         <span className="font-mono text-[10px] uppercase text-muted-foreground md:text-xs">
           {filtered.length} shops
