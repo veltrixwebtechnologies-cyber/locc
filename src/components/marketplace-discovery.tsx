@@ -1,4 +1,4 @@
-import { ChevronRight, PackageSearch, Sparkles, TrendingUp, UsersRound, Zap } from "lucide-react";
+import { ChevronRight, PackageSearch, Flame, TrendingUp, UsersRound, Zap } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { deliveryCategories } from "@/lib/mock-data";
 import { resolveProductImageUrl, type MerchandisingProduct } from "@/lib/merchandising";
@@ -61,7 +61,7 @@ export function MarketplaceDiscovery({ products }: { products: MerchandisingProd
                   Frequently searched
                 </h2>
               </div>
-              <Sparkles className="h-5 w-5 text-[var(--marigold)]" />
+              <Flame className="h-5 w-5 text-amber-500" />
             </div>
             <div className="grid grid-cols-3 gap-3">
               {frequentSearches.map((item, index) => {

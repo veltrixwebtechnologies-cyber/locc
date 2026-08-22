@@ -11,7 +11,7 @@ import {
   Lock,
   ShieldCheck,
   ShoppingBag,
-  Sparkles,
+  Tag,
   Trash2,
   Truck,
 } from "lucide-react";
@@ -163,7 +163,7 @@ function CartPage() {
             <aside className="space-y-4 md:sticky md:top-28 md:self-start">
               <div className="rounded-2xl border border-[#ead9a8] bg-card p-5 shadow-sm">
                 <div className="flex items-center gap-2">
-                  <Sparkles className="h-4 w-4 text-primary" />
+                  <Tag className="h-4 w-4 text-primary" />
                   <p className="text-sm font-bold">Unlock free delivery</p>
                 </div>
                 <p className="mt-2 text-xs text-muted-foreground">

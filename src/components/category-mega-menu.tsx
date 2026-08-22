@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { useState, type ReactNode } from "react";
-import { ChevronDown, ChevronRight, Menu, PackageSearch, X, Sparkles } from "lucide-react";
+import { ChevronDown, ChevronRight, Menu, PackageSearch, X, Tag } from "lucide-react";
 import { deliveryCategories } from "@/lib/mock-data";
 
 type CategoryPromo = {
@@ -366,7 +366,7 @@ export function CategoryMegaMenu() {
                           <div className="flex flex-col justify-between bg-gradient-to-br from-amber-50/90 via-orange-50/40 to-amber-100/60 p-5 border-r border-slate-100">
                             <div>
                               <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/15 px-2.5 py-0.5 text-[10px] font-extrabold uppercase tracking-widest text-amber-900">
-                                <Sparkles className="h-3 w-3 text-amber-700" />
+                                <Tag className="h-3 w-3 text-amber-700" />
                                 {promo.badge}
                               </span>
                               <h3 className="mt-2.5 font-display text-lg font-extrabold leading-snug tracking-tight text-slate-900">

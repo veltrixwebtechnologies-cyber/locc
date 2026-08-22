@@ -33,6 +33,8 @@ export function AppShell({ children }: { children: ReactNode }) {
   const [scrolled, setScrolled] = useState(false);
   const [headerQuery, setHeaderQuery] = useState("");
   const [searchFocused, setSearchFocused] = useState(false);
+  const [cartBarDismissed, setCartBarDismissed] = useState(false);
+  const [userInteracted, setUserInteracted] = useState(false);
   const { itemCount } = cartTotals(cart.lines);
   const isSignedIn = Boolean(auth.id);
 
@@ -42,6 +44,27 @@ export function AppShell({ children }: { children: ReactNode }) {
     window.addEventListener("scroll", update, { passive: true });
     return () => window.removeEventListener("scroll", update);
   }, []);
+
+  // Only show the floating cart bar after the user has actually interacted
+  // with the page (scroll or tap). This prevents the bar from immediately
+  // appearing on mobile open and causing accidental navigation to /cart.
+  useEffect(() => {
+    if (userInteracted) return;
+    const onInteract = () => setUserInteracted(true);
+    window.addEventListener("scroll", onInteract, { once: true, passive: true });
+    window.addEventListener("touchstart", onInteract, { once: true, passive: true });
+    window.addEventListener("pointerdown", onInteract, { once: true });
+    return () => {
+      window.removeEventListener("scroll", onInteract);
+      window.removeEventListener("touchstart", onInteract);
+      window.removeEventListener("pointerdown", onInteract);
+    };
+  }, [userInteracted]);
+
+  // Reset dismissed state when a new item is added to cart
+  useEffect(() => {
+    setCartBarDismissed(false);
+  }, [itemCount]);
 
   const tabs: Array<{
     to: string;
@@ -277,7 +300,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       <ShopperFooter />
 
       <AnimatePresence>
-        {itemCount > 0 && !pathname.startsWith("/cart") && !pathname.startsWith("/checkout") ? (
+        {itemCount > 0 && !pathname.startsWith("/cart") && !pathname.startsWith("/checkout") && userInteracted && !cartBarDismissed ? (
           <m.div
             initial={{ opacity: 0, y: 28, scale: 0.98 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -294,14 +317,26 @@ export function AppShell({ children }: { children: ReactNode }) {
                   ₹{cartTotals(cart.lines).subtotal}
                 </p>
               </div>
-              <Link
-                to="/cart"
-                className="inline-flex shrink-0 items-center gap-2 rounded-xl bg-background px-4 py-2.5 text-sm font-bold text-foreground transition-transform hover:scale-[1.02] active:scale-[0.98]"
-              >
-                <ShoppingBag className="h-4 w-4 text-primary" />
-                Review cart
-                <ArrowRight className="h-4 w-4 text-primary" />
-              </Link>
+              <div className="flex shrink-0 items-center gap-2">
+                <Link
+                  to="/cart"
+                  className="inline-flex shrink-0 items-center gap-2 rounded-xl bg-background px-4 py-2.5 text-sm font-bold text-foreground transition-transform hover:scale-[1.02] active:scale-[0.98]"
+                >
+                  <ShoppingBag className="h-4 w-4 text-primary" />
+                  Review cart
+                  <ArrowRight className="h-4 w-4 text-primary" />
+                </Link>
+                <button
+                  type="button"
+                  aria-label="Dismiss cart bar"
+                  onClick={() => setCartBarDismissed(true)}
+                  className="grid h-7 w-7 place-items-center rounded-full bg-white/15 text-primary-foreground/80 transition-colors hover:bg-white/25"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+                  </svg>
+                </button>
+              </div>
             </div>
           </m.div>
         ) : null}
