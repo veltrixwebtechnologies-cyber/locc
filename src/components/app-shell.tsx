@@ -306,7 +306,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 28, scale: 0.98 }}
             transition={{ type: "spring", stiffness: 360, damping: 28 }}
-            className="fixed inset-x-0 bottom-[66px] z-50 px-4 md:bottom-5"
+            className="fixed inset-x-0 bottom-[72px] z-50 px-4 md:bottom-5"
           >
             <div className="mx-auto flex max-w-xl items-center justify-between gap-4 rounded-2xl bg-primary px-4 py-3 text-primary-foreground shadow-[0_14px_38px_-12px_rgba(42,27,74,0.6)] ring-1 ring-white/20 md:max-w-lg md:px-5">
               <div className="min-w-0">

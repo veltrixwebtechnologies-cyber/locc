@@ -1,7 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { useServerFn } from "@tanstack/react-start";
-import { MapPin, Search, LocateFixed } from "lucide-react";
+import { Search } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { AwningCard } from "@/components/awning-card";
 import {
@@ -13,7 +12,6 @@ import {
 } from "@/lib/mock-data";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { reverseGeocode } from "@/lib/geocoding.functions";
 import { MerchandisingSections } from "@/components/merchandising-sections";
 import { PromoCarousel } from "@/components/promo-carousel";
 import { MarketplaceAdStrip } from "@/components/marketplace-ad-strip";
@@ -21,6 +19,7 @@ import type { MerchandisingProduct } from "@/lib/merchandising";
 import { Reveal } from "@/components/motion/presets";
 import { MarketplaceDiscovery } from "@/components/marketplace-discovery";
 import { SwiggyShopRow, SwiggyQuickCategories } from "@/components/swiggy-shop-row";
+import { HeroSection } from "@/components/hero-section";
 
 const toStoreCategory = (value?: string | null): StoreCategory => {
   const category = (value ?? "").toLowerCase();
@@ -40,12 +39,6 @@ export const Route = createFileRoute("/")({
 
 function Home() {
   const search = Route.useSearch();
-  const reverseGeocodeFn = useServerFn(reverseGeocode);
-  const [location, setLocation] = useState("Marine Drive, Kochi");
-  const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState(location);
-  const [locStatus, setLocStatus] = useState<"idle" | "loading" | "ok" | "error">("idle");
-  const [locError, setLocError] = useState("");
   const [query, setQuery] = useState(search.q ?? "");
   const [cat, setCat] = useState<string>(search.category ?? "all");
   const approvedProducts = useQuery({
@@ -111,46 +104,6 @@ function Home() {
     setQuery(search.q ?? "");
     setCat(search.category ?? "all");
   }, [search.category, search.q]);
-
-  const autoSetLocation = () => {
-    if (!navigator.geolocation) {
-      setLocStatus("error");
-      setLocError("Location is not supported by this browser.");
-      return;
-    }
-
-    setLocStatus("loading");
-    setLocError("");
-    navigator.geolocation.getCurrentPosition(
-      async (pos) => {
-        const coords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-        let label = `Current location · ${coords.lat.toFixed(5)}, ${coords.lng.toFixed(5)}`;
-        try {
-          const result = await reverseGeocodeFn({ data: coords });
-          label = result.address;
-        } catch {
-          setLocError("Location found, but the address name could not be loaded.");
-        }
-        setDraft(label);
-        setLocation(label);
-        setEditing(false);
-        setLocStatus("ok");
-      },
-      (err) => {
-        setLocStatus("error");
-        setLocError(
-          err.code === err.PERMISSION_DENIED
-            ? "Permission denied. Allow location access in your browser."
-            : err.code === err.POSITION_UNAVAILABLE
-              ? "Location unavailable. Type your area manually."
-              : err.code === err.TIMEOUT
-                ? "Timed out getting your location. Try Auto again."
-                : "Could not get your location.",
-        );
-      },
-      { enableHighAccuracy: true, timeout: 8000 },
-    );
-  };
 
   const activeFilter: StoreCategory | undefined = useMemo(() => {
     if (cat === "all") return undefined;
@@ -254,67 +207,8 @@ function Home() {
 
   return (
     <AppShell>
-      {/* Location bar */}
-      <div className="sticky top-0 z-30 bg-background/95 backdrop-blur md:top-16">
-        <div className="px-5 pt-4 pb-3 md:px-8 md:pt-8">
-          <p className="font-mono text-[10px] uppercase tracking-widest text-primary">
-            Good to see you
-          </p>
-          {editing ? (
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                setLocation(draft || location);
-                setEditing(false);
-              }}
-              className="mt-1 flex items-center gap-2"
-            >
-              <MapPin className="h-4 w-4 text-primary" />
-              <input
-                autoFocus
-                value={draft}
-                onChange={(e) => setDraft(e.target.value)}
-                className="w-full bg-transparent text-base font-medium outline-none"
-                placeholder="Enter street, area or landmark"
-              />
-              <button
-                type="button"
-                onClick={autoSetLocation}
-                disabled={locStatus === "loading"}
-                className="inline-flex items-center gap-1 text-xs text-primary disabled:opacity-60"
-              >
-                <LocateFixed
-                  className={`h-3.5 w-3.5 ${locStatus === "loading" ? "animate-spin" : ""}`}
-                />
-                {locStatus === "loading" ? "Finding" : "Auto"}
-              </button>
-              <button
-                type="submit"
-                className="rounded-md bg-primary px-2.5 py-1 text-xs font-medium text-primary-foreground"
-              >
-                Set
-              </button>
-            </form>
-          ) : (
-            <button
-              onClick={() => {
-                setDraft(location);
-                setEditing(true);
-              }}
-              className="mt-1 flex items-center gap-2 text-left"
-            >
-              <MapPin className="h-4 w-4 text-primary" />
-              <span className="text-base font-medium underline-offset-4 hover:underline">
-                {location}
-              </span>
-            </button>
-          )}
-          {locStatus === "error" && <p className="mt-1 text-[11px] text-destructive">{locError}</p>}
-          {locStatus === "ok" && !editing && (
-            <p className="mt-1 text-[11px] text-primary">Delivery location updated.</p>
-          )}
-        </div>
-      </div>
+      {/* Hero section — replaces the old sticky location bar on mobile */}
+      <HeroSection />
 
       <MarketplaceAdStrip />
 
@@ -329,15 +223,15 @@ function Home() {
 
       <MarketplaceDiscovery products={homepageProducts} />
 
-      {/* Mobile search. Desktop search remains in the commerce header. */}
-      <div className="px-5 pb-2 md:hidden">
-        <label className="flex items-center gap-2 rounded-xl bg-card px-3 py-2.5 ring-1 ring-black/[0.04] md:px-4 md:py-3.5">
-          <Search className="h-4 w-4 text-muted-foreground md:h-5 md:w-5" />
+      {/* Mobile search — floats below the hero, not sticky */}
+      <div className="px-5 pb-2 pt-1 md:hidden">
+        <label className="flex items-center gap-2 rounded-xl bg-card px-3 py-2.5 ring-1 ring-black/[0.04]">
+          <Search className="h-4 w-4 text-muted-foreground" />
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search products, categories or shops"
-            className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground md:text-base"
+            className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
           />
         </label>
       </div>
