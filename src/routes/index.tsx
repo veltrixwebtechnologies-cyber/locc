@@ -20,7 +20,6 @@ import type { MerchandisingProduct } from "@/lib/merchandising";
 import { Reveal } from "@/components/motion/presets";
 import { MarketplaceDiscovery } from "@/components/marketplace-discovery";
 import { SwiggyShopRow, SwiggyQuickCategories } from "@/components/swiggy-shop-row";
-import { AirbnbMapView } from "@/components/airbnb-map-view";
 import {
   SwiggyTopDealsStrip,
   SwiggyFeaturedBanner,
@@ -39,7 +38,7 @@ const getCategoryDisplayName = (catName?: string | null): string => {
   if (!catName) return "";
   const lower = catName.toLowerCase();
   if (categoryLabel[lower as StoreCategory]) return categoryLabel[lower as StoreCategory];
-  if (lower === "flour_mill") return "Flour Mill (மாவு ஆலை)";
+  if (lower === "flour_mill") return "Flour & Masala Mill (மாவு & மசாலா ஆலை)";
   if (lower === "palamuthir") return "Palamuthir Nilayam";
   if (lower === "meat_fish") return "Meat, Fish & Chicken";
   if (lower === "fashion_accessories") return "Chain & Kammal Gifts";
@@ -389,25 +388,6 @@ function Home() {
           stores={filtered}
           title={activeFilter ? `Shops in ${displayCategoryName}` : "Top shops near you"}
         />
-
-        {/* Interactive Airbnb-Style Map Discovery Section */}
-        <section className="mx-5 my-8 md:mx-8">
-          <div className="mb-4">
-            <div className="flex items-center gap-2">
-              <span className="flex h-3 w-3 relative">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-pink-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-3 w-3 bg-pink-500"></span>
-              </span>
-              <h2 className="text-[20px] sm:text-[22px] font-black text-[#1a1a2e] md:text-[24px]">
-                Explore Shops on Interactive Map
-              </h2>
-            </div>
-            <p className="mt-1 text-xs sm:text-sm text-slate-500 font-medium">
-              Discover local flour mills, palamuthir nilayam, boutiques, showrooms & individual stalls near your location with live pin search.
-            </p>
-          </div>
-          <AirbnbMapView stores={filtered} />
-        </section>
 
         {/* 4. Swiggy ₹99 Store / Budget Meals Section */}
         <Swiggy99StoreSection products={homepageProducts} />

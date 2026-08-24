@@ -306,7 +306,7 @@ export function SwiggyShopRow({
               : "bg-white text-slate-700 border border-slate-200 hover:bg-slate-50"
           }`}
         >
-          🌾 FLOUR MILL (மாவு ஆலை)
+          🌾🌶️ FLOUR & MASALA MILL (மாவு & மசாலா ஆலை)
         </button>
         <button
           type="button"
