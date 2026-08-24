@@ -81,15 +81,21 @@ export async function resolveProductImageUrl(raw: string | null | undefined): Pr
 export function useNewArrivals() {
   return useQuery({
     queryKey: ["merchandising", "new-arrivals"],
+    retry: 1,
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
-        .from("public_merchandising_products")
-        .select(productSelect)
-        .gte("created_at", new Date(Date.now() - 30 * 86400000).toISOString())
-        .order("created_at", { ascending: false })
-        .limit(12);
-      if (error) throw error;
-      return (data ?? []) as MerchandisingProduct[];
+      try {
+        const { data, error } = await (supabase as any)
+          .from("public_merchandising_products")
+          .select(productSelect)
+          .gte("created_at", new Date(Date.now() - 30 * 86400000).toISOString())
+          .order("created_at", { ascending: false })
+          .limit(12);
+        if (error) throw error;
+        return (data ?? []) as MerchandisingProduct[];
+      } catch (err) {
+        console.warn("[merchandising] Failed to fetch new arrivals:", err);
+        return [] as MerchandisingProduct[];
+      }
     },
   });
 }
@@ -97,22 +103,28 @@ export function useNewArrivals() {
 export function useDeals() {
   return useQuery({
     queryKey: ["merchandising", "deals"],
+    retry: 1,
     queryFn: async () => {
-      const now = new Date().toISOString();
-      const { data, error } = await (supabase as any)
-        .from("public_merchandising_products")
-        .select(productSelect)
-        .not("discount_price", "is", null)
-        .or(`discount_starts_at.is.null,discount_starts_at.lte.${now}`)
-        .or(`discount_ends_at.is.null,discount_ends_at.gt.${now}`)
-        .limit(50);
-      if (error) throw error;
-      return (data ?? [])
-        .sort(
-          (a: MerchandisingProduct, b: MerchandisingProduct) =>
-            discountPercent(b) - discountPercent(a),
-        )
-        .slice(0, 12) as MerchandisingProduct[];
+      try {
+        const now = new Date().toISOString();
+        const { data, error } = await (supabase as any)
+          .from("public_merchandising_products")
+          .select(productSelect)
+          .not("discount_price", "is", null)
+          .or(`discount_starts_at.is.null,discount_starts_at.lte.${now}`)
+          .or(`discount_ends_at.is.null,discount_ends_at.gt.${now}`)
+          .limit(50);
+        if (error) throw error;
+        return (data ?? [])
+          .sort(
+            (a: MerchandisingProduct, b: MerchandisingProduct) =>
+              discountPercent(b) - discountPercent(a),
+          )
+          .slice(0, 12) as MerchandisingProduct[];
+      } catch (err) {
+        console.warn("[merchandising] Failed to fetch deals:", err);
+        return [] as MerchandisingProduct[];
+      }
     },
   });
 }
@@ -120,19 +132,25 @@ export function useDeals() {
 export function useClearance() {
   return useQuery({
     queryKey: ["merchandising", "clearance"],
+    retry: 1,
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
-        .from("public_merchandising_products")
-        .select(productSelect)
-        .eq("clearance", true)
-        .limit(50);
-      if (error) throw error;
-      return (data ?? [])
-        .sort(
-          (a: MerchandisingProduct, b: MerchandisingProduct) =>
-            discountPercent(b) - discountPercent(a),
-        )
-        .slice(0, 12) as MerchandisingProduct[];
+      try {
+        const { data, error } = await (supabase as any)
+          .from("public_merchandising_products")
+          .select(productSelect)
+          .eq("clearance", true)
+          .limit(50);
+        if (error) throw error;
+        return (data ?? [])
+          .sort(
+            (a: MerchandisingProduct, b: MerchandisingProduct) =>
+              discountPercent(b) - discountPercent(a),
+          )
+          .slice(0, 12) as MerchandisingProduct[];
+      } catch (err) {
+        console.warn("[merchandising] Failed to fetch clearance:", err);
+        return [] as MerchandisingProduct[];
+      }
     },
   });
 }
@@ -142,21 +160,27 @@ export function useBestSellers(
 ) {
   return useQuery({
     queryKey: ["merchandising", "best-sellers", period],
+    retry: 1,
     queryFn: async () => {
-      const { data: rankings, error: rankingError } = await (supabase as any).rpc(
-        "get_best_sellers",
-        { p_period: period },
-      );
-      if (rankingError) throw rankingError;
-      const ids = (rankings ?? []).map((row: { product_id: string }) => row.product_id);
-      if (ids.length === 0) return [] as MerchandisingProduct[];
-      const { data, error } = await (supabase as any)
-        .from("public_merchandising_products")
-        .select(productSelect)
-        .in("id", ids);
-      if (error) throw error;
-      const byId = new Map((data ?? []).map((row: MerchandisingProduct) => [row.id, row]));
-      return ids.map((id: string) => byId.get(id)).filter(Boolean) as MerchandisingProduct[];
+      try {
+        const { data: rankings, error: rankingError } = await (supabase as any).rpc(
+          "get_best_sellers",
+          { p_period: period },
+        );
+        if (rankingError) throw rankingError;
+        const ids = (rankings ?? []).map((row: { product_id: string }) => row.product_id);
+        if (ids.length === 0) return [] as MerchandisingProduct[];
+        const { data, error } = await (supabase as any)
+          .from("public_merchandising_products")
+          .select(productSelect)
+          .in("id", ids);
+        if (error) throw error;
+        const byId = new Map((data ?? []).map((row: MerchandisingProduct) => [row.id, row]));
+        return ids.map((id: string) => byId.get(id)).filter(Boolean) as MerchandisingProduct[];
+      } catch (err) {
+        console.warn("[merchandising] Failed to fetch best sellers:", err);
+        return [] as MerchandisingProduct[];
+      }
     },
   });
 }
@@ -164,21 +188,27 @@ export function useBestSellers(
 export function useTrending() {
   return useQuery({
     queryKey: ["merchandising", "trending"],
+    retry: 1,
     queryFn: async () => {
-      const { data: rankings, error: rankingError } = await (supabase as any).rpc(
-        "get_trending_products",
-        { p_limit: 12 },
-      );
-      if (rankingError) throw rankingError;
-      const ids = (rankings ?? []).map((row: { product_id: string }) => row.product_id);
-      if (ids.length === 0) return [] as MerchandisingProduct[];
-      const { data, error } = await (supabase as any)
-        .from("public_merchandising_products")
-        .select(productSelect)
-        .in("id", ids);
-      if (error) throw error;
-      const byId = new Map((data ?? []).map((row: MerchandisingProduct) => [row.id, row]));
-      return ids.map((id: string) => byId.get(id)).filter(Boolean) as MerchandisingProduct[];
+      try {
+        const { data: rankings, error: rankingError } = await (supabase as any).rpc(
+          "get_trending_products",
+          { p_limit: 12 },
+        );
+        if (rankingError) throw rankingError;
+        const ids = (rankings ?? []).map((row: { product_id: string }) => row.product_id);
+        if (ids.length === 0) return [] as MerchandisingProduct[];
+        const { data, error } = await (supabase as any)
+          .from("public_merchandising_products")
+          .select(productSelect)
+          .in("id", ids);
+        if (error) throw error;
+        const byId = new Map((data ?? []).map((row: MerchandisingProduct) => [row.id, row]));
+        return ids.map((id: string) => byId.get(id)).filter(Boolean) as MerchandisingProduct[];
+      } catch (err) {
+        console.warn("[merchandising] Failed to fetch trending products:", err);
+        return [] as MerchandisingProduct[];
+      }
     },
   });
 }
@@ -186,13 +216,19 @@ export function useTrending() {
 export function useFeaturedBrands() {
   return useQuery({
     queryKey: ["merchandising", "featured-brands"],
+    retry: 1,
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
-        .from("featured_brands")
-        .select("brand_id,display_order,brands(id,name,logo_url)")
-        .order("display_order");
-      if (error) throw error;
-      return data ?? [];
+      try {
+        const { data, error } = await (supabase as any)
+          .from("featured_brands")
+          .select("brand_id,display_order,brands(id,name,logo_url)")
+          .order("display_order");
+        if (error) throw error;
+        return data ?? [];
+      } catch (err) {
+        console.warn("[merchandising] Failed to fetch featured brands:", err);
+        return [];
+      }
     },
   });
 }
@@ -200,24 +236,28 @@ export function useFeaturedBrands() {
 export function useActiveCollections() {
   return useQuery({
     queryKey: ["merchandising", "collections"],
+    retry: 1,
     queryFn: async () => {
-      const [gift, seasonal] = await Promise.all([
-        (supabase as any)
-          .from("gift_collections")
-          .select("id,name,description,image_url")
-          .eq("is_active", true)
-          .order("display_order")
-          .limit(8),
-        (supabase as any)
-          .from("seasonal_collections")
-          .select("id,name,description,image_url")
-          .eq("is_active", true)
-          .order("display_order")
-          .limit(8),
-      ]);
-      if (gift.error) throw gift.error;
-      if (seasonal.error) throw seasonal.error;
-      return { gift: gift.data ?? [], seasonal: seasonal.data ?? [] };
+      try {
+        const [gift, seasonal] = await Promise.all([
+          (supabase as any)
+            .from("gift_collections")
+            .select("id,name,description,image_url")
+            .eq("is_active", true)
+            .order("display_order")
+            .limit(8),
+          (supabase as any)
+            .from("seasonal_collections")
+            .select("id,name,description,image_url")
+            .eq("is_active", true)
+            .order("display_order")
+            .limit(8),
+        ]);
+        return { gift: gift.data ?? [], seasonal: seasonal.data ?? [] };
+      } catch (err) {
+        console.warn("[merchandising] Failed to fetch collections:", err);
+        return { gift: [], seasonal: [] };
+      }
     },
   });
 }
