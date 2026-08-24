@@ -19,6 +19,11 @@ import type { MerchandisingProduct } from "@/lib/merchandising";
 import { Reveal } from "@/components/motion/presets";
 import { MarketplaceDiscovery } from "@/components/marketplace-discovery";
 import { SwiggyShopRow, SwiggyQuickCategories } from "@/components/swiggy-shop-row";
+import {
+  SwiggyTopDealsStrip,
+  SwiggyFeaturedBanner,
+  Swiggy99StoreSection,
+} from "@/components/swiggy-inspiration-sections";
 import { HeroSection } from "@/components/hero-section";
 import {
   FlipkartCategoryStrip,
@@ -340,20 +345,14 @@ function Home() {
 
   return (
     <AppShell>
-      {/* Flipkart-Style Clean Top Category Strip */}
-      <FlipkartCategoryStrip activeCategory={cat} />
-
-      {/* Hero section */}
+      {/* Swiggy-Style Hero Landing Section */}
       <HeroSection />
 
-      {/* Flipkart-Style 3 Banner Grid (Cohesive Dark Theme) */}
-      <FlipkartBannerRow />
+      {/* 1. Swiggy Top Yellow Deals Carousel Strip */}
+      <SwiggyTopDealsStrip />
 
-      {/* Flipkart-Style Signature "Best Deals on..." Container */}
-      <FlipkartBestDealsShowcase
-        products={homepageProducts}
-        title={activeFilter ? `Best Deals on ${displayCategoryName}` : "Best Deals on Local Shore"}
-      />
+      {/* 2. Swiggy Featured Merchant Ad Banner */}
+      <SwiggyFeaturedBanner />
 
       {/* Swiggy-style quick category icon strip */}
       <SwiggyQuickCategories />
@@ -384,10 +383,19 @@ function Home() {
           </div>
         )}
 
-        {/* Swiggy-style horizontal shop discovery row */}
+        {/* 3. Swiggy-style horizontal shop discovery row with filter pill tabs */}
         <SwiggyShopRow
           stores={filtered}
-          title={activeFilter ? `Shops in ${displayCategoryName}` : "Discover best shops near you"}
+          title={activeFilter ? `Shops in ${displayCategoryName}` : "Top shops near you"}
+        />
+
+        {/* 4. Swiggy ₹99 Store / Budget Meals Section */}
+        <Swiggy99StoreSection products={homepageProducts} />
+
+        {/* Flipkart-Style Signature "Best Deals on..." Container */}
+        <FlipkartBestDealsShowcase
+          products={homepageProducts}
+          title={activeFilter ? `Best Deals on ${displayCategoryName}` : "Best Deals on Local Shore"}
         />
 
         {/* Category Products Grid */}

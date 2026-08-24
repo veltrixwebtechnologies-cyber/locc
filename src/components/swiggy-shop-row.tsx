@@ -1,29 +1,34 @@
 import { Link } from "@tanstack/react-router";
-import { Star, ChevronLeft, ChevronRight } from "lucide-react";
+import { Star, ChevronLeft, ChevronRight, Heart } from "lucide-react";
 import { m, AnimatePresence } from "motion/react";
 import { useRef, useState, useCallback } from "react";
 import type { Store } from "@/lib/mock-data";
 import { categoryLabel } from "@/lib/mock-data";
 import { useShopsStatus } from "@/lib/shop-availability";
+import { WishlistButton } from "@/components/wishlist-button";
 import { scrollToShops } from "@/lib/scroll-utils";
 
 /* ─── offer config per store category ─────────────────────────────────── */
-const CATEGORY_OFFERS: Record<string, { primary: string; bank: string }> = {
+const CATEGORY_OFFERS: Record<string, { primary: string; bank: string; overlayTag: string }> = {
   grocery: {
     primary: "Flat 10% off on pre-booking",
     bank: "Up to 10% off with bank offers",
+    overlayTag: "ITEMS AT ₹39",
   },
   pharmacy: {
     primary: "Free delivery above ₹199",
     bank: "Up to 5% off with bank offers",
+    overlayTag: "30% OFF UPTO ₹75 | AD",
   },
   bakery: {
     primary: "Buy 2 get 1 free",
     bank: "Up to 8% off with bank offers",
+    overlayTag: "50% OFF | AD",
   },
   stationery: {
     primary: "10% off on ₹300+",
     bank: "Up to 6% off with bank offers",
+    overlayTag: "FLAT ₹50 OFF",
   },
 };
 
@@ -56,109 +61,120 @@ function SwiggyShopCard({
       }}
       className="group shrink-0 w-[260px] sm:w-[273px]"
     >
-      <Link
-        to="/store/$storeId"
-        params={{ storeId: store.id }}
-        className="block overflow-hidden rounded-[24px] bg-white transition-shadow duration-300 hover:shadow-[0_8px_32px_-8px_rgba(0,0,0,0.18)]"
-      >
-        {/* ── Image area ── */}
-        <div className="relative aspect-[16/10] w-full overflow-hidden bg-[#f0f0f5]">
-          <img
-            src={store.imageUrl}
-            alt={store.name}
-            loading="lazy"
-            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-          />
-
-          {/* Bottom gradient — Swiggy style: dark gradient strip at bottom */}
-          <div
-            className="absolute inset-x-0 bottom-0 h-[52%]"
-            style={{
-              background:
-                "linear-gradient(to top, rgba(27,27,27,0.75) 0%, transparent 100%)",
+      <div className="relative overflow-hidden rounded-[24px] bg-white transition-shadow duration-300 hover:shadow-[0_8px_32px_-8px_rgba(0,0,0,0.18)]">
+        {/* Wishlist Button in Top Right */}
+        <div className="absolute right-3 top-3 z-20">
+          <WishlistButton
+            productId={`store-${store.id}`}
+            productName={store.name}
+            item={{
+              productId: `store-${store.id}`,
+              name: store.name,
+              shopName: store.name,
+              category: catLabel,
+              price: 0,
+              imageUrl: store.imageUrl,
+              sellerId: store.id,
             }}
           />
+        </div>
 
-          {/* ETA — bottom-left, bold white, Swiggy exact */}
-          <div className="absolute bottom-2.5 left-3">
-            <p className="text-[22px] font-extrabold leading-none text-white drop-shadow-lg">
-              {store.etaMin} MINS
-            </p>
-            <p className="text-[12px] font-medium text-white/80 mt-0.5">
-              {store.distanceKm.toFixed(1)} km
-            </p>
+        <Link
+          to="/store/$storeId"
+          params={{ storeId: store.id }}
+          className="block"
+        >
+          {/* ── Image area ── */}
+          <div className="relative aspect-[16/10] w-full overflow-hidden bg-[#f0f0f5]">
+            <img
+              src={store.imageUrl}
+              alt={store.name}
+              loading="lazy"
+              className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+            />
+
+            {/* Bottom gradient — Swiggy style dark gradient */}
+            <div
+              className="absolute inset-x-0 bottom-0 h-[60%]"
+              style={{
+                background:
+                  "linear-gradient(to top, rgba(15,15,20,0.85) 0%, rgba(15,15,20,0.4) 50%, transparent 100%)",
+              }}
+            />
+
+            {/* Bottom Left Bold Overlay Offer Text (Swiggy Exact) */}
+            <div className="absolute bottom-2.5 left-3">
+              <p className="text-[17px] sm:text-[19px] font-black uppercase tracking-tight text-white drop-shadow-md">
+                {offers.overlayTag}
+              </p>
+              <p className="text-[11px] font-semibold text-white/80">
+                {store.etaMin} MINS · {store.distanceKm.toFixed(1)} km
+              </p>
+            </div>
+
+            {/* Closed overlay */}
+            {!isOpen && (
+              <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-black/60 backdrop-blur-[2px]">
+                <p className="text-[15px] font-bold text-white">Currently closed</p>
+                <p className="mt-0.5 text-[12px] text-white/70">Opens tomorrow at 8 AM</p>
+              </div>
+            )}
           </div>
 
-          {/* Closed overlay */}
-          {!isOpen && (
-            <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-black/60 backdrop-blur-[2px]">
-              <p className="text-[15px] font-bold text-white">Currently closed</p>
-              <p className="mt-0.5 text-[12px] text-white/70">Opens tomorrow at 8 AM</p>
+          {/* ── Card body ── */}
+          <div className="px-3.5 pt-3 pb-3.5">
+            {/* Name + Rating row — Swiggy style */}
+            <div className="flex items-start justify-between gap-2">
+              <h3 className="truncate text-[16px] sm:text-[17px] font-extrabold leading-tight text-[#1a1a2e]">
+                {store.name}
+              </h3>
             </div>
-          )}
 
-          {/* Offer ribbon — Swiggy style diagonal */}
-          <div className="absolute left-0 top-3">
-            <div className="rounded-r-lg bg-[#981495] px-2.5 py-1 shadow-md">
-              <p className="text-[12px] font-extrabold uppercase tracking-wide text-white">
-                {offers.primary.length > 22
-                  ? offers.primary.slice(0, 22) + "…"
-                  : offers.primary}
+            {/* Rating + ETA line */}
+            <div className="mt-1 flex items-center gap-1.5 text-[13px] font-bold text-[#282c3f]">
+              <span className="flex items-center gap-0.5 rounded-md bg-[#1a8d3f] px-1.5 py-[2px] text-[12px] font-black text-white">
+                <Star className="h-3 w-3 fill-white text-white" />
+                {store.rating.toFixed(1)}
+              </span>
+              <span>•</span>
+              <span>{store.etaMin}-{store.etaMin + 5} mins</span>
+            </div>
+
+            {/* Subtitle — Cuisine/Category */}
+            <p className="mt-1 truncate text-[13px] text-[#686b78] font-medium">
+              {catLabel} · {store.address}
+            </p>
+
+            {/* Thin divider */}
+            <div className="mt-2.5 mb-2 h-px bg-[#f0f0f5]" />
+
+            {/* Bank offer */}
+            <div className="flex items-center gap-1.5">
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 20 20"
+                fill="none"
+                className="shrink-0"
+              >
+                <rect
+                  x="1"
+                  y="3"
+                  width="18"
+                  height="14"
+                  rx="2"
+                  stroke="#981495"
+                  strokeWidth="1.5"
+                />
+                <path d="M1 8h18" stroke="#981495" strokeWidth="1.5" />
+              </svg>
+              <p className="truncate text-[12px] font-semibold text-[#686b78]">
+                {offers.bank}
               </p>
             </div>
           </div>
-        </div>
-
-        {/* ── Card body ── */}
-        <div className="px-3.5 pt-3 pb-3.5">
-          {/* Name + Rating row — exactly like Swiggy */}
-          <div className="flex items-start justify-between gap-2">
-            <h3 className="truncate text-[17px] font-bold leading-tight text-[#1a1a2e]">
-              {store.name}
-            </h3>
-            <span className="flex shrink-0 items-center gap-0.5 rounded-lg bg-[#1a8d3f] px-1.5 py-[3px] text-[13px] font-bold text-white">
-              {store.rating.toFixed(1)}
-              <Star
-                className="h-[11px] w-[11px] fill-white text-white"
-                strokeWidth={0}
-              />
-            </span>
-          </div>
-
-          {/* Subtitle — Swiggy shows cuisine · area */}
-          <p className="mt-1 truncate text-[14px] text-[#686b78]">
-            {catLabel} · {store.address}
-          </p>
-
-          {/* Thin divider */}
-          <div className="mt-2.5 mb-2 h-px bg-[#f0f0f5]" />
-
-          {/* Bank offer */}
-          <div className="flex items-center gap-1.5">
-            <svg
-              width="15"
-              height="15"
-              viewBox="0 0 20 20"
-              fill="none"
-              className="shrink-0"
-            >
-              <rect
-                x="1"
-                y="3"
-                width="18"
-                height="14"
-                rx="2"
-                stroke="#981495"
-                strokeWidth="1.5"
-              />
-              <path d="M1 8h18" stroke="#981495" strokeWidth="1.5" />
-            </svg>
-            <p className="truncate text-[13px] font-medium text-[#686b78]">
-              {offers.bank}
-            </p>
-          </div>
-        </div>
-      </Link>
+        </Link>
+      </div>
     </m.div>
   );
 }
@@ -174,6 +190,7 @@ export function SwiggyShopRow({
   const scrollRef = useRef<HTMLDivElement>(null);
   const [canLeft, setCanLeft] = useState(false);
   const [canRight, setCanRight] = useState(true);
+  const [activeFilterTab, setActiveFilterTab] = useState<string>("all");
 
   const realIds = stores
     .map((s) => s.id)
@@ -194,14 +211,69 @@ export function SwiggyShopRow({
     setTimeout(updateArrows, 350);
   };
 
+  const filteredStores = stores.filter((s) => {
+    if (activeFilterTab === "min100") return true;
+    if (activeFilterTab === "fast") return s.etaMin <= 25;
+    if (activeFilterTab === "ratings") return s.rating >= 4.3;
+    return true;
+  });
+
   if (!stores.length) return null;
 
   return (
     <section className="mt-8 px-5 md:px-8" aria-label={title}>
-      {/* header row */}
+      {/* Filter Tabs Bar (Swiggy exact) */}
+      <div className="mb-4 flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
+        <button
+          type="button"
+          onClick={() => setActiveFilterTab("all")}
+          className={`shrink-0 rounded-full px-4 py-2 text-xs font-black transition-all ${
+            activeFilterTab === "all"
+              ? "bg-[#101c42] text-white shadow-sm"
+              : "bg-white text-slate-700 border border-slate-200 hover:bg-slate-50"
+          }`}
+        >
+          ALL SHOPS
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveFilterTab(activeFilterTab === "min100" ? "all" : "min100")}
+          className={`shrink-0 rounded-full px-4 py-2 text-xs font-black uppercase transition-all ${
+            activeFilterTab === "min100"
+              ? "bg-[#101c42] text-white shadow-sm"
+              : "bg-white text-slate-700 border border-slate-200 hover:bg-slate-50"
+          }`}
+        >
+          MIN Rs. 100 OFF
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveFilterTab(activeFilterTab === "fast" ? "all" : "fast")}
+          className={`shrink-0 rounded-full px-4 py-2 text-xs font-black uppercase transition-all ${
+            activeFilterTab === "fast"
+              ? "bg-[#101c42] text-white shadow-sm"
+              : "bg-white text-slate-700 border border-slate-200 hover:bg-slate-50"
+          }`}
+        >
+          FAST DELIVERY
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveFilterTab(activeFilterTab === "ratings" ? "all" : "ratings")}
+          className={`shrink-0 rounded-full px-4 py-2 text-xs font-black uppercase transition-all ${
+            activeFilterTab === "ratings"
+              ? "bg-[#101c42] text-white shadow-sm"
+              : "bg-white text-slate-700 border border-slate-200 hover:bg-slate-50"
+          }`}
+        >
+          RATINGS 4.0+
+        </button>
+      </div>
+
+      {/* Header row */}
       <div className="mb-4 flex items-center justify-between">
         <div>
-          <h2 className="text-[22px] font-extrabold text-[#1a1a2e] md:text-[24px]">
+          <h2 className="text-[20px] sm:text-[22px] font-black text-[#1a1a2e] md:text-[24px]">
             {title}
           </h2>
           <div className="mt-0.5 h-[3px] w-8 rounded-full bg-[#981495]" />
@@ -226,7 +298,7 @@ export function SwiggyShopRow({
         onScroll={updateArrows}
         className="flex gap-4 overflow-x-auto pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden snap-x snap-mandatory"
       >
-        {stores.map((store, index) => {
+        {filteredStores.map((store, index) => {
           const liveStatus = statusQ.data?.get(store.id);
           return (
             <div key={store.id} className="snap-start">
