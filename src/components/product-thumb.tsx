@@ -3,7 +3,7 @@ import { ShoppingBasket, Pill, PenLine, Croissant } from "lucide-react";
 import type { StoreCategory } from "@/lib/mock-data";
 import { SafeProductImage } from "@/lib/image-utils";
 
-const iconFor: Record<StoreCategory, React.ComponentType<{ className?: string }>> = {
+const iconFor: Partial<Record<StoreCategory, React.ComponentType<{ className?: string }>>> = {
   grocery: ShoppingBasket,
   pharmacy: Pill,
   stationery: PenLine,

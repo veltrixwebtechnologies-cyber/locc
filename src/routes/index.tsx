@@ -9,6 +9,7 @@ import {
   productsByStore,
   APPROVED_STORE,
   type StoreCategory,
+  categoryLabel,
 } from "@/lib/mock-data";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -19,6 +20,7 @@ import type { MerchandisingProduct } from "@/lib/merchandising";
 import { Reveal } from "@/components/motion/presets";
 import { MarketplaceDiscovery } from "@/components/marketplace-discovery";
 import { SwiggyShopRow, SwiggyQuickCategories } from "@/components/swiggy-shop-row";
+import { AirbnbMapView } from "@/components/airbnb-map-view";
 import {
   SwiggyTopDealsStrip,
   SwiggyFeaturedBanner,
@@ -36,60 +38,59 @@ import { scrollToShops } from "@/lib/scroll-utils";
 const getCategoryDisplayName = (catName?: string | null): string => {
   if (!catName) return "";
   const lower = catName.toLowerCase();
-  if (lower === "grocery" || lower === "fresh" || lower === "ready" || lower === "kitchen") return "Daily Grocery";
+  if (categoryLabel[lower as StoreCategory]) return categoryLabel[lower as StoreCategory];
+  if (lower === "flour_mill") return "Flour Mill (மாவு ஆலை)";
+  if (lower === "palamuthir") return "Palamuthir Nilayam";
+  if (lower === "meat_fish") return "Meat, Fish & Chicken";
+  if (lower === "fashion_accessories") return "Chain & Kammal Gifts";
+  if (lower === "boutiques") return "Designer Boutiques";
+  if (lower === "showrooms") return "Showrooms";
+  if (lower === "fast_fashion") return "Fast Fashion (Branded)";
+  if (lower === "individual_fashion") return "Individual Fashion";
+  if (lower === "kitchen_appliances") return "Kitchen Utensils & Appliances";
+  if (lower === "home_decor") return "Home Interior Decor";
+  if (lower === "grocery" || lower === "fresh" || lower === "ready") return "Daily Grocery";
   if (lower === "pharmacy" || lower === "wellness" || lower === "personal" || lower === "care" || lower.includes("pharm")) return "Pharmacy & Care";
   if (lower === "bakery" || lower === "snacks" || lower.includes("bake")) return "Fresh Bakery";
-  if (lower === "stationery" || lower === "electronics" || lower === "tech" || lower === "home" || lower === "fashion") return "Home & Tech";
+  if (lower === "stationery" || lower === "electronics" || lower === "tech") return "Books & Tech";
   return catName.replace(/_/g, " ").replace(/-/g, " ");
 };
 
 const toStoreCategory = (value?: string | null): StoreCategory => {
   const category = (value ?? "").toLowerCase();
+  if (category.includes("palamuthir") || category.includes("fruit") || category.includes("veggie")) return "palamuthir";
+  if (category.includes("flour") || category.includes("mill") || category.includes("maavu") || category.includes("batter")) return "flour_mill";
+  if (category.includes("meat") || category.includes("fish") || category.includes("chicken") || category.includes("mutton")) return "meat_fish";
+  if (category.includes("kammal") || category.includes("chain") || category.includes("accessory") || category.includes("gift") || category.includes("earring")) return "fashion_accessories";
+  if (category.includes("boutique") || category.includes("silk") || category.includes("saree") || category.includes("stitching")) return "boutiques";
+  if (category.includes("showroom") || category.includes("appliance")) return "showrooms";
+  if (category.includes("fast_fashion") || category.includes("brand") || category.includes("zudio")) return "fast_fashion";
+  if (category.includes("individual_fashion") || category.includes("cloth") || category.includes("garment") || category.includes("dhoti")) return "individual_fashion";
+  if (category.includes("kitchen") || category.includes("vessel") || category.includes("cooker") || category.includes("mixer")) return "kitchen_appliances";
+  if (category.includes("decor") || category.includes("interior") || category.includes("curtain") || category.includes("brass")) return "home_decor";
   if (
     category.includes("pharm") ||
     category.includes("pharam") ||
     category.includes("wellness") ||
     category.includes("care") ||
     category.includes("med") ||
-    category.includes("otc") ||
-    category.includes("device") ||
-    category.includes("first aid") ||
-    category.includes("health") ||
-    category.includes("beauty") ||
-    category.includes("personal")
+    category.includes("health")
   ) {
     return "pharmacy";
   }
   if (
     category.includes("station") ||
-    category.includes("staton") ||
     category.includes("book") ||
     category.includes("office") ||
-    category.includes("tech") ||
-    category.includes("pen") ||
-    category.includes("art") ||
-    category.includes("school") ||
-    category.includes("paper") ||
-    category.includes("craft") ||
-    category.includes("electronic") ||
-    category.includes("electr") ||
-    category.includes("fashion") ||
-    category.includes("home")
+    category.includes("paper")
   ) {
     return "stationery";
   }
   if (
     category.includes("bake") ||
-    category.includes("bread") ||
-    category.includes("pastry") ||
     category.includes("cake") ||
-    category.includes("puff") ||
-    category.includes("bun") ||
-    category.includes("croissant") ||
-    category.includes("viennoiserie") ||
-    category.includes("sweet") ||
-    category.includes("snack") ||
-    category.includes("bakes")
+    category.includes("bread") ||
+    category.includes("pastry")
   ) {
     return "bakery";
   }
@@ -388,6 +389,25 @@ function Home() {
           stores={filtered}
           title={activeFilter ? `Shops in ${displayCategoryName}` : "Top shops near you"}
         />
+
+        {/* Interactive Airbnb-Style Map Discovery Section */}
+        <section className="mx-5 my-8 md:mx-8">
+          <div className="mb-4">
+            <div className="flex items-center gap-2">
+              <span className="flex h-3 w-3 relative">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-pink-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-3 w-3 bg-pink-500"></span>
+              </span>
+              <h2 className="text-[20px] sm:text-[22px] font-black text-[#1a1a2e] md:text-[24px]">
+                Explore Shops on Interactive Map
+              </h2>
+            </div>
+            <p className="mt-1 text-xs sm:text-sm text-slate-500 font-medium">
+              Discover local flour mills, palamuthir nilayam, boutiques, showrooms & individual stalls near your location with live pin search.
+            </p>
+          </div>
+          <AirbnbMapView stores={filtered} />
+        </section>
 
         {/* 4. Swiggy ₹99 Store / Budget Meals Section */}
         <Swiggy99StoreSection products={homepageProducts} />

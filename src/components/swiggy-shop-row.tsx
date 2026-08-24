@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { Star, ChevronLeft, ChevronRight, Heart } from "lucide-react";
+import { Star, ChevronLeft, ChevronRight, Heart, MapPin } from "lucide-react";
 import { m, AnimatePresence } from "motion/react";
 import { useRef, useState, useCallback } from "react";
 import type { Store } from "@/lib/mock-data";
@@ -10,25 +10,75 @@ import { scrollToShops } from "@/lib/scroll-utils";
 
 /* ─── offer config per store category ─────────────────────────────────── */
 const CATEGORY_OFFERS: Record<string, { primary: string; bank: string; overlayTag: string }> = {
-  grocery: {
-    primary: "Flat 10% off on pre-booking",
-    bank: "Up to 10% off with bank offers",
-    overlayTag: "ITEMS AT ₹39",
+  flour_mill: {
+    primary: "Freshly ground batter & flour",
+    bank: "Flat ₹20 off on batter",
+    overlayTag: "FRESH BATTER ₹45",
+  },
+  palamuthir: {
+    primary: "Farm fresh fruits & veggies",
+    bank: "Up to 15% off on fruits",
+    overlayTag: "FARM FRESH | 20 MIN",
+  },
+  meat_fish: {
+    primary: "Tender Mutton & Fresh Sea Fish",
+    bank: "Free cleaning & cutting",
+    overlayTag: "100% FRESH MEAT",
+  },
+  fashion_accessories: {
+    primary: "Chains, Kammal & Gift Box Sets",
+    bank: "Buy 1 Get 1 Free on Earrings",
+    overlayTag: "GIFTS & JEWELLERY",
+  },
+  boutiques: {
+    primary: "Handloom Silks & Kurti Sets",
+    bank: "Up to 20% off on stitching",
+    overlayTag: "DESIGNER BOUTIQUE",
+  },
+  showrooms: {
+    primary: "Electronics & Textile Showroom",
+    bank: "No Cost EMI available",
+    overlayTag: "SHOWROOM DEALS",
+  },
+  fast_fashion: {
+    primary: "Branded youth denim & tees",
+    bank: "Flat 30% off on ₹999+",
+    overlayTag: "BRANDED OUTLET",
+  },
+  individual_fashion: {
+    primary: "Cotton shirts & pure dhotis",
+    bank: "Flat ₹100 off on readymades",
+    overlayTag: "LOCAL FASHION",
+  },
+  kitchen_appliances: {
+    primary: "Cookers, Mixers & Utensils",
+    bank: "1 Year free warranty",
+    overlayTag: "VESSELS & APPLIANCES",
+  },
+  home_decor: {
+    primary: "Curtains, Brass Lamps & Decor",
+    bank: "Up to 15% off on decor",
+    overlayTag: "HOME INTERIORS",
   },
   pharmacy: {
     primary: "Free delivery above ₹199",
-    bank: "Up to 5% off with bank offers",
-    overlayTag: "30% OFF UPTO ₹75 | AD",
+    bank: "Up to 10% off with bank offers",
+    overlayTag: "24/7 CHEMIST",
+  },
+  stationery: {
+    primary: "10% off on ₹300+",
+    bank: "Up to 8% off with bank offers",
+    overlayTag: "BOOK STALL",
   },
   bakery: {
     primary: "Buy 2 get 1 free",
     bank: "Up to 8% off with bank offers",
-    overlayTag: "50% OFF | AD",
+    overlayTag: "50% OFF | OVEN FRESH",
   },
-  stationery: {
-    primary: "10% off on ₹300+",
-    bank: "Up to 6% off with bank offers",
-    overlayTag: "FLAT ₹50 OFF",
+  grocery: {
+    primary: "Flat 10% off on pre-booking",
+    bank: "Up to 10% off with bank offers",
+    overlayTag: "ITEMS AT ₹39",
   },
 };
 
@@ -104,7 +154,7 @@ function SwiggyShopCard({
 
             {/* Bottom Left Bold Overlay Offer Text (Swiggy Exact) */}
             <div className="absolute bottom-2.5 left-3">
-              <p className="text-[17px] sm:text-[19px] font-black uppercase tracking-tight text-white drop-shadow-md">
+              <p className="text-[16px] sm:text-[18px] font-black uppercase tracking-tight text-white drop-shadow-md">
                 {offers.overlayTag}
               </p>
               <p className="text-[11px] font-semibold text-white/80">
@@ -212,10 +262,11 @@ export function SwiggyShopRow({
   };
 
   const filteredStores = stores.filter((s) => {
+    if (activeFilterTab === "all") return true;
     if (activeFilterTab === "min100") return true;
     if (activeFilterTab === "fast") return s.etaMin <= 25;
-    if (activeFilterTab === "ratings") return s.rating >= 4.3;
-    return true;
+    if (activeFilterTab === "ratings") return s.rating >= 4.7;
+    return s.category === activeFilterTab;
   });
 
   if (!stores.length) return null;
@@ -233,40 +284,84 @@ export function SwiggyShopRow({
               : "bg-white text-slate-700 border border-slate-200 hover:bg-slate-50"
           }`}
         >
-          ALL SHOPS
+          ALL SHOPS ({stores.length})
         </button>
         <button
           type="button"
-          onClick={() => setActiveFilterTab(activeFilterTab === "min100" ? "all" : "min100")}
+          onClick={() => setActiveFilterTab(activeFilterTab === "palamuthir" ? "all" : "palamuthir")}
           className={`shrink-0 rounded-full px-4 py-2 text-xs font-black uppercase transition-all ${
-            activeFilterTab === "min100"
-              ? "bg-[#101c42] text-white shadow-sm"
+            activeFilterTab === "palamuthir"
+              ? "bg-[#981495] text-white shadow-sm"
               : "bg-white text-slate-700 border border-slate-200 hover:bg-slate-50"
           }`}
         >
-          MIN Rs. 100 OFF
+          🍎 PALAMUTHIR NILAYAM
         </button>
         <button
           type="button"
-          onClick={() => setActiveFilterTab(activeFilterTab === "fast" ? "all" : "fast")}
+          onClick={() => setActiveFilterTab(activeFilterTab === "flour_mill" ? "all" : "flour_mill")}
           className={`shrink-0 rounded-full px-4 py-2 text-xs font-black uppercase transition-all ${
-            activeFilterTab === "fast"
-              ? "bg-[#101c42] text-white shadow-sm"
+            activeFilterTab === "flour_mill"
+              ? "bg-[#981495] text-white shadow-sm"
               : "bg-white text-slate-700 border border-slate-200 hover:bg-slate-50"
           }`}
         >
-          FAST DELIVERY
+          🌾 FLOUR MILL (மாவு ஆலை)
         </button>
         <button
           type="button"
-          onClick={() => setActiveFilterTab(activeFilterTab === "ratings" ? "all" : "ratings")}
+          onClick={() => setActiveFilterTab(activeFilterTab === "meat_fish" ? "all" : "meat_fish")}
           className={`shrink-0 rounded-full px-4 py-2 text-xs font-black uppercase transition-all ${
-            activeFilterTab === "ratings"
-              ? "bg-[#101c42] text-white shadow-sm"
+            activeFilterTab === "meat_fish"
+              ? "bg-[#981495] text-white shadow-sm"
               : "bg-white text-slate-700 border border-slate-200 hover:bg-slate-50"
           }`}
         >
-          RATINGS 4.0+
+          🍗 MEAT, FISH & CHICKEN
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveFilterTab(activeFilterTab === "fashion_accessories" ? "all" : "fashion_accessories")}
+          className={`shrink-0 rounded-full px-4 py-2 text-xs font-black uppercase transition-all ${
+            activeFilterTab === "fashion_accessories"
+              ? "bg-[#981495] text-white shadow-sm"
+              : "bg-white text-slate-700 border border-slate-200 hover:bg-slate-50"
+          }`}
+        >
+          💎 CHAIN & KAMMAL GIFTS
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveFilterTab(activeFilterTab === "boutiques" ? "all" : "boutiques")}
+          className={`shrink-0 rounded-full px-4 py-2 text-xs font-black uppercase transition-all ${
+            activeFilterTab === "boutiques"
+              ? "bg-[#981495] text-white shadow-sm"
+              : "bg-white text-slate-700 border border-slate-200 hover:bg-slate-50"
+          }`}
+        >
+          👗 BOUTIQUES
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveFilterTab(activeFilterTab === "showrooms" ? "all" : "showrooms")}
+          className={`shrink-0 rounded-full px-4 py-2 text-xs font-black uppercase transition-all ${
+            activeFilterTab === "showrooms"
+              ? "bg-[#981495] text-white shadow-sm"
+              : "bg-white text-slate-700 border border-slate-200 hover:bg-slate-50"
+          }`}
+        >
+          📺 SHOWROOMS
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveFilterTab(activeFilterTab === "kitchen_appliances" ? "all" : "kitchen_appliances")}
+          className={`shrink-0 rounded-full px-4 py-2 text-xs font-black uppercase transition-all ${
+            activeFilterTab === "kitchen_appliances"
+              ? "bg-[#981495] text-white shadow-sm"
+              : "bg-white text-slate-700 border border-slate-200 hover:bg-slate-50"
+          }`}
+        >
+          🍳 KITCHEN APPLIANCES
         </button>
       </div>
 
@@ -348,82 +443,82 @@ function NavArrow({
 /* ─── Swiggy category strip — 2-row scrollable circles ─────────────────── */
 const SHOP_CATEGORIES = [
   {
-    id: "fresh",
-    label: "Fresh Produce",
+    id: "palamuthir",
+    label: "Palamuthir",
     imageUrl:
-      "https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=200&q=80",
+      "https://images.unsplash.com/photo-1610832958506-aa56368176cf?auto=format&fit=crop&w=200&q=80",
+  },
+  {
+    id: "flour_mill",
+    label: "Flour Mill (மாவு ஆலை)",
+    imageUrl:
+      "https://images.unsplash.com/photo-1586201375761-83865001e31c?auto=format&fit=crop&w=200&q=80",
+  },
+  {
+    id: "meat_fish",
+    label: "Meat & Fish",
+    imageUrl:
+      "https://images.unsplash.com/photo-1607623814075-e51df1bdc82f?auto=format&fit=crop&w=200&q=80",
+  },
+  {
+    id: "fashion_accessories",
+    label: "Chain & Kammal",
+    imageUrl:
+      "https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?auto=format&fit=crop&w=200&q=80",
+  },
+  {
+    id: "boutiques",
+    label: "Boutiques",
+    imageUrl:
+      "https://images.unsplash.com/photo-1583391733956-6c78276477e2?auto=format&fit=crop&w=200&q=80",
+  },
+  {
+    id: "showrooms",
+    label: "Showrooms",
+    imageUrl:
+      "https://images.unsplash.com/photo-1555529669-e69e7aa0ba9a?auto=format&fit=crop&w=200&q=80",
+  },
+  {
+    id: "fast_fashion",
+    label: "Fast Fashion",
+    imageUrl:
+      "https://images.unsplash.com/photo-1489987707025-afc232f7ea0f?auto=format&fit=crop&w=200&q=80",
+  },
+  {
+    id: "individual_fashion",
+    label: "Local Fashion",
+    imageUrl:
+      "https://images.unsplash.com/photo-1441986300917-64674bd600d8?auto=format&fit=crop&w=200&q=80",
+  },
+  {
+    id: "kitchen_appliances",
+    label: "Kitchen Utensils",
+    imageUrl:
+      "https://images.unsplash.com/photo-1584990347449-716c15a3a17a?auto=format&fit=crop&w=200&q=80",
+  },
+  {
+    id: "home_decor",
+    label: "Home Decor",
+    imageUrl:
+      "https://images.unsplash.com/photo-1513519245088-0e12902e5a38?auto=format&fit=crop&w=200&q=80",
+  },
+  {
+    id: "pharmacy",
+    label: "Pharmacy",
+    imageUrl:
+      "https://images.unsplash.com/photo-1587854692152-cbe660dbde88?auto=format&fit=crop&w=200&q=80",
+  },
+  {
+    id: "stationery",
+    label: "Book Stall",
+    imageUrl:
+      "https://images.unsplash.com/photo-1519682337058-a94d519337bc?auto=format&fit=crop&w=200&q=80",
   },
   {
     id: "bakery",
     label: "Bakery",
     imageUrl:
       "https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=200&q=80",
-  },
-  {
-    id: "pharmacy",
-    label: "Pharmacy",
-    imageUrl:
-      "https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?auto=format&fit=crop&w=200&q=80",
-  },
-  {
-    id: "stationery",
-    label: "Stationery",
-    imageUrl:
-      "https://images.unsplash.com/photo-1519682337058-a94d519337bc?auto=format&fit=crop&w=200&q=80",
-  },
-  {
-    id: "snacks",
-    label: "Snacks",
-    imageUrl:
-      "https://images.unsplash.com/photo-1621939514649-280e2ee25f60?auto=format&fit=crop&w=200&q=80",
-  },
-  {
-    id: "personal",
-    label: "Personal Care",
-    imageUrl:
-      "https://images.unsplash.com/photo-1556228720-195a672e8a03?auto=format&fit=crop&w=200&q=80",
-  },
-  {
-    id: "home",
-    label: "Home Essentials",
-    imageUrl:
-      "https://images.unsplash.com/photo-1583947215259-38e31be8751f?auto=format&fit=crop&w=200&q=80",
-  },
-  {
-    id: "electronics",
-    label: "Electronics",
-    imageUrl:
-      "https://images.unsplash.com/photo-1498049794561-7780e7231661?auto=format&fit=crop&w=200&q=80",
-  },
-  {
-    id: "fashion",
-    label: "Fashion",
-    imageUrl:
-      "https://images.unsplash.com/photo-1441986300917-64674bd600d8?auto=format&fit=crop&w=200&q=80",
-  },
-  {
-    id: "kitchen",
-    label: "Kitchen",
-    imageUrl:
-      "https://images.unsplash.com/photo-1556911220-e15b29be8c8f?auto=format&fit=crop&w=200&q=80",
-  },
-  {
-    id: "accessories",
-    label: "Accessories",
-    imageUrl:
-      "https://images.unsplash.com/photo-1508296695146-257a814070b4?auto=format&fit=crop&w=200&q=80",
-  },
-  {
-    id: "footwear",
-    label: "Footwear",
-    imageUrl:
-      "https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=200&q=80",
-  },
-  {
-    id: "ready",
-    label: "Ready to Cook",
-    imageUrl:
-      "https://images.unsplash.com/photo-1585032226651-759b368d7246?auto=format&fit=crop&w=200&q=80",
   },
   {
     id: "grocery",
