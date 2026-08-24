@@ -354,6 +354,28 @@ export function SwiggyShopRow({
         </button>
         <button
           type="button"
+          onClick={() => setActiveFilterTab(activeFilterTab === "fast_fashion" ? "all" : "fast_fashion")}
+          className={`shrink-0 rounded-full px-4 py-2 text-xs font-black uppercase transition-all ${
+            activeFilterTab === "fast_fashion"
+              ? "bg-[#981495] text-white shadow-sm"
+              : "bg-white text-slate-700 border border-slate-200 hover:bg-slate-50"
+          }`}
+        >
+          🛍️ FAST FASHION (BRANDED)
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveFilterTab(activeFilterTab === "individual_fashion" ? "all" : "individual_fashion")}
+          className={`shrink-0 rounded-full px-4 py-2 text-xs font-black uppercase transition-all ${
+            activeFilterTab === "individual_fashion"
+              ? "bg-[#981495] text-white shadow-sm"
+              : "bg-white text-slate-700 border border-slate-200 hover:bg-slate-50"
+          }`}
+        >
+          👔 INDIVIDUAL FASHION SHOPS
+        </button>
+        <button
+          type="button"
           onClick={() => setActiveFilterTab(activeFilterTab === "kitchen_appliances" ? "all" : "kitchen_appliances")}
           className={`shrink-0 rounded-full px-4 py-2 text-xs font-black uppercase transition-all ${
             activeFilterTab === "kitchen_appliances"
@@ -362,6 +384,39 @@ export function SwiggyShopRow({
           }`}
         >
           🍳 KITCHEN APPLIANCES
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveFilterTab(activeFilterTab === "home_decor" ? "all" : "home_decor")}
+          className={`shrink-0 rounded-full px-4 py-2 text-xs font-black uppercase transition-all ${
+            activeFilterTab === "home_decor"
+              ? "bg-[#981495] text-white shadow-sm"
+              : "bg-white text-slate-700 border border-slate-200 hover:bg-slate-50"
+          }`}
+        >
+          🏺 INTERIOR & HOME DECOR
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveFilterTab(activeFilterTab === "pharmacy" ? "all" : "pharmacy")}
+          className={`shrink-0 rounded-full px-4 py-2 text-xs font-black uppercase transition-all ${
+            activeFilterTab === "pharmacy"
+              ? "bg-[#981495] text-white shadow-sm"
+              : "bg-white text-slate-700 border border-slate-200 hover:bg-slate-50"
+          }`}
+        >
+          💊 PHARMACY INDIVIDUAL
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveFilterTab(activeFilterTab === "stationery" ? "all" : "stationery")}
+          className={`shrink-0 rounded-full px-4 py-2 text-xs font-black uppercase transition-all ${
+            activeFilterTab === "stationery"
+              ? "bg-[#981495] text-white shadow-sm"
+              : "bg-white text-slate-700 border border-slate-200 hover:bg-slate-50"
+          }`}
+        >
+          📚 BOOKS & STATIONERY
         </button>
       </div>
 
