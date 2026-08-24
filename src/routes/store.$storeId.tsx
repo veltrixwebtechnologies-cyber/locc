@@ -282,6 +282,7 @@ function StorePage() {
                   <ul className="mt-2 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
                     {items.map((p) => {
                       const q = qtyOf(p.id);
+                      const mrp = Math.round(p.price * 1.25);
                       return (
                         <m.li
                           key={p.id}
@@ -289,53 +290,64 @@ function StorePage() {
                           initial={{ opacity: 0, y: 10 }}
                           whileInView={{ opacity: 1, y: 0 }}
                           viewport={{ once: true, amount: 0.15 }}
-                          whileHover={{ y: -2 }}
-                          className="flex min-h-[260px] flex-col rounded-xl border border-[#ead9a8] bg-card p-3 transition-all hover:-translate-y-0.5 hover:border-[#d9bd70] hover:shadow-md"
+                          whileHover={{ y: -4, scale: 1.01 }}
+                          whileTap={{ scale: 0.98 }}
+                          className="group relative flex min-w-0 flex-col overflow-hidden rounded-2xl border border-[#ead9a8] bg-white p-3.5 shadow-xs transition-all duration-300 hover:border-[#d9bd70] hover:shadow-md"
                         >
-                          <div className="relative flex h-32 items-center justify-center rounded-lg bg-[#f8f8f8] p-2">
-                            <ProductThumb
-                              src={p.imageUrl}
-                              alt={p.name}
-                              category={store.category}
-                              size="lg"
+                          <div className="absolute right-2.5 top-2.5 z-10">
+                            <WishlistButton
+                              productId={p.id}
+                              productName={p.name}
+                              item={{
+                                productId: p.id,
+                                name: p.name,
+                                shopName: store.name,
+                                category: p.category,
+                                price: p.price,
+                                imageUrl: p.imageUrl,
+                                sellerId: p.storeId,
+                              }}
                             />
-                            <span className="absolute bottom-2 left-2 rounded bg-background/95 px-1.5 py-1 text-[9px] font-semibold text-foreground">
-                              {store.etaMin} mins
-                            </span>
-                            <div className="absolute right-2 top-2">
-                              <WishlistButton
-                                productId={p.id}
-                                productName={p.name}
-                                item={{
-                                  productId: p.id,
-                                  name: p.name,
-                                  shopName: store.name,
-                                  category: p.category,
-                                  price: p.price,
-                                  imageUrl: p.imageUrl,
-                                  sellerId: p.storeId,
-                                }}
+                          </div>
+
+                          <Link
+                            to="/product/$productId"
+                            params={{ productId: p.id }}
+                            onClick={() => {
+                              void recordProductEvent(p.id, "view");
+                              void recordRecentProductView(p.id);
+                            }}
+                            className="flex flex-col h-full"
+                          >
+                            <div className="aspect-[4/3] w-full overflow-hidden rounded-xl bg-slate-50 p-2 flex items-center justify-center border border-[#ead9a8]/40 relative">
+                              <ProductThumb
+                                src={p.imageUrl}
+                                alt={p.name}
+                                category={store.category}
+                                size="lg"
                               />
                             </div>
-                          </div>
-                          <div className="mt-3 min-w-0 flex-1">
-                            <Link
-                              to="/product/$productId"
-                              params={{ productId: p.id }}
-                              onClick={() => {
-                                void recordProductEvent(p.id, "view");
-                                void recordRecentProductView(p.id);
-                              }}
-                              className="line-clamp-2 text-xs font-semibold leading-4 hover:text-primary hover:underline"
-                            >
-                              {p.name}
-                            </Link>
-                            <p className="mt-1 truncate text-[11px] text-muted-foreground">
-                              {p.unit || p.category}
-                            </p>
-                          </div>
-                          <div className="mt-3 flex items-center justify-between gap-2">
-                            <span className="font-mono text-sm font-bold">₹{p.price}</span>
+                            <div className="mt-3 flex flex-col justify-between flex-1">
+                              <div>
+                                <h3 className="line-clamp-1 text-sm font-bold text-slate-800 group-hover:text-purple-700 transition-colors">
+                                  {p.name}
+                                </h3>
+                                <div className="mt-1 flex items-baseline gap-2">
+                                  <span className="text-sm font-black text-slate-900">
+                                    ₹{p.price}
+                                  </span>
+                                  <span className="text-[11px] font-medium text-slate-400 line-through">
+                                    ₹{mrp}
+                                  </span>
+                                </div>
+                                <p className="mt-0.5 text-xs font-black text-purple-700">
+                                  20% OFF
+                                </p>
+                              </div>
+                            </div>
+                          </Link>
+
+                          <div className="mt-3 pt-2 border-t border-slate-100">
                             <QtyStepper
                               qty={q}
                               max={p.stock}
@@ -345,6 +357,7 @@ function StorePage() {
                                 cartStore.add(p.storeId, store.name, p);
                               }}
                               onChange={(n) => cartStore.setQty(p.id, n)}
+                              addClassName="w-full rounded-xl bg-purple-50 py-1.5 text-xs font-bold text-purple-700 border border-purple-200/60 transition hover:bg-purple-600 hover:text-white"
                             />
                           </div>
                         </m.li>

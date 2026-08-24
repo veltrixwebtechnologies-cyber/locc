@@ -2,6 +2,7 @@ import { Link } from "@tanstack/react-router";
 import { useState, type ReactNode } from "react";
 import { ChevronDown, ChevronRight, Menu, PackageSearch, X, Tag } from "lucide-react";
 import { deliveryCategories } from "@/lib/mock-data";
+import { scrollToShops } from "@/lib/scroll-utils";
 
 type CategoryPromo = {
   headline: string;
@@ -292,6 +293,11 @@ export function CategoryMegaMenu() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [activeGroup, setActiveGroup] = useState<string | null>(null);
 
+  const handleCategoryClick = () => {
+    setActiveGroup(null);
+    scrollToShops();
+  };
+
   return (
     <>
       <div className="relative z-40 w-full border-b border-primary-foreground/10 bg-primary text-primary-foreground shadow-sm">
@@ -327,7 +333,10 @@ export function CategoryMegaMenu() {
                   <Link
                     to="/"
                     search={{ category: group.categoryId, q: undefined }}
-                    onClick={() => setActiveGroup((prev) => (prev === group.id ? null : group.id))}
+                    onClick={() => {
+                      setActiveGroup((prev) => (prev === group.id ? null : group.id));
+                      handleCategoryClick();
+                    }}
                     className={`inline-flex items-center gap-1 rounded-md px-2.5 py-1.5 text-xs font-medium whitespace-nowrap transition-colors ${
                       isOpen
                         ? "bg-primary-foreground/15 text-white font-bold"
@@ -390,7 +399,7 @@ export function CategoryMegaMenu() {
                               <Link
                                 to="/"
                                 search={{ category: group.categoryId, q: undefined }}
-                                onClick={() => setActiveGroup(null)}
+                                onClick={handleCategoryClick}
                                 className="flex w-full items-center justify-center rounded-full bg-[#ffd814] hover:bg-[#f7ca00] px-4 py-2 text-center text-xs font-extrabold text-slate-900 shadow-sm transition-all hover:shadow active:scale-[0.99]"
                               >
                                 {promo.ctaText}
@@ -411,7 +420,7 @@ export function CategoryMegaMenu() {
                                 <Link
                                   to="/"
                                   search={{ category: group.categoryId, q: undefined }}
-                                  onClick={() => setActiveGroup(null)}
+                                  onClick={handleCategoryClick}
                                   className="text-xs font-bold text-teal-700 hover:underline"
                                 >
                                   View all &rarr;
@@ -424,7 +433,7 @@ export function CategoryMegaMenu() {
                                     <Link
                                       to="/"
                                       search={{ category: group.categoryId, q: undefined }}
-                                      onClick={() => setActiveGroup(null)}
+                                      onClick={handleCategoryClick}
                                       className="text-xs font-bold text-slate-900 hover:text-teal-700 hover:underline"
                                     >
                                       {column.heading}
@@ -435,7 +444,7 @@ export function CategoryMegaMenu() {
                                           <Link
                                             to="/"
                                             search={{ category: group.categoryId, q: item }}
-                                            onClick={() => setActiveGroup(null)}
+                                            onClick={handleCategoryClick}
                                             className="flex items-center gap-1 text-xs text-slate-600 hover:text-teal-700 hover:underline"
                                           >
                                             <ChevronRight className="h-3 w-3 shrink-0 text-slate-400" />

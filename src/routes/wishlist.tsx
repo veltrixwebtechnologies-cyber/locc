@@ -13,6 +13,7 @@ import {
   type MerchandisingProduct,
 } from "@/lib/merchandising";
 import { APPROVED_STORE } from "@/lib/mock-data";
+import { SafeProductImage } from "@/lib/image-utils";
 
 export const Route = createFileRoute("/wishlist")({
   component: WishlistPage,
@@ -30,7 +31,9 @@ function WishlistPage() {
         <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
           Saved products
         </p>
-        <h1 className="mt-1 font-display text-3xl">Wishlist</h1>
+        <h1 className="mt-1 font-display text-3xl flex items-baseline gap-2">
+          Wishlist {products.data?.length ? <span className="text-lg font-sans font-normal text-muted-foreground">({products.data.length} {products.data.length === 1 ? "item" : "items"})</span> : null}
+        </h1>
       </div>
 
       {!signedIn ? (
@@ -105,9 +108,13 @@ function WishlistRow({ product }: { product: MerchandisingProduct }) {
   return (
     <li className="flex flex-col gap-3 rounded-2xl border border-[#ead9a8] bg-card p-3 shadow-sm transition-shadow hover:shadow-md sm:flex-row sm:items-center">
       <div className="h-20 w-20 shrink-0 overflow-hidden rounded-lg bg-muted">
-        {imageUrl ? (
-          <img src={imageUrl} alt={product.name} className="h-full w-full object-cover" />
-        ) : null}
+        <SafeProductImage
+          src={imageUrl}
+          productName={product.name}
+          category={product.category}
+          alt={product.name}
+          className="h-full w-full object-cover"
+        />
       </div>
       <div className="min-w-0 flex-1">
         <Link

@@ -5,6 +5,7 @@ import { useRef, useState, useCallback } from "react";
 import type { Store } from "@/lib/mock-data";
 import { categoryLabel } from "@/lib/mock-data";
 import { useShopsStatus } from "@/lib/shop-availability";
+import { scrollToShops } from "@/lib/scroll-utils";
 
 /* ─── offer config per store category ─────────────────────────────────── */
 const CATEGORY_OFFERS: Record<string, { primary: string; bank: string }> = {
@@ -449,6 +450,7 @@ function CategoryCircle({
       <Link
         to="/"
         search={{ category: cat.id, q: undefined }}
+        onClick={scrollToShops}
         className="group flex flex-col items-center gap-1.5"
       >
         <div className="h-[90px] w-[90px] overflow-hidden rounded-full bg-[#f0f0f5] transition-transform duration-200 group-hover:scale-105 md:h-[100px] md:w-[100px]">

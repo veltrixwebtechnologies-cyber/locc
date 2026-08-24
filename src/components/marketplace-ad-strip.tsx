@@ -11,6 +11,7 @@ type Campaign = {
   alt: string;
   className: string;
   category?: string;
+  q?: string;
 };
 
 const CAMPAIGNS: Campaign[] = [
@@ -29,6 +30,7 @@ const CAMPAIGNS: Campaign[] = [
     alt: "Dog, cat and pet care supplies",
     className: "bg-[#ffc52e] text-[#2d2b23]",
     category: "grocery",
+    q: "pet",
   },
   {
     title: "No time for a diaper run?",
@@ -37,6 +39,7 @@ const CAMPAIGNS: Campaign[] = [
     alt: "Parent caring for a baby with baby care products",
     className: "bg-[#dbe8f2] text-[#263442]",
     category: "grocery",
+    q: "baby",
   },
 ];
 
@@ -119,7 +122,12 @@ export function MarketplaceAdStrip() {
           </p>
           <Link
             to="/"
-            search={{ category: featured.category, q: undefined }}
+            search={{ category: featured.category, q: featured.q }}
+            onClick={() => {
+              setTimeout(() => {
+                document.getElementById("shops-section")?.scrollIntoView({ behavior: "smooth", block: "start" });
+              }, 50);
+            }}
             className="mt-6 inline-flex rounded-lg bg-[#a96b00] px-4 py-2.5 text-sm font-bold text-white shadow-sm transition-transform hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
           >
             Explore offer
@@ -179,7 +187,12 @@ export function MarketplaceAdStrip() {
           <Link
             key={campaign.title}
             to="/"
-            search={{ category: campaign.category, q: undefined }}
+            search={{ category: campaign.category, q: campaign.q }}
+            onClick={() => {
+              setTimeout(() => {
+                document.getElementById("shops-section")?.scrollIntoView({ behavior: "smooth", block: "start" });
+              }, 50);
+            }}
             aria-label={`Explore ${campaign.title}`}
             className={cn(
               "group overflow-hidden rounded-2xl border border-black/5 bg-card shadow-soft transition-shadow hover:shadow-elegant focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",

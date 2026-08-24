@@ -4,6 +4,7 @@ import { deliveryCategories } from "@/lib/mock-data";
 import { resolveProductImageUrl, type MerchandisingProduct } from "@/lib/merchandising";
 import { useEffect, useState } from "react";
 import { m, useReducedMotion } from "motion/react";
+import { SafeProductImage } from "@/lib/image-utils";
 
 const browseGroups = [
   { label: "Fresh & Daily Needs", category: "fresh" },
@@ -31,25 +32,7 @@ export function MarketplaceDiscovery({ products }: { products: MerchandisingProd
   return (
     <section className="mt-6 px-5 md:px-8">
       <div className="overflow-hidden rounded-2xl border border-[#ead9a8] bg-card shadow-sm">
-        <div className="grid lg:grid-cols-[220px_1fr_250px]">
-          <aside className="border-b border-border/70 bg-muted/40 p-4 lg:border-b-0 lg:border-r">
-            <div className="mb-3 flex items-center gap-2 text-sm font-bold text-foreground">
-              <PackageSearch className="h-4 w-4 text-primary" /> Browse local categories
-            </div>
-            <nav className="space-y-1">
-              {browseGroups.map((group) => (
-                <Link
-                  key={group.category}
-                  to="/"
-                  search={{ category: group.category, q: undefined }}
-                  className="flex items-center justify-between rounded-lg px-2.5 py-2 text-xs font-medium text-foreground/80 transition-colors hover:bg-background hover:text-primary"
-                >
-                  {group.label}
-                  <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
-                </Link>
-              ))}
-            </nav>
-          </aside>
+        <div className="grid lg:grid-cols-[1fr_250px]">
 
           <div className="p-4 md:p-5">
             <div className="mb-3 flex items-center justify-between">
@@ -174,30 +157,34 @@ function DiscoveryProductCard({
     };
   }, [product?.image_url]);
 
+  const sellingPrice = product ? Number(product.discount_price ?? product.selling_price ?? 0) : null;
+
   return (
     <Link
       {...linkProps}
-      className={
-        linkProps.className ??
-        "group overflow-hidden rounded-xl border border-[#ead9a8] bg-background transition-all hover:-translate-y-0.5 hover:border-[#d9bd70] hover:shadow-md"
-      }
+      className="group flex flex-col overflow-hidden rounded-2xl border border-[#ead9a8] bg-white p-3.5 shadow-xs transition duration-300 hover:border-[#d9bd70] hover:shadow-md"
     >
-      <div className="flex aspect-[1.35] items-center justify-center bg-[#f7f7f7] p-3">
-        {imageUrl ? (
-          <img
-            src={imageUrl}
-            alt={product?.name ?? item.title}
-            loading="lazy"
-            className="h-full w-full object-contain mix-blend-multiply transition-transform group-hover:scale-105"
-          />
-        ) : (
-          <PackageSearch className="h-8 w-8 text-primary/50" />
-        )}
+      <div className="aspect-[4/3] w-full overflow-hidden rounded-xl bg-slate-50 p-2 flex items-center justify-center border border-[#ead9a8]/40">
+        <SafeProductImage
+          src={imageUrl}
+          productName={product?.name ?? item.title}
+          category={product?.category}
+          alt={product?.name ?? item.title}
+          loading="lazy"
+          className="h-full w-full object-contain transition-transform duration-300 group-hover:scale-105"
+        />
       </div>
-      <div className="p-2.5">
-        <p className="text-[11px] font-semibold text-foreground">{product?.name ?? item.title}</p>
-        <p className="mt-1 text-[10px] text-muted-foreground">
-          Shop now <span className="text-primary">›</span>
+      <div className="mt-3 flex flex-col justify-between flex-1">
+        <h3 className="line-clamp-1 text-sm font-bold text-slate-800 group-hover:text-purple-700 transition-colors">
+          {product?.name ?? item.title}
+        </h3>
+        {sellingPrice !== null && (
+          <div className="mt-1 flex items-baseline gap-2">
+            <span className="text-sm font-black text-slate-900">₹{sellingPrice}</span>
+          </div>
+        )}
+        <p className="mt-0.5 text-xs font-black text-purple-700">
+          Best Pick
         </p>
       </div>
     </Link>

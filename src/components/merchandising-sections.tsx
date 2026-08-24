@@ -24,6 +24,7 @@ import { Reveal, SkeletonCard, cardMotion, spring } from "@/components/motion/pr
 import { cartStore, useCart } from "@/lib/cart-store";
 import { QtyStepper } from "@/components/qty-stepper";
 import { flyProductToCart } from "@/lib/fly-to-cart";
+import { SafeProductImage } from "@/lib/image-utils";
 
 type ProductSectionProps = {
   title: string;
@@ -41,6 +42,7 @@ export function ProductCard({
   const [imageUrl, setImageUrl] = useState(product.image_url ?? "");
   const cart = useCart();
   const quantity = cart.lines.find((line) => line.productId === product.id)?.qty ?? 0;
+
   useEffect(() => {
     let mounted = true;
     if (product.image_url && !/^(https?:|data:)/i.test(product.image_url)) {
@@ -52,81 +54,26 @@ export function ProductCard({
       mounted = false;
     };
   }, [product.image_url]);
-  const discount =
-    product.discount_price && product.mrp > product.discount_price
-      ? Math.round(((product.mrp - product.discount_price) / product.mrp) * 100)
-      : 0;
+
+  const sellingPrice = Number(product.discount_price ?? product.selling_price ?? 0);
+  const mrp = Number(product.mrp ?? (sellingPrice ? Math.round(sellingPrice * 1.25) : 0));
+  const discountPercent =
+    mrp > sellingPrice ? Math.round(((mrp - sellingPrice) / mrp) * 100) : 0;
+  const dealTag = `${discountPercent}% OFF`;
+
   return (
     <m.div
       variants={cardMotion}
-      whileHover={{ y: -4, scale: 1.012 }}
-      whileTap={{ scale: 0.965 }}
+      whileHover={{ y: -4, scale: 1.01 }}
+      whileTap={{ scale: 0.98 }}
       transition={spring}
       data-product-id={product.id}
-      className={`group relative flex min-w-0 flex-col overflow-hidden border border-[#ead9a8] bg-card transition-shadow duration-300 hover:border-[#d9bd70] hover:shadow-lg ${compact ? "rounded-md" : "rounded-lg"}`}
+      className={`group relative flex min-w-0 flex-col overflow-hidden rounded-2xl border border-[#ead9a8] bg-white shadow-xs transition-all duration-300 hover:border-[#d9bd70] hover:shadow-md ${
+        compact ? "p-2.5" : "p-3.5"
+      }`}
     >
-      <Link
-        to="/product/$productId"
-        params={{ productId: product.id }}
-        className="block"
-        onClick={() => {
-          void recordProductEvent(product.id, "view");
-          void recordRecentProductView(product.id);
-        }}
-      >
-        <div className={`relative bg-[#f7f7f7] ${compact ? "aspect-[1.2] p-2" : "aspect-[1.08] p-3"}`}>
-          {imageUrl ? (
-            <m.div layoutId={`product-image-${product.id}`} className="h-full w-full">
-              <img
-                src={imageUrl}
-                alt={product.name}
-                loading="lazy"
-                decoding="async"
-                data-product-image
-                className="h-full w-full object-contain mix-blend-multiply transition-transform duration-500 group-hover:scale-105"
-              />
-            </m.div>
-          ) : null}
-          <span className="absolute bottom-2 left-2 rounded bg-background/95 px-1.5 py-1 text-[9px] font-bold text-foreground shadow-sm">
-            20-40 min
-          </span>
-        </div>
-        <div className={compact ? "px-2 pt-2" : "px-3 pt-3"}>
-          <p className={`line-clamp-2 font-semibold leading-5 ${compact ? "min-h-9 text-xs" : "min-h-10 text-sm"}`}>
-            {product.name}
-          </p>
-          <p className="mt-1 truncate text-[10px] text-muted-foreground">
-            {product.category || product.shop_name}
-          </p>
-          <div className="mt-2 flex flex-wrap items-baseline gap-x-2 gap-y-1">
-            <span className={`font-mono font-bold ${compact ? "text-lg" : "text-xl"}`}>
-              ₹{product.discount_price ?? product.selling_price}
-            </span>
-            {product.discount_price && (
-              <span className="text-xs text-muted-foreground line-through">
-                M.R.P. ₹{product.mrp}
-              </span>
-            )}
-            {discount > 0 && (
-              <m.span
-                initial={{ scale: 0.7, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                className="text-[10px] font-semibold text-emerald-700"
-              >
-                {discount}% off
-              </m.span>
-            )}
-          </div>
-          <span className="mt-1.5 inline-flex items-center gap-1 text-[11px] text-muted-foreground">
-            <Star className="h-3 w-3 fill-[var(--marigold)] text-[var(--marigold)]" />{" "}
-            {Number(product.average_rating).toFixed(1)} ({product.review_count ?? 0})
-          </span>
-          <p className="mt-1 text-[10px] leading-4 text-foreground/80">
-            FREE delivery in <strong>20-40 min</strong>
-          </p>
-        </div>
-      </Link>
-      <div className="absolute right-2 top-2">
+      {/* Top right Wishlist button overlay */}
+      <div className="absolute right-2.5 top-2.5 z-10">
         <WishlistButton
           productId={product.id}
           productName={product.name}
@@ -135,16 +82,63 @@ export function ProductCard({
             name: product.name,
             shopName: product.shop_name,
             category: product.category ?? "Other",
-            price: Number(product.discount_price ?? product.selling_price),
+            price: sellingPrice,
             imageUrl: product.image_url ?? undefined,
             sellerId: product.seller_id,
           }}
         />
       </div>
-      <div className={`mt-auto flex flex-col gap-1.5 ${compact ? "px-2 pb-2 pt-1" : "px-3 pb-3 pt-2"}`}>
-        <p className="min-w-0 truncate text-[10px] text-muted-foreground">
-          Sold by {product.shop_name}
-        </p>
+
+      <Link
+        to="/product/$productId"
+        params={{ productId: product.id }}
+        className="flex flex-col h-full"
+        onClick={() => {
+          void recordProductEvent(product.id, "view");
+          void recordRecentProductView(product.id);
+        }}
+      >
+        {/* Grey inner padded image container frame */}
+        <div className="aspect-[4/3] w-full overflow-hidden rounded-xl bg-slate-50 p-2 flex items-center justify-center border border-[#ead9a8]/40 relative">
+          <m.div layoutId={`product-image-${product.id}`} className="h-full w-full flex items-center justify-center">
+            <SafeProductImage
+              src={imageUrl}
+              productName={product.name}
+              category={product.category}
+              alt={product.name}
+              loading="lazy"
+              decoding="async"
+              data-product-image
+              className="h-full w-full object-contain transition-transform duration-300 group-hover:scale-105"
+            />
+          </m.div>
+        </div>
+
+        {/* Product details */}
+        <div className="mt-3 flex flex-col justify-between flex-1">
+          <div>
+            <h3 className="line-clamp-1 text-sm font-bold text-slate-800 group-hover:text-purple-700 transition-colors">
+              {product.name}
+            </h3>
+            <div className="mt-1 flex items-baseline gap-2">
+              <span className="text-sm font-black text-slate-900">
+                ₹{sellingPrice}
+              </span>
+              {mrp > sellingPrice && (
+                <span className="text-[11px] font-medium text-slate-400 line-through">
+                  ₹{mrp}
+                </span>
+              )}
+            </div>
+            <p className="mt-0.5 text-xs font-black text-purple-700">
+              {dealTag}
+            </p>
+          </div>
+        </div>
+      </Link>
+
+      {/* Add to cart / Qty stepper at bottom */}
+      <div className="mt-3 pt-2 border-t border-slate-100">
         <QtyStepper
           qty={quantity}
           max={product.stock}
@@ -155,12 +149,12 @@ export function ProductCard({
               id: product.id,
               name: product.name,
               unit: product.category ?? "",
-              price: Number(product.discount_price ?? product.selling_price),
+              price: sellingPrice,
               stock: product.stock,
             });
           }}
           onChange={(nextQuantity) => cartStore.setQty(product.id, nextQuantity)}
-          addClassName="w-full rounded-full bg-[var(--orchid)] px-3 py-2 text-xs font-semibold text-white transition-colors hover:bg-[var(--orchid-deep)]"
+          addClassName="w-full rounded-xl bg-purple-50 py-1.5 text-xs font-bold text-purple-700 border border-purple-200/60 transition hover:bg-purple-600 hover:text-white"
         />
       </div>
     </m.div>

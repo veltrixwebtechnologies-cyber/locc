@@ -2,6 +2,7 @@ import { useEffect, useId } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth-store";
+import { productsByStore, stores } from "@/lib/mock-data";
 
 export type MerchandisingProduct = {
   id: string;
@@ -374,7 +375,7 @@ export function useWishlist() {
       const entriesMissing =
         savedEntries.error?.code === "PGRST205" || savedEntries.error?.status === 404;
       if (savedEntries.error && !entriesMissing) throw savedEntries.error;
-      return [
+      const raw = [
         ...(savedProducts.data ?? []).map((row: { product_id: string; created_at: string }) => ({
           product_id: row.product_id,
           created_at: row.created_at,
@@ -386,6 +387,16 @@ export function useWishlist() {
               created_at: row.created_at,
             }))),
       ].sort((a, b) => b.created_at.localeCompare(a.created_at));
+
+      const seen = new Set<string>();
+      const list: Array<{ product_id: string; created_at: string }> = [];
+      for (const item of raw) {
+        if (!seen.has(item.product_id)) {
+          seen.add(item.product_id);
+          list.push(item);
+        }
+      }
+      return list;
     },
   });
 }
@@ -451,6 +462,38 @@ export function useWishlistProducts() {
           shop_name: entry.shop_name,
         });
       }
+
+      const allLocalProducts = Object.values(productsByStore).flat();
+      for (const id of ids) {
+        if (!byId.has(id)) {
+          const mockMatch = allLocalProducts.find((p) => p.id === id);
+          if (mockMatch) {
+            const store = stores.find((s) => s.id === mockMatch.storeId);
+            byId.set(id, {
+              id: mockMatch.id,
+              seller_id: mockMatch.storeId,
+              name: mockMatch.name,
+              brand: null,
+              brand_id: null,
+              brand_name: null,
+              category: mockMatch.category,
+              selling_price: mockMatch.price,
+              mrp: mockMatch.price,
+              discount_price: null,
+              discount_starts_at: null,
+              discount_ends_at: null,
+              clearance: false,
+              stock: 20,
+              image_url: mockMatch.imageUrl ?? null,
+              created_at: new Date().toISOString(),
+              average_rating: store?.rating ?? 4.5,
+              review_count: 12,
+              shop_name: store?.name ?? "Local Shop",
+            });
+          }
+        }
+      }
+
       return ids.map((id: string) => byId.get(id)).filter(Boolean) as MerchandisingProduct[];
     },
   });
@@ -479,18 +522,20 @@ export function useToggleWishlist() {
         const { data: userData, error: userError } = await supabase.auth.getUser();
         if (userError || !userData.user)
           throw userError ?? new Error("Sign in to use your wishlist.");
-        const result = isUuid
-          ? await (supabase as any)
-              .from("wishlist")
-              .delete()
-              .eq("user_id", userData.user.id)
-              .eq("product_id", productId)
-          : await (supabase as any)
-              .from("wishlist_entries")
-              .delete()
-              .eq("user_id", userData.user.id)
-              .eq("item_key", productId);
-        if (result.error) throw result.error;
+        const [wRes, weRes] = await Promise.all([
+          (supabase as any)
+            .from("wishlist")
+            .delete()
+            .eq("user_id", userData.user.id)
+            .eq("product_id", productId),
+          (supabase as any)
+            .from("wishlist_entries")
+            .delete()
+            .eq("user_id", userData.user.id)
+            .eq("item_key", productId),
+        ]);
+        if (wRes.error && wRes.error.code !== "PGRST116") throw wRes.error;
+        if (weRes.error && weRes.error.code !== "PGRST205" && weRes.error.status !== 404) throw weRes.error;
       } else {
         if (isUuid) {
           const { data: userData, error: userError } = await supabase.auth.getUser();
