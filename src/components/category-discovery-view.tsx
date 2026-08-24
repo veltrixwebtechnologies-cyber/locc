@@ -30,6 +30,7 @@ import {
 import type { Store, StoreCategory } from "@/lib/mock-data";
 import { WishlistButton } from "@/components/wishlist-button";
 import { scrollToShops } from "@/lib/scroll-utils";
+import { getFallbackProductImage } from "@/lib/image-utils";
 
 interface CategoryMeta {
   id: StoreCategory | "all";
@@ -470,6 +471,10 @@ export function CategoryDiscoveryView({
                   <img
                     src={store.imageUrl}
                     alt={store.name}
+                    loading="lazy"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = getFallbackProductImage(store.name, store.category);
+                    }}
                     className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
                   />
 

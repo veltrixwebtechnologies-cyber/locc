@@ -96,6 +96,7 @@ function SwiggyShopCard({
   index: number;
   liveIsOpen?: boolean;
 }) {
+  const [imgError, setImgError] = useState(false);
   const offers = getOffers(store.category);
   const catLabel = categoryLabel[store.category] ?? store.category;
   const isOpen = liveIsOpen !== undefined ? liveIsOpen : store.isOpen;
@@ -137,9 +138,10 @@ function SwiggyShopCard({
           {/* ── Image area ── */}
           <div className="relative aspect-[16/10] w-full overflow-hidden bg-[#f0f0f5]">
             <img
-              src={store.imageUrl}
+              src={imgError ? "https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=800&q=75" : store.imageUrl}
               alt={store.name}
               loading="lazy"
+              onError={() => setImgError(true)}
               className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
             />
 
@@ -539,7 +541,7 @@ const SHOP_CATEGORIES = [
     id: "boutiques",
     label: "Boutiques",
     imageUrl:
-      "https://images.unsplash.com/photo-1583391733956-6c78276477e2?auto=format&fit=crop&w=200&q=80",
+      "https://images.unsplash.com/photo-1558769132-cb1aea458c5e?auto=format&fit=crop&w=300&q=80",
   },
   {
     id: "showrooms",
@@ -563,7 +565,7 @@ const SHOP_CATEGORIES = [
     id: "kitchen_appliances",
     label: "Kitchen Utensils",
     imageUrl:
-      "https://images.unsplash.com/photo-1584990347449-716c15a3a17a?auto=format&fit=crop&w=200&q=80",
+      "https://images.unsplash.com/photo-1556911220-e15b29be8c8f?auto=format&fit=crop&w=300&q=80",
   },
   {
     id: "home_decor",
@@ -672,6 +674,9 @@ function CategoryCircle({
   cat: { id: string; label: string; imageUrl: string };
   index: number;
 }) {
+  const [hasError, setHasError] = useState(false);
+  const fallback = "https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=300&q=80";
+
   return (
     <m.div
       initial={{ opacity: 0, scale: 0.85 }}
@@ -692,9 +697,10 @@ function CategoryCircle({
       >
         <div className="h-[90px] w-[90px] overflow-hidden rounded-full bg-[#f0f0f5] transition-transform duration-200 group-hover:scale-105 md:h-[100px] md:w-[100px]">
           <img
-            src={cat.imageUrl}
+            src={hasError ? fallback : cat.imageUrl}
             alt={cat.label}
             loading="lazy"
+            onError={() => setHasError(true)}
             className="h-full w-full object-cover"
           />
         </div>

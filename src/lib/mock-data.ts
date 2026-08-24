@@ -83,7 +83,7 @@ export const deliveryCategories: DeliveryCategory[] = [
   {
     id: "boutiques",
     label: "Designer Boutiques",
-    imageUrl: catImg("photo-1583391733956-6c78276477e2"),
+    imageUrl: catImg("photo-1558769132-cb1aea458c5e"),
     filter: "boutiques",
   },
   {
@@ -101,7 +101,7 @@ export const deliveryCategories: DeliveryCategory[] = [
   {
     id: "kitchen_appliances",
     label: "Kitchen Appliances (பாத்திரம்)",
-    imageUrl: catImg("photo-1584990347449-716c15a3a17a"),
+    imageUrl: catImg("photo-1556911220-e15b29be8c8f"),
     filter: "kitchen_appliances",
   },
   {
@@ -244,7 +244,7 @@ export const stores: Store[] = [
     address: "18, Heritage Avenue",
     lat: 9.971,
     lng: 76.258,
-    imageUrl: storeImg("photo-1583391733956-6c78276477e2"),
+    imageUrl: storeImg("photo-1558769132-cb1aea458c5e"),
   },
   {
     id: "s_show1",
@@ -300,7 +300,7 @@ export const stores: Store[] = [
     address: "63, Vessels Bazaar Road",
     lat: 9.962,
     lng: 76.248,
-    imageUrl: storeImg("photo-1584990347449-716c15a3a17a"),
+    imageUrl: storeImg("photo-1556911220-e15b29be8c8f"),
   },
   {
     id: "s_decor1",
