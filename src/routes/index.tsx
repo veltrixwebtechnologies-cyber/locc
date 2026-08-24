@@ -20,6 +20,7 @@ import type { MerchandisingProduct } from "@/lib/merchandising";
 import { Reveal } from "@/components/motion/presets";
 import { MarketplaceDiscovery } from "@/components/marketplace-discovery";
 import { SwiggyShopRow, SwiggyQuickCategories } from "@/components/swiggy-shop-row";
+import { CategoryDiscoveryView } from "@/components/category-discovery-view";
 import {
   SwiggyTopDealsStrip,
   SwiggyFeaturedBanner,
@@ -106,6 +107,7 @@ export const Route = createFileRoute("/")({
 
 function Home() {
   const search = Route.useSearch();
+  const navigate = Route.useNavigate();
   const [query, setQuery] = useState(search.q ?? "");
   const [cat, setCat] = useState<string>(search.category ?? "all");
   const approvedProducts = useQuery({
@@ -383,10 +385,20 @@ function Home() {
           </div>
         )}
 
-        {/* 3. Swiggy-style horizontal shop discovery row with filter pill tabs */}
-        <SwiggyShopRow
-          stores={filtered}
-          title={activeFilter ? `Shops in ${displayCategoryName}` : "Top shops near you"}
+        {/* 3. Comprehensive Category Discovery & Shop Grid View matching UI design */}
+        <CategoryDiscoveryView
+          stores={stores}
+          activeCategory={activeFilter || "all"}
+          onCategoryChange={(catId) => {
+            navigate({
+              search: (prev: { category?: string; q?: string }) => ({
+                ...prev,
+                category: catId === "all" ? undefined : catId,
+              }),
+              resetScroll: false,
+            });
+            scrollToShops();
+          }}
         />
 
         {/* 4. Swiggy ₹99 Store / Budget Meals Section */}

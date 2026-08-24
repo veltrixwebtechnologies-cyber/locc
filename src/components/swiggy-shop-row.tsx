@@ -233,14 +233,28 @@ function SwiggyShopCard({
 export function SwiggyShopRow({
   stores,
   title = "Top shops near you",
+  activeCategory,
+  onSelectCategory,
 }: {
   stores: Store[];
   title?: string;
+  activeCategory?: string;
+  onSelectCategory?: (category: string) => void;
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [canLeft, setCanLeft] = useState(false);
   const [canRight, setCanRight] = useState(true);
-  const [activeFilterTab, setActiveFilterTab] = useState<string>("all");
+  const [internalTab, setInternalTab] = useState<string>("all");
+
+  const activeFilterTab = activeCategory && activeCategory !== "all" ? activeCategory : internalTab;
+
+  const handleTabClick = (catId: string) => {
+    const nextTab = activeFilterTab === catId ? "all" : catId;
+    setInternalTab(nextTab);
+    if (onSelectCategory) {
+      onSelectCategory(nextTab);
+    }
+  };
 
   const realIds = stores
     .map((s) => s.id)
@@ -277,7 +291,7 @@ export function SwiggyShopRow({
       <div className="mb-4 flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
         <button
           type="button"
-          onClick={() => setActiveFilterTab("all")}
+          onClick={() => handleTabClick("all")}
           className={`shrink-0 rounded-full px-4 py-2 text-xs font-black transition-all ${
             activeFilterTab === "all"
               ? "bg-[#101c42] text-white shadow-sm"
@@ -288,7 +302,7 @@ export function SwiggyShopRow({
         </button>
         <button
           type="button"
-          onClick={() => setActiveFilterTab(activeFilterTab === "palamuthir" ? "all" : "palamuthir")}
+          onClick={() => handleTabClick("palamuthir")}
           className={`shrink-0 rounded-full px-4 py-2 text-xs font-black uppercase transition-all ${
             activeFilterTab === "palamuthir"
               ? "bg-[#981495] text-white shadow-sm"
@@ -299,7 +313,7 @@ export function SwiggyShopRow({
         </button>
         <button
           type="button"
-          onClick={() => setActiveFilterTab(activeFilterTab === "flour_mill" ? "all" : "flour_mill")}
+          onClick={() => handleTabClick("flour_mill")}
           className={`shrink-0 rounded-full px-4 py-2 text-xs font-black uppercase transition-all ${
             activeFilterTab === "flour_mill"
               ? "bg-[#981495] text-white shadow-sm"
@@ -310,7 +324,7 @@ export function SwiggyShopRow({
         </button>
         <button
           type="button"
-          onClick={() => setActiveFilterTab(activeFilterTab === "meat_fish" ? "all" : "meat_fish")}
+          onClick={() => handleTabClick("meat_fish")}
           className={`shrink-0 rounded-full px-4 py-2 text-xs font-black uppercase transition-all ${
             activeFilterTab === "meat_fish"
               ? "bg-[#981495] text-white shadow-sm"
@@ -321,7 +335,7 @@ export function SwiggyShopRow({
         </button>
         <button
           type="button"
-          onClick={() => setActiveFilterTab(activeFilterTab === "fashion_accessories" ? "all" : "fashion_accessories")}
+          onClick={() => handleTabClick("fashion_accessories")}
           className={`shrink-0 rounded-full px-4 py-2 text-xs font-black uppercase transition-all ${
             activeFilterTab === "fashion_accessories"
               ? "bg-[#981495] text-white shadow-sm"
@@ -332,7 +346,7 @@ export function SwiggyShopRow({
         </button>
         <button
           type="button"
-          onClick={() => setActiveFilterTab(activeFilterTab === "boutiques" ? "all" : "boutiques")}
+          onClick={() => handleTabClick("boutiques")}
           className={`shrink-0 rounded-full px-4 py-2 text-xs font-black uppercase transition-all ${
             activeFilterTab === "boutiques"
               ? "bg-[#981495] text-white shadow-sm"
@@ -343,7 +357,7 @@ export function SwiggyShopRow({
         </button>
         <button
           type="button"
-          onClick={() => setActiveFilterTab(activeFilterTab === "showrooms" ? "all" : "showrooms")}
+          onClick={() => handleTabClick("showrooms")}
           className={`shrink-0 rounded-full px-4 py-2 text-xs font-black uppercase transition-all ${
             activeFilterTab === "showrooms"
               ? "bg-[#981495] text-white shadow-sm"
@@ -354,7 +368,7 @@ export function SwiggyShopRow({
         </button>
         <button
           type="button"
-          onClick={() => setActiveFilterTab(activeFilterTab === "fast_fashion" ? "all" : "fast_fashion")}
+          onClick={() => handleTabClick("fast_fashion")}
           className={`shrink-0 rounded-full px-4 py-2 text-xs font-black uppercase transition-all ${
             activeFilterTab === "fast_fashion"
               ? "bg-[#981495] text-white shadow-sm"
@@ -365,7 +379,7 @@ export function SwiggyShopRow({
         </button>
         <button
           type="button"
-          onClick={() => setActiveFilterTab(activeFilterTab === "individual_fashion" ? "all" : "individual_fashion")}
+          onClick={() => handleTabClick("individual_fashion")}
           className={`shrink-0 rounded-full px-4 py-2 text-xs font-black uppercase transition-all ${
             activeFilterTab === "individual_fashion"
               ? "bg-[#981495] text-white shadow-sm"
@@ -376,7 +390,7 @@ export function SwiggyShopRow({
         </button>
         <button
           type="button"
-          onClick={() => setActiveFilterTab(activeFilterTab === "kitchen_appliances" ? "all" : "kitchen_appliances")}
+          onClick={() => handleTabClick("kitchen_appliances")}
           className={`shrink-0 rounded-full px-4 py-2 text-xs font-black uppercase transition-all ${
             activeFilterTab === "kitchen_appliances"
               ? "bg-[#981495] text-white shadow-sm"
@@ -387,7 +401,7 @@ export function SwiggyShopRow({
         </button>
         <button
           type="button"
-          onClick={() => setActiveFilterTab(activeFilterTab === "home_decor" ? "all" : "home_decor")}
+          onClick={() => handleTabClick("home_decor")}
           className={`shrink-0 rounded-full px-4 py-2 text-xs font-black uppercase transition-all ${
             activeFilterTab === "home_decor"
               ? "bg-[#981495] text-white shadow-sm"
@@ -398,7 +412,7 @@ export function SwiggyShopRow({
         </button>
         <button
           type="button"
-          onClick={() => setActiveFilterTab(activeFilterTab === "pharmacy" ? "all" : "pharmacy")}
+          onClick={() => handleTabClick("pharmacy")}
           className={`shrink-0 rounded-full px-4 py-2 text-xs font-black uppercase transition-all ${
             activeFilterTab === "pharmacy"
               ? "bg-[#981495] text-white shadow-sm"
@@ -409,7 +423,7 @@ export function SwiggyShopRow({
         </button>
         <button
           type="button"
-          onClick={() => setActiveFilterTab(activeFilterTab === "stationery" ? "all" : "stationery")}
+          onClick={() => handleTabClick("stationery")}
           className={`shrink-0 rounded-full px-4 py-2 text-xs font-black uppercase transition-all ${
             activeFilterTab === "stationery"
               ? "bg-[#981495] text-white shadow-sm"
@@ -672,6 +686,7 @@ function CategoryCircle({
       <Link
         to="/"
         search={{ category: cat.id, q: undefined }}
+        resetScroll={false}
         onClick={scrollToShops}
         className="group flex flex-col items-center gap-1.5"
       >

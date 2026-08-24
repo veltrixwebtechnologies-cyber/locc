@@ -1,11 +1,12 @@
 export function scrollToShops() {
-  // Dual rAF + setTimeout ensures React has finished state updates & DOM layout rendering
   requestAnimationFrame(() => {
     setTimeout(() => {
       const el = document.getElementById("shops-section");
       if (el) {
-        el.scrollIntoView({ behavior: "smooth", block: "start" });
+        const yOffset = -75; // Offset for fixed top navbar
+        const y = el.getBoundingClientRect().top + window.pageYOffset + yOffset;
+        window.scrollTo({ top: Math.max(0, y), behavior: "smooth" });
       }
-    }, 100);
+    }, 60);
   });
 }

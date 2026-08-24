@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { Link } from "@tanstack/react-router";
 import { Star, ChevronRight, CheckCircle2, Plus, ShoppingBag } from "lucide-react";
 import { m } from "motion/react";
@@ -226,7 +227,7 @@ export function Swiggy99StoreSection({
 }) {
   const cart = useCart();
 
-  // Curated Local Shore essentials under ₹99
+  // Curated Local Shore essentials under ₹99 fallback
   const localBudgetItems = [
     {
       id: "b1",
@@ -296,6 +297,25 @@ export function Swiggy99StoreSection({
     },
   ];
 
+  const itemsToDisplay = useMemo(() => {
+    if (products && products.length > 0) {
+      const cheapProducts = products.filter((p: any) => Number(p.price ?? p.selling_price ?? 99) <= 250);
+      const source = cheapProducts.length > 0 ? cheapProducts : products;
+      return source.slice(0, 10).map((p: any) => ({
+        id: p.id,
+        seller_id: p.seller_id ?? "s1",
+        name: p.name,
+        selling_price: Number(p.price ?? p.selling_price ?? 99),
+        mrp: Number(p.mrp ?? Math.round(Number(p.price ?? p.selling_price ?? 99) * 1.25)),
+        category: p.category ?? "Local Item",
+        image_url: p.imageUrl ?? p.image_url,
+        shop_name: p.shop_name ?? "Verified Shop",
+        average_rating: p.average_rating ?? 4.8,
+      }));
+    }
+    return localBudgetItems;
+  }, [products]);
+
   return (
     <div className="mx-5 my-6 md:mx-8 md:my-8">
       {/* Light blue Tinted Container exact like Swiggy ₹99 Store */}
@@ -330,7 +350,7 @@ export function Swiggy99StoreSection({
 
         {/* Horizontal Carousel of Products */}
         <div className="flex gap-3 overflow-x-auto pb-2 pt-1 no-scrollbar scroll-smooth">
-          {localBudgetItems.map((item: any) => {
+          {itemsToDisplay.map((item: any) => {
             const sellingPrice = Number(item.selling_price);
             const mrp = Number(item.mrp);
 

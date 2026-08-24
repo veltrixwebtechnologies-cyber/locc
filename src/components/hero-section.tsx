@@ -80,6 +80,7 @@ export function HeroSection() {
     navigate({
       to: "/",
       search: { q: searchQuery.trim(), category: undefined },
+      resetScroll: false,
     });
     scrollToShops();
   };
@@ -170,6 +171,7 @@ export function HeroSection() {
                   navigate({
                     to: "/",
                     search: { category: card.category, q: undefined },
+                    resetScroll: false,
                   });
                   scrollToShops();
                 }}
