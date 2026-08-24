@@ -391,9 +391,9 @@ function Home() {
           activeCategory={activeFilter || "all"}
           onCategoryChange={(catId) => {
             navigate({
-              search: (prev: { category?: string; q?: string }) => ({
-                ...prev,
+              search: (prev) => ({
                 category: catId === "all" ? undefined : catId,
+                q: prev.q,
               }),
               resetScroll: false,
             });
