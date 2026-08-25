@@ -134,16 +134,16 @@ function StorePage() {
         products,
         store: vendor
           ? ({
-              ...APPROVED_STORE,
-              id: vendor.id,
-              name: vendor.shop_name || APPROVED_STORE.name,
-              category: toStoreCategory(vendor.category),
-              tagline: vendor.business_type || "Approved local vendor",
-              address:
-                [vendor.address_line1, vendor.city, vendor.state].filter(Boolean).join(", ") ||
-                APPROVED_STORE.address,
-              imageUrl,
-            } as Store)
+            ...APPROVED_STORE,
+            id: vendor.id,
+            name: vendor.shop_name || APPROVED_STORE.name,
+            category: toStoreCategory(vendor.category),
+            tagline: vendor.business_type || "Approved local vendor",
+            address:
+              [vendor.address_line1, vendor.city, vendor.state].filter(Boolean).join(", ") ||
+              APPROVED_STORE.address,
+            imageUrl,
+          } as Store)
           : null,
       };
     },

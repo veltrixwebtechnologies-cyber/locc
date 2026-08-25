@@ -356,9 +356,8 @@ function ProductPage() {
                     Product Details
                   </h2>
                   <ChevronDown
-                    className={`h-5 w-5 text-muted-foreground transition-transform duration-200 ${
-                      showDetails ? "rotate-180" : ""
-                    }`}
+                    className={`h-5 w-5 text-muted-foreground transition-transform duration-200 ${showDetails ? "rotate-180" : ""
+                      }`}
                   />
                 </button>
 
@@ -688,7 +687,7 @@ function ProductGallery({
   discountPercent: number;
 }) {
   const mainImage = item.image_url || "";
-  
+
   // Generate 4 representative product perspective thumbnails
   const thumbnails = [
     { label: "Front View", url: mainImage },
@@ -720,11 +719,10 @@ function ProductGallery({
             key={`${thumb.label}-${index}`}
             type="button"
             onClick={() => setSelectedIdx(index)}
-            className={`relative h-20 w-20 shrink-0 overflow-hidden rounded-xl border bg-white p-2 transition-all ${
-              selectedIdx === index
+            className={`relative h-20 w-20 shrink-0 overflow-hidden rounded-xl border bg-white p-2 transition-all ${selectedIdx === index
                 ? "border-emerald-600 ring-2 ring-emerald-600/30 shadow-md"
                 : "border-border/70 hover:border-emerald-500/60"
-            }`}
+              }`}
           >
             <ProductThumb
               src={thumb.url || undefined}
@@ -751,7 +749,7 @@ function ProductGallery({
             {discountPercent}% OFF
           </span>
         )}
-        
+
         <ProductThumb
           src={activeImage}
           alt={item.name}
