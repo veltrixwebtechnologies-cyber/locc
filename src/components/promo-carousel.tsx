@@ -184,19 +184,23 @@ export function PromoCarousel() {
   const bannerQuery = useQuery({
     queryKey: ["homepage-banners"],
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
-        .from("banners")
-        .select("id,title,subtitle,image_url,link_url,sort_order,starts_at,ends_at")
-        .eq("placement", "hero")
-        .eq("is_active", true)
-        .order("sort_order", { ascending: true });
-      if (error) throw error;
-      const now = Date.now();
-      return ((data ?? []) as BannerRow[]).filter(
-        (banner) =>
-          (!banner.starts_at || new Date(banner.starts_at).getTime() <= now) &&
-          (!banner.ends_at || new Date(banner.ends_at).getTime() > now),
-      );
+      try {
+        const { data, error } = await (supabase as any)
+          .from("banners")
+          .select("id,title,subtitle,image_url,link_url,sort_order,starts_at,ends_at")
+          .eq("placement", "hero")
+          .eq("is_active", true)
+          .order("sort_order", { ascending: true });
+        if (error) return [];
+        const now = Date.now();
+        return ((data ?? []) as BannerRow[]).filter(
+          (banner) =>
+            (!banner.starts_at || new Date(banner.starts_at).getTime() <= now) &&
+            (!banner.ends_at || new Date(banner.ends_at).getTime() > now),
+        );
+      } catch {
+        return [];
+      }
     },
     staleTime: 60_000,
   });

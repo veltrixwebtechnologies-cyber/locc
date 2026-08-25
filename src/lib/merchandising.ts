@@ -305,19 +305,24 @@ function discountPercent(product: Pick<MerchandisingProduct, "mrp" | "discount_p
 export function useActiveFlashSales() {
   return useQuery({
     queryKey: ["merchandising", "flash-sales"],
+    retry: 1,
     queryFn: async () => {
-      const now = new Date().toISOString();
-      const { data, error } = await (supabase as any)
-        .from("flash_sales")
-        .select(
-          "id,title,discount_type,discount_value,starts_at,ends_at,is_active,flash_sale_products(product_id)",
-        )
-        .eq("is_active", true)
-        .lte("starts_at", now)
-        .gt("ends_at", now)
-        .order("ends_at", { ascending: true });
-      if (error) throw error;
-      return data ?? [];
+      try {
+        const now = new Date().toISOString();
+        const { data, error } = await (supabase as any)
+          .from("flash_sales")
+          .select(
+            "id,title,discount_type,discount_value,starts_at,ends_at,is_active,flash_sale_products(product_id)",
+          )
+          .eq("is_active", true)
+          .lte("starts_at", now)
+          .gt("ends_at", now)
+          .order("ends_at", { ascending: true });
+        if (error) return [];
+        return data ?? [];
+      } catch {
+        return [];
+      }
     },
   });
 }

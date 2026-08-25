@@ -244,7 +244,7 @@ function StorePage() {
         {/* Products */}
         <div className="grid gap-5 px-5 pb-6 md:grid-cols-[150px_minmax(0,1fr)] md:px-0">
           <aside className="hidden md:block">
-            <div className="sticky top-28 rounded-xl border border-[#ead9a8] bg-card p-2">
+            <div className="sticky top-28 rounded-xl border border-purple-200 bg-card p-2">
               <p className="px-2 py-2 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
                 Categories
               </p>
@@ -292,7 +292,7 @@ function StorePage() {
                           viewport={{ once: true, amount: 0.15 }}
                           whileHover={{ y: -4, scale: 1.01 }}
                           whileTap={{ scale: 0.98 }}
-                          className="group relative flex min-w-0 flex-col overflow-hidden rounded-2xl border border-[#ead9a8] bg-white p-3.5 shadow-xs transition-all duration-300 hover:border-[#d9bd70] hover:shadow-md"
+                          className="group relative flex min-w-0 flex-col overflow-hidden rounded-2xl border border-purple-200 bg-white p-3.5 shadow-xs transition-all duration-300 hover:border-purple-400 hover:shadow-md"
                         >
                           <div className="absolute right-2.5 top-2.5 z-10">
                             <WishlistButton
@@ -319,7 +319,7 @@ function StorePage() {
                             }}
                             className="flex flex-col h-full"
                           >
-                            <div className="aspect-[4/3] w-full overflow-hidden rounded-xl bg-slate-50 p-2 flex items-center justify-center border border-[#ead9a8]/40 relative">
+                            <div className="aspect-[4/3] w-full overflow-hidden rounded-xl bg-slate-50 p-2 flex items-center justify-center border border-purple-200/40 relative">
                               <ProductThumb
                                 src={p.imageUrl}
                                 alt={p.name}
@@ -357,7 +357,7 @@ function StorePage() {
                                 cartStore.add(p.storeId, store.name, p);
                               }}
                               onChange={(n) => cartStore.setQty(p.id, n)}
-                              addClassName="w-full rounded-xl bg-purple-50 py-1.5 text-xs font-bold text-purple-700 border border-purple-200/60 transition hover:bg-purple-600 hover:text-white"
+                              addClassName="w-full rounded-xl bg-purple-50 py-1.5 text-xs font-bold text-purple-700 border border-purple-200/60 transition hover:bg-purple-700 hover:text-white"
                             />
                           </div>
                         </m.li>

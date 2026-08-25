@@ -15,7 +15,7 @@ export function AwningCard({ store }: { store: Store }) {
       <Link
         to="/store/$storeId"
         params={{ storeId: store.id }}
-        className="group block overflow-hidden rounded-xl border border-[#ead9a8] bg-card transition-all duration-300 hover:border-[#d9bd70] hover:shadow-lg"
+        className="group block overflow-hidden rounded-xl border border-purple-200 bg-card transition-all duration-300 hover:border-purple-400 hover:shadow-lg"
       >
         <div className="relative aspect-[16/10] w-full overflow-hidden bg-[var(--sand)]">
           <img

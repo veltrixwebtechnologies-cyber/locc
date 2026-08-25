@@ -253,7 +253,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               <Link
                 to="/auth"
                 search={{ redirect: pathname }}
-                className="ml-2 inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground hover:bg-teal-deep"
+                className="ml-2 inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground hover:bg-[#700b6e]"
               >
                 <LogIn className="h-4 w-4" /> Sign in
               </Link>
@@ -266,13 +266,13 @@ export function AppShell({ children }: { children: ReactNode }) {
         <CategoryMegaMenu />
       </div>
 
-      <div className="hidden border-b border-[#ead9a8]/70 bg-[#fffaf0] md:block">
+      <div className="hidden border-b border-purple-200/70 bg-purple-50/50 md:block">
         <div className="flex h-9 w-full items-center justify-between gap-6 px-6 text-[11px] text-foreground/75 lg:px-8">
           <div className="flex items-center gap-2">
             <MapPin className="h-3.5 w-3.5 text-primary" />
             <span>
               Delivering to{" "}
-              <strong className="font-semibold text-foreground">Marine Drive, Kochi</strong>
+              <strong className="font-semibold text-foreground">Pappampatti Pirivu, Coimbatore</strong>
             </span>
           </div>
           <div className="flex items-center gap-5">

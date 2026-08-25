@@ -1,13 +1,58 @@
-import { useMemo } from "react";
+import { useMemo, useEffect, useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { Star, ChevronRight, CheckCircle2, Plus, ShoppingBag } from "lucide-react";
-import { m } from "motion/react";
+import { Star, ChevronRight, ChevronLeft, CheckCircle2, Plus } from "lucide-react";
 import type { MerchandisingProduct } from "@/lib/merchandising";
-import { cartStore, useCart } from "@/lib/cart-store";
+import { cartStore } from "@/lib/cart-store";
 import { flyProductToCart } from "@/lib/fly-to-cart";
-import { WishlistButton } from "@/components/wishlist-button";
 
-/* ─── 1. Shoreline Category Deals Yellow Strip Carousel ──────────────────── */
+/* ─── Continuous Sub-Pixel Slow Auto-Scroll Hook (Feature Banner Only) ───── */
+function useSlowAutoScroll<T extends HTMLDivElement>(speed = 0.55) {
+  const scrollRef = useRef<T>(null);
+  const [isPaused, setIsPaused] = useState(false);
+  const posRef = useRef(0);
+
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+
+    posRef.current = el.scrollLeft;
+    let animId: number;
+
+    const step = () => {
+      if (!isPaused && el) {
+        posRef.current += speed;
+        // Seamless loop calculation (3 sets of cloned items)
+        const singleSetWidth = el.scrollWidth / 3;
+        if (singleSetWidth > 0) {
+          if (posRef.current >= singleSetWidth * 2) {
+            posRef.current -= singleSetWidth;
+          } else if (posRef.current <= 0) {
+            posRef.current += singleSetWidth;
+          }
+        }
+        el.scrollLeft = posRef.current;
+      } else if (el) {
+        posRef.current = el.scrollLeft;
+      }
+      animId = requestAnimationFrame(step);
+    };
+
+    animId = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(animId);
+  }, [isPaused, speed]);
+
+  return {
+    scrollRef,
+    pauseHandlers: {
+      onMouseEnter: () => setIsPaused(true),
+      onMouseLeave: () => setIsPaused(false),
+      onTouchStart: () => setIsPaused(true),
+      onTouchEnd: () => setIsPaused(false),
+    },
+  };
+}
+
+/* ─── 1. Shoreline Category Deals Yellow Strip (Static Horizontal Row) ───── */
 export function SwiggyTopDealsStrip() {
   const deals = [
     {
@@ -50,7 +95,9 @@ export function SwiggyTopDealsStrip() {
 
   return (
     <div className="w-full overflow-hidden py-3">
-      <div className="flex gap-3 overflow-x-auto px-5 md:px-8 no-scrollbar scroll-smooth">
+      <div
+        className="flex gap-3 overflow-x-auto px-5 md:px-8 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
+      >
         {deals.map((deal) => (
           <Link
             key={deal.id}
@@ -95,7 +142,7 @@ export function SwiggyTopDealsStrip() {
   );
 }
 
-/* ─── 2. Shoreline Verified Local Merchant Banner (Mobile Peek Carousel) ──────── */
+/* ─── 2. Shoreline Verified Local Merchant Banner (Slow Continuous Auto-Motion) ──────── */
 export function SwiggyFeaturedBanner() {
   const adBanners = [
     {
@@ -106,7 +153,7 @@ export function SwiggyFeaturedBanner() {
       category: "grocery",
       logoBg: "#981495",
       logoText: "AK",
-      buttonBg: "#284a75", // Swiggy exact navy blue button color
+      buttonBg: "#284a75",
       bgGradient: "from-[#ebf3fe] via-[#f4f8ff] to-white",
       borderColor: "border-[#d8e6fa]",
       image: "https://images.unsplash.com/photo-1604719312566-8912e9227c6a?auto=format&fit=crop&w=500&q=80",
@@ -152,14 +199,26 @@ export function SwiggyFeaturedBanner() {
     },
   ];
 
+  // Slow continuous motion hook (0.55 speed, pause on hover/touch)
+  const { scrollRef, pauseHandlers } = useSlowAutoScroll<HTMLDivElement>(0.55);
+
+  // Triple items array for infinite seamless looping
+  const tripleAdBanners = useMemo(
+    () => [...adBanners, ...adBanners, ...adBanners],
+    [adBanners]
+  );
+
   return (
-    <div className="w-full overflow-hidden py-3">
-      {/* Horizontal Carousel with Mobile Peek (84vw on mobile, 440px on desktop) */}
-      <div className="flex gap-3.5 overflow-x-auto px-5 md:px-8 no-scrollbar scroll-smooth snap-x snap-mandatory">
-        {adBanners.map((ad) => (
+    <div className="w-full overflow-hidden py-3" {...pauseHandlers}>
+      {/* Horizontal Continuous Auto-Scrolling Container with scrollbars strictly hidden */}
+      <div
+        ref={scrollRef}
+        className="flex gap-3.5 overflow-x-auto px-5 md:px-8 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
+      >
+        {tripleAdBanners.map((ad, index) => (
           <div
-            key={ad.id}
-            className={`shrink-0 w-[85vw] max-w-[390px] sm:w-[440px] snap-start rounded-[24px] border ${ad.borderColor} bg-gradient-to-r ${ad.bgGradient} p-4 sm:p-4.5 shadow-xs transition-all duration-300 hover:shadow-md relative overflow-hidden`}
+            key={`${ad.id}-${index}`}
+            className={`shrink-0 w-[85vw] max-w-[390px] sm:w-[440px] rounded-[24px] border ${ad.borderColor} bg-gradient-to-r ${ad.bgGradient} p-4 sm:p-4.5 shadow-xs transition-all duration-300 hover:shadow-md relative overflow-hidden`}
           >
             <div className="flex items-center justify-between gap-2 h-full">
               {/* Left Column Text & Action */}
@@ -225,9 +284,6 @@ export function Swiggy99StoreSection({
 }: {
   products?: MerchandisingProduct[];
 }) {
-  const cart = useCart();
-
-  // Curated Local Shore essentials under ₹99 fallback
   const localBudgetItems = [
     {
       id: "b1",
@@ -316,10 +372,20 @@ export function Swiggy99StoreSection({
     return localBudgetItems;
   }, [products]);
 
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  const scrollLeft = () => {
+    scrollRef.current?.scrollBy({ left: -320, behavior: "smooth" });
+  };
+
+  const scrollRight = () => {
+    scrollRef.current?.scrollBy({ left: 320, behavior: "smooth" });
+  };
+
   return (
-    <div className="mx-5 my-6 md:mx-8 md:my-8">
+    <div className="relative group mx-5 my-6 md:mx-8 md:my-8">
       {/* Light blue Tinted Container exact like Swiggy ₹99 Store */}
-      <div className="rounded-[28px] border border-[#d2e7ff] bg-gradient-to-b from-[#eaf3ff] to-[#f4f8fe] p-4 sm:p-6 shadow-xs">
+      <div className="relative rounded-[28px] border border-[#d2e7ff] bg-gradient-to-b from-[#eaf3ff] to-[#f4f8fe] p-4 sm:p-6 shadow-xs">
         {/* Header Row */}
         <div className="flex items-center justify-between gap-3 mb-4">
           <div className="flex items-center gap-2.5">
@@ -348,8 +414,27 @@ export function Swiggy99StoreSection({
           </Link>
         </div>
 
-        {/* Horizontal Carousel of Products */}
-        <div className="flex gap-3 overflow-x-auto pb-2 pt-1 no-scrollbar scroll-smooth">
+        {/* Desktop Chevron Navigation Buttons */}
+        <button
+          type="button"
+          onClick={scrollLeft}
+          aria-label="Previous products"
+          className="absolute left-2 top-1/2 -translate-y-1/2 z-20 hidden md:grid h-9 w-9 place-items-center rounded-full bg-white/95 text-slate-800 shadow-md opacity-0 group-hover:opacity-100 transition-opacity duration-200 hover:scale-105"
+        >
+          <ChevronLeft className="h-5 w-5" />
+        </button>
+
+        <button
+          type="button"
+          onClick={scrollRight}
+          aria-label="Next products"
+          className="absolute right-2 top-1/2 -translate-y-1/2 z-20 hidden md:grid h-9 w-9 place-items-center rounded-full bg-white/95 text-slate-800 shadow-md opacity-0 group-hover:opacity-100 transition-opacity duration-200 hover:scale-105"
+        >
+          <ChevronRight className="h-5 w-5" />
+        </button>
+
+        {/* Horizontal Row of Products */}
+        <div ref={scrollRef} className="flex gap-3 overflow-x-auto pb-2 pt-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden scroll-smooth">
           {itemsToDisplay.map((item: any) => {
             const sellingPrice = Number(item.selling_price);
             const mrp = Number(item.mrp);
@@ -357,14 +442,14 @@ export function Swiggy99StoreSection({
             return (
               <div
                 key={item.id}
-                className="group relative shrink-0 w-[145px] sm:w-[160px] rounded-2xl bg-white p-2.5 shadow-xs border border-slate-100 transition-all duration-300 hover:shadow-md"
+                className="group/card relative shrink-0 w-[145px] sm:w-[160px] rounded-2xl bg-white p-2.5 shadow-xs border border-slate-100 transition-all duration-300 hover:shadow-md"
               >
                 {/* Image Container */}
                 <div className="relative aspect-square w-full rounded-xl overflow-hidden bg-slate-50">
                   <img
                     src={item.image_url}
                     alt={item.name}
-                    className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                    className="h-full w-full object-cover transition-transform duration-300 group-hover/card:scale-105"
                   />
 
                   {/* Category Pill Badge (Bottom Left) */}
@@ -394,7 +479,7 @@ export function Swiggy99StoreSection({
 
                 {/* Details */}
                 <div className="mt-2 space-y-1">
-                  <h4 className="line-clamp-1 text-xs font-bold text-slate-800 group-hover:text-[#981495] transition-colors">
+                  <h4 className="line-clamp-1 text-xs font-bold text-slate-800 group-hover/card:text-[#981495] transition-colors">
                     {item.name}
                   </h4>
 

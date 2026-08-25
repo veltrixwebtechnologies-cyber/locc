@@ -270,11 +270,11 @@ export function CategoryDiscoveryView({
                 onClick={() => handleSelectTab(catKey)}
                 className={`shrink-0 flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-full text-xs font-bold transition-all duration-200 shadow-2xs ${
                   isSelected
-                    ? "bg-[#7C3AED] text-white shadow-md ring-2 ring-[#7C3AED]/30 scale-102"
+                    ? "bg-[#981495] text-white shadow-md ring-2 ring-[#981495]/30 scale-102"
                     : "bg-white text-slate-700 border border-slate-200/90 hover:bg-slate-50 hover:border-slate-300"
                 }`}
               >
-                <IconComponent className={`h-3.5 w-3.5 sm:h-4 sm:w-4 ${isSelected ? "text-white" : "text-[#7C3AED]"}`} />
+                <IconComponent className={`h-3.5 w-3.5 sm:h-4 sm:w-4 ${isSelected ? "text-white" : "text-[#981495]"}`} />
                 <span className="whitespace-nowrap">{item.shortLabel}</span>
               </button>
             );
@@ -310,11 +310,11 @@ export function CategoryDiscoveryView({
                       }}
                       className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-left transition-colors ${
                         activeCategory === key
-                          ? "bg-purple-50 text-[#7C3AED]"
+                          ? "bg-purple-50 text-[#981495]"
                           : "text-slate-700 hover:bg-slate-100"
                       }`}
                     >
-                      <IconC className="h-4 w-4 text-[#7C3AED]" />
+                      <IconC className="h-4 w-4 text-[#981495]" />
                       <span className="truncate">{item.label}</span>
                     </button>
                   );
@@ -330,7 +330,7 @@ export function CategoryDiscoveryView({
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 sm:gap-5">
           <div className="flex items-start gap-3.5 sm:gap-4">
             {/* Category Icon Circle Badge */}
-            <div className="flex h-11 w-11 sm:h-14 sm:w-14 shrink-0 items-center justify-center rounded-2xl bg-[#7C3AED]/10 text-[#7C3AED] shadow-2xs">
+            <div className="flex h-11 w-11 sm:h-14 sm:w-14 shrink-0 items-center justify-center rounded-2xl bg-[#981495]/10 text-[#981495] shadow-2xs">
               <CategoryIcon className="h-5 w-5 sm:h-7 sm:w-7 stroke-[2.2]" />
             </div>
 
@@ -352,9 +352,9 @@ export function CategoryDiscoveryView({
                 setFilterOpenNow(false);
                 setSelectedSort("distance");
               }}
-              className="inline-flex items-center gap-1.5 rounded-full border border-purple-200 bg-white px-3.5 sm:px-4 py-1.5 sm:py-2 text-xs font-extrabold text-[#7C3AED] shadow-2xs hover:bg-purple-50 transition-colors"
+              className="inline-flex items-center gap-1.5 rounded-full border border-purple-200 bg-white px-3.5 sm:px-4 py-1.5 sm:py-2 text-xs font-extrabold text-[#981495] shadow-2xs hover:bg-purple-50 transition-colors"
             >
-              <MapPin className="h-3.5 w-3.5 text-[#7C3AED]" />
+              <MapPin className="h-3.5 w-3.5 text-[#981495]" />
               <span>Near Me</span>
             </button>
           </div>
@@ -372,7 +372,7 @@ export function CategoryDiscoveryView({
               onClick={() => setShowFilterMenu(!showFilterMenu)}
               className={`flex items-center gap-1.5 sm:gap-2 px-3.5 sm:px-4 py-2 rounded-xl text-xs font-bold border transition-colors ${
                 filterOpenNow || filterTopRated
-                  ? "border-[#7C3AED] bg-purple-50 text-[#7C3AED]"
+                  ? "border-[#981495] bg-purple-50 text-[#981495]"
                   : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
               }`}
             >
@@ -392,7 +392,7 @@ export function CategoryDiscoveryView({
                     type="checkbox"
                     checked={filterOpenNow}
                     onChange={(e) => setFilterOpenNow(e.target.checked)}
-                    className="rounded border-slate-300 text-[#7C3AED] focus:ring-[#7C3AED]"
+                    className="rounded border-slate-300 text-[#981495] focus:ring-[#981495]"
                   />
                   <span>Open Now Only</span>
                 </label>
@@ -401,7 +401,7 @@ export function CategoryDiscoveryView({
                     type="checkbox"
                     checked={filterTopRated}
                     onChange={(e) => setFilterTopRated(e.target.checked)}
-                    className="rounded border-slate-300 text-[#7C3AED] focus:ring-[#7C3AED]"
+                    className="rounded border-slate-300 text-[#981495] focus:ring-[#981495]"
                   />
                   <span>Top Rated (4.5★ +)</span>
                 </label>
@@ -434,7 +434,7 @@ export function CategoryDiscoveryView({
       {/* 4. Shops Grid Cards (Responsive 1 col mobile, 2 col tablet, 4 col desktop) */}
       {filteredStores.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-slate-200 bg-white p-8 sm:p-12 text-center space-y-3">
-          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-purple-50 text-[#7C3AED]">
+          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-purple-50 text-[#981495]">
             <Search className="h-6 w-6" />
           </div>
           <h3 className="font-bold text-slate-900 text-base">No shops found matching your criteria</h3>
@@ -448,7 +448,7 @@ export function CategoryDiscoveryView({
               setFilterTopRated(false);
               handleSelectTab("all");
             }}
-            className="inline-flex items-center gap-1 text-xs font-bold text-[#7C3AED] hover:underline"
+            className="inline-flex items-center gap-1 text-xs font-bold text-[#981495] hover:underline"
           >
             Clear all filters
           </button>
@@ -480,7 +480,7 @@ export function CategoryDiscoveryView({
 
                   {/* Featured Badge (Top Left) */}
                   {(store.rating >= 4.7 || index === 0) && (
-                    <div className="absolute top-2.5 left-2.5 bg-[#7C3AED] text-white text-[10px] font-extrabold px-2.5 py-0.5 rounded-md shadow-sm">
+                    <div className="absolute top-2.5 left-2.5 bg-[#981495] text-white text-[10px] font-extrabold px-2.5 py-0.5 rounded-md shadow-sm">
                       Featured
                     </div>
                   )}
@@ -498,7 +498,7 @@ export function CategoryDiscoveryView({
                 <div className="p-3.5 sm:p-4 flex-1 flex flex-col justify-between space-y-3">
                   <div>
                     {/* Title */}
-                    <h3 className="font-extrabold text-slate-900 text-sm sm:text-base line-clamp-1 group-hover:text-[#7C3AED] transition-colors">
+                    <h3 className="font-extrabold text-slate-900 text-sm sm:text-base line-clamp-1 group-hover:text-[#981495] transition-colors">
                       {store.name}
                     </h3>
 
@@ -548,7 +548,7 @@ export function CategoryDiscoveryView({
       {/* 5. "Can't find what you need?" Banner */}
       <div className="rounded-2xl bg-gradient-to-r from-purple-50 via-indigo-50/60 to-purple-50 border border-purple-100 p-4 sm:p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-xs">
         <div className="flex items-center gap-3.5">
-          <div className="flex h-10 w-10 sm:h-11 sm:w-11 shrink-0 items-center justify-center rounded-xl bg-[#7C3AED]/10 text-[#7C3AED]">
+          <div className="flex h-10 w-10 sm:h-11 sm:w-11 shrink-0 items-center justify-center rounded-xl bg-[#981495]/10 text-[#981495]">
             <Tag className="h-5 w-5 stroke-[2.2]" />
           </div>
           <div>
@@ -564,7 +564,7 @@ export function CategoryDiscoveryView({
         <button
           type="button"
           onClick={() => setIsRequestModalOpen(true)}
-          className="w-full sm:w-auto shrink-0 rounded-xl bg-[#7C3AED] hover:bg-[#6D28D9] text-white font-extrabold text-xs px-5 py-2.5 shadow-md hover:shadow-lg transition-all active:scale-95 text-center"
+          className="w-full sm:w-auto shrink-0 rounded-xl bg-[#981495] hover:bg-[#6D28D9] text-white font-extrabold text-xs px-5 py-2.5 shadow-md hover:shadow-lg transition-all active:scale-95 text-center"
         >
           Request a Shop
         </button>
@@ -573,7 +573,7 @@ export function CategoryDiscoveryView({
       {/* 6. Bottom Trust / Features Strip (2 cols on mobile, 4 on desktop) */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 pt-2">
         <div className="flex items-center gap-3 rounded-2xl bg-white border border-slate-100 p-3.5 sm:p-4 shadow-2xs">
-          <div className="flex h-9 w-9 sm:h-10 sm:w-10 shrink-0 items-center justify-center rounded-xl bg-purple-50 text-[#7C3AED]">
+          <div className="flex h-9 w-9 sm:h-10 sm:w-10 shrink-0 items-center justify-center rounded-xl bg-purple-50 text-[#981495]">
             <ShieldCheck className="h-4 w-4 sm:h-5 sm:w-5" />
           </div>
           <div>
@@ -583,7 +583,7 @@ export function CategoryDiscoveryView({
         </div>
 
         <div className="flex items-center gap-3 rounded-2xl bg-white border border-slate-100 p-3.5 sm:p-4 shadow-2xs">
-          <div className="flex h-9 w-9 sm:h-10 sm:w-10 shrink-0 items-center justify-center rounded-xl bg-purple-50 text-[#7C3AED]">
+          <div className="flex h-9 w-9 sm:h-10 sm:w-10 shrink-0 items-center justify-center rounded-xl bg-purple-50 text-[#981495]">
             <MapPin className="h-4 w-4 sm:h-5 sm:w-5" />
           </div>
           <div>
@@ -593,7 +593,7 @@ export function CategoryDiscoveryView({
         </div>
 
         <div className="flex items-center gap-3 rounded-2xl bg-white border border-slate-100 p-3.5 sm:p-4 shadow-2xs">
-          <div className="flex h-9 w-9 sm:h-10 sm:w-10 shrink-0 items-center justify-center rounded-xl bg-purple-50 text-[#7C3AED]">
+          <div className="flex h-9 w-9 sm:h-10 sm:w-10 shrink-0 items-center justify-center rounded-xl bg-purple-50 text-[#981495]">
             <Star className="h-4 w-4 sm:h-5 sm:w-5" />
           </div>
           <div>
@@ -603,7 +603,7 @@ export function CategoryDiscoveryView({
         </div>
 
         <div className="flex items-center gap-3 rounded-2xl bg-white border border-slate-100 p-3.5 sm:p-4 shadow-2xs">
-          <div className="flex h-9 w-9 sm:h-10 sm:w-10 shrink-0 items-center justify-center rounded-xl bg-purple-50 text-[#7C3AED]">
+          <div className="flex h-9 w-9 sm:h-10 sm:w-10 shrink-0 items-center justify-center rounded-xl bg-purple-50 text-[#981495]">
             <Headphones className="h-4 w-4 sm:h-5 sm:w-5" />
           </div>
           <div>
@@ -626,7 +626,7 @@ export function CategoryDiscoveryView({
             </button>
 
             <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-purple-100 text-[#7C3AED]">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-purple-100 text-[#981495]">
                 <Tag className="h-5 w-5" />
               </div>
               <div>
@@ -657,7 +657,7 @@ export function CategoryDiscoveryView({
                     placeholder="e.g. Higginbothams Book Stall, Amman Mill..."
                     value={requestShopName}
                     onChange={(e) => setRequestShopName(e.target.value)}
-                    className="w-full rounded-xl border border-slate-200 px-3 py-2 text-xs focus:border-[#7C3AED] focus:outline-none"
+                    className="w-full rounded-xl border border-slate-200 px-3 py-2 text-xs focus:border-[#981495] focus:outline-none"
                   />
                 </div>
 
@@ -670,7 +670,7 @@ export function CategoryDiscoveryView({
                     placeholder="e.g. Bazaar Street, Near Bus Stand..."
                     value={requestArea}
                     onChange={(e) => setRequestArea(e.target.value)}
-                    className="w-full rounded-xl border border-slate-200 px-3 py-2 text-xs focus:border-[#7C3AED] focus:outline-none"
+                    className="w-full rounded-xl border border-slate-200 px-3 py-2 text-xs focus:border-[#981495] focus:outline-none"
                   />
                 </div>
 
@@ -683,7 +683,7 @@ export function CategoryDiscoveryView({
                     placeholder="Describe specific products or masalas..."
                     value={requestDetails}
                     onChange={(e) => setRequestDetails(e.target.value)}
-                    className="w-full rounded-xl border border-slate-200 px-3 py-2 text-xs focus:border-[#7C3AED] focus:outline-none"
+                    className="w-full rounded-xl border border-slate-200 px-3 py-2 text-xs focus:border-[#981495] focus:outline-none"
                   />
                 </div>
 
@@ -697,7 +697,7 @@ export function CategoryDiscoveryView({
                   </button>
                   <button
                     type="submit"
-                    className="px-5 py-2 rounded-xl text-xs font-bold bg-[#7C3AED] hover:bg-[#6D28D9] text-white shadow-md"
+                    className="px-5 py-2 rounded-xl text-xs font-bold bg-[#981495] hover:bg-[#6D28D9] text-white shadow-md"
                   >
                     Submit Request
                   </button>

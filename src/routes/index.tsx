@@ -27,6 +27,7 @@ import {
   Swiggy99StoreSection,
 } from "@/components/swiggy-inspiration-sections";
 import { HeroSection } from "@/components/hero-section";
+import { LocalShoreMapExperience } from "@/components/map/localshore-map-experience";
 import {
   FlipkartCategoryStrip,
   FlipkartBannerRow,
@@ -350,6 +351,9 @@ function Home() {
       {/* Swiggy-Style Hero Landing Section */}
       <HeroSection />
 
+      {/* Main Promo Carousel (Swiggy / Local Shore Banners) */}
+      <PromoCarousel />
+
       {/* 1. Swiggy Top Yellow Deals Carousel Strip */}
       <SwiggyTopDealsStrip />
 
@@ -360,7 +364,41 @@ function Home() {
       <SwiggyQuickCategories />
 
       {/* Shops section anchor */}
-      <div id="shops-section" className="scroll-mt-24">
+      <div id="shops-section" className="scroll-mt-24 px-5 md:px-8">
+        {/* Interactive Map Search Header */}
+        <div className="mb-6 rounded-3xl border border-primary/20 bg-card p-4 md:p-6 shadow-md">
+          <div className="mb-4 flex flex-col md:flex-row md:items-center justify-between gap-2 border-b border-border/80 pb-3">
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="flex h-3 w-3 rounded-full bg-emerald-500 animate-ping" />
+                <h2 className="font-display text-lg md:text-2xl font-bold text-foreground">
+                  🗺️ Interactive LocalShop &amp; Product Map
+                </h2>
+              </div>
+              <p className="mt-1 text-xs md:text-sm text-muted-foreground">
+                Search products, view prices directly on open maps (OpenStreetMap + MapLibre GL), and order from nearby verified local shops.
+              </p>
+            </div>
+          </div>
+
+          <LocalShoreMapExperience
+            initialQuery={query}
+            initialCategory={cat}
+            onQueryChange={(q) => {
+              navigate({
+                search: (prev) => ({ ...prev, q: q || undefined }),
+                resetScroll: false,
+              });
+            }}
+            onCategoryChange={(c) => {
+              navigate({
+                search: (prev) => ({ ...prev, category: c === "all" ? undefined : c }),
+                resetScroll: false,
+              });
+            }}
+          />
+        </div>
+
         {/* Active category filter bar */}
         {((cat && cat !== "all") || query) && (
           <div className="mx-5 mb-4 flex items-center justify-between rounded-xl border border-primary/20 bg-primary/5 px-4 py-2.5 md:mx-8">

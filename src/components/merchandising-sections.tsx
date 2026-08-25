@@ -68,7 +68,7 @@ export function ProductCard({
       whileTap={{ scale: 0.98 }}
       transition={spring}
       data-product-id={product.id}
-      className={`group relative flex min-w-0 flex-col overflow-hidden rounded-2xl border border-[#ead9a8] bg-white shadow-xs transition-all duration-300 hover:border-[#d9bd70] hover:shadow-md ${
+      className={`group relative flex min-w-0 flex-col overflow-hidden rounded-2xl border border-purple-200 bg-white shadow-xs transition-all duration-300 hover:border-purple-400 hover:shadow-md ${
         compact ? "p-2.5" : "p-3.5"
       }`}
     >
@@ -99,7 +99,7 @@ export function ProductCard({
         }}
       >
         {/* Grey inner padded image container frame */}
-        <div className="aspect-[4/3] w-full overflow-hidden rounded-xl bg-slate-50 p-2 flex items-center justify-center border border-[#ead9a8]/40 relative">
+        <div className="aspect-[4/3] w-full overflow-hidden rounded-xl bg-slate-50 p-2 flex items-center justify-center border border-purple-200/40 relative">
           <m.div layoutId={`product-image-${product.id}`} className="h-full w-full flex items-center justify-center">
             <SafeProductImage
               src={imageUrl}
@@ -154,7 +154,7 @@ export function ProductCard({
             });
           }}
           onChange={(nextQuantity) => cartStore.setQty(product.id, nextQuantity)}
-          addClassName="w-full rounded-xl bg-purple-50 py-1.5 text-xs font-bold text-purple-700 border border-purple-200/60 transition hover:bg-purple-600 hover:text-white"
+          addClassName="w-full rounded-xl bg-purple-50 py-1.5 text-xs font-bold text-purple-700 border border-purple-200/60 transition hover:bg-purple-700 hover:text-white"
         />
       </div>
     </m.div>

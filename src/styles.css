@@ -46,16 +46,16 @@
 :root {
   --radius: 0.75rem;
 
-  /* Brand — Localshore reference palette */
-  --teal: oklch(0.46 0.24 330); /* Orchid primary #981495 */
-  --teal-deep: oklch(0.36 0.23 330); /* Deep orchid */
-  --orchid-deep: #7d0d76;
+  /* Brand — Localshore reference palette (Signature Orchid #981495) */
+  --teal: #981495; /* Orchid Primary #981495 */
+  --teal-deep: #700b6e; /* Deep Orchid #700b6e */
+  --orchid-deep: #700b6e;
   --orchid: #981495;
-  --orchid-light: #b52bab;
-  --sand: oklch(0.98 0.01 300); /* Near-white lavender tint */
-  --ink: oklch(0.22 0.08 330); /* Deep orchid-ink */
-  --marigold: oklch(0.78 0.14 78); /* Amber accent #E8A93A */
-  --marigold-foreground: oklch(0.22 0.08 330);
+  --orchid-light: #c026d3;
+  --sand: oklch(0.98 0.01 295); /* Clean orchid tint */
+  --ink: oklch(0.22 0.05 295); /* Deep slate ink */
+  --marigold: #981495; /* Signature Orchid */
+  --marigold-foreground: oklch(1 0 0);
   --coral: oklch(0.72 0.14 30); /* Muted coral #E88A7A */
   --success: oklch(0.64 0.15 155);
 
@@ -65,19 +65,19 @@
   --card-foreground: var(--ink);
   --popover: oklch(1 0 0);
   --popover-foreground: var(--ink);
-  --primary: var(--teal);
+  --primary: var(--orchid);
   --primary-foreground: oklch(1 0 0);
-  --secondary: oklch(0.96 0.02 295);
-  --secondary-foreground: var(--ink);
+  --secondary: #fdf2fe;
+  --secondary-foreground: #700b6e;
   --muted: oklch(0.96 0.015 295);
   --muted-foreground: oklch(0.5 0.04 295);
-  --accent: var(--marigold);
-  --accent-foreground: var(--ink);
+  --accent: var(--orchid);
+  --accent-foreground: oklch(1 0 0);
   --destructive: var(--coral);
   --destructive-foreground: oklch(1 0 0);
-  --border: oklch(0.78 0.08 78 / 0.55); /* Amber hairline like reference */
+  --border: #f0abfc; /* Light orchid hairline border */
   --input: oklch(0.9 0.03 295);
-  --ring: var(--teal);
+  --ring: var(--orchid);
 }
 
 @layer base {
