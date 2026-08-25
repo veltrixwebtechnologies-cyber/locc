@@ -48,6 +48,7 @@ export function LocalShoreMapExperience({
     maxDistanceKm: undefined,
   });
   const [selectedMarkerId, setSelectedMarkerId] = useState<string | null>(null);
+  const [hoveredMarkerId, setHoveredMarkerId] = useState<string | null>(null);
 
   // Sync external props with internal filter state
   useEffect(() => {
@@ -310,6 +311,8 @@ export function LocalShoreMapExperience({
                   return (
                     <div
                       key={item.id}
+                      onMouseEnter={() => setHoveredMarkerId(item.id)}
+                      onMouseLeave={() => setHoveredMarkerId(null)}
                       onClick={() => {
                         setSelectedMarkerId(item.id);
                         mapRef.current?.flyToLocation(item.lat, item.lng, 14.5);
@@ -414,6 +417,7 @@ export function LocalShoreMapExperience({
                 markers={markerItems}
                 userLocation={userLocation}
                 selectedMarkerId={selectedMarkerId}
+                hoveredMarkerId={hoveredMarkerId}
                 onSelectMarker={(m) => setSelectedMarkerId(m ? m.id : null)}
                 onBoundsChange={(bounds) => {
                   setFilters((prev) => ({ ...prev, bounds }));

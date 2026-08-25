@@ -128,8 +128,8 @@ export function ShopCardSheet({
               {marker.productName} · {marker.distanceKm.toFixed(1)} km away
             </p>
           </div>
-          <div className="flex items-center gap-1 rounded-lg bg-amber-50 px-2 py-1 text-xs font-extrabold text-amber-900 dark:bg-amber-950/60 dark:text-amber-300 shrink-0">
-            <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
+          <div className="flex items-center gap-1 rounded-lg bg-amber-500/10 px-2 py-1 text-xs font-extrabold text-foreground shrink-0 border border-amber-500/20">
+            <Star className="h-3.5 w-3.5 fill-[#F59E0B] text-[#F59E0B]" />
             <span>{marker.rating.toFixed(2)}</span>
             <span className="font-normal text-muted-foreground">({Math.floor(marker.rating * 15)})</span>
           </div>

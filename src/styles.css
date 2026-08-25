@@ -54,8 +54,8 @@
   --orchid-light: #c026d3;
   --sand: oklch(0.98 0.01 295); /* Clean orchid tint */
   --ink: oklch(0.22 0.05 295); /* Deep slate ink */
-  --marigold: #981495; /* Signature Orchid */
-  --marigold-foreground: oklch(1 0 0);
+  --marigold: #F59E0B; /* Warm Gold / Marigold Accent */
+  --marigold-foreground: #1E1B4B;
   --coral: oklch(0.72 0.14 30); /* Muted coral #E88A7A */
   --success: oklch(0.64 0.15 155);
 
@@ -71,8 +71,8 @@
   --secondary-foreground: #700b6e;
   --muted: oklch(0.96 0.015 295);
   --muted-foreground: oklch(0.5 0.04 295);
-  --accent: var(--orchid);
-  --accent-foreground: oklch(1 0 0);
+  --accent: var(--marigold);
+  --accent-foreground: var(--marigold-foreground);
   --destructive: var(--coral);
   --destructive-foreground: oklch(1 0 0);
   --border: #f0abfc; /* Light orchid hairline border */

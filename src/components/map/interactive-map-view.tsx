@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useImperativeHandle, forwardRef } from "react";
 import * as maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
-import { Locate, RefreshCw, Layers } from "lucide-react";
+import { Locate, RefreshCw } from "lucide-react";
 import type { MapMarkerItem, MapLocation } from "@/lib/map-service/types";
 import { getMapLibreStyle } from "@/lib/map-service/providers";
 import { ShopCardSheet } from "./shop-card-sheet";
@@ -16,6 +16,7 @@ interface Props {
   markers: MapMarkerItem[];
   userLocation: MapLocation;
   selectedMarkerId?: string | null;
+  hoveredMarkerId?: string | null;
   onSelectMarker?: (marker: MapMarkerItem | null) => void;
   onBoundsChange?: (bounds: { swLat: number; swLng: number; neLat: number; neLng: number }) => void;
   onUserLocationChange?: (loc: MapLocation) => void;
@@ -28,6 +29,7 @@ export const InteractiveMapView = forwardRef<InteractiveMapViewRef, Props>(
       markers,
       userLocation,
       selectedMarkerId,
+      hoveredMarkerId,
       onSelectMarker,
       onBoundsChange,
       onUserLocationChange,
@@ -82,23 +84,33 @@ export const InteractiveMapView = forwardRef<InteractiveMapViewRef, Props>(
             data: routeGeoJSON,
           });
 
+          // Outer glowing casing
+          map.addLayer({
+            id: "directions-route-casing",
+            type: "line",
+            source: "directions-route",
+            layout: { "line-join": "round", "line-cap": "round" },
+            paint: {
+              "line-color": "#F59E0B", // Marigold Gold
+              "line-width": 8,
+              "line-opacity": 0.4,
+            },
+          });
+
+          // Core route line
           map.addLayer({
             id: "directions-route-line",
             type: "line",
             source: "directions-route",
-            layout: {
-              "line-join": "round",
-              "line-cap": "round",
-            },
+            layout: { "line-join": "round", "line-cap": "round" },
             paint: {
-              "line-color": "#981495", // LocalShore coastal teal brand color
-              "line-width": 5,
-              "line-opacity": 0.85,
+              "line-color": "#1E1B4B", // Dark Ink
+              "line-width": 4,
+              "line-opacity": 0.9,
             },
           });
         }
 
-        // Fit map bounds to encompass origin and destination route
         if (geometry.length > 0) {
           const bounds = new maplibregl.LngLatBounds();
           geometry.forEach((coord) => bounds.extend(coord as [number, number]));
@@ -108,9 +120,10 @@ export const InteractiveMapView = forwardRef<InteractiveMapViewRef, Props>(
       clearRoute: () => {
         setRouteInfo(null);
         const map = mapRef.current;
-        if (map && map.getLayer("directions-route-line")) {
-          map.removeLayer("directions-route-line");
-          map.removeSource("directions-route");
+        if (map) {
+          if (map.getLayer("directions-route-line")) map.removeLayer("directions-route-line");
+          if (map.getLayer("directions-route-casing")) map.removeLayer("directions-route-casing");
+          if (map.getSource("directions-route")) map.removeSource("directions-route");
         }
       },
     }));
@@ -134,7 +147,6 @@ export const InteractiveMapView = forwardRef<InteractiveMapViewRef, Props>(
       );
 
       map.on("error", (e) => {
-        // Prevent noisy console output for aborted tile fetch requests during fast panning
         const err = e.error as any;
         if (err?.message?.includes("aborted") || err?.name === "AbortError") {
           return;
@@ -145,7 +157,78 @@ export const InteractiveMapView = forwardRef<InteractiveMapViewRef, Props>(
         setShowSearchThisArea(true);
       });
 
-      // ResizeObserver to ensure map canvas automatically resizes on layout shifts
+      // Setup GeoJSON Source for Cluster rendering
+      map.on("load", () => {
+        if (!map.getSource("shops-cluster-source")) {
+          map.addSource("shops-cluster-source", {
+            type: "geojson",
+            data: { type: "FeatureCollection", features: [] },
+            cluster: true,
+            clusterMaxZoom: 12,
+            clusterRadius: 50,
+          });
+
+          // Circle cluster layer
+          map.addLayer({
+            id: "clusters",
+            type: "circle",
+            source: "shops-cluster-source",
+            filter: ["has", "point_count"],
+            paint: {
+              "circle-color": "#F59E0B",
+              "circle-radius": [
+                "step",
+                ["get", "point_count"],
+                18,
+                5,
+                24,
+                15,
+                30,
+              ],
+              "circle-stroke-width": 3,
+              "circle-stroke-color": "#1E1B4B",
+            },
+          });
+
+          // Cluster text count layer
+          map.addLayer({
+            id: "cluster-count",
+            type: "symbol",
+            source: "shops-cluster-source",
+            filter: ["has", "point_count"],
+            layout: {
+              "text-field": "{point_count_abbreviated}",
+              "text-size": 13,
+              "text-font": ["Open Sans Bold", "Arial Unicode MS Bold"],
+            },
+            paint: {
+              "text-color": "#1E1B4B",
+            },
+          });
+
+          // Zoom into cluster on click
+          map.on("click", "clusters", (e) => {
+            const features = map.queryRenderedFeatures(e.point, { layers: ["clusters"] });
+            const clusterId = features[0]?.properties?.cluster_id;
+            const source = map.getSource("shops-cluster-source") as maplibregl.GeoJSONSource;
+            if (clusterId && source) {
+              source.getClusterExpansionZoom(clusterId, (err, zoom) => {
+                if (err) return;
+                const coords = (features[0].geometry as any).coordinates;
+                map.easeTo({ center: coords, zoom: zoom + 0.5 });
+              });
+            }
+          });
+
+          map.on("mouseenter", "clusters", () => {
+            map.getCanvas().style.cursor = "pointer";
+          });
+          map.on("mouseleave", "clusters", () => {
+            map.getCanvas().style.cursor = "";
+          });
+        }
+      });
+
       const resizeObserver = new ResizeObserver(() => {
         if (mapRef.current) {
           mapRef.current.resize();
@@ -162,7 +245,7 @@ export const InteractiveMapView = forwardRef<InteractiveMapViewRef, Props>(
       };
     }, []);
 
-    // Update User Location Marker (orchid pulsing ring)
+    // Update User Location Marker (Marigold/Orchid pulsing ring)
     useEffect(() => {
       const map = mapRef.current;
       if (!map) return;
@@ -175,9 +258,9 @@ export const InteractiveMapView = forwardRef<InteractiveMapViewRef, Props>(
         const userEl = document.createElement("div");
         userEl.className = "relative grid h-7 w-7 place-items-center";
         userEl.innerHTML = `
-          <div class="absolute inset-0 animate-ping rounded-full bg-primary/40"></div>
-          <div class="relative grid h-5 w-5 place-items-center rounded-full bg-primary text-white shadow-md ring-2 ring-white">
-            <svg class="h-3 w-3" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+          <div class="absolute inset-0 animate-ping rounded-full bg-amber-500/40"></div>
+          <div class="relative grid h-5.5 w-5.5 place-items-center rounded-full bg-[#F59E0B] text-[#1E1B4B] shadow-md ring-2 ring-white font-bold">
+            <svg class="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
           </div>
         `;
 
@@ -187,10 +270,28 @@ export const InteractiveMapView = forwardRef<InteractiveMapViewRef, Props>(
       }
     }, [userLocation]);
 
-    // Update Shop Markers (Compact Price Pins)
+    // Update GeoJSON Source & Price Pin Markers
     useEffect(() => {
       const map = mapRef.current;
       if (!map) return;
+
+      // Update GeoJSON cluster source data
+      if (map.getSource("shops-cluster-source")) {
+        const source = map.getSource("shops-cluster-source") as maplibregl.GeoJSONSource;
+        source.setData({
+          type: "FeatureCollection",
+          features: markers.map((m) => ({
+            type: "Feature",
+            geometry: { type: "Point", coordinates: [m.lng, m.lat] },
+            properties: {
+              id: m.id,
+              shopId: m.shopId,
+              shopName: m.shopName,
+              priceDisplay: m.priceDisplay,
+            },
+          })),
+        });
+      }
 
       // Clean up old markers no longer present
       const currentIds = new Set(markers.map((m) => m.id));
@@ -201,22 +302,21 @@ export const InteractiveMapView = forwardRef<InteractiveMapViewRef, Props>(
         }
       });
 
-      // Render or update price pin markers
+      // Render or update custom price pin markers
       markers.forEach((marker) => {
         const isSelected = activeMarker?.id === marker.id;
+        const isHovered = hoveredMarkerId === marker.id;
 
         if (htmlMarkersRef.current[marker.id]) {
-          // Update position & selection state
           const markerInst = htmlMarkersRef.current[marker.id];
           markerInst.setLngLat([marker.lng, marker.lat]);
           const el = markerInst.getElement();
-          el.className = getMarkerClass(isSelected);
+          el.className = getMarkerClass(isSelected, isHovered);
         } else {
-          // Create new price + shop marker element
           const pinEl = document.createElement("div");
-          pinEl.className = getMarkerClass(isSelected);
+          pinEl.className = getMarkerClass(isSelected, isHovered);
           pinEl.innerHTML = `
-            <div class="marker-price-pill shadow-md hover:scale-105 transition-all">
+            <div class="marker-price-pill shadow-md transition-all">
               <span class="font-extrabold">${marker.priceDisplay}</span>
               <span class="shop-name-tag">${marker.shopName}</span>
             </div>
@@ -236,7 +336,7 @@ export const InteractiveMapView = forwardRef<InteractiveMapViewRef, Props>(
           htmlMarkersRef.current[marker.id] = mInst;
         }
       });
-    }, [markers, activeMarker]);
+    }, [markers, activeMarker, hoveredMarkerId]);
 
     const handleSearchThisAreaClick = () => {
       setShowSearchThisArea(false);
@@ -263,7 +363,6 @@ export const InteractiveMapView = forwardRef<InteractiveMapViewRef, Props>(
             }
           },
           () => {
-            // Default back to center
             if (mapRef.current) {
               mapRef.current.flyTo({ center: [userLocation.lng, userLocation.lat], zoom: 14 });
             }
@@ -277,7 +376,7 @@ export const InteractiveMapView = forwardRef<InteractiveMapViewRef, Props>(
         {/* Map Container */}
         <div ref={containerRef} className="h-full w-full" />
 
-        {/* Custom Styling for Compact Price Pins */}
+        {/* Custom Styling for Price Pins & Marigold Hover Highlights */}
         <style>{`
           .maplibregl-marker {
             width: auto !important;
@@ -296,7 +395,11 @@ export const InteractiveMapView = forwardRef<InteractiveMapViewRef, Props>(
           }
           .maplibre-marker-pin.selected {
             z-index: 50 !important;
-            transform: scale(1.15);
+            transform: scale(1.18);
+          }
+          .maplibre-marker-pin.hovered {
+            z-index: 40 !important;
+            transform: scale(1.12);
           }
           .marker-price-pill {
             display: inline-flex !important;
@@ -326,16 +429,17 @@ export const InteractiveMapView = forwardRef<InteractiveMapViewRef, Props>(
             text-overflow: ellipsis;
             white-space: nowrap;
           }
-          .marker-price-pill:hover {
-            transform: scale(1.06);
-            box-shadow: 0 6px 18px rgba(0, 0, 0, 0.24);
-            border-color: #111827;
+          .marker-price-pill:hover, .hovered .marker-price-pill {
+            background-color: #F59E0B !important;
+            color: #1E1B4B !important;
+            border-color: #1E1B4B !important;
+            box-shadow: 0 6px 18px rgba(245, 158, 11, 0.45);
           }
           .selected .marker-price-pill {
             background-color: #111827 !important;
             color: #ffffff !important;
-            border-color: #111827 !important;
-            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35);
+            border-color: #F59E0B !important;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
           }
           .selected .shop-name-tag {
             border-left-color: rgba(255, 255, 255, 0.3);
@@ -348,9 +452,9 @@ export const InteractiveMapView = forwardRef<InteractiveMapViewRef, Props>(
           <div className="absolute top-4 inset-x-0 z-20 flex justify-center pointer-events-none">
             <button
               onClick={handleSearchThisAreaClick}
-              className="pointer-events-auto flex items-center gap-2 rounded-full border border-primary/30 bg-card/95 px-4 py-2 text-xs font-bold text-primary shadow-xl backdrop-blur transition-transform hover:scale-105 active:scale-95"
+              className="pointer-events-auto flex items-center gap-2 rounded-full border border-amber-500/40 bg-card/95 px-4 py-2 text-xs font-bold text-foreground shadow-xl backdrop-blur transition-transform hover:scale-105 active:scale-95"
             >
-              <RefreshCw className="h-3.5 w-3.5" />
+              <RefreshCw className="h-3.5 w-3.5 text-[#F59E0B]" />
               <span>Search this area</span>
             </button>
           </div>
@@ -363,14 +467,14 @@ export const InteractiveMapView = forwardRef<InteractiveMapViewRef, Props>(
             title="Recenter to my location"
             className="grid h-10 w-10 place-items-center rounded-xl border border-border bg-card text-foreground shadow-md transition-colors hover:bg-muted active:scale-95"
           >
-            <Locate className="h-5 w-5 text-primary" />
+            <Locate className="h-5 w-5 text-[#F59E0B]" />
           </button>
         </div>
 
         {/* Route Stats Overlay Banner (if route active) */}
         {routeInfo && (
-          <div className="absolute top-4 right-14 z-20 rounded-xl border border-primary/30 bg-card/95 px-3.5 py-2 shadow-lg backdrop-blur text-xs font-bold text-foreground">
-            <span className="text-primary">{routeInfo.distanceKm} km</span> · Approx {routeInfo.durationMins} mins drive
+          <div className="absolute top-4 right-14 z-20 rounded-xl border border-amber-500/40 bg-card/95 px-3.5 py-2 shadow-lg backdrop-blur text-xs font-bold text-foreground">
+            <span className="text-[#F59E0B] font-extrabold">{routeInfo.distanceKm} km</span> · Approx {routeInfo.durationMins} mins drive
           </div>
         )}
 
@@ -386,7 +490,6 @@ export const InteractiveMapView = forwardRef<InteractiveMapViewRef, Props>(
               }}
               onDirectionsCalculated={(geom, dist, dur) => {
                 if (mapRef.current) {
-                  // Call imperative drawRoute
                   const refInst = {
                     drawRoute: (g: [number, number][], d: number, t: number) => {
                       setRouteInfo({ distanceKm: d, durationMins: t });
@@ -402,10 +505,16 @@ export const InteractiveMapView = forwardRef<InteractiveMapViewRef, Props>(
                       } else {
                         m.addSource("directions-route", { type: "geojson", data: geojson });
                         m.addLayer({
+                          id: "directions-route-casing",
+                          type: "line",
+                          source: "directions-route",
+                          paint: { "line-color": "#F59E0B", "line-width": 8, "line-opacity": 0.4 },
+                        });
+                        m.addLayer({
                           id: "directions-route-line",
                           type: "line",
                           source: "directions-route",
-                          paint: { "line-color": "#981495", "line-width": 5, "line-opacity": 0.9 },
+                          paint: { "line-color": "#1E1B4B", "line-width": 4, "line-opacity": 0.9 },
                         });
                       }
                       const b = new maplibregl.LngLatBounds();
@@ -424,8 +533,9 @@ export const InteractiveMapView = forwardRef<InteractiveMapViewRef, Props>(
   }
 );
 
-function getMarkerClass(isSelected: boolean): string {
-  return `maplibre-marker-pin ${isSelected ? "selected" : ""}`;
+function getMarkerClass(isSelected: boolean, isHovered: boolean): string {
+  return `maplibre-marker-pin ${isSelected ? "selected" : ""} ${isHovered ? "hovered" : ""}`;
 }
 
 InteractiveMapView.displayName = "InteractiveMapView";
+
