@@ -41,6 +41,11 @@ export const InteractiveMapView = forwardRef<InteractiveMapViewRef, Props>(
     const mapRef = useRef<maplibregl.Map | null>(null);
     const htmlMarkersRef = useRef<Record<string, maplibregl.Marker>>({});
     const userMarkerRef = useRef<maplibregl.Marker | null>(null);
+    const onBoundsChangeRef = useRef(onBoundsChange);
+    useEffect(() => {
+      onBoundsChangeRef.current = onBoundsChange;
+    }, [onBoundsChange]);
+
     const [showSearchThisArea, setShowSearchThisArea] = useState(false);
     const [activeMarker, setActiveMarker] = useState<MapMarkerItem | null>(null);
     const [routeInfo, setRouteInfo] = useState<{ distanceKm: number; durationMins: number } | null>(null);
@@ -155,6 +160,15 @@ export const InteractiveMapView = forwardRef<InteractiveMapViewRef, Props>(
 
       map.on("moveend", () => {
         setShowSearchThisArea(true);
+        if (onBoundsChangeRef.current) {
+          const bounds = map.getBounds();
+          onBoundsChangeRef.current({
+            swLat: bounds.getSouthWest().lat,
+            swLng: bounds.getSouthWest().lng,
+            neLat: bounds.getNorthEast().lat,
+            neLng: bounds.getNorthEast().lng,
+          });
+        }
       });
 
       // Setup GeoJSON Source for Cluster rendering
@@ -207,16 +221,18 @@ export const InteractiveMapView = forwardRef<InteractiveMapViewRef, Props>(
           });
 
           // Zoom into cluster on click
-          map.on("click", "clusters", (e) => {
+          map.on("click", "clusters", async (e) => {
             const features = map.queryRenderedFeatures(e.point, { layers: ["clusters"] });
             const clusterId = features[0]?.properties?.cluster_id;
             const source = map.getSource("shops-cluster-source") as maplibregl.GeoJSONSource;
             if (clusterId && source) {
-              source.getClusterExpansionZoom(clusterId, (err, zoom) => {
-                if (err) return;
+              try {
+                const zoom = await source.getClusterExpansionZoom(clusterId);
                 const coords = (features[0].geometry as any).coordinates;
                 map.easeTo({ center: coords, zoom: zoom + 0.5 });
-              });
+              } catch (err) {
+                console.error("Error expanding cluster zoom:", err);
+              }
             }
           });
 
@@ -312,6 +328,15 @@ export const InteractiveMapView = forwardRef<InteractiveMapViewRef, Props>(
           markerInst.setLngLat([marker.lng, marker.lat]);
           const el = markerInst.getElement();
           el.className = getMarkerClass(isSelected, isHovered);
+          
+          // Always sync priceDisplay and shopName DOM content
+          const pill = el.querySelector(".marker-price-pill");
+          if (pill) {
+            pill.innerHTML = `
+              <span class="font-extrabold">${marker.priceDisplay}</span>
+              <span class="shop-name-tag">${marker.shopName}</span>
+            `;
+          }
         } else {
           const pinEl = document.createElement("div");
           pinEl.className = getMarkerClass(isSelected, isHovered);

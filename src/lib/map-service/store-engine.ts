@@ -48,6 +48,35 @@ export function getPriceFreshnessText(index: number): string {
  * - Price per unit: ₹120/kg
  * - Starting price: ₹199+
  */
+// Fallback price calculator per store category if explicit prices are missing or 0
+export function getCategoryFallbackPrice(cat: StoreCategory, index: number): number {
+  const defaults: Record<StoreCategory, number[]> = {
+    flour_mill: [45, 58, 75, 85],
+    palamuthir: [50, 120, 180, 190],
+    meat_fish: [260, 440, 580, 390],
+    fashion_accessories: [220, 380, 260, 490],
+    boutiques: [850, 1150, 3450],
+    showrooms: [7800, 22990],
+    fast_fashion: [699, 999],
+    individual_fashion: [899, 599],
+    kitchen_appliances: [1450, 3290],
+    home_decor: [399, 650],
+    pharmacy: [22, 450],
+    stationery: [60, 240],
+    bakery: [65, 120],
+    grocery: [420, 299],
+  };
+  const list = defaults[cat] || [199, 299, 399];
+  return list[index % list.length];
+}
+
+/**
+ * Format price according to LocalShore requirements:
+ * - Exact price: ₹299
+ * - Price range: ₹199–₹899
+ * - Price per unit: ₹120/kg
+ * - Starting price: ₹199+
+ */
 export function formatPriceDisplay(
   minPrice: number,
   maxPrice?: number,
@@ -56,7 +85,6 @@ export function formatPriceDisplay(
 ): string {
   const cleanUnit = unit ? unit.trim().toLowerCase() : "";
   const isPerKg = cleanUnit.includes("kg") || cleanUnit.includes("kilo");
-  const isPerPc = cleanUnit.includes("pc") || cleanUnit.includes("piece") || cleanUnit.includes("set");
 
   if (maxPrice && maxPrice > minPrice) {
     return `₹${minPrice}–₹${maxPrice}`;
@@ -83,11 +111,12 @@ export function getMapMarkerItems(
   const query = (filters.query ?? "").trim().toLowerCase();
   const catFilter = filters.category && filters.category !== "all" ? filters.category : undefined;
 
-  // Build combined store list
-  const liveSellerIds = new Set(liveProducts.map((p) => p.seller_id));
-  const liveVendorStores: Store[] = (liveVendors ?? [])
-    .filter((vendor) => liveSellerIds.has(vendor.id))
-    .map((vendor, idx) => ({
+  // Build combined store map (preserving live vendors & mock stores)
+  const storeMap = new Map<string, Store>();
+
+  // 1. Add live vendors from Supabase
+  (liveVendors ?? []).forEach((vendor, idx) => {
+    storeMap.set(vendor.id, {
       ...APPROVED_STORE,
       id: vendor.id,
       name: vendor.shop_name || APPROVED_STORE.name,
@@ -101,31 +130,39 @@ export function getMapMarkerItems(
       rating: 4.8,
       isOpen: true,
       etaMin: 20,
-    }));
+    });
+  });
 
-  const allStores = liveVendorStores.length > 0 ? [...liveVendorStores, ...stores] : stores;
+  // 2. Add mock stores
+  stores.forEach((store) => {
+    if (!storeMap.has(store.id)) {
+      storeMap.set(store.id, store);
+    }
+  });
 
+  const allStores = Array.from(storeMap.values());
   const markers: MapMarkerItem[] = [];
 
   allStores.forEach((store, idx) => {
     // Determine effective lat/lng:
-    // If the store has explicit non-default DB coordinates, use them.
-    // Otherwise, dynamically cluster store around the user's active search location
-    // using a deterministic golden spiral scatter (0.4 km - 4.5 km range).
-    let effectiveLat = store.lat;
-    let effectiveLng = store.lng;
+    // If store coordinates are missing or far away (>0.3 degrees/~30km from search center),
+    // scatter dynamically near user location using golden ratio spiral.
+    let effectiveLat = Number(store.lat);
+    let effectiveLng = Number(store.lng);
 
-    const isDefaultLocation =
+    const isMissingOrFar =
       !effectiveLat ||
       !effectiveLng ||
-      (Math.abs(effectiveLat - 9.968) < 0.05 && Math.abs(effectiveLng - 76.244) < 0.05);
+      isNaN(effectiveLat) ||
+      isNaN(effectiveLng) ||
+      Math.abs(effectiveLat - userLocation.lat) > 0.35 ||
+      Math.abs(effectiveLng - userLocation.lng) > 0.35;
 
-    if (isDefaultLocation) {
-      // Golden ratio spiral scatter angle & distance
+    if (isMissingOrFar) {
+      // Golden ratio spiral scatter angle & radius
       const angle = (idx * 137.5 * Math.PI) / 180;
-      const radiusKm = 0.4 + ((idx * 0.7) % 4.2);
+      const radiusKm = 0.3 + ((idx * 0.6) % 3.8);
 
-      // Convert km offsets into lat/lng degrees
       const latOffset = (radiusKm * Math.sin(angle)) / 111;
       const lngOffset =
         (radiusKm * Math.cos(angle)) / (111 * Math.cos((userLocation.lat * Math.PI) / 180));
@@ -134,7 +171,7 @@ export function getMapMarkerItems(
       effectiveLng = userLocation.lng + lngOffset;
     }
 
-    // Distance calculation from active user location
+    // Calculate exact Haversine distance
     const computedDistanceKm = calculateHaversineDistanceKm(
       userLocation.lat,
       userLocation.lng,
@@ -142,8 +179,8 @@ export function getMapMarkerItems(
       effectiveLng
     );
 
-    // Apply distance filter
-    if (filters.maxDistanceKm && computedDistanceKm > filters.maxDistanceKm) {
+    // Apply max distance filter (relative to active search location)
+    if (filters.maxDistanceKm !== undefined && computedDistanceKm > filters.maxDistanceKm) {
       return;
     }
 
@@ -166,12 +203,12 @@ export function getMapMarkerItems(
     const storeSeedProds = productsByStore[store.id] || [];
     const storeLiveProds = liveProducts
       .filter((p) => p.seller_id === store.id)
-      .map((p, pIdx) => ({
+      .map((p) => ({
         id: p.id,
         storeId: store.id,
         name: p.name,
         unit: p.unit || "1 pc",
-        price: Number(p.selling_price ?? 0),
+        price: Number(p.selling_price ?? p.price ?? 0),
         mrp: Number(p.mrp ?? p.selling_price ?? 0),
         category: p.category || "General",
         imageUrl: p.image_url,
@@ -197,20 +234,24 @@ export function getMapMarkerItems(
         if (storeNameMatch) {
           matchingProducts = allStoreProducts;
         } else {
-          return; // Shop has no products matching the user's product search query
+          return; // Shop has no products matching user query
         }
       }
     }
 
-    if (matchingProducts.length === 0) return;
+    // Extract valid prices
+    let prices = (matchingProducts.length > 0 ? matchingProducts : allStoreProducts)
+      .map((p) => Number(p.price))
+      .filter((pr) => !isNaN(pr) && pr > 0);
 
-    // Calculate price range across matching products
-    const prices = matchingProducts.map((p) => p.price).filter((pr) => !isNaN(pr) && pr > 0);
-    if (prices.length === 0) return;
+    // Fallback price if none exist, so shop pin price is never missing
+    if (prices.length === 0) {
+      prices = [getCategoryFallbackPrice(store.category, idx)];
+    }
 
     const minPrice = Math.min(...prices);
     const maxPrice = Math.max(...prices);
-    const topProduct = matchingProducts[0];
+    const topProduct = matchingProducts[0] || allStoreProducts[0];
 
     // Check price range filter
     if (filters.minPrice !== undefined && minPrice < filters.minPrice) return;
@@ -239,9 +280,9 @@ export function getMapMarkerItems(
       matchingProducts.length
     );
 
-    const productNameDisplay = query && matchingProducts.length > 0
+    const productNameDisplay = query && topProduct
       ? topProduct.name
-      : store.tagline || topProduct.name;
+      : store.tagline || (topProduct ? topProduct.name : store.name);
 
     markers.push({
       id: `marker-${store.id}`,
@@ -253,7 +294,7 @@ export function getMapMarkerItems(
       address: store.address,
       rating: store.rating,
       isOpen: store.isOpen,
-      distanceKm: computedDistanceKm,
+      distanceKm: Number(computedDistanceKm.toFixed(1)),
       productName: productNameDisplay,
       productImage: topProduct?.imageUrl || store.imageUrl,
       minPrice,
@@ -263,11 +304,11 @@ export function getMapMarkerItems(
       updatedAt: getPriceFreshnessText(idx),
       inStock,
       totalVariants: matchingProducts.length,
-      rawStore: { ...store, distanceKm: computedDistanceKm },
+      rawStore: { ...store, distanceKm: Number(computedDistanceKm.toFixed(1)) },
       matchingProduct: topProduct,
     });
   });
 
-  // Sort markers by distance or minPrice
+  // Sort markers by distance
   return markers.sort((a, b) => a.distanceKm - b.distanceKm);
 }

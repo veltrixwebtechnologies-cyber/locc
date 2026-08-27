@@ -219,7 +219,7 @@ export function useOrdersState() {
       .channel("shoreline-orders")
       .on("postgres_changes", { event: "*", schema: "public", table: "orders" }, refresh)
       .subscribe();
-    const poll = window.setInterval(refresh, 5_000);
+    const poll = window.setInterval(refresh, 20_000);
     const refreshWhenVisible = () => {
       if (document.visibilityState === "visible") refresh();
     };

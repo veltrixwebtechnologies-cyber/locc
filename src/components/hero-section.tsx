@@ -143,10 +143,7 @@ export function HeroSection() {
           {/* Main Swiggy Catchphrase Title */}
           <div className="max-w-2xl space-y-2">
             <h1 className="font-display text-2xl font-black tracking-tight sm:text-4xl md:text-5xl text-white leading-[1.15]">
-              Order food &amp; groceries. Discover best shops.{" "}
-              <span className="underline decoration-amber-400 decoration-wavy decoration-2">
-                Shoreline it!
-              </span>
+              Order food &amp; groceries. Discover best shops. Shoreline it!
             </h1>
             <p className="text-xs sm:text-sm font-semibold text-purple-100 max-w-lg">
               Support neighborhood vendors with instant fulfillment across Shoreline City.

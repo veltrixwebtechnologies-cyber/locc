@@ -118,7 +118,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             >
               LS
             </m.span>
-            <span className="font-display text-lg font-bold text-foreground">Local Shore</span>
+            <span className="font-display text-lg font-bold text-foreground">LocalShore</span>
           </Link>
           <button
             type="button"
@@ -132,9 +132,10 @@ export function AppShell({ children }: { children: ReactNode }) {
           >
             <MapPin className="h-4 w-4 shrink-0 text-primary" />
             <span>
-              <span className="block text-xs font-bold text-foreground">Delivery in 20-40 min</span>
-              <span className="block max-w-36 truncate text-[11px] text-muted-foreground">
-                Select delivery location
+              <span className="block text-[10px] font-medium text-muted-foreground">Deliver to</span>
+              <span className="flex items-center gap-1 text-xs font-bold text-foreground">
+                Coimbatore, TN
+                <svg className="h-3 w-3 text-muted-foreground" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M6 9l6 6 6-6"/></svg>
               </span>
             </span>
           </button>

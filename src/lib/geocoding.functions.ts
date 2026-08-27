@@ -31,28 +31,30 @@ export const reverseGeocode = createServerFn({ method: "GET" })
       zoom: "18",
     });
 
-    const response = await fetch(
-      `https://nominatim.openstreetmap.org/reverse?${params.toString()}`,
-      {
-        headers: {
-          "User-Agent": "LocalShore/1.0 (https://shop-local-delivery.lovable.app)",
-          "Accept-Language": "en",
+    try {
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?${params.toString()}`,
+        {
+          headers: {
+            "User-Agent": "LocalShore/1.0 (https://shop-local-delivery.lovable.app)",
+            "Accept-Language": "en",
+          },
         },
-      },
-    );
+      );
 
-    if (!response.ok) {
-      const body = await response.text();
-      throw new Error(`Reverse geocoding failed [${response.status}]: ${body}`);
+      if (response.ok) {
+        const payload = (await response.json()) as {
+          display_name?: string;
+          error?: string;
+        };
+
+        if (payload.display_name && !payload.error) {
+          return { address: payload.display_name };
+        }
+      }
+    } catch {
+      // Fallback below
     }
 
-    const payload = (await response.json()) as {
-      display_name?: string;
-      error?: string;
-    };
-
-    if (payload.error) throw new Error(payload.error);
-    if (!payload.display_name) throw new Error("No readable address found for this location.");
-
-    return { address: payload.display_name };
+    return { address: `Near ${data.lat.toFixed(4)}, ${data.lng.toFixed(4)}` };
   });

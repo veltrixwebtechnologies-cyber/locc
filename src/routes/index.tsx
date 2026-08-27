@@ -360,45 +360,30 @@ function Home() {
       {/* 2. Swiggy Featured Merchant Ad Banner */}
       <SwiggyFeaturedBanner />
 
-      {/* Swiggy-style quick category icon strip */}
+      {/* Shops section — full-width split view matching reference design */}
+      <div id="shops-section" className="scroll-mt-24 px-5 pt-6 md:px-8">
+        <LocalShoreMapExperience
+          initialQuery={query}
+          initialCategory={cat}
+          onQueryChange={(q) => {
+            navigate({
+              search: (prev) => ({ ...prev, q: q || undefined }),
+              resetScroll: false,
+            });
+          }}
+          onCategoryChange={(c) => {
+            navigate({
+              search: (prev) => ({ ...prev, category: c === "all" ? undefined : c }),
+              resetScroll: false,
+            });
+          }}
+        />
+      </div>
+
+      {/* Swiggy-style quick category icon strip - Placed right after Map View */}
       <SwiggyQuickCategories />
 
-      {/* Shops section anchor */}
-      <div id="shops-section" className="scroll-mt-24 px-5 md:px-8">
-        {/* Interactive Map Search Header */}
-        <div className="mb-6 rounded-3xl border border-primary/20 bg-card p-4 md:p-6 shadow-md">
-          <div className="mb-4 flex flex-col md:flex-row md:items-center justify-between gap-2 border-b border-border/80 pb-3">
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="flex h-3 w-3 rounded-full bg-emerald-500 animate-ping" />
-                <h2 className="font-display text-lg md:text-2xl font-bold text-foreground">
-                  🗺️ Interactive LocalShop &amp; Product Map
-                </h2>
-              </div>
-              <p className="mt-1 text-xs md:text-sm text-muted-foreground">
-                Search products, view prices directly on open maps (OpenStreetMap + MapLibre GL), and order from nearby verified local shops.
-              </p>
-            </div>
-          </div>
-
-          <LocalShoreMapExperience
-            initialQuery={query}
-            initialCategory={cat}
-            onQueryChange={(q) => {
-              navigate({
-                search: (prev) => ({ ...prev, q: q || undefined }),
-                resetScroll: false,
-              });
-            }}
-            onCategoryChange={(c) => {
-              navigate({
-                search: (prev) => ({ ...prev, category: c === "all" ? undefined : c }),
-                resetScroll: false,
-              });
-            }}
-          />
-        </div>
-
+      <div className="px-5 md:px-8">
         {/* Active category filter bar */}
         {((cat && cat !== "all") || query) && (
           <div className="mx-5 mb-4 flex items-center justify-between rounded-xl border border-primary/20 bg-primary/5 px-4 py-2.5 md:mx-8">
