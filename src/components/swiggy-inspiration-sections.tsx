@@ -4,6 +4,7 @@ import { Star, ChevronRight, ChevronLeft, CheckCircle2, Plus } from "lucide-reac
 import type { MerchandisingProduct } from "@/lib/merchandising";
 import { cartStore } from "@/lib/cart-store";
 import { flyProductToCart } from "@/lib/fly-to-cart";
+import { resolveImageUrl } from "@/lib/image-utils";
 
 /* ─── Continuous Sub-Pixel Slow Auto-Scroll Hook (Feature Banner Only) ───── */
 function useSlowAutoScroll<T extends HTMLDivElement>(speed = 0.55) {
@@ -447,7 +448,7 @@ export function Swiggy99StoreSection({
                 {/* Image Container */}
                 <div className="relative aspect-square w-full rounded-xl overflow-hidden bg-slate-50">
                   <img
-                    src={item.image_url}
+                    src={resolveImageUrl(item.image_url, item.name, item.category)}
                     alt={item.name}
                     className="h-full w-full object-cover transition-transform duration-300 group-hover/card:scale-105"
                   />

@@ -1,7 +1,23 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { ArrowLeft, ShieldCheck, Truck, Store, Mail, Phone, Loader2 } from "lucide-react";
+import {
+  ShieldCheck,
+  Truck,
+  Store,
+  Mail,
+  Phone,
+  Loader2,
+  ArrowRight,
+  Lock,
+  Zap,
+  Heart,
+  ChevronDown,
+  UserCheck,
+  User,
+  MapPin,
+  Sparkles
+} from "lucide-react";
 import { toast } from "sonner";
 import { OtpInput, OTP_LENGTH } from "@/components/auth/otp-input";
 
@@ -63,14 +79,14 @@ function AuthPage() {
   const [mode, setMode] = useState<Mode>("phone");
   const [intent, setIntent] = useState<AuthIntent>("login");
 
-  // phone flow
+  // Phone flow states
   const [step, setStep] = useState<"phone" | "otp">("phone");
   const [countryCode, setCountryCode] = useState("+91");
   const [phone, setPhone] = useState("");
   const [otp, setOtp] = useState("");
   const [cooldown, setCooldown] = useState(0);
 
-  // email flow (OTP)
+  // Email flow states
   const [emailStep, setEmailStep] = useState<"email" | "otp">("email");
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
@@ -168,7 +184,7 @@ function AuthPage() {
       return;
     }
     if (!/^\d{6,14}$/.test(phone)) {
-      setError("Enter a valid phone number.");
+      setError("Enter a valid mobile phone number.");
       return;
     }
     if (!/^\+\d{1,3}$/.test(countryCode)) {
@@ -231,7 +247,7 @@ function AuthPage() {
   const verifyOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     if (otp.length !== OTP_LENGTH) {
-      setError(`Enter the ${OTP_LENGTH}-digit code.`);
+      setError(`Enter the complete ${OTP_LENGTH}-digit code.`);
       return;
     }
     setError(null);
@@ -263,6 +279,7 @@ function AuthPage() {
       setLoading(false);
     }
   };
+
   const sendEmailOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     if (cooldown > 0) {
@@ -274,7 +291,7 @@ function AuthPage() {
       return;
     }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      setError("Enter a valid email.");
+      setError("Enter a valid email address.");
       return;
     }
     setError(null);
@@ -313,7 +330,7 @@ function AuthPage() {
   const verifyEmailOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     if (emailOtp.length !== OTP_LENGTH) {
-      setError(`Enter the ${OTP_LENGTH}-digit verification code from the email.`);
+      setError(`Enter the complete ${OTP_LENGTH}-digit code.`);
       return;
     }
     setError(null);
@@ -393,315 +410,503 @@ function AuthPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="mx-auto grid min-h-screen w-full max-w-6xl grid-cols-1 lg:grid-cols-2">
-        <aside className="relative hidden overflow-hidden bg-primary text-primary-foreground lg:flex lg:flex-col lg:justify-between lg:p-12">
+    // STRICT TRUE FULL-VIEWPORT CONTAINER (No outer card, No outer bg-slate, 100vw x 100vh)
+    <div className="w-screen h-screen min-h-[100dvh] overflow-hidden bg-white flex flex-col lg:flex-row font-sans">
+      
+      {/* =================================================================== */}
+      {/* LEFT PANEL: 48% Width Full Viewport Signature Orchid Brand Panel   */}
+      {/* =================================================================== */}
+      <aside className="hidden lg:flex lg:w-[48%] xl:w-[46%] h-full bg-gradient-to-br from-[#730d70] via-[#5c095a] to-[#420440] text-white p-10 xl:p-14 flex-col justify-between relative overflow-y-auto shrink-0 select-none">
+        
+        {/* Soft radial orchid illumination behind content */}
+        <div className="absolute top-1/4 left-1/3 -translate-x-1/2 -translate-y-1/2 w-[32rem] h-[32rem] bg-[#c026d3]/20 rounded-full blur-[100px] pointer-events-none" />
+        <div className="absolute bottom-10 right-10 w-[24rem] h-[24rem] bg-[#981495]/25 rounded-full blur-[90px] pointer-events-none" />
+
+        {/* TOP: LocalShore Logo */}
+        <div className="relative z-10 flex items-center justify-between">
           <Link
             to="/"
             search={{ category: undefined, q: undefined }}
-            className="inline-flex items-center gap-2 text-sm opacity-90 hover:opacity-100"
+            className="inline-flex items-center gap-3.5 group"
           >
-            <span className="grid h-9 w-9 place-items-center rounded-lg bg-primary-foreground/15 font-display text-sm font-bold">
+            <span className="grid h-11 w-11 place-items-center rounded-2xl bg-white/15 backdrop-blur-md border border-white/20 text-white font-black text-base shadow-md group-hover:scale-105 transition-transform">
               LS
             </span>
-            <span className="font-display text-lg font-bold">Local Shore</span>
+            <span className="font-display font-extrabold text-2xl xl:text-3xl tracking-tight text-white">LocalShore</span>
+          </Link>
+        </div>
+
+        {/* MIDDLE: Eyebrow + Powerful Headline + Benefits */}
+        <div className="relative z-10 my-auto py-8 space-y-7">
+          
+          {/* Eyebrow */}
+          <div>
+            <span className="text-[11px] font-black uppercase tracking-widest text-[#f0abfc] bg-white/10 px-4 py-1.5 rounded-full border border-white/12 backdrop-blur-md inline-flex items-center gap-1.5">
+              <span>WELCOME BACK</span>
+              <span className="text-xs">👋</span>
+            </span>
+
+            {/* Main Headline */}
+            <h1 className="font-display mt-4 text-3xl xl:text-4xl 2xl:text-5xl font-black leading-[1.12] tracking-tight text-white">
+              Pick your own local shop.
+              <span className="block mt-1.5 bg-gradient-to-r from-[#f0abfc] via-[#f5d0fe] to-[#e879f9] bg-clip-text text-transparent">
+                We just deliver.
+              </span>
+            </h1>
+
+            {/* Supporting Text */}
+            <p className="mt-3.5 text-sm xl:text-base text-fuchsia-100/80 leading-relaxed font-medium max-w-lg">
+              Sign in to place orders, track deliveries in real time, and save your favourite local shops.
+            </p>
+          </div>
+
+          {/* 3 Premium Feature Rows */}
+          <div className="space-y-4.5 pt-2">
+            {/* Feature 1 */}
+            <div className="flex items-start gap-4 group">
+              <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-white/12 border border-white/20 text-fuchsia-200 shadow-md shadow-black/10 backdrop-blur-md group-hover:scale-105 transition-transform shadow-[0_0_20px_rgba(240,171,252,0.18)]">
+                <Store className="h-5.5 w-5.5 text-white" />
+              </div>
+              <div>
+                <h3 className="font-bold text-white text-base">Real neighbourhood shops</h3>
+                <p className="text-xs xl:text-sm text-fuchsia-100/75 leading-relaxed mt-0.5">
+                  No dark stores. Everything comes from trusted local shops near you.
+                </p>
+              </div>
+            </div>
+
+            {/* Feature 2 */}
+            <div className="flex items-start gap-4 group">
+              <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-white/12 border border-white/20 text-fuchsia-200 shadow-md shadow-black/10 backdrop-blur-md group-hover:scale-105 transition-transform shadow-[0_0_20px_rgba(240,171,252,0.18)]">
+                <Truck className="h-5.5 w-5.5 text-white" />
+              </div>
+              <div>
+                <h3 className="font-bold text-white text-base">Live order tracking</h3>
+                <p className="text-xs xl:text-sm text-fuchsia-100/75 leading-relaxed mt-0.5">
+                  See your order move from shop to doorstep on a live map.
+                </p>
+              </div>
+            </div>
+
+            {/* Feature 3 */}
+            <div className="flex items-start gap-4 group">
+              <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-white/12 border border-white/20 text-fuchsia-200 shadow-md shadow-black/10 backdrop-blur-md group-hover:scale-105 transition-transform shadow-[0_0_20px_rgba(240,171,252,0.18)]">
+                <ShieldCheck className="h-5.5 w-5.5 text-white" />
+              </div>
+              <div>
+                <h3 className="font-bold text-white text-base">Easy & secure login</h3>
+                <p className="text-xs xl:text-sm text-fuchsia-100/75 leading-relaxed mt-0.5">
+                  Phone OTP or email login. Quick, safe and hassle-free.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* BOTTOM SECTION: Enlarged Local Shop Delivery Visual + Security Card */}
+        <div className="relative z-10 space-y-4 pt-4">
+          
+          {/* Visual Delivery Scene Canvas Card */}
+          <div className="relative w-full rounded-2xl bg-[#420440]/75 border border-white/15 p-5 overflow-hidden backdrop-blur-md shadow-2xl">
+            
+            {/* Top Ribbon Banner */}
+            <div className="flex items-center justify-between text-[11px] font-black uppercase tracking-wider text-fuchsia-200 pb-2.5 border-b border-white/10 mb-3.5">
+              <span className="flex items-center gap-1.5 text-white">
+                <Store className="h-3.5 w-3.5 text-[#f0abfc]" />
+                <span>LOCAL SHOP</span>
+              </span>
+              <span className="text-[#f0abfc] flex items-center gap-1">
+                <span>→</span>
+                <Truck className="h-3.5 w-3.5 text-amber-300" />
+                <span>LIVE DELIVERY →</span>
+              </span>
+              <span className="flex items-center gap-1.5 text-white">
+                <MapPin className="h-3.5 w-3.5 text-emerald-400" />
+                <span>YOUR DOORSTEP</span>
+              </span>
+            </div>
+
+            {/* Scene Canvas */}
+            <div className="relative h-24 w-full flex items-center justify-between px-3">
+              
+              {/* Left Node: Local Shop */}
+              <div className="relative z-10 flex flex-col items-center">
+                <div className="grid h-12 w-12 place-items-center rounded-2xl bg-gradient-to-tr from-[#981495] to-[#c026d3] text-white shadow-xl shadow-[#981495]/50 border border-white/20">
+                  <Store className="h-6 w-6" />
+                </div>
+                <span className="text-[11px] font-bold text-white mt-1.5">🏪 Local shop</span>
+              </div>
+
+              {/* Center: Dotted Delivery Arc Path with Animated Rider */}
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                <svg className="w-full h-full" viewBox="0 0 340 90" fill="none">
+                  <path
+                    d="M 60 45 Q 170 10 280 45"
+                    stroke="#f0abfc"
+                    strokeWidth="3"
+                    strokeDasharray="7 7"
+                    className="animate-route-dash opacity-90"
+                  />
+                </svg>
+                
+                {/* Rider Icon Badge */}
+                <div className="absolute top-2.5 grid h-8 w-8 place-items-center rounded-xl bg-[#981495] text-white border border-[#f0abfc] shadow-lg shadow-purple-950/70 animate-bounce">
+                  <Truck className="h-4 w-4" />
+                </div>
+              </div>
+
+              {/* Right Node: Doorstep */}
+              <div className="relative z-10 flex flex-col items-center">
+                <div className="relative flex items-center justify-center">
+                  <span className="absolute h-11 w-11 animate-ping rounded-full bg-emerald-400/40 opacity-75" />
+                  <span className="relative grid h-12 w-12 place-items-center rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-500 text-white shadow-xl shadow-emerald-900/50 border border-white/20">
+                    <MapPin className="h-6 w-6" />
+                  </span>
+                </div>
+                <span className="text-[11px] font-bold text-white mt-1.5">📍 Your doorstep</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Translucent Glass Security Message */}
+          <div className="flex items-center gap-3 rounded-2xl bg-white/10 backdrop-blur-md px-4.5 py-3 border border-white/15 text-xs xl:text-sm text-fuchsia-100 font-semibold shadow-xs">
+            <Lock className="h-4 w-4 text-[#f0abfc] shrink-0" />
+            <span>🔒 Your data is 100% secure and private with us.</span>
+          </div>
+
+          {/* Subdued Terms Footnote */}
+          <p className="text-xs text-fuchsia-200/60 text-center lg:text-left">
+            By continuing you agree to our{" "}
+            <span className="text-white underline underline-offset-2 cursor-pointer hover:text-[#f0abfc]">
+              Terms & Privacy
+            </span>
+            .
+          </p>
+        </div>
+      </aside>
+
+      {/* =================================================================== */}
+      {/* RIGHT PANEL: 52% Width Full Viewport Authentication Form Container  */}
+      {/* =================================================================== */}
+      <main className="w-full lg:w-[52%] xl:w-[54%] h-full bg-white p-6 sm:p-10 lg:p-14 xl:p-16 flex flex-col justify-between overflow-y-auto shrink-0">
+        
+        {/* TOP RIGHT: Security Badge & Mobile Back Link */}
+        <div className="flex items-center justify-between w-full max-w-[500px] mx-auto">
+          {/* Mobile Header Logo */}
+          <Link
+            to="/"
+            search={{ category: undefined, q: undefined }}
+            className="lg:hidden inline-flex items-center gap-2"
+          >
+            <span className="grid h-9 w-9 place-items-center rounded-xl bg-[#981495] text-white font-black text-xs shadow-sm">
+              LS
+            </span>
+            <span className="font-black text-xl tracking-tight text-slate-900">LocalShore</span>
           </Link>
 
-          <div className="max-w-md">
-            <p className="font-mono text-[11px] uppercase tracking-widest opacity-80">Sign in</p>
-            <h2 className="mt-3 font-display text-4xl leading-tight">
-              Pick your own local shop. We just deliver.
-            </h2>
-            <p className="mt-3 text-sm opacity-85">
-              Sign in with your phone or email to place orders, track deliveries, and save your
-              favourite shops.
-            </p>
-
-            <ul className="mt-8 space-y-4 text-sm">
-              <Perk
-                icon={Store}
-                title="Real neighbourhood shops"
-                desc="No dark stores. You choose where it's sourced from."
-              />
-              <Perk
-                icon={Truck}
-                title="Live order tracking"
-                desc="See your rider from shop to doorstep on a map."
-              />
-              <Perk
-                icon={ShieldCheck}
-                title="Phone OTP or email login"
-                desc="Use whichever is easier for you."
-              />
-            </ul>
+          {/* Security Pill */}
+          <div className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3.5 py-1.5 text-xs font-bold text-emerald-700 border border-emerald-200/70 shadow-2xs ml-auto">
+            <ShieldCheck className="h-4 w-4 text-emerald-600 shrink-0" />
+            <span>🛡 100% Secure</span>
+            <span className="hidden sm:inline text-emerald-600/70 font-normal">| We protect your privacy</span>
           </div>
+        </div>
 
-          <p className="text-xs opacity-70">By continuing you agree to our Terms & Privacy.</p>
-        </aside>
-
-        <section className="flex flex-col px-5 pt-6 sm:px-8 lg:justify-center lg:px-12 lg:pt-0">
-          <div className="flex items-center justify-between lg:hidden">
-            <Link
-              to="/"
-              search={{ category: undefined, q: undefined }}
-              className="inline-flex items-center gap-1.5 text-sm text-muted-foreground"
-            >
-              <ArrowLeft className="h-4 w-4" /> Back
-            </Link>
-            <span className="inline-flex items-center gap-2">
-              <span className="grid h-7 w-7 place-items-center rounded-md bg-primary text-primary-foreground font-display text-xs font-bold">
-                LS
-              </span>
-              <span className="font-display text-sm font-bold">Local Shore</span>
+        {/* CENTER: Vertically Centered Form Container (Max 480-500px width) */}
+        <div className="my-auto py-6 max-w-[480px] mx-auto w-full">
+          
+          {/* Mobile-only Brand Headline */}
+          <div className="lg:hidden mb-6 text-center">
+            <span className="text-[10px] font-black uppercase tracking-wider text-[#981495] bg-[#fdf2fe] px-3 py-1 rounded-full border border-[#f0abfc]/40">
+              WELCOME BACK 👋
             </span>
+            <h1 className="font-display mt-2.5 text-2xl font-black text-slate-900 leading-tight">
+              Pick your own local shop. <span className="text-[#981495]">We just deliver.</span>
+            </h1>
           </div>
 
-          <div className="mx-auto mt-8 w-full max-w-md lg:mt-0">
-            <h1 className="font-display text-3xl leading-tight sm:text-4xl">
+          {/* Form Title & Subheading */}
+          <div className="text-left">
+            <h2 className="font-display text-2xl sm:text-3xl xl:text-4xl font-black tracking-tight text-slate-900">
+              {intent === "signup" ? "Create your account" : "Sign in to your account"}
+            </h2>
+            <p className="mt-2 text-xs sm:text-sm font-medium text-slate-500 leading-relaxed">
               {mode === "phone"
                 ? step === "phone"
-                  ? `${intent === "signup" ? "Sign up" : "Sign in"} with your phone`
-                  : "Enter the code we sent"
+                  ? `We'll send you an ${OTP_LENGTH}-digit code via SMS to sign in securely.`
+                  : `Enter the ${OTP_LENGTH}-digit verification code sent to ${countryCode} ${phone}.`
                 : emailStep === "email"
-                  ? `${intent === "signup" ? "Sign up" : "Sign in"} with your email`
-                  : "Enter the code we emailed"}
-            </h1>
-            <p className="mt-2 text-sm text-muted-foreground">
-              {mode === "phone"
-                ? step === "phone"
-                  ? `We'll text you an ${OTP_LENGTH}-digit code via Supabase Auth. No password to remember.`
-                  : `Sent to ${countryCode} ${phone}. Enter the ${OTP_LENGTH}-digit code you received.`
-                : emailStep === "email"
-                  ? `We'll email you an ${OTP_LENGTH}-digit verification code. No password to remember.`
-                  : `Sent to ${email}. Check your inbox (and spam) for the verification code.`}
+                  ? `We'll send you an ${OTP_LENGTH}-digit verification code via email.`
+                  : `Enter the ${OTP_LENGTH}-digit code sent to ${email}.`}
             </p>
+          </div>
 
-            <div className="mt-6 grid grid-cols-2 gap-1 rounded-xl bg-muted p-1">
-              <button
-                type="button"
-                onClick={() => switchIntent("login")}
-                className={`rounded-lg py-2 text-sm font-medium transition-colors ${
-                  intent === "login"
-                    ? "bg-background text-foreground shadow-sm"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                Login
-              </button>
-              <button
-                type="button"
-                onClick={() => switchIntent("signup")}
-                className={`rounded-lg py-2 text-sm font-medium transition-colors ${
-                  intent === "signup"
-                    ? "bg-background text-foreground shadow-sm"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                Sign up
-              </button>
-            </div>
+          {/* SEGMENTED CONTROL 1: Login vs Sign Up */}
+          <div className="mt-6 grid grid-cols-2 gap-1 rounded-2xl bg-slate-100/90 p-1.5 border border-slate-200/60">
+            <button
+              type="button"
+              onClick={() => switchIntent("login")}
+              className={`inline-flex items-center justify-center gap-2 rounded-xl py-2.5 text-xs sm:text-sm font-extrabold transition-all duration-200 cursor-pointer ${
+                intent === "login"
+                  ? "bg-white text-[#700b6e] shadow-xs border border-slate-200/80"
+                  : "text-slate-500 hover:text-slate-900 font-semibold"
+              }`}
+            >
+              <UserCheck className="h-4 w-4" />
+              <span>Login</span>
+            </button>
 
-            {/* Mode tabs */}
-            <div className="mt-6 grid grid-cols-2 gap-1 rounded-xl bg-muted p-1">
-              <button
-                type="button"
-                onClick={() => switchMode("phone")}
-                className={`inline-flex items-center justify-center gap-2 rounded-lg py-2 text-sm font-medium transition-colors ${
-                  mode === "phone"
-                    ? "bg-background text-foreground shadow-sm"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                <Phone className="h-4 w-4" /> Phone
-              </button>
-              <button
-                type="button"
-                onClick={() => switchMode("email")}
-                className={`inline-flex items-center justify-center gap-2 rounded-lg py-2 text-sm font-medium transition-colors ${
-                  mode === "email"
-                    ? "bg-background text-foreground shadow-sm"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                <Mail className="h-4 w-4" /> Email
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={() => switchIntent("signup")}
+              className={`inline-flex items-center justify-center gap-2 rounded-xl py-2.5 text-xs sm:text-sm font-extrabold transition-all duration-200 cursor-pointer ${
+                intent === "signup"
+                  ? "bg-white text-[#700b6e] shadow-xs border border-slate-200/80"
+                  : "text-slate-500 hover:text-slate-900 font-semibold"
+              }`}
+            >
+              <User className="h-4 w-4" />
+              <span>Sign up</span>
+            </button>
+          </div>
 
-            {mode === "phone" ? (
-              step === "phone" ? (
-                <form onSubmit={sendOtp} className="mt-6 space-y-4">
-                  {intent === "signup" && (
+          {/* SEGMENTED CONTROL 2: Phone vs Email */}
+          <div className="mt-3 grid grid-cols-2 gap-1 rounded-2xl bg-slate-100/90 p-1.5 border border-slate-200/60">
+            <button
+              type="button"
+              onClick={() => switchMode("phone")}
+              className={`inline-flex items-center justify-center gap-2 rounded-xl py-2.5 text-xs sm:text-sm font-extrabold transition-all duration-200 cursor-pointer ${
+                mode === "phone"
+                  ? "bg-white text-[#700b6e] shadow-xs border border-slate-200/80"
+                  : "text-slate-500 hover:text-slate-900 font-semibold"
+              }`}
+            >
+              <Phone className="h-4 w-4 text-[#981495]" />
+              <span>Phone</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => switchMode("email")}
+              className={`inline-flex items-center justify-center gap-2 rounded-xl py-2.5 text-xs sm:text-sm font-extrabold transition-all duration-200 cursor-pointer ${
+                mode === "email"
+                  ? "bg-white text-[#700b6e] shadow-xs border border-slate-200/80"
+                  : "text-slate-500 hover:text-slate-900 font-semibold"
+              }`}
+            >
+              <Mail className="h-4 w-4 text-[#981495]" />
+              <span>Email</span>
+            </button>
+          </div>
+
+          {/* PHONE FLOW FORM */}
+          {mode === "phone" ? (
+            step === "phone" ? (
+              <form onSubmit={sendOtp} className="mt-5 space-y-4">
+                {intent === "signup" && (
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">Full Name</label>
                     <input
                       type="text"
                       value={name}
                       onChange={(e) => setName(e.target.value)}
-                      placeholder="Full name"
+                      placeholder="John Doe"
                       autoComplete="name"
-                      className="w-full rounded-xl bg-card px-3.5 py-3.5 text-sm outline-none ring-1 ring-black/[0.06] focus:ring-2 focus:ring-primary"
+                      className="w-full rounded-2xl bg-slate-50 border border-slate-200 px-4 py-3 text-sm font-medium outline-none focus:border-[#981495] focus:bg-white focus:ring-4 focus:ring-[#981495]/10 transition"
                     />
-                  )}
-                  <label className="flex items-center gap-2 rounded-2xl border border-border/70 bg-card px-3 py-3.5 transition-all focus-within:border-primary focus-within:ring-4 focus-within:ring-primary/10">
-                    <input
-                      inputMode="tel"
-                      maxLength={4}
-                      value={countryCode}
-                      onChange={(e) => {
-                        let v = e.target.value.replace(/[^\d+]/g, "");
-                        if (!v.startsWith("+")) v = "+" + v.replace(/\+/g, "");
-                        setCountryCode(v.slice(0, 4));
-                      }}
-                      className="w-14 border-0 bg-transparent font-mono text-sm outline-none shadow-none focus:outline-none focus:ring-0 focus-visible:outline-none focus-visible:ring-0 focus-visible:shadow-none"
-                      aria-label="Country code"
-                    />
-                    <span className="h-5 w-px bg-black/10" />
+                  </div>
+                )}
+
+                {/* Phone input with country code picker */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Mobile Number</label>
+                  <div className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-3.5 py-3 transition-all focus-within:border-[#981495] focus-within:bg-white focus-within:ring-4 focus-within:ring-[#981495]/10">
+                    <div className="flex items-center gap-1 font-mono text-sm font-bold text-slate-700 pr-2 border-r border-slate-200 shrink-0">
+                      <span>+91</span>
+                      <ChevronDown className="h-3.5 w-3.5 text-slate-400" />
+                    </div>
+                    <Phone className="h-4 w-4 text-slate-400 shrink-0 ml-1" />
                     <input
                       inputMode="numeric"
                       maxLength={14}
                       value={phone}
                       onChange={(e) => setPhone(e.target.value.replace(/\D/g, ""))}
                       placeholder="98765 43210"
-                      className="w-full border-0 bg-transparent font-mono text-base outline-none tracking-wider shadow-none focus:outline-none focus:ring-0 focus-visible:outline-none focus-visible:ring-0 focus-visible:shadow-none"
+                      className="w-full border-0 bg-transparent font-mono text-base font-bold text-slate-900 outline-none ring-0 shadow-none tracking-wider placeholder:font-normal placeholder:text-slate-400 focus:outline-none focus:ring-0 focus:shadow-none focus-visible:outline-none focus-visible:ring-0 focus-visible:shadow-none"
                       autoFocus
                     />
-                  </label>
-                  {error && <p className="text-xs text-destructive">{error}</p>}
-                  <button
-                    type="submit"
-                    disabled={loading}
-                    className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-3.5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-teal-deep disabled:opacity-70"
-                  >
-                    {loading && <Loader2 className="h-4 w-4 animate-spin" />}
-                    {loading ? "Sending code…" : "Login"}
-                  </button>
-                  <div id="firebase-recaptcha-container" />
-                </form>
-              ) : (
-                <form onSubmit={verifyOtp} className="mt-6 space-y-4">
-                  <p className="text-xs text-muted-foreground">
-                    Code sent to{" "}
-                    <span className="font-mono">
-                      {countryCode} {phone}
-                    </span>
-                  </p>
-                  <OtpInput value={otp} onChange={setOtp} disabled={loading} />
-                  {error && <p className="text-xs text-destructive">{error}</p>}
-                  <button
-                    type="submit"
-                    disabled={loading || otp.length !== OTP_LENGTH}
-                    className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-3.5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-teal-deep disabled:opacity-70"
-                  >
-                    {loading && <Loader2 className="h-4 w-4 animate-spin" />}
-                    {loading ? "Verifying…" : "Verify"}
-                  </button>
-                  <div className="flex items-center justify-between text-xs">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setStep("phone");
-                        setOtp("");
-                        setError(null);
-                      }}
-                      className="text-muted-foreground underline-offset-4 hover:underline"
-                    >
-                      Use a different number
-                    </button>
-                    <button
-                      type="button"
-                      onClick={resendOtp}
-                      disabled={cooldown > 0 || loading}
-                      className="text-primary underline-offset-4 hover:underline disabled:text-muted-foreground disabled:no-underline"
-                    >
-                      {cooldown > 0 ? `Resend in ${cooldown}s` : "Resend code"}
-                    </button>
                   </div>
-                  <div id="firebase-recaptcha-container" />
-                </form>
-              )
-            ) : emailStep === "email" ? (
-              <form onSubmit={sendEmailOtp} className="mt-6 space-y-3">
-                {intent === "signup" && (
-                  <input
-                    type="text"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="Full name"
-                    autoComplete="name"
-                    className="w-full rounded-xl bg-card px-3.5 py-3.5 text-sm outline-none ring-1 ring-black/[0.06] focus:ring-2 focus:ring-primary"
-                  />
-                )}
-                <label className="flex items-center gap-2 rounded-xl bg-card px-3 py-3.5 ring-1 ring-black/[0.06] focus-within:ring-2 focus-within:ring-primary">
-                  <Mail className="h-4 w-4 text-muted-foreground" />
-                  <input
-                    type="email"
-                    autoComplete="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="you@example.com"
-                    className="w-full bg-transparent text-sm outline-none"
-                    autoFocus
-                  />
-                </label>
-                {error && <p className="text-xs text-destructive">{error}</p>}
-                {error === "No account found with this email." && (
-                  <div className="flex items-center justify-between text-xs">
-                    <button
-                      type="button"
-                      onClick={() => switchIntent("signup")}
-                      className="text-primary underline-offset-4 hover:underline"
-                    >
-                      Create Account
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setEmail("");
-                        setError(null);
-                      }}
-                      className="text-muted-foreground underline-offset-4 hover:underline"
-                    >
-                      Change Email
-                    </button>
+                </div>
+
+                {/* Green Privacy Reassurance Message */}
+                <div className="flex items-center gap-2 rounded-xl bg-emerald-50/80 border border-emerald-200/60 px-3 py-2 text-xs text-emerald-800 font-semibold">
+                  <ShieldCheck className="h-4 w-4 text-emerald-600 shrink-0" />
+                  <span>🛡 We'll never share your number with anyone.</span>
+                </div>
+
+                {error && (
+                  <div className="rounded-xl bg-red-50 border border-red-200 p-3 text-xs font-bold text-red-600">
+                    {error}
                   </div>
                 )}
-                {error === "This email is already registered. Please log in instead." && (
-                  <button
-                    type="button"
-                    onClick={() => switchIntent("login")}
-                    className="text-xs text-primary underline-offset-4 hover:underline"
-                  >
-                    Go to Login
-                  </button>
-                )}
+
+                {/* Primary CTA Button */}
                 <button
                   type="submit"
                   disabled={loading}
-                  className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-3.5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-teal-deep disabled:opacity-70"
+                  className="group w-full inline-flex items-center justify-center gap-2.5 rounded-2xl bg-gradient-to-r from-[#981495] to-[#700b6e] hover:from-[#821280] hover:to-[#5c095a] text-white font-extrabold py-3.5 px-5 text-sm sm:text-base shadow-md shadow-[#981495]/25 hover:shadow-lg hover:shadow-[#981495]/35 transition-all hover:scale-[1.005] active:scale-[0.995] disabled:opacity-60 cursor-pointer"
                 >
-                  {loading && <Loader2 className="h-4 w-4 animate-spin" />}
-                  {loading ? "Sending code…" : "Login"}
+                  {loading ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <span>Sending code…</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>{intent === "signup" ? "Send OTP to Register" : "Send OTP"}</span>
+                      <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                    </>
+                  )}
                 </button>
-                {intent === "signup" && (
-                  <p className="pt-1 text-center text-xs text-muted-foreground">
-                    We&apos;ll create your account after verification.
-                  </p>
-                )}
               </form>
             ) : (
-              <form onSubmit={verifyEmailOtp} className="mt-6 space-y-4">
-                <p className="text-xs text-muted-foreground">
-                  Code sent to <span className="font-mono">{email}</span>
-                </p>
-                <OtpInput value={emailOtp} onChange={setEmailOtp} disabled={loading} />
-                {error && <p className="text-xs text-destructive">{error}</p>}
+              /* Phone OTP Verification Form */
+              <form onSubmit={verifyOtp} className="mt-5 space-y-4">
+                <div className="rounded-xl bg-[#fdf2fe] border border-[#f0abfc]/40 p-3 text-xs font-medium text-[#700b6e] flex items-center justify-between">
+                  <span>Code sent to <strong className="font-mono text-[#570656]">{countryCode} {phone}</strong></span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setStep("phone");
+                      setOtp("");
+                      setError(null);
+                    }}
+                    className="text-[#981495] font-bold hover:underline"
+                  >
+                    Edit
+                  </button>
+                </div>
+
+                <div className="py-2 flex justify-center">
+                  <OtpInput value={otp} onChange={setOtp} disabled={loading} />
+                </div>
+
+                {error && (
+                  <div className="rounded-xl bg-red-50 border border-red-200 p-3 text-xs font-bold text-red-600">
+                    {error}
+                  </div>
+                )}
+
                 <button
                   type="submit"
-                  disabled={loading || emailOtp.length !== OTP_LENGTH}
-                  className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-3.5 text-sm font-semibold text-primary-foreground disabled:opacity-70"
+                  disabled={loading || otp.length !== OTP_LENGTH}
+                  className="group w-full inline-flex items-center justify-center gap-2.5 rounded-2xl bg-gradient-to-r from-[#981495] to-[#700b6e] hover:from-[#821280] hover:to-[#5c095a] text-white font-extrabold py-3.5 px-5 text-sm sm:text-base shadow-md shadow-[#981495]/25 hover:shadow-lg hover:shadow-[#981495]/35 transition-all hover:scale-[1.005] active:scale-[0.995] disabled:opacity-60 cursor-pointer"
                 >
-                  {loading && <Loader2 className="h-4 w-4 animate-spin" />}
-                  {loading ? "Verifying…" : "Verify"}
+                  {loading ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <span>Verifying…</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>Verify & Continue</span>
+                      <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                    </>
+                  )}
                 </button>
-                <div className="flex items-center justify-between text-xs">
+
+                <div className="flex items-center justify-between text-xs font-semibold pt-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setStep("phone");
+                      setOtp("");
+                      setError(null);
+                    }}
+                    className="text-slate-500 hover:text-slate-900 hover:underline"
+                  >
+                    Use a different number
+                  </button>
+                  <button
+                    type="button"
+                    onClick={resendOtp}
+                    disabled={cooldown > 0 || loading}
+                    className="text-[#981495] font-bold hover:underline disabled:text-slate-400 disabled:no-underline"
+                  >
+                    {cooldown > 0 ? `Resend in ${cooldown}s` : "Resend OTP"}
+                  </button>
+                </div>
+              </form>
+            )
+          ) : (
+            /* EMAIL FLOW FORM */
+            emailStep === "email" ? (
+              <form onSubmit={sendEmailOtp} className="mt-5 space-y-4">
+                {intent === "signup" && (
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">Full Name</label>
+                    <input
+                      type="text"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      placeholder="John Doe"
+                      autoComplete="name"
+                      className="w-full rounded-2xl bg-slate-50 border border-slate-200 px-4 py-3 text-sm font-medium outline-none focus:border-[#981495] focus:bg-white focus:ring-4 focus:ring-[#981495]/10 transition"
+                    />
+                  </div>
+                )}
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Email Address</label>
+                  <div className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-3.5 py-3 transition-all focus-within:border-[#981495] focus-within:bg-white focus-within:ring-4 focus-within:ring-[#981495]/10">
+                    <Mail className="h-4 w-4 text-slate-400 shrink-0" />
+                    <input
+                      type="email"
+                      autoComplete="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="you@example.com"
+                      className="w-full border-0 bg-transparent text-sm font-semibold text-slate-900 outline-none ring-0 shadow-none placeholder:font-normal placeholder:text-slate-400 focus:outline-none focus:ring-0 focus:shadow-none focus-visible:outline-none focus-visible:ring-0 focus-visible:shadow-none"
+                      autoFocus
+                    />
+                  </div>
+                </div>
+
+                {/* Green Privacy Reassurance Message */}
+                <div className="flex items-center gap-2 rounded-xl bg-emerald-50/80 border border-emerald-200/60 px-3 py-2 text-xs text-emerald-800 font-semibold">
+                  <ShieldCheck className="h-4 w-4 text-emerald-600 shrink-0" />
+                  <span>🛡 We'll never share your email with anyone.</span>
+                </div>
+
+                {error && (
+                  <div className="rounded-xl bg-red-50 border border-red-200 p-3 text-xs font-bold text-red-600">
+                    {error}
+                  </div>
+                )}
+
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="group w-full inline-flex items-center justify-center gap-2.5 rounded-2xl bg-gradient-to-r from-[#981495] to-[#700b6e] hover:from-[#821280] hover:to-[#5c095a] text-white font-extrabold py-3.5 px-5 text-sm sm:text-base shadow-md shadow-[#981495]/25 hover:shadow-lg hover:shadow-[#981495]/35 transition-all hover:scale-[1.005] active:scale-[0.995] disabled:opacity-60 cursor-pointer"
+                >
+                  {loading ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <span>Sending code…</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>{intent === "signup" ? "Send OTP to Register" : "Send OTP"}</span>
+                      <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                    </>
+                  )}
+                </button>
+              </form>
+            ) : (
+              /* Email OTP Verification Form */
+              <form onSubmit={verifyEmailOtp} className="mt-5 space-y-4">
+                <div className="rounded-xl bg-[#fdf2fe] border border-[#f0abfc]/40 p-3 text-xs font-medium text-[#700b6e] flex items-center justify-between">
+                  <span>Code sent to <strong className="font-mono text-[#570656]">{email}</strong></span>
                   <button
                     type="button"
                     onClick={() => {
@@ -709,7 +914,49 @@ function AuthPage() {
                       setEmailOtp("");
                       setError(null);
                     }}
-                    className="text-muted-foreground underline-offset-4 hover:underline"
+                    className="text-[#981495] font-bold hover:underline"
+                  >
+                    Edit
+                  </button>
+                </div>
+
+                <div className="py-2 flex justify-center">
+                  <OtpInput value={emailOtp} onChange={setEmailOtp} disabled={loading} />
+                </div>
+
+                {error && (
+                  <div className="rounded-xl bg-red-50 border border-red-200 p-3 text-xs font-bold text-red-600">
+                    {error}
+                  </div>
+                )}
+
+                <button
+                  type="submit"
+                  disabled={loading || emailOtp.length !== OTP_LENGTH}
+                  className="group w-full inline-flex items-center justify-center gap-2.5 rounded-2xl bg-gradient-to-r from-[#981495] to-[#700b6e] hover:from-[#821280] hover:to-[#5c095a] text-white font-extrabold py-3.5 px-5 text-sm sm:text-base shadow-md shadow-[#981495]/25 hover:shadow-lg hover:shadow-[#981495]/35 transition-all hover:scale-[1.005] active:scale-[0.995] disabled:opacity-60 cursor-pointer"
+                >
+                  {loading ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <span>Verifying…</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>Verify & Continue</span>
+                      <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                    </>
+                  )}
+                </button>
+
+                <div className="flex items-center justify-between text-xs font-semibold pt-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEmailStep("email");
+                      setEmailOtp("");
+                      setError(null);
+                    }}
+                    className="text-slate-500 hover:text-slate-900 hover:underline"
                   >
                     Use a different email
                   </button>
@@ -717,42 +964,95 @@ function AuthPage() {
                     type="button"
                     onClick={resendEmailOtp}
                     disabled={cooldown > 0 || loading}
-                    className="text-primary underline-offset-4 hover:underline disabled:text-muted-foreground disabled:no-underline"
+                    className="text-[#981495] font-bold hover:underline disabled:text-slate-400 disabled:no-underline"
                   >
-                    {cooldown > 0 ? `Resend in ${cooldown}s` : "Resend code"}
+                    {cooldown > 0 ? `Resend in ${cooldown}s` : "Resend Code"}
                   </button>
                 </div>
               </form>
-            )}
+            )
+          )}
+
+          {/* Divider */}
+          <div className="relative my-6">
+            <div className="absolute inset-0 flex items-center">
+              <span className="w-full border-t border-slate-200" />
+            </div>
+            <div className="relative flex justify-center text-[11px] uppercase tracking-widest font-black">
+              <span className="bg-white px-3 text-slate-400">OR</span>
+            </div>
           </div>
 
-          <p className="mx-auto mt-10 w-full max-w-md text-center text-[11px] text-muted-foreground lg:hidden">
-            By continuing you agree to our Terms & Privacy.
-          </p>
-        </section>
-      </div>
-    </div>
-  );
-}
+          {/* Secondary Button: Switch Auth Mode */}
+          <button
+            type="button"
+            onClick={() => switchMode(mode === "phone" ? "email" : "phone")}
+            className="w-full inline-flex items-center justify-center gap-2.5 rounded-2xl border border-slate-200 bg-white hover:bg-[#fdf2fe]/50 text-slate-800 font-bold py-3.5 px-4 text-xs sm:text-sm shadow-2xs transition-all hover:border-[#f0abfc]/70 cursor-pointer"
+          >
+            {mode === "phone" ? (
+              <>
+                <Mail className="h-4 w-4 text-[#981495]" />
+                <span>Continue with Email</span>
+              </>
+            ) : (
+              <>
+                <Phone className="h-4 w-4 text-[#981495]" />
+                <span>Continue with Phone</span>
+              </>
+            )}
+          </button>
+        </div>
 
-function Perk({
-  icon: Icon,
-  title,
-  desc,
-}: {
-  icon: typeof ShieldCheck;
-  title: string;
-  desc: string;
-}) {
-  return (
-    <li className="flex items-start gap-3">
-      <span className="mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-primary-foreground/15">
-        <Icon className="h-4.5 w-4.5" />
-      </span>
-      <div>
-        <p className="font-semibold">{title}</p>
-        <p className="text-xs opacity-80">{desc}</p>
-      </div>
-    </li>
+        {/* BOTTOM: Trust Signals & Help Link */}
+        <div className="mt-auto pt-4 border-t border-slate-100 max-w-[480px] mx-auto w-full">
+          
+          {/* 3 Compact Trust Indicators */}
+          <div className="grid grid-cols-3 gap-2 text-center mb-4">
+            
+            {/* Trust Signal 1 */}
+            <div className="flex flex-col items-center p-2 rounded-xl bg-slate-50/70 border border-slate-100">
+              <span className="grid h-7 w-7 place-items-center rounded-full bg-amber-100 text-amber-700 mb-1">
+                <Zap className="h-3.5 w-3.5" />
+              </span>
+              <span className="text-[11px] font-black text-slate-900 leading-tight">Quick login</span>
+              <span className="text-[10px] text-slate-500 font-medium">Under 10 seconds</span>
+            </div>
+
+            {/* Trust Signal 2 */}
+            <div className="flex flex-col items-center p-2 rounded-xl bg-slate-50/70 border border-slate-100">
+              <span className="grid h-7 w-7 place-items-center rounded-full bg-blue-100 text-blue-700 mb-1">
+                <ShieldCheck className="h-3.5 w-3.5" />
+              </span>
+              <span className="text-[11px] font-black text-slate-900 leading-tight">Secure & private</span>
+              <span className="text-[10px] text-slate-500 font-medium">Encrypted data</span>
+            </div>
+
+            {/* Trust Signal 3 */}
+            <div className="flex flex-col items-center p-2 rounded-xl bg-slate-50/70 border border-slate-100">
+              <span className="grid h-7 w-7 place-items-center rounded-full bg-pink-100 text-pink-700 mb-1">
+                <Heart className="h-3.5 w-3.5" />
+              </span>
+              <span className="text-[11px] font-black text-slate-900 leading-tight">Loved by locals</span>
+              <span className="text-[10px] text-slate-500 font-medium">10,000+ shoppers</span>
+            </div>
+          </div>
+
+          {/* Help Footer */}
+          <div className="text-center">
+            <button
+              type="button"
+              onClick={() => toast.info("Contact support@localshore.in for assistance")}
+              className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-[#981495] transition-colors cursor-pointer"
+            >
+              <span>Trouble signing in?</span>
+              <span className="font-bold text-[#981495] flex items-center gap-0.5">
+                Get help <ArrowRight className="h-3 w-3" />
+              </span>
+            </button>
+          </div>
+        </div>
+
+      </main>
+    </div>
   );
 }

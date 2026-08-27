@@ -35,6 +35,8 @@ import { SkeletonCard } from "@/components/motion/presets";
 import { productsByStore, stores, Store } from "@/lib/mock-data";
 import { ProductThumb } from "@/components/product-thumb";
 
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
 export const Route = createFileRoute("/product/$productId")({ component: ProductPage });
 
 function ProductPage() {
@@ -46,98 +48,94 @@ function ProductPage() {
   const [body, setBody] = useState("");
   const [showDetails, setShowDetails] = useState(true);
 
+  const isUuid = UUID_REGEX.test(productId);
+
   // Fetch current product
   const product = useQuery({
     queryKey: ["product", productId],
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
-        .from("public_merchandising_products")
-        .select("*")
-        .eq("id", productId)
-        .single();
-      if (error) {
-        const localProduct = Object.values(productsByStore)
-          .flat()
-          .find((candidate) => candidate.id === productId);
-        if (!localProduct) throw error;
-        const localStore = stores.find((store) => store.id === localProduct.storeId);
-        const fallback: MerchandisingProduct = {
-          id: localProduct.id,
-          seller_id: localProduct.storeId,
-          name: localProduct.name,
-          brand: null,
-          brand_id: null,
-          brand_name: null,
-          category: localProduct.category,
-          selling_price: localProduct.price,
-          mrp: Math.round(localProduct.price * 1.1),
-          discount_price: localProduct.price,
-          discount_starts_at: null,
-          discount_ends_at: null,
-          clearance: false,
-          stock: localProduct.stock ?? 20,
-          image_url: localProduct.imageUrl ?? null,
-          created_at: new Date().toISOString(),
-          average_rating: localStore?.rating ?? 4.7,
-          review_count: 34,
-          shop_name: localStore?.name ?? "Anand Kirana Store",
-        };
+      if (isUuid) {
+        const { data, error } = await (supabase as any)
+          .from("public_merchandising_products")
+          .select("*")
+          .eq("id", productId)
+          .maybeSingle();
+
+        if (error) {
+          console.error("Error fetching product from Supabase:", error);
+          return null;
+        }
+
+        if (!data) return null;
+
         void recordProductEvent(productId, "view");
-        return fallback;
+        void recordRecentProductView(productId);
+        return data as MerchandisingProduct;
       }
-      void recordProductEvent(productId, "view");
-      void recordRecentProductView(productId);
-      return data as MerchandisingProduct;
+      return null;
     },
   });
 
   // Fetch reviews
   const reviews = useQuery({
     queryKey: ["product-reviews", productId],
-    enabled: Boolean(product.data),
+    enabled: Boolean(product.data && isUuid),
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
-        .from("reviews")
-        .select("id,rating,title,body,created_at,user_id")
-        .eq("product_id", productId)
-        .eq("status", "approved")
-        .order("created_at", { ascending: false });
-      if (error) throw error;
-      return data ?? [];
+      try {
+        const { data, error } = await (supabase as any)
+          .from("reviews")
+          .select("id,rating,title,body,created_at,user_id")
+          .eq("product_id", productId)
+          .eq("status", "approved")
+          .order("created_at", { ascending: false });
+
+        if (error) return [];
+        return data ?? [];
+      } catch {
+        return [];
+      }
     },
   });
 
   // Delivered product check for reviews
   const deliveredProductOrder = useQuery({
     queryKey: ["delivered-product-order", auth.id, productId],
-    enabled: Boolean(auth.id && product.data),
+    enabled: Boolean(auth.id && product.data && isUuid),
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
-        .from("orders")
-        .select("id,status,order_items(product_id)")
-        .eq("user_id", auth.id)
-        .eq("status", "delivered");
-      if (error) throw error;
-      return (
-        (data ?? []).find((order: any) =>
-          (order.order_items ?? []).some((line: any) => line.product_id === productId),
-        ) ?? null
-      );
+      try {
+        const { data, error } = await (supabase as any)
+          .from("orders")
+          .select("id,status,order_items(product_id)")
+          .eq("user_id", auth.id)
+          .eq("status", "delivered");
+        if (error) return null;
+        return (
+          (data ?? []).find((order: any) =>
+            (order.order_items ?? []).some((line: any) => line.product_id === productId),
+          ) ?? null
+        );
+      } catch {
+        return null;
+      }
     },
   });
 
   const existingReview = useQuery({
     queryKey: ["my-product-review", auth.id, productId],
-    enabled: Boolean(auth.id && product.data),
+    enabled: Boolean(auth.id && product.data && isUuid),
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
-        .from("reviews")
-        .select("id")
-        .eq("product_id", productId)
-        .eq("user_id", auth.id)
-        .limit(1);
-      if (error) throw error;
-      return data ?? [];
+      try {
+        const { data, error } = await (supabase as any)
+          .from("reviews")
+          .select("id")
+          .eq("product_id", productId)
+          .eq("user_id", auth.id)
+          .limit(1);
+        if (error) return [];
+        return data ?? [];
+      } catch {
+        return [];
+      }
     },
   });
 
@@ -147,49 +145,45 @@ function ProductPage() {
     enabled: Boolean(product.data),
     queryFn: async () => {
       const current = product.data as MerchandisingProduct;
-      const { data, error } = await (supabase as any)
-        .from("public_merchandising_products")
-        .select("*")
-        .neq("id", productId)
-        .eq("category", current.category)
-        .gt("stock", 0)
-        .limit(12);
+      try {
+        let query = (supabase as any)
+          .from("public_merchandising_products")
+          .select("*")
+          .gt("stock", 0)
+          .limit(12);
 
-      if (!error && data && data.length >= 3) {
-        return data as MerchandisingProduct[];
+        if (isUuid) {
+          query = query.neq("id", productId);
+        }
+        if (current?.category) {
+          query = query.eq("category", current.category);
+        }
+
+        const { data, error } = await query;
+        if (!error && data && data.length > 0) {
+          return data as MerchandisingProduct[];
+        }
+
+        // Fallback: If no products in category, get general database products
+        let generalQuery = (supabase as any)
+          .from("public_merchandising_products")
+          .select("*")
+          .gt("stock", 0)
+          .limit(12);
+
+        if (isUuid) {
+          generalQuery = generalQuery.neq("id", productId);
+        }
+
+        const { data: generalData } = await generalQuery;
+        if (generalData && generalData.length > 0) {
+          return generalData as MerchandisingProduct[];
+        }
+      } catch (err) {
+        console.warn("Supabase similar products query failed:", err);
       }
 
-      // Local fallback with varied names for demonstration
-      const localProducts = Object.values(productsByStore)
-        .flat()
-        .filter((candidate) => candidate.id !== productId)
-        .slice(0, 10);
-
-      return localProducts.map((candidate, idx) => {
-        const store = stores.find((entry) => entry.id === candidate.storeId);
-        const mrp = Math.round(candidate.price * 1.1);
-        return {
-          id: candidate.id,
-          seller_id: candidate.storeId,
-          name: candidate.name,
-          brand: candidate.category,
-          brand_id: null,
-          brand_name: "LocalShore",
-          category: candidate.category || current.category || "Grocery",
-          selling_price: candidate.price,
-          mrp: mrp,
-          discount_price: candidate.price,
-          discount_starts_at: null,
-          discount_ends_at: null,
-          clearance: false,
-          stock: candidate.stock ?? 25,
-          image_url: candidate.imageUrl ?? null,
-          created_at: new Date().toISOString(),
-          average_rating: store?.rating ?? 4.6,
-          review_count: 12 + idx * 5,
-          shop_name: store?.name ?? "Anand Kirana Store",
-        } satisfies MerchandisingProduct;
-      });
+      return [] as MerchandisingProduct[];
     },
   });
 
@@ -198,42 +192,26 @@ function ProductPage() {
     queryKey: ["top-category-products", product.data?.category],
     enabled: Boolean(product.data),
     queryFn: async () => {
-      const current = product.data as MerchandisingProduct;
-      const { data, error } = await (supabase as any)
-        .from("public_merchandising_products")
-        .select("*")
-        .gt("stock", 0)
-        .limit(10);
+      try {
+        let query = (supabase as any)
+          .from("public_merchandising_products")
+          .select("*")
+          .gt("stock", 0)
+          .limit(10);
 
-      if (!error && data && data.length > 0) {
-        return data as MerchandisingProduct[];
+        if (isUuid) {
+          query = query.neq("id", productId);
+        }
+
+        const { data, error } = await query;
+        if (!error && data && data.length > 0) {
+          return data as MerchandisingProduct[];
+        }
+      } catch (err) {
+        console.warn("Supabase top category products query failed:", err);
       }
 
-      const allLocal = Object.values(productsByStore).flat();
-      return allLocal.slice(0, 10).map((candidate, idx) => {
-        const store = stores.find((entry) => entry.id === candidate.storeId);
-        return {
-          id: candidate.id,
-          seller_id: candidate.storeId,
-          name: candidate.name,
-          brand: null,
-          brand_id: null,
-          brand_name: null,
-          category: candidate.category,
-          selling_price: candidate.price,
-          mrp: Math.round(candidate.price * 1.15),
-          discount_price: candidate.price,
-          discount_starts_at: null,
-          discount_ends_at: null,
-          clearance: false,
-          stock: candidate.stock ?? 20,
-          image_url: candidate.imageUrl ?? null,
-          created_at: new Date().toISOString(),
-          average_rating: store?.rating ?? 4.8,
-          review_count: 28 + idx * 4,
-          shop_name: store?.name ?? "Local Seller",
-        } satisfies MerchandisingProduct;
-      });
+      return [] as MerchandisingProduct[];
     },
   });
 

@@ -132,6 +132,14 @@ const orderErrorMessage = (error: any) => {
   if (message.includes("Product is not available"))
     return "One or more items are no longer available.";
   if (message.includes("Insufficient stock")) return message;
+  if (
+    message.includes("Shop is currently closed") ||
+    message.includes("not accepting orders") ||
+    message.includes("Temporarily closed") ||
+    message.includes("Closed for")
+  ) {
+    return message;
+  }
   if (message.includes("Cart items must come from one approved shop"))
     return "Your cart contains items from different shops.";
   if (message.includes("invalid input syntax for type uuid"))
@@ -158,6 +166,8 @@ export const ordersStore = {
       p_payment_method:
         order.paymentMethod === "UPI" ? "upi" : order.paymentMethod === "Card" ? "card" : "cod",
       p_coupon_code: order.couponCode ?? null,
+      p_customer_latitude: Number.isFinite(order.destination?.lat) ? order.destination.lat : null,
+      p_customer_longitude: Number.isFinite(order.destination?.lng) ? order.destination.lng : null,
     };
 
     const { data: created, error } = await (supabase as any).rpc("place_order_once", {

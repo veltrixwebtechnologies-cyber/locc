@@ -30,7 +30,7 @@ import {
 import type { Store, StoreCategory } from "@/lib/mock-data";
 import { WishlistButton } from "@/components/wishlist-button";
 import { scrollToShops } from "@/lib/scroll-utils";
-import { getFallbackProductImage } from "@/lib/image-utils";
+import { getFallbackProductImage, resolveImageUrl } from "@/lib/image-utils";
 
 interface CategoryMeta {
   id: StoreCategory | "all";
@@ -160,6 +160,24 @@ export const CATEGORY_REGISTRY: Record<string, CategoryMeta> = {
     description: "Explore gold-plated kammal, thoadu, chain, bangles, hair accessories, fancy jewellery & gift box sets.",
     subCategories: ["Kammal & Earrings", "Chain & Bangles", "Gift Box Sets"],
   },
+  bakery: {
+    id: "bakery",
+    label: "Bakery & Confectionery",
+    shortLabel: "Bakery",
+    icon: CookingPot,
+    emoji: "🥐",
+    description: "Explore fresh oven bakes, butter pastries, hot chicken puffs, tea rusks, cream cakes & traditional biscuits.",
+    subCategories: ["Bakes & Pastries", "Hot Puffs", "Cakes & Rusks"],
+  },
+  grocery: {
+    id: "grocery",
+    label: "Super Groceries & Provisions",
+    shortLabel: "Grocery",
+    icon: ShoppingBag,
+    emoji: "🛒",
+    description: "Explore monthly ration staples, Sona Masoori rice, cold pressed sesame oils, pulses & daily household provisions.",
+    subCategories: ["Staples & Rice", "Oils & Ghee", "Pulses & Spices"],
+  },
 };
 
 const CATEGORY_TABS = [
@@ -176,6 +194,8 @@ const CATEGORY_TABS = [
   "home_decor",
   "kitchen_appliances",
   "fashion_accessories",
+  "bakery",
+  "grocery",
 ];
 
 export function CategoryDiscoveryView({
@@ -457,7 +477,9 @@ export function CategoryDiscoveryView({
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
           {filteredStores.map((store, index) => {
             const storeSubcategory =
-              meta.subCategories[index % meta.subCategories.length] || meta.shortLabel;
+              meta?.subCategories?.length
+                ? meta.subCategories[index % meta.subCategories.length]
+                : meta?.shortLabel || "Local Shop";
 
             return (
               <Link
@@ -469,7 +491,7 @@ export function CategoryDiscoveryView({
                 {/* Shop Image Container */}
                 <div className="relative h-40 sm:h-44 w-full bg-slate-100 overflow-hidden">
                   <img
-                    src={store.imageUrl}
+                    src={resolveImageUrl(store.imageUrl, store.name, store.category)}
                     alt={store.name}
                     loading="lazy"
                     onError={(e) => {

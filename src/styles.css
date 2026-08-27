@@ -23,7 +23,7 @@
   --color-muted: var(--muted);
   --color-muted-foreground: var(--muted-foreground);
   --color-accent: var(--accent);
-  --color-accent-foreground: var(--accent-foreground);
+  --color-[#f0abfc]: #f0abfc;
   --color-destructive: var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
   --color-border: var(--border);
@@ -36,9 +36,9 @@
   --color-ink: var(--ink);
   --color-teal: var(--teal);
   --color-teal-deep: var(--teal-deep);
-  --font-display: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
-  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
-  --font-mono: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Outfit", "Plus Jakarta Sans", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-sans: "Plus Jakarta Sans", "Outfit", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-mono: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
 
   --color-success: var(--success);
 }
@@ -219,6 +219,16 @@
   animation: delivery-pulse 1.8s ease-out infinite;
 }
 
+@keyframes route-dash {
+  to {
+    stroke-dashoffset: -24;
+  }
+}
+
+.animate-route-dash {
+  animation: route-dash 1.8s linear infinite;
+}
+
 @keyframes success-check {
   from { transform: scale(0.5) rotate(-12deg); opacity: 0; }
   to { transform: scale(1) rotate(0); opacity: 1; }
@@ -281,7 +291,19 @@ select {
 input:focus-visible,
 textarea:focus-visible,
 select:focus-visible {
+  outline: none;
+}
+
+input:focus-visible:not(.bg-transparent):not(.shadow-none):not(.border-0),
+textarea:focus-visible:not(.bg-transparent):not(.shadow-none):not(.border-0),
+select:focus-visible:not(.bg-transparent):not(.shadow-none):not(.border-0) {
   box-shadow: 0 0 0 3px color-mix(in oklab, var(--primary) 14%, transparent);
+}
+
+input.bg-transparent:focus,
+input.bg-transparent:focus-visible {
+  box-shadow: none !important;
+  outline: none !important;
 }
 
 ::view-transition-old(root),

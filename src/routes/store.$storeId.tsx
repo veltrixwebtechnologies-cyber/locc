@@ -18,6 +18,7 @@ import { ProductThumb } from "@/components/product-thumb";
 import { recordProductEvent, recordRecentProductView } from "@/lib/merchandising";
 import { WishlistButton } from "@/components/wishlist-button";
 import { flyProductToCart } from "@/lib/fly-to-cart";
+import { resolveImageUrl } from "@/lib/image-utils";
 import { m } from "motion/react";
 
 const isUuid = (value: string) =>
@@ -180,7 +181,7 @@ function StorePage() {
         {/* Header */}
         <div className="relative overflow-hidden bg-card md:rounded-2xl md:border md:hairline">
           <div className="relative aspect-[16/9] w-full overflow-hidden bg-[var(--sand)] md:aspect-[21/7]">
-            <img src={store.imageUrl} alt={store.name} className="h-full w-full object-cover" />
+            <img src={resolveImageUrl(store.imageUrl, store.name, store.category)} alt={store.name} className="h-full w-full object-cover" />
             <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-black/10 to-transparent" />
             <Link
               to="/"
@@ -292,7 +293,7 @@ function StorePage() {
                           viewport={{ once: true, amount: 0.15 }}
                           whileHover={{ y: -4, scale: 1.01 }}
                           whileTap={{ scale: 0.98 }}
-                          className="group relative flex min-w-0 flex-col overflow-hidden rounded-2xl border border-purple-200 bg-white p-3.5 shadow-xs transition-all duration-300 hover:border-purple-400 hover:shadow-md"
+                          className="group relative flex min-w-0 flex-col overflow-hidden rounded-2xl border border-amber-300/80 bg-white p-3.5 shadow-xs transition-all duration-300 hover:border-amber-400 hover:shadow-md hover:shadow-amber-500/10"
                         >
                           <div className="absolute right-2.5 top-2.5 z-10">
                             <WishlistButton
@@ -319,7 +320,7 @@ function StorePage() {
                             }}
                             className="flex flex-col h-full"
                           >
-                            <div className="aspect-[4/3] w-full overflow-hidden rounded-xl bg-slate-50 p-2 flex items-center justify-center border border-purple-200/40 relative">
+                            <div className="aspect-[4/3] w-full overflow-hidden rounded-xl bg-slate-50 p-2 flex items-center justify-center border border-amber-200/50 relative">
                               <ProductThumb
                                 src={p.imageUrl}
                                 alt={p.name}

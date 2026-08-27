@@ -63,12 +63,13 @@ export function ProductCard({
 
   return (
     <m.div
-      variants={cardMotion}
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
       whileHover={{ y: -4, scale: 1.01 }}
       whileTap={{ scale: 0.98 }}
-      transition={spring}
+      transition={{ duration: 0.25 }}
       data-product-id={product.id}
-      className={`group relative flex min-w-0 flex-col overflow-hidden rounded-2xl border border-purple-200 bg-white shadow-xs transition-all duration-300 hover:border-purple-400 hover:shadow-md ${
+      className={`group relative flex min-w-0 flex-col overflow-hidden rounded-2xl border border-amber-300/80 bg-white shadow-xs transition-all duration-300 hover:border-amber-400 hover:shadow-md hover:shadow-amber-500/10 ${
         compact ? "p-2.5" : "p-3.5"
       }`}
     >
@@ -99,7 +100,7 @@ export function ProductCard({
         }}
       >
         {/* Grey inner padded image container frame */}
-        <div className="aspect-[4/3] w-full overflow-hidden rounded-xl bg-slate-50 p-2 flex items-center justify-center border border-purple-200/40 relative">
+        <div className="aspect-[4/3] w-full overflow-hidden rounded-xl bg-slate-50 p-2 flex items-center justify-center border border-amber-200/50 relative">
           <m.div layoutId={`product-image-${product.id}`} className="h-full w-full flex items-center justify-center">
             <SafeProductImage
               src={imageUrl}
@@ -162,39 +163,16 @@ export function ProductCard({
 }
 
 function ProductSection({ title, products, loading = false }: ProductSectionProps) {
-  if (loading) {
-    return (
-      <section className="mt-8 px-5 md:px-8" aria-label={`Loading ${title}`}>
-        <div className="flex items-center justify-between">
-          <h2 className="font-display text-lg font-bold md:text-xl">{title}</h2>
-          <span className="inline-flex items-center gap-1.5 text-[10px] text-muted-foreground">
-            <span className="h-2 w-2 animate-pulse rounded-full bg-primary" /> Loading
-          </span>
-        </div>
-        <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-          {[0, 1, 2, 3, 4].map((item) => (
-            <SkeletonCard key={item} />
-          ))}
-        </div>
-      </section>
-    );
-  }
-  if (!products?.length) return null;
+  if (!products || products.length === 0) return null;
   return (
-    <Reveal className="mt-8 px-5 md:px-8">
+    <div className="mt-6 px-5 md:px-8">
       <h2 className="font-display text-lg font-bold md:text-xl">{title}</h2>
-      <m.div
-        initial="hidden"
-        whileInView="visible"
-        viewport={{ once: true, amount: 0.1 }}
-        variants={{ visible: { transition: { staggerChildren: 0.055 } } }}
-        className="mt-3 grid grid-cols-2 gap-3 pb-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5"
-      >
+      <div className="mt-3 grid grid-cols-2 gap-3 pb-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
         {products.map((product) => (
           <ProductCard key={product.id} product={product} />
         ))}
-      </m.div>
-    </Reveal>
+      </div>
+    </div>
   );
 }
 
@@ -223,7 +201,6 @@ export function MerchandisingSections({
 
   return (
     <div>
-      <ProductSection title="Products near you" products={fallbackProducts} />
       {best.data?.length ? (
         <section className="mt-8 px-5 md:px-8">
           <div className="flex items-center justify-between gap-3">

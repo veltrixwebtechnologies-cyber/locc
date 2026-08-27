@@ -92,8 +92,7 @@ export function useNewArrivals() {
           .limit(12);
         if (error) throw error;
         return (data ?? []) as MerchandisingProduct[];
-      } catch (err) {
-        console.warn("[merchandising] Failed to fetch new arrivals:", err);
+      } catch {
         return [] as MerchandisingProduct[];
       }
     },
@@ -121,8 +120,7 @@ export function useDeals() {
               discountPercent(b) - discountPercent(a),
           )
           .slice(0, 12) as MerchandisingProduct[];
-      } catch (err) {
-        console.warn("[merchandising] Failed to fetch deals:", err);
+      } catch {
         return [] as MerchandisingProduct[];
       }
     },
@@ -147,8 +145,7 @@ export function useClearance() {
               discountPercent(b) - discountPercent(a),
           )
           .slice(0, 12) as MerchandisingProduct[];
-      } catch (err) {
-        console.warn("[merchandising] Failed to fetch clearance:", err);
+      } catch {
         return [] as MerchandisingProduct[];
       }
     },
@@ -177,8 +174,7 @@ export function useBestSellers(
         if (error) throw error;
         const byId = new Map((data ?? []).map((row: MerchandisingProduct) => [row.id, row]));
         return ids.map((id: string) => byId.get(id)).filter(Boolean) as MerchandisingProduct[];
-      } catch (err) {
-        console.warn("[merchandising] Failed to fetch best sellers:", err);
+      } catch {
         return [] as MerchandisingProduct[];
       }
     },
@@ -205,8 +201,7 @@ export function useTrending() {
         if (error) throw error;
         const byId = new Map((data ?? []).map((row: MerchandisingProduct) => [row.id, row]));
         return ids.map((id: string) => byId.get(id)).filter(Boolean) as MerchandisingProduct[];
-      } catch (err) {
-        console.warn("[merchandising] Failed to fetch trending products:", err);
+      } catch {
         return [] as MerchandisingProduct[];
       }
     },
@@ -225,8 +220,7 @@ export function useFeaturedBrands() {
           .order("display_order");
         if (error) throw error;
         return data ?? [];
-      } catch (err) {
-        console.warn("[merchandising] Failed to fetch featured brands:", err);
+      } catch {
         return [];
       }
     },
@@ -254,8 +248,7 @@ export function useActiveCollections() {
             .limit(8),
         ]);
         return { gift: gift.data ?? [], seasonal: seasonal.data ?? [] };
-      } catch (err) {
-        console.warn("[merchandising] Failed to fetch collections:", err);
+      } catch {
         return { gift: [], seasonal: [] };
       }
     },
@@ -638,15 +631,38 @@ export function useToggleWishlist() {
   });
 }
 
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
 export async function recordProductEvent(productId: string, eventType: "view" | "add_to_cart") {
-  await (supabase as any)
-    .from("product_views")
-    .insert({ product_id: productId, event_type: eventType });
+  if (!UUID_REGEX.test(productId)) return;
+  try {
+    const { data: sessionData } = await supabase.auth.getSession();
+    const userId = sessionData?.session?.user?.id ?? null;
+    await (supabase as any)
+      .from("product_views")
+      .insert({ product_id: productId, event_type: eventType, user_id: userId });
+  } catch (err) {
+    // Non-critical analytics logging: log warning if insert fails
+    console.warn("Analytics event logging skipped:", err);
+  }
 }
 
+/**
+ * Strategy C — Recently Viewed Persistence
+ * Customer recently-viewed history requires an authenticated user account to bind user_id.
+ * For guests, database persistence is skipped; recently viewed history persists once signed in.
+ */
 export async function recordRecentProductView(productId: string) {
-  const { error } = await (supabase as any).rpc("record_recent_product_view", {
-    p_product_id: productId,
-  });
-  if (error) console.warn("Unable to record recent product view", error);
+  if (!UUID_REGEX.test(productId)) return;
+  try {
+    const { data: sessionData } = await supabase.auth.getSession();
+    if (!sessionData?.session?.user) return;
+    await (supabase as any).rpc("record_recent_product_view", {
+      p_product_id: productId,
+    });
+  } catch (err) {
+    // Non-critical RPC analytics logging: log warning if RPC fails
+    console.warn("Recent view RPC skipped:", err);
+  }
 }
+
