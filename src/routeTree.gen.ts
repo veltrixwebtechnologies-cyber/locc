@@ -12,13 +12,21 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AddressesRouteImport } from './routes/addresses'
 import { Route as AuthRouteImport } from './routes/auth'
+import { Route as BestShopsRouteImport } from './routes/best-shops'
+import { Route as BrandsRouteImport } from './routes/brands'
 import { Route as CartRouteImport } from './routes/cart'
 import { Route as CheckoutRouteImport } from './routes/checkout'
+import { Route as CitiesRouteImport } from './routes/cities'
 import { Route as CompareRouteImport } from './routes/compare'
+import { Route as CustomerCareRouteImport } from './routes/customer-care'
+import { Route as ExploreRouteImport } from './routes/explore'
+import { Route as GiftCardsRouteImport } from './routes/gift-cards'
 import { Route as HelpRouteImport } from './routes/help'
+import { Route as NewsRouteImport } from './routes/news'
 import { Route as NotificationsRouteImport } from './routes/notifications'
 import { Route as OrdersRouteImport } from './routes/orders'
 import { Route as ProfileRouteImport } from './routes/profile'
+import { Route as RewardsRouteImport } from './routes/rewards'
 import { Route as SupportRouteImport } from './routes/support'
 import { Route as WishlistRouteImport } from './routes/wishlist'
 import { Route as BrandBrandIdRouteImport } from './routes/brand.$brandId'
@@ -44,6 +52,16 @@ const AuthRoute = AuthRouteImport.update({
   path: '/auth',
   getParentRoute: () => rootRouteImport,
 } as any)
+const BestShopsRoute = BestShopsRouteImport.update({
+  id: '/best-shops',
+  path: '/best-shops',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BrandsRoute = BrandsRouteImport.update({
+  id: '/brands',
+  path: '/brands',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const CartRoute = CartRouteImport.update({
   id: '/cart',
   path: '/cart',
@@ -54,14 +72,39 @@ const CheckoutRoute = CheckoutRouteImport.update({
   path: '/checkout',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CitiesRoute = CitiesRouteImport.update({
+  id: '/cities',
+  path: '/cities',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const CompareRoute = CompareRouteImport.update({
   id: '/compare',
   path: '/compare',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CustomerCareRoute = CustomerCareRouteImport.update({
+  id: '/customer-care',
+  path: '/customer-care',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ExploreRoute = ExploreRouteImport.update({
+  id: '/explore',
+  path: '/explore',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const GiftCardsRoute = GiftCardsRouteImport.update({
+  id: '/gift-cards',
+  path: '/gift-cards',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const HelpRoute = HelpRouteImport.update({
   id: '/help',
   path: '/help',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const NewsRoute = NewsRouteImport.update({
+  id: '/news',
+  path: '/news',
   getParentRoute: () => rootRouteImport,
 } as any)
 const NotificationsRoute = NotificationsRouteImport.update({
@@ -77,6 +120,11 @@ const OrdersRoute = OrdersRouteImport.update({
 const ProfileRoute = ProfileRouteImport.update({
   id: '/profile',
   path: '/profile',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RewardsRoute = RewardsRouteImport.update({
+  id: '/rewards',
+  path: '/rewards',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SupportRoute = SupportRouteImport.update({
@@ -129,13 +177,21 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/addresses': typeof AddressesRoute
   '/auth': typeof AuthRoute
+  '/best-shops': typeof BestShopsRoute
+  '/brands': typeof BrandsRoute
   '/cart': typeof CartRoute
   '/checkout': typeof CheckoutRoute
+  '/cities': typeof CitiesRoute
   '/compare': typeof CompareRoute
+  '/customer-care': typeof CustomerCareRoute
+  '/explore': typeof ExploreRoute
+  '/gift-cards': typeof GiftCardsRoute
   '/help': typeof HelpRoute
+  '/news': typeof NewsRoute
   '/notifications': typeof NotificationsRoute
   '/orders': typeof OrdersRoute
   '/profile': typeof ProfileRoute
+  '/rewards': typeof RewardsRoute
   '/support': typeof SupportRoute
   '/wishlist': typeof WishlistRoute
   '/brand/$brandId': typeof BrandBrandIdRoute
@@ -150,13 +206,21 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/addresses': typeof AddressesRoute
   '/auth': typeof AuthRoute
+  '/best-shops': typeof BestShopsRoute
+  '/brands': typeof BrandsRoute
   '/cart': typeof CartRoute
   '/checkout': typeof CheckoutRoute
+  '/cities': typeof CitiesRoute
   '/compare': typeof CompareRoute
+  '/customer-care': typeof CustomerCareRoute
+  '/explore': typeof ExploreRoute
+  '/gift-cards': typeof GiftCardsRoute
   '/help': typeof HelpRoute
+  '/news': typeof NewsRoute
   '/notifications': typeof NotificationsRoute
   '/orders': typeof OrdersRoute
   '/profile': typeof ProfileRoute
+  '/rewards': typeof RewardsRoute
   '/support': typeof SupportRoute
   '/wishlist': typeof WishlistRoute
   '/brand/$brandId': typeof BrandBrandIdRoute
@@ -172,13 +236,21 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/addresses': typeof AddressesRoute
   '/auth': typeof AuthRoute
+  '/best-shops': typeof BestShopsRoute
+  '/brands': typeof BrandsRoute
   '/cart': typeof CartRoute
   '/checkout': typeof CheckoutRoute
+  '/cities': typeof CitiesRoute
   '/compare': typeof CompareRoute
+  '/customer-care': typeof CustomerCareRoute
+  '/explore': typeof ExploreRoute
+  '/gift-cards': typeof GiftCardsRoute
   '/help': typeof HelpRoute
+  '/news': typeof NewsRoute
   '/notifications': typeof NotificationsRoute
   '/orders': typeof OrdersRoute
   '/profile': typeof ProfileRoute
+  '/rewards': typeof RewardsRoute
   '/support': typeof SupportRoute
   '/wishlist': typeof WishlistRoute
   '/brand/$brandId': typeof BrandBrandIdRoute
@@ -195,13 +267,21 @@ export interface FileRouteTypes {
     | '/'
     | '/addresses'
     | '/auth'
+    | '/best-shops'
+    | '/brands'
     | '/cart'
     | '/checkout'
+    | '/cities'
     | '/compare'
+    | '/customer-care'
+    | '/explore'
+    | '/gift-cards'
     | '/help'
+    | '/news'
     | '/notifications'
     | '/orders'
     | '/profile'
+    | '/rewards'
     | '/support'
     | '/wishlist'
     | '/brand/$brandId'
@@ -216,13 +296,21 @@ export interface FileRouteTypes {
     | '/'
     | '/addresses'
     | '/auth'
+    | '/best-shops'
+    | '/brands'
     | '/cart'
     | '/checkout'
+    | '/cities'
     | '/compare'
+    | '/customer-care'
+    | '/explore'
+    | '/gift-cards'
     | '/help'
+    | '/news'
     | '/notifications'
     | '/orders'
     | '/profile'
+    | '/rewards'
     | '/support'
     | '/wishlist'
     | '/brand/$brandId'
@@ -237,13 +325,21 @@ export interface FileRouteTypes {
     | '/'
     | '/addresses'
     | '/auth'
+    | '/best-shops'
+    | '/brands'
     | '/cart'
     | '/checkout'
+    | '/cities'
     | '/compare'
+    | '/customer-care'
+    | '/explore'
+    | '/gift-cards'
     | '/help'
+    | '/news'
     | '/notifications'
     | '/orders'
     | '/profile'
+    | '/rewards'
     | '/support'
     | '/wishlist'
     | '/brand/$brandId'
@@ -259,13 +355,21 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AddressesRoute: typeof AddressesRoute
   AuthRoute: typeof AuthRoute
+  BestShopsRoute: typeof BestShopsRoute
+  BrandsRoute: typeof BrandsRoute
   CartRoute: typeof CartRoute
   CheckoutRoute: typeof CheckoutRoute
+  CitiesRoute: typeof CitiesRoute
   CompareRoute: typeof CompareRoute
+  CustomerCareRoute: typeof CustomerCareRoute
+  ExploreRoute: typeof ExploreRoute
+  GiftCardsRoute: typeof GiftCardsRoute
   HelpRoute: typeof HelpRoute
+  NewsRoute: typeof NewsRoute
   NotificationsRoute: typeof NotificationsRoute
   OrdersRoute: typeof OrdersRoute
   ProfileRoute: typeof ProfileRoute
+  RewardsRoute: typeof RewardsRoute
   SupportRoute: typeof SupportRoute
   WishlistRoute: typeof WishlistRoute
   BrandBrandIdRoute: typeof BrandBrandIdRoute
@@ -300,6 +404,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/best-shops': {
+      id: '/best-shops'
+      path: '/best-shops'
+      fullPath: '/best-shops'
+      preLoaderRoute: typeof BestShopsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/brands': {
+      id: '/brands'
+      path: '/brands'
+      fullPath: '/brands'
+      preLoaderRoute: typeof BrandsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/cart': {
       id: '/cart'
       path: '/cart'
@@ -314,6 +432,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CheckoutRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/cities': {
+      id: '/cities'
+      path: '/cities'
+      fullPath: '/cities'
+      preLoaderRoute: typeof CitiesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/compare': {
       id: '/compare'
       path: '/compare'
@@ -321,11 +446,39 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CompareRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/customer-care': {
+      id: '/customer-care'
+      path: '/customer-care'
+      fullPath: '/customer-care'
+      preLoaderRoute: typeof CustomerCareRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/explore': {
+      id: '/explore'
+      path: '/explore'
+      fullPath: '/explore'
+      preLoaderRoute: typeof ExploreRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/gift-cards': {
+      id: '/gift-cards'
+      path: '/gift-cards'
+      fullPath: '/gift-cards'
+      preLoaderRoute: typeof GiftCardsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/help': {
       id: '/help'
       path: '/help'
       fullPath: '/help'
       preLoaderRoute: typeof HelpRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/news': {
+      id: '/news'
+      path: '/news'
+      fullPath: '/news'
+      preLoaderRoute: typeof NewsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/notifications': {
@@ -347,6 +500,13 @@ declare module '@tanstack/react-router' {
       path: '/profile'
       fullPath: '/profile'
       preLoaderRoute: typeof ProfileRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/rewards': {
+      id: '/rewards'
+      path: '/rewards'
+      fullPath: '/rewards'
+      preLoaderRoute: typeof RewardsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/support': {
@@ -419,13 +579,21 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AddressesRoute: AddressesRoute,
   AuthRoute: AuthRoute,
+  BestShopsRoute: BestShopsRoute,
+  BrandsRoute: BrandsRoute,
   CartRoute: CartRoute,
   CheckoutRoute: CheckoutRoute,
+  CitiesRoute: CitiesRoute,
   CompareRoute: CompareRoute,
+  CustomerCareRoute: CustomerCareRoute,
+  ExploreRoute: ExploreRoute,
+  GiftCardsRoute: GiftCardsRoute,
   HelpRoute: HelpRoute,
+  NewsRoute: NewsRoute,
   NotificationsRoute: NotificationsRoute,
   OrdersRoute: OrdersRoute,
   ProfileRoute: ProfileRoute,
+  RewardsRoute: RewardsRoute,
   SupportRoute: SupportRoute,
   WishlistRoute: WishlistRoute,
   BrandBrandIdRoute: BrandBrandIdRoute,

@@ -184,9 +184,16 @@ export function getMapMarkerItems(
       return;
     }
 
-    // Apply category filter
-    if (catFilter && store.category !== catFilter) {
-      return;
+    // Apply category filter (checking store category, converted category, and products)
+    if (catFilter) {
+      const matchStoreCat = store.category === catFilter || toStoreCategory(store.category) === catFilter;
+      const seedProds = productsByStore[store.id] || [];
+      const matchProdCat = seedProds.some(
+        (p) => toStoreCategory(p.category) === catFilter || (p.category && p.category.toLowerCase().includes(catFilter.toLowerCase()))
+      );
+      if (!matchStoreCat && !matchProdCat) {
+        return;
+      }
     }
 
     // Apply open now filter

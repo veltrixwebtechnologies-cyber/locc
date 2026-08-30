@@ -35,6 +35,7 @@ import {
 } from "@/components/flipkart-deals-showcase";
 import { getFallbackProductImage, isValidImageUrl } from "@/lib/image-utils";
 import { scrollToShops } from "@/lib/scroll-utils";
+import { EcosystemMerchandisingStrips } from "@/components/ecosystem-merchandising-strips";
 
 const getCategoryDisplayName = (catName?: string | null): string => {
   if (!catName) return "";
@@ -488,6 +489,11 @@ function Home() {
       </div>
 
       <MerchandisingSections fallbackProducts={homepageProducts} />
+
+      {/* Ecosystem Merchandising Strips (Rewards, Brands, Best Shops, Travel, Cities, News) */}
+      <div className="px-5 md:px-8">
+        <EcosystemMerchandisingStrips />
+      </div>
 
       {/* All shops grid — shown below the Swiggy row as secondary listing */}
       <div className="mt-6 flex items-center justify-between px-5 pt-2 md:mt-8 md:px-8">

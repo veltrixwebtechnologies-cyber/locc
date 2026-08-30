@@ -622,7 +622,7 @@ function ProfilePage() {
                   ) : (
                     <div className="mt-5 rounded-2xl border border-slate-200 p-4 text-center">
                       <p className="text-xs text-slate-600">No active orders right now.</p>
-                      <Link to="/" className="mt-1 text-xs font-bold text-purple-700 underline">Start shopping from neighborhood stores</Link>
+                      <Link to="/" search={{ category: undefined, q: undefined }} className="mt-1 text-xs font-bold text-purple-700 underline">Start shopping from neighborhood stores</Link>
                     </div>
                   )}
 

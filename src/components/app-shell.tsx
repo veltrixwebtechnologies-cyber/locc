@@ -75,22 +75,22 @@ export function AppShell({ children }: { children: ReactNode }) {
   }> = [
     { to: "/", label: "Shops", icon: Home, match: (p) => p === "/" },
     {
-      to: "/cart",
-      label: "Cart",
-      icon: ShoppingBag,
-      match: (p) => p.startsWith("/cart") || p.startsWith("/checkout"),
-    },
-    {
-      to: "/wishlist",
-      label: "Wishlist",
+      to: "/explore",
+      label: "Explore",
       icon: Heart,
-      match: (p) => p.startsWith("/wishlist"),
+      match: (p) => p.startsWith("/explore"),
     },
     {
       to: "/orders",
       label: "Orders",
       icon: ClipboardList,
       match: (p) => p.startsWith("/orders") || p.startsWith("/order/"),
+    },
+    {
+      to: "/rewards",
+      label: "Rewards",
+      icon: ShoppingBag,
+      match: (p) => p.startsWith("/rewards"),
     },
     { to: "/profile", label: "Profile", icon: User, match: (p) => p.startsWith("/profile") },
   ];
@@ -269,25 +269,29 @@ export function AppShell({ children }: { children: ReactNode }) {
 
       <div className="hidden border-b border-purple-200/70 bg-purple-50/50 md:block">
         <div className="flex h-9 w-full items-center justify-between gap-6 px-6 text-[11px] text-foreground/75 lg:px-8">
-          <div className="flex items-center gap-2">
-            <MapPin className="h-3.5 w-3.5 text-primary" />
-            <span>
-              Delivering to{" "}
-              <strong className="font-semibold text-foreground">Pappampatti Pirivu, Coimbatore</strong>
-            </span>
+          <div className="flex items-center gap-4">
+            <Link to="/cities" className="flex items-center gap-1.5 hover:text-primary transition">
+              <MapPin className="h-3.5 w-3.5 text-primary" />
+              <span>
+                Delivering to{" "}
+                <strong className="font-semibold text-foreground underline decoration-dotted">Coimbatore, TN</strong>
+                <span className="ml-1.5 text-[10px] text-purple-600 font-bold">(View Cities)</span>
+              </span>
+            </Link>
           </div>
           <div className="flex items-center gap-5">
-            <span className="inline-flex items-center gap-1.5">
-              <Clock3 className="h-3.5 w-3.5 text-primary" />
-              20-40 min delivery
-            </span>
-            <span className="inline-flex items-center gap-1.5">
-              <ShieldCheck className="h-3.5 w-3.5 text-primary" />
-              Trusted local sellers
-            </span>
-            <Link to="/help" className="inline-flex items-center gap-1.5 hover:text-primary">
+            <Link to="/best-shops" className="inline-flex items-center gap-1.5 hover:text-primary font-semibold text-amber-800">
+              🏆 Best Shops & Sellers
+            </Link>
+            <Link to="/brands" className="inline-flex items-center gap-1.5 hover:text-primary font-semibold text-purple-800">
+              🛍️ Brand Stores
+            </Link>
+            <Link to="/explore" className="inline-flex items-center gap-1.5 hover:text-primary font-semibold text-teal-800">
+              ✈️ Travel & Explore
+            </Link>
+            <Link to="/customer-care" className="inline-flex items-center gap-1.5 hover:text-primary">
               <Headphones className="h-3.5 w-3.5 text-primary" />
-              Need help?
+              Customer Care
             </Link>
           </div>
         </div>
@@ -396,22 +400,22 @@ export function AppShell({ children }: { children: ReactNode }) {
 
 const footerLinks = [
   [
-    ["About Local Shore", "/help?topic=about"],
-    ["Our neighborhoods", "/help?topic=neighborhoods"],
-    ["Community notes", "/help?topic=community"],
-    ["Careers", "mailto:careers@localshore.in"],
+    ["Rewards & Loyalty", "/rewards"],
+    ["Gift Cards", "/gift-cards"],
+    ["LocalShore News", "/news"],
+    ["Cities We Deliver", "/cities"],
   ],
   [
-    ["Sell with us", "/help?topic=sell"],
-    ["Deliver with us", "/help?topic=deliver"],
-    ["Partner help", "/help?topic=partner"],
-    ["Merchant resources", "/help?topic=merchant"],
+    ["Brand Marketplace", "/brands"],
+    ["Best Shops & Sellers", "/best-shops"],
+    ["International Travel", "/explore"],
+    ["Sell on LocalShore", "/help?topic=sell"],
   ],
   [
-    ["Help center", "/help"],
-    ["Contact support", "/support"],
-    ["Privacy center", "/help?topic=privacy"],
-    ["Terms of use", "/help?topic=terms"],
+    ["Customer Care Center", "/customer-care"],
+    ["Help Center", "/help"],
+    ["Privacy Policy", "/help?topic=privacy"],
+    ["Terms of Service", "/help?topic=terms"],
   ],
 ];
 

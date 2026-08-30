@@ -53,7 +53,7 @@ export function LocalShoreMapExperience({
   const [filters, setFilters] = useState<MapFilterOptions>({
     query: initialQuery,
     category: initialCategory !== "all" ? (initialCategory as any) : undefined,
-    maxDistanceKm: 3, // Initially focus on prices within 3 km near user location
+    maxDistanceKm: 25, // Show all verified local shops within 25 km radius
   });
   const [selectedMarkerId, setSelectedMarkerId] = useState<string | null>(null);
   const [hoveredMarkerId, setHoveredMarkerId] = useState<string | null>(null);
@@ -159,121 +159,172 @@ export function LocalShoreMapExperience({
   };
 
   const activeQuickFilter = filters.category ?? "all";
+  const [showDesktopMap, setShowDesktopMap] = useState(false);
+  const [isMobileMapOpen, setIsMobileMapOpen] = useState(false);
+
+  // Category badge color lookup for high-contrast tag pills
+  const getBadgeColor = (cat: string) => {
+    const c = cat.toLowerCase();
+    if (c.includes("groc") || c.includes("fresh") || c.includes("palamuthir")) return "#059669"; // Emerald
+    if (c.includes("bout") || c.includes("fashion") || c.includes("cloth")) return "#981495"; // Purple
+    if (c.includes("station") || c.includes("tech") || c.includes("electr")) return "#4f46e5"; // Indigo
+    if (c.includes("pharm") || c.includes("health") || c.includes("med")) return "#0284c7"; // Sky Blue
+    if (c.includes("bake") || c.includes("sweet") || c.includes("bread")) return "#b36a3e"; // Warm Brown
+    if (c.includes("flour") || c.includes("mill") || c.includes("spices")) return "#d97706"; // Amber
+    return "#981495";
+  };
 
   return (
     <div className="w-full">
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-0 items-start">
+      {/* SECTION HEADER BAR */}
+      <div className="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-slate-100">
+        <div>
+          <div className="flex items-center gap-2.5">
+            <h2 className="font-display text-xl md:text-2xl font-extrabold text-slate-900 tracking-tight">
+              Shops near you
+            </h2>
+            <span className="inline-flex items-center gap-1 rounded-full bg-purple-50 border border-purple-200 px-2.5 py-0.5 text-[11px] font-bold text-[#981495]">
+              <span className="h-1.5 w-1.5 rounded-full bg-[#981495] animate-pulse" />
+              Verified Local Sellers
+            </span>
+          </div>
+          <p className="mt-0.5 text-xs md:text-sm text-slate-500 font-medium">
+            <strong className="text-slate-900 font-bold">{markerItems.length} local stores</strong> verified in this area
+          </p>
+        </div>
 
-        {/* LEFT PANEL */}
-        <div className={`lg:col-span-5 flex flex-col ${view === "map" ? "hidden lg:flex" : "flex"}`}>
-          <div className="pb-3">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <h2 className="font-display text-xl font-bold text-foreground">Shops near you</h2>
-                <p className="mt-0.5 text-xs text-muted-foreground">
-                  {markerItems.length} local stores verified in this area
-                </p>
-              </div>
-              <span className="inline-flex items-center gap-1 shrink-0 rounded-full bg-emerald-50 border border-emerald-200 px-2.5 py-1 text-[11px] font-semibold text-emerald-700">
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                Prices include local delivery &amp; taxes
-              </span>
+        {/* Action Button: One-Button Map Toggle */}
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => {
+              setShowDesktopMap(!showDesktopMap);
+              setIsMobileMapOpen(!isMobileMapOpen);
+            }}
+            className="inline-flex items-center gap-2 rounded-full border-2 border-[#981495] bg-white px-4 py-2 text-xs md:text-sm font-bold text-[#981495] shadow-xs hover:bg-[#981495] hover:text-white transition-all active:scale-95"
+          >
+            <MapPin className="h-4 w-4 shrink-0" />
+            <span>{showDesktopMap ? "Close Map" : "View Map"}</span>
+          </button>
+        </div>
+      </div>
+
+      {/* CATEGORY FILTER PILLS BAR */}
+      <div className="my-4 flex items-center gap-2 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden pb-1">
+        {QUICK_FILTERS.map((f) => {
+          const isActive = f.id === activeQuickFilter;
+          return (
+            <button
+              key={f.id}
+              type="button"
+              onClick={() => {
+                const newCat = f.id === "all" ? undefined : (f.id as any);
+                setFilters((prev) => ({ ...prev, category: newCat }));
+                onCategoryChange?.(f.id);
+              }}
+              className={`shrink-0 rounded-full px-4 py-2 text-xs md:text-sm font-bold transition-all ${
+                isActive
+                  ? "bg-[#981495] text-white shadow-md shadow-purple-900/10 scale-[1.02]"
+                  : "bg-slate-100/90 text-slate-700 hover:bg-slate-200/80 hover:text-slate-900 border border-slate-200/60"
+              }`}
+            >
+              {f.label}
+            </button>
+          );
+        })}
+        <button
+          type="button"
+          className="shrink-0 flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+        >
+          <Filter className="h-3.5 w-3.5" />
+          Filters
+        </button>
+      </div>
+
+      {/* MAIN CONTAINER: Dynamic Responsive Split View */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        {/* SHOP CARDS PANEL */}
+        <div className={`flex flex-col transition-all duration-300 ${
+          showDesktopMap ? "lg:col-span-6" : "lg:col-span-12"
+        }`}>
+          {markerItems.length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/50 p-12 text-center">
+              <div className="mx-auto text-4xl mb-3">🔍</div>
+              <p className="font-bold text-slate-900 text-base">No shops found nearby</p>
+              <p className="mt-1 text-xs text-slate-500">Try adjusting your category or search filters.</p>
             </div>
+          ) : (
+            <div className={`grid gap-4 pb-8 ${
+              showDesktopMap 
+                ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-2" 
+                : "grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4"
+            }`}>
+              {markerItems.map((item) => {
+                const isSelected = selectedMarkerId === item.id;
+                const imgUrl = isValidImageUrl(item.productImage)
+                  ? item.productImage
+                  : getFallbackProductImage(item.productName, item.category);
+                const badgeColor = getBadgeColor(item.category);
+                const catName = categoryLabel[item.category] || item.category;
+                const priceMin = item.minPrice;
+                const priceMax = item.maxPrice ?? item.minPrice;
 
-            <div className="mt-3 flex items-center gap-2 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden pb-1">
-              {QUICK_FILTERS.map((f) => {
-                const isActive = f.id === activeQuickFilter;
                 return (
-                  <button
-                    key={f.id}
-                    type="button"
+                  <div
+                    key={item.id}
+                    onMouseEnter={() => setHoveredMarkerId(item.id)}
+                    onMouseLeave={() => setHoveredMarkerId(null)}
                     onClick={() => {
-                      const newCat = f.id === "all" ? undefined : (f.id as any);
-                      setFilters((prev) => ({ ...prev, category: newCat }));
-                      onCategoryChange?.(f.id);
+                      setSelectedMarkerId(item.id);
+                      mapRef.current?.flyToLocation(item.lat, item.lng, 14.5);
                     }}
-                    className={`shrink-0 rounded-full px-4 py-1.5 text-xs font-semibold transition-all ${
-                      isActive
-                        ? "bg-primary text-primary-foreground shadow-sm"
-                        : "bg-white border border-slate-200 text-slate-700 hover:border-primary/40 hover:bg-primary/5"
+                    className={`group relative flex flex-col overflow-hidden rounded-2xl bg-white border cursor-pointer transition-all duration-250 ${
+                      isSelected
+                        ? "border-[#981495] ring-2 ring-[#981495]/20 shadow-xl scale-[1.01]"
+                        : "border-slate-200/80 hover:border-[#981495]/40 hover:shadow-lg hover:-translate-y-0.5"
                     }`}
                   >
-                    {f.label}
-                  </button>
-                );
-              })}
-              <button
-                type="button"
-                className="shrink-0 flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
-              >
-                <Filter className="h-3.5 w-3.5" />
-                Filters
-              </button>
-            </div>
-          </div>
-
-          <div className="h-[calc(100vh-300px)] min-h-[480px] overflow-y-auto [scrollbar-width:thin] [scrollbar-color:var(--primary)_transparent]">
-            {markerItems.length === 0 ? (
-              <div className="rounded-2xl border border-dashed border-border p-10 text-center">
-                <div className="mx-auto text-3xl mb-3">🔍</div>
-                <p className="font-bold text-foreground">No shops found nearby</p>
-                <p className="mt-1 text-xs text-muted-foreground">Try adjusting your filters.</p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 pb-6">
-                {markerItems.map((item) => {
-                  const isSelected = selectedMarkerId === item.id;
-                  const imgUrl = isValidImageUrl(item.productImage)
-                    ? item.productImage
-                    : getFallbackProductImage(item.productName, item.category);
-                  const catColor = categoryColor[item.category] || "#981495";
-                  const catName = categoryLabel[item.category] || item.category;
-                  const priceMin = item.minPrice;
-                  const priceMax = item.maxPrice ?? item.minPrice;
-
-                  return (
-                    <div
-                      key={item.id}
-                      onMouseEnter={() => setHoveredMarkerId(item.id)}
-                      onMouseLeave={() => setHoveredMarkerId(null)}
-                      onClick={() => {
-                        setSelectedMarkerId(item.id);
-                        mapRef.current?.flyToLocation(item.lat, item.lng, 14.5);
-                      }}
-                      className={`group relative flex flex-col overflow-hidden rounded-2xl bg-white border cursor-pointer transition-all duration-200 ${
-                        isSelected
-                          ? "border-primary ring-2 ring-primary/20 shadow-lg"
-                          : "border-slate-200/80 hover:border-primary/30 hover:shadow-md"
-                      }`}
-                    >
-                      <div className="relative aspect-[16/10] w-full overflow-hidden bg-slate-100">
-                        <img
-                          src={imgUrl}
-                          alt={item.productName}
-                          className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-                        />
-                        <div className="absolute top-2.5 left-2.5 rounded-md bg-white/95 px-2.5 py-0.5 text-[11px] font-bold text-gray-900 shadow-sm">
-                          {item.distanceKm <= 2 ? "Top Pick" : "Verified Shop"}
-                        </div>
-                        <button
-                          onClick={(e) => { e.stopPropagation(); toast.success(`Saved ${item.shopName} to Wishlist`); }}
-                          className="absolute top-2.5 right-2.5 flex h-7 w-7 items-center justify-center rounded-full bg-white/90 text-slate-400 shadow-sm hover:text-red-500 transition-colors"
-                        >
-                          <svg className="h-4 w-4 fill-none stroke-current stroke-[2]" viewBox="0 0 24 24">
-                            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
-                          </svg>
-                        </button>
-                        <span
-                          className="absolute bottom-2.5 left-2.5 rounded-full px-2.5 py-0.5 text-[10px] font-bold text-white shadow-xs"
-                          style={{ backgroundColor: catColor }}
-                        >
-                          {catName}
-                        </span>
+                    {/* Store / Product Image with Badges */}
+                    <div className="relative aspect-[16/10] w-full overflow-hidden bg-slate-100">
+                      <img
+                        src={imgUrl}
+                        alt={item.productName}
+                        className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                      />
+                      
+                      {/* Top Pick Badge */}
+                      <div className="absolute top-2.5 left-2.5 rounded-full bg-white/95 backdrop-blur-xs px-2.5 py-1 text-[10px] font-bold text-slate-900 shadow-sm border border-slate-200/40">
+                        {item.distanceKm <= 2 ? "Top Pick" : "Verified Store"}
                       </div>
 
-                      <div className="p-3.5 flex flex-col gap-1.5">
+                      {/* Wishlist Button */}
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toast.success(`Saved ${item.shopName} to Wishlist`);
+                        }}
+                        className="absolute top-2.5 right-2.5 flex h-8 w-8 items-center justify-center rounded-full bg-white/90 text-slate-500 shadow-md hover:text-red-500 hover:scale-110 active:scale-90 transition-all"
+                      >
+                        <svg className="h-4 w-4 fill-none stroke-current stroke-[2]" viewBox="0 0 24 24">
+                          <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+                        </svg>
+                      </button>
+
+                      {/* Category Tag Overlay */}
+                      <span
+                        className="absolute bottom-2.5 left-2.5 rounded-full px-2.5 py-0.5 text-[10px] font-bold text-white shadow-sm"
+                        style={{ backgroundColor: badgeColor }}
+                      >
+                        {catName}
+                      </span>
+                    </div>
+
+                    {/* Card Content Body */}
+                    <div className="p-3.5 flex flex-col gap-1.5 flex-1 justify-between">
+                      <div>
                         <div className="flex items-start justify-between gap-2">
-                          <h3 className="font-bold text-[14px] text-slate-900 line-clamp-1 group-hover:text-primary transition-colors">
+                          <h3 className="font-bold text-[14px] text-slate-900 line-clamp-1 group-hover:text-[#981495] transition-colors">
                             {item.shopName}
                           </h3>
                           <div className="flex items-center gap-0.5 shrink-0 text-[12px] font-bold text-slate-700">
@@ -282,50 +333,86 @@ export function LocalShoreMapExperience({
                             <span className="font-normal text-slate-400 ml-0.5">({Math.floor(item.rating * 15)})</span>
                           </div>
                         </div>
-                        <p className="text-xs text-slate-500 line-clamp-1">{item.productName}</p>
-                        <p className="text-[11px] font-semibold text-primary flex items-center gap-1">
-                          <span className="h-1.5 w-1.5 rounded-full bg-primary inline-block" />
+
+                        <p className="text-xs text-slate-500 line-clamp-1 mt-0.5">{item.productName}</p>
+
+                        <p className="text-[11px] font-semibold text-[#981495] flex items-center gap-1.5 mt-1">
+                          <span className="h-1.5 w-1.5 rounded-full bg-[#981495] inline-block animate-pulse" />
                           Available for pickup &amp; instant delivery
                         </p>
-                        <div className="mt-1 flex items-center justify-between pt-2 border-t border-slate-100">
-                          <div>
-                            <span className="font-bold text-[15px] text-slate-900">₹{priceMin}–₹{priceMax}</span>
-                            <span className="text-[11px] text-slate-400 ml-1">total</span>
-                          </div>
-                          <Link
-                            to="/store/$storeId"
-                            params={{ storeId: item.shopId }}
-                            onClick={(e) => e.stopPropagation()}
-                            className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-3.5 py-1.5 text-[12px] font-bold text-primary hover:bg-primary hover:text-primary-foreground transition-all"
-                          >
-                            View Shop
-                            <ArrowRight className="h-3.5 w-3.5" />
-                          </Link>
+                      </div>
+
+                      {/* Price & View Shop Footer */}
+                      <div className="mt-2 flex items-center justify-between pt-2.5 border-t border-slate-100">
+                        <div>
+                          <span className="font-extrabold text-[14px] text-slate-900">₹{priceMin}–₹{priceMax}</span>
+                          <span className="text-[10px] text-slate-400 ml-1">total</span>
                         </div>
+                        <Link
+                          to="/store/$storeId"
+                          params={{ storeId: item.shopId }}
+                          onClick={(e) => e.stopPropagation()}
+                          className="inline-flex items-center gap-1 rounded-full bg-purple-50 px-3.5 py-1.5 text-[11px] font-bold text-[#981495] hover:bg-[#981495] hover:text-white transition-all shadow-2xs"
+                        >
+                          View Shop
+                          <ArrowRight className="h-3.5 w-3.5" />
+                        </Link>
                       </div>
                     </div>
-                  );
-                })}
-              </div>
-            )}
-
-            {markerItems.length > 0 && (
-              <div className="pb-6">
-                <button
-                  type="button"
-                  className="w-full flex items-center justify-center gap-2 rounded-2xl border border-primary/30 py-3 text-sm font-bold text-primary hover:bg-primary/5 transition-colors"
-                >
-                  <span>🛍️</span>
-                  Explore more shops
-                </button>
-              </div>
-            )}
-          </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
 
-        {/* RIGHT PANEL: Sticky Map */}
-        <div className={`lg:col-span-7 lg:pl-4 ${view === "list" ? "hidden lg:block" : "block"}`}>
-          <div className="sticky top-20 rounded-2xl border border-border/60 bg-card overflow-hidden shadow-md">
+        {/* RIGHT PANEL: Sticky MapLibre GL Interactive Map (Desktop View) */}
+        {showDesktopMap && (
+          <div className="hidden lg:block lg:col-span-6 sticky top-20">
+            <div className="rounded-2xl border border-slate-200/80 bg-white overflow-hidden shadow-lg">
+              <InteractiveMapView
+                ref={mapRef}
+                markers={markerItems}
+                userLocation={userLocation}
+                selectedMarkerId={selectedMarkerId}
+                hoveredMarkerId={hoveredMarkerId}
+                onSelectMarker={(m) => setSelectedMarkerId(m ? m.id : null)}
+                onBoundsChange={(bounds) => setFilters((prev) => ({ ...prev, bounds }))}
+                onUserLocationChange={setUserLocation}
+                className="h-[calc(100vh-210px)] min-h-[560px] max-h-[760px] w-full"
+              />
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* MOBILE FULLSCREEN MAP MODAL OVERLAY */}
+      {isMobileMapOpen && (
+        <div className="fixed inset-0 z-50 flex flex-col bg-white lg:hidden animate-in fade-in duration-200">
+          {/* Top Navbar */}
+          <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200 bg-white shadow-xs">
+            <button
+              type="button"
+              onClick={() => setIsMobileMapOpen(false)}
+              className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-slate-700 hover:bg-slate-200 font-bold"
+            >
+              ✕
+            </button>
+            <div className="text-center">
+              <h3 className="font-bold text-sm text-slate-900">Shops near you</h3>
+              <p className="text-[10px] text-slate-500">{markerItems.length} verified stores</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setIsMobileMapOpen(false)}
+              className="inline-flex items-center gap-1 rounded-full border border-[#981495] px-3 py-1 text-xs font-bold text-[#981495]"
+            >
+              List View
+            </button>
+          </div>
+
+          {/* Map Container */}
+          <div className="flex-1 relative">
             <InteractiveMapView
               ref={mapRef}
               markers={markerItems}
@@ -335,21 +422,26 @@ export function LocalShoreMapExperience({
               onSelectMarker={(m) => setSelectedMarkerId(m ? m.id : null)}
               onBoundsChange={(bounds) => setFilters((prev) => ({ ...prev, bounds }))}
               onUserLocationChange={setUserLocation}
-              className="h-[calc(100vh-200px)] min-h-[580px] max-h-[780px] w-full"
+              className="h-full w-full rounded-none border-0"
             />
           </div>
         </div>
-      </div>
+      )}
 
-      {/* Mobile floating toggle */}
+      {/* Mobile Floating Map/List Bar */}
       <div className="fixed bottom-[80px] inset-x-0 z-40 flex justify-center pointer-events-none lg:hidden">
         <button
-          onClick={() => setView(view === "map" ? "list" : "map")}
-          className="pointer-events-auto flex items-center gap-2 rounded-full bg-foreground px-5 py-3 text-xs font-bold text-background shadow-2xl hover:scale-105 active:scale-95 transition-all"
+          onClick={() => setIsMobileMapOpen(!isMobileMapOpen)}
+          className="pointer-events-auto flex items-center gap-2 rounded-full bg-[#981495] px-5 py-3 text-xs font-bold text-white shadow-2xl hover:scale-105 active:scale-95 transition-all"
         >
-          {view === "map" ? <><span>Show list</span><span>📋</span></> : <><span>Show map</span><span>🗺️</span></>}
+          {isMobileMapOpen ? (
+            <><span>Show list</span><span>📋</span></>
+          ) : (
+            <><span>Show map</span><span>🗺️</span></>
+          )}
         </button>
       </div>
     </div>
   );
 }
+

@@ -1,19 +1,33 @@
 /**
- * Swiggy-Inspired Creative Hero Landing Section for Local Shore Marketplace
- * Replicates Swiggy's iconic landing hero:
- * 1. Bold brand gradient banner with "Order groceries & essentials... Shoreline it!"
- * 2. Location & Instant Search inputs floating inside the hero
- * 3. 3 Signature Floating Feature Cards (Grocery Instamart, Express Chemist, Fresh Bakes & Tech)
+ * LocalShore Web Front Page Signature Hero Landing Section
+ * Cinematic Motion-Design Animation inspired by high-energy delivery commercials:
+ * - Scene 1: Camera push-in arrival & energetic badge overshoots
+ * - Scene 2: Commercial motion typography with line-by-line slide & yellow word emphasis
+ * - Scene 3 & 4: Scooter drive-in from right with deceleration tilt & delivery box momentum
+ * - Scene 5: Location & Search bar horizontal unfold
+ * - Scene 6 & 7: Sequential 3D card arrival with inner image parallax & depth
+ * - Scene 8: Realistic engine idle & suspension micro-vibration
+ * - Scene 9: Premium micro-interactions & arrow shifts
+ * - Scene 10: Smooth scroll transformations hooked to scroll progress
+ *
+ * Respects prefers-reduced-motion, mobile responsiveness, zero layout shift, and 100% LocalShore branding.
  */
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { m, AnimatePresence } from "motion/react";
+import {
+  motion,
+  AnimatePresence,
+  useReducedMotion,
+  useScroll,
+  useTransform,
+} from "framer-motion";
 import {
   MapPin,
   Search,
   ArrowUpRight,
   Sparkles,
   Zap,
+  ChevronDown,
   Flame,
   X,
 } from "lucide-react";
@@ -28,7 +42,6 @@ interface SwiggyFeatureCard {
   badgeText: string;
   category: string;
   image: string;
-  arrowBg: string;
 }
 
 const FEATURE_CARDS: SwiggyFeatureCard[] = [
@@ -40,9 +53,7 @@ const FEATURE_CARDS: SwiggyFeatureCard[] = [
     badgeBg: "bg-emerald-100",
     badgeText: "text-emerald-800",
     category: "grocery",
-    image:
-      "https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=400&q=80",
-    arrowBg: "bg-[#fc8019]",
+    image: "/assets/grocery-basket.png",
   },
   {
     id: "pharmacy",
@@ -52,9 +63,7 @@ const FEATURE_CARDS: SwiggyFeatureCard[] = [
     badgeBg: "bg-sky-100",
     badgeText: "text-sky-800",
     category: "pharmacy",
-    image:
-      "https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?auto=format&fit=crop&w=400&q=80",
-    arrowBg: "bg-[#981495]",
+    image: "/assets/pharmacy-medicines.png",
   },
   {
     id: "bakery-tech",
@@ -64,39 +73,50 @@ const FEATURE_CARDS: SwiggyFeatureCard[] = [
     badgeBg: "bg-amber-100",
     badgeText: "text-amber-950",
     category: "bakery",
-    image:
-      "https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=400&q=80",
-    arrowBg: "bg-[#284a75]",
+    image: "/assets/chocolate-cake.png",
   },
 ];
 
 const SEARCH_SUGGESTIONS = [
-  "Jhumka & Gold Kammal",
-  "Fresh Idli & Dosa Batter",
-  "Pappampatti Mysurpa & Bakery",
-  "Nattu Kozhi & Country Mutton",
-  "Paracetamol & 24/7 Chemist",
+  "Fresh Vegetables & Organic Produce",
+  "Sri Krishna Mysurpa & Bakery",
+  "Idli & Dosa Batter (24 Hours Fresh)",
+  "Paracetamol & Chemist Essentials",
   "Handloom Silk Sarees & Kurtis",
-  "Stainless Steel Cookers & Utensils",
 ];
 
 const POPULAR_TAGS = [
-  { label: "Jhumka", query: "jhumka", icon: "✨" },
+  { label: "Groceries", query: "grocery", icon: "🛒" },
   { label: "Idli Batter", query: "batter", icon: "🥣" },
-  { label: "Mysurpa", query: "sweets", icon: "🍬" },
-  { label: "Country Chicken", query: "chicken", icon: "🍗" },
-  { label: "Medicals", query: "medical", icon: "💊" },
-  { label: "Silk Sarees", query: "saree", icon: "👗" },
+  { label: "Sweets", query: "sweets", icon: "🍬" },
+  { label: "Chicken", query: "chicken", icon: "🍗" },
+  { label: "Medicines", query: "pharmacy", icon: "💊" },
+  { label: "Bakery", query: "bakery", icon: "🥐" },
 ];
 
 export function HeroSection() {
   const navigate = useNavigate();
+  const shouldReduceMotion = useReducedMotion();
+  const containerRef = useRef<HTMLDivElement>(null);
+
   const [searchQuery, setSearchQuery] = useState("");
   const [locationText, setLocationText] = useState("Pappampatti Pirivu, Coimbatore");
   const [suggestionIdx, setSuggestionIdx] = useState(0);
   const [isFocused, setIsFocused] = useState(false);
+  const [activeSlide, setActiveSlide] = useState(0);
 
-  // Cycle animated placeholder suggestions
+  // ── Scene 10: Scroll Transformation Hooks ──
+  const { scrollYProgress } = useScroll({
+    target: containerRef,
+    offset: ["start start", "end start"],
+  });
+
+  const heroScale = useTransform(scrollYProgress, [0, 1], [1, 0.96]);
+  const heroOpacity = useTransform(scrollYProgress, [0, 0.85], [1, 0.8]);
+  const scooterScrollX = useTransform(scrollYProgress, [0, 1], [0, 90]);
+  const headlineScrollY = useTransform(scrollYProgress, [0, 1], [0, -30]);
+  const cardsScrollY = useTransform(scrollYProgress, [0, 1], [0, 20]);
+
   useEffect(() => {
     const timer = setInterval(() => {
       setSuggestionIdx((prev) => (prev + 1) % SEARCH_SUGGESTIONS.length);
@@ -107,7 +127,10 @@ export function HeroSection() {
   const handleSearchSubmit = (e?: React.FormEvent, customQuery?: string) => {
     if (e) e.preventDefault();
     const queryToUse = customQuery ?? searchQuery;
-    if (!queryToUse.trim()) return;
+    if (!queryToUse.trim()) {
+      scrollToShops();
+      return;
+    }
 
     navigate({
       to: "/",
@@ -124,63 +147,247 @@ export function HeroSection() {
   };
 
   return (
-    <section className="mx-auto max-w-7xl px-4 pt-3 pb-4 md:px-8 md:pt-5">
-      {/* ── Main Hero Container with Original Brand Color Code #981495 ── */}
-      <div className="relative overflow-hidden rounded-[32px] bg-[#981495] p-6 sm:p-8 md:p-10 text-white shadow-lg">
-        <div className="relative z-10 space-y-6">
-          {/* Top Brand Badges */}
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="inline-flex items-center gap-1.5 rounded-full bg-white/20 backdrop-blur-md px-3 py-1 text-xs font-bold tracking-wide text-white border border-white/30">
-              <Sparkles className="h-3.5 w-3.5 text-amber-300" />
-              <span>Shoreline Local Shore Marketplace</span>
-            </div>
-            <div className="inline-flex items-center gap-1 rounded-full bg-amber-400 px-2.5 py-0.5 text-[11px] font-black uppercase text-slate-950">
-              <Zap className="h-3 w-3" />
-              20-30 MIN DELIVERY
-            </div>
-          </div>
+    <section
+      ref={containerRef}
+      className="mx-auto max-w-7xl px-4 pt-3 pb-6 md:px-8 md:pt-5 overflow-hidden"
+    >
+      {/* ── Scene 1 & 10: Camera Push-In Hero Card with Scroll Transformation ── */}
+      <motion.div
+        style={
+          shouldReduceMotion
+            ? {}
+            : {
+                scale: heroScale,
+                opacity: heroOpacity,
+              }
+        }
+        initial={{ opacity: 0, scale: shouldReduceMotion ? 1 : 0.96 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
+        className="relative overflow-hidden rounded-[36px] bg-[#981495] p-6 sm:p-8 lg:p-12 text-white shadow-2xl"
+      >
+        {/* Slow Animated Ambient Glows */}
+        <motion.div
+          animate={
+            shouldReduceMotion
+              ? {}
+              : {
+                  y: [0, 14, 0],
+                  opacity: [0.2, 0.35, 0.2],
+                  scale: [1, 1.05, 1],
+                }
+          }
+          transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
+          className="absolute -top-24 -right-24 h-96 w-96 rounded-full bg-purple-400/25 blur-3xl pointer-events-none"
+        />
+        <motion.div
+          animate={
+            shouldReduceMotion
+              ? {}
+              : {
+                  y: [0, -14, 0],
+                  opacity: [0.3, 0.45, 0.3],
+                  scale: [1, 1.08, 1],
+                }
+          }
+          transition={{ duration: 9, repeat: Infinity, ease: "easeInOut" }}
+          className="absolute -bottom-24 -left-24 h-96 w-96 rounded-full bg-purple-900/40 blur-3xl pointer-events-none"
+        />
 
-          {/* Main Swiggy Catchphrase Title */}
-          <div className="max-w-2xl space-y-2">
-            <h1 className="font-display text-2xl font-black tracking-tight sm:text-4xl md:text-5xl text-white leading-[1.15]">
-              Order food &amp; groceries. Discover best shops. Shoreline it!
-            </h1>
-            <p className="text-xs sm:text-sm font-semibold text-purple-100 max-w-lg">
-              Support neighborhood vendors with instant fulfillment across Shoreline City.
-            </p>
-          </div>
-
-          {/* ── Location & Search Bar Container ── */}
-          <div className="relative max-w-3xl">
-            <m.form
-              onSubmit={handleSearchSubmit}
-              animate={{ scale: isFocused ? 1.005 : 1 }}
-              transition={{ type: "spring", stiffness: 400, damping: 25 }}
-              className="relative flex flex-col sm:flex-row items-center gap-2.5 rounded-2xl bg-white p-2.5 shadow-xl transition-all duration-300 z-20"
+        <div className="relative z-10 space-y-7">
+          {/* Top Pill Badges Row (Scene 1: Energetic Badges Arrival) */}
+          <div className="flex flex-wrap items-center gap-2.5">
+            {/* LocalShore Marketplace Badge */}
+            <motion.div
+              initial={{ opacity: 0, y: shouldReduceMotion ? 0 : -20, scale: 0.9 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              transition={{ duration: 0.5, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
+              className="inline-flex items-center gap-1.5 rounded-full bg-white/15 backdrop-blur-md px-3.5 py-1 text-xs font-bold tracking-wide text-white border border-white/20 shadow-sm"
             >
-              {/* Location Selector Section */}
-              <div className="flex items-center gap-2 px-3 py-2 text-slate-700 border-b sm:border-b-0 sm:border-r border-slate-200 w-full sm:w-auto shrink-0 group">
-                <m.div
-                  animate={{ scale: [1, 1.15, 1] }}
-                  transition={{ repeat: Infinity, duration: 3, ease: "easeInOut" }}
+              <Sparkles className="h-3.5 w-3.5 text-amber-300 fill-amber-300" />
+              <span>LocalShore Marketplace</span>
+            </motion.div>
+
+            {/* "20–30 MIN DELIVERY" Badge with Energetic Spring Overshoot */}
+            <motion.div
+              initial={{ opacity: 0, x: shouldReduceMotion ? 0 : -30, scale: 0.8 }}
+              animate={{ opacity: 1, x: 0, scale: [0.8, 1.12, 1] }}
+              transition={{ duration: 0.5, delay: 0.22, ease: [0.16, 1, 0.3, 1] }}
+              className="inline-flex items-center gap-1 rounded-full bg-[#FACC15] px-3.5 py-1 text-[11px] font-black uppercase text-slate-950 shadow-md tracking-wider"
+            >
+              <Zap className="h-3.5 w-3.5 fill-slate-950" />
+              20–30 MIN DELIVERY
+            </motion.div>
+          </div>
+
+          {/* Title Headline & 3D Rider Illustration Grid */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
+            {/* Scene 2: Motion Typography Commercial Headline */}
+            <motion.div
+              style={shouldReduceMotion ? {} : { y: headlineScrollY }}
+              className="lg:col-span-7 space-y-3"
+            >
+              <h1 className="font-display text-3xl font-black tracking-tight sm:text-5xl lg:text-[54px] text-white leading-[1.08]">
+                {/* Line 1: Slides in from left with overshoot */}
+                <motion.span
+                  initial={{
+                    opacity: 0,
+                    x: shouldReduceMotion ? 0 : -60,
+                    filter: shouldReduceMotion ? "none" : "blur(6px)",
+                  }}
+                  animate={{ opacity: 1, x: 0, filter: "blur(0px)" }}
+                  transition={{ duration: 0.55, delay: 0.25, ease: [0.16, 1, 0.3, 1] }}
+                  className="block"
                 >
-                  <MapPin className="h-4 w-4 text-[#981495] shrink-0" />
-                </m.div>
+                  Order food &amp; groceries.
+                </motion.span>
+
+                {/* Line 2: Follows naturally */}
+                <motion.span
+                  initial={{
+                    opacity: 0,
+                    x: shouldReduceMotion ? 0 : -50,
+                    filter: shouldReduceMotion ? "none" : "blur(6px)",
+                  }}
+                  animate={{ opacity: 1, x: 0, filter: "blur(0px)" }}
+                  transition={{ duration: 0.55, delay: 0.38, ease: [0.16, 1, 0.3, 1] }}
+                  className="block"
+                >
+                  Discover best shops.
+                </motion.span>
+
+                {/* Line 3: Commercial Pop Emphasis on "LocalShore" */}
+                <motion.span
+                  initial={{
+                    opacity: 0,
+                    x: shouldReduceMotion ? 0 : -40,
+                    filter: shouldReduceMotion ? "none" : "blur(6px)",
+                  }}
+                  animate={{ opacity: 1, x: 0, filter: "blur(0px)" }}
+                  transition={{ duration: 0.55, delay: 0.50, ease: [0.16, 1, 0.3, 1] }}
+                  className="block pt-0.5"
+                >
+                  <motion.span
+                    initial={{
+                      opacity: 0,
+                      scale: 0.75,
+                      rotate: shouldReduceMotion ? 0 : -4,
+                    }}
+                    animate={{
+                      opacity: 1,
+                      scale: [0.75, 1.15, 1],
+                      rotate: shouldReduceMotion ? 0 : [-4, 2, 0],
+                    }}
+                    transition={{
+                      duration: 0.6,
+                      delay: 0.55,
+                      ease: [0.16, 1, 0.3, 1],
+                    }}
+                    className="text-[#FACC15] font-extrabold inline-block drop-shadow-md"
+                  >
+                    LocalShore
+                  </motion.span>{" "}
+                  <motion.span
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ duration: 0.4, delay: 0.65 }}
+                  >
+                    it!
+                  </motion.span>
+                </motion.span>
+              </h1>
+
+              {/* Subtitle Description */}
+              <motion.p
+                initial={{ opacity: 0, y: shouldReduceMotion ? 0 : 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.65, ease: "easeOut" }}
+                className="text-xs sm:text-sm font-semibold text-purple-100/90 max-w-lg leading-relaxed pt-1"
+              >
+                Support neighborhood vendors with instant fulfillment across Shoreline City.
+              </motion.p>
+            </motion.div>
+
+            {/* ── Scene 3, 4, 8 & 10: Scooter Entrance & Pristine Delivery Rider Video ── */}
+            <div className="flex lg:col-span-5 justify-center lg:justify-end items-center relative my-4 lg:my-0 w-full">
+              <motion.div
+                style={shouldReduceMotion ? {} : { x: scooterScrollX }}
+                initial={{
+                  opacity: 0,
+                  x: shouldReduceMotion ? 0 : 40,
+                  scale: 0.9,
+                }}
+                animate={{
+                  opacity: 1,
+                  x: 0,
+                  scale: 1,
+                }}
+                transition={{
+                  duration: 0.8,
+                  delay: 0.3,
+                  ease: [0.16, 1, 0.3, 1],
+                }}
+                className="relative w-full max-w-[340px] sm:max-w-sm lg:max-w-none lg:w-96 aspect-[16/9] lg:h-72 mx-auto overflow-hidden rounded-2xl lg:rounded-3xl shadow-xl lg:shadow-2xl border-2 border-white/30"
+              >
+                {/* High-Fidelity Animated Delivery Rider Video (Plays Once) */}
+                <motion.video
+                  autoPlay
+                  muted
+                  playsInline
+                  animate={
+                    shouldReduceMotion
+                      ? {}
+                      : {
+                          y: [0, -4, 0, -2, 0],
+                        }
+                  }
+                  transition={{
+                    duration: 2.8,
+                    repeat: Infinity,
+                    ease: "easeInOut",
+                  }}
+                  src="/assets/delivery-rider.mp4"
+                  className="w-full h-full object-cover"
+                />
+              </motion.div>
+            </div>
+          </div>
+
+          {/* ── Scene 5: Search & Location Floating Bar Unfold ── */}
+          <div className="relative max-w-2xl">
+            <motion.form
+              onSubmit={handleSearchSubmit}
+              initial={{ opacity: 0, y: shouldReduceMotion ? 0 : 25, scale: 0.96 }}
+              animate={{ opacity: 1, y: 0, scale: isFocused ? 1.005 : 1 }}
+              transition={{
+                duration: 0.6,
+                delay: 0.7,
+                ease: [0.16, 1, 0.3, 1],
+                scale: { type: "spring", stiffness: 400, damping: 25 },
+              }}
+              className="relative flex flex-col sm:flex-row items-center gap-2 rounded-full bg-white p-2 shadow-2xl transition-all duration-300 z-20"
+            >
+              {/* Location Selector (Slides in from left) */}
+              <motion.div
+                initial={{ opacity: 0, x: shouldReduceMotion ? 0 : -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.4, delay: 0.75 }}
+                className="flex items-center gap-2 px-4 py-2 text-slate-700 border-b sm:border-b-0 sm:border-r border-slate-200 w-full sm:w-auto shrink-0 group"
+              >
+                <MapPin className="h-4 w-4 text-[#981495] shrink-0" />
                 <input
                   type="text"
                   value={locationText}
                   onChange={(e) => setLocationText(e.target.value)}
-                  placeholder="Enter delivery location"
-                  className="text-xs sm:text-sm font-bold text-slate-800 bg-transparent outline-none focus:outline-none focus:ring-0 border-none w-full sm:w-[180px] truncate shadow-none"
+                  placeholder="Enter location"
+                  className="text-xs sm:text-sm font-bold text-slate-900 bg-transparent outline-none border-none w-full sm:w-[170px] truncate"
                 />
-              </div>
+                <ChevronDown className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+              </motion.div>
 
-              {/* Search Input Section with Animated Cycling Placeholder */}
+              {/* Search Field */}
               <div className="relative flex items-center gap-2 px-3 py-2 w-full flex-1">
-                <m.div animate={{ rotate: searchQuery ? 90 : 0 }}>
-                  <Search className="h-4 w-4 text-[#981495] shrink-0" />
-                </m.div>
-
+                <Search className="h-4 w-4 text-[#981495] shrink-0" />
                 <div className="relative w-full flex items-center">
                   <input
                     type="text"
@@ -188,23 +395,22 @@ export function HeroSection() {
                     onFocus={() => setIsFocused(true)}
                     onBlur={() => setTimeout(() => setIsFocused(false), 200)}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="relative z-10 text-xs sm:text-sm font-semibold text-slate-900 bg-transparent outline-none focus:outline-none focus:ring-0 border-none w-full shadow-none"
+                    className="relative z-10 text-xs sm:text-sm font-semibold text-slate-900 bg-transparent outline-none border-none w-full"
                   />
 
-                  {/* Animated Rotating Placeholder when input is empty */}
                   {!searchQuery && (
                     <div className="absolute inset-y-0 left-0 flex items-center pointer-events-none overflow-hidden h-full w-full">
                       <AnimatePresence mode="wait">
-                        <m.span
+                        <motion.span
                           key={suggestionIdx}
-                          initial={{ y: 16, opacity: 0 }}
+                          initial={{ y: 14, opacity: 0 }}
                           animate={{ y: 0, opacity: 1 }}
-                          exit={{ y: -16, opacity: 0 }}
-                          transition={{ duration: 0.35, ease: "easeOut" }}
+                          exit={{ y: -14, opacity: 0 }}
+                          transition={{ duration: 0.3 }}
                           className="text-xs sm:text-sm font-medium text-slate-400 truncate"
                         >
                           Search &quot;{SEARCH_SUGGESTIONS[suggestionIdx]}&quot;...
-                        </m.span>
+                        </motion.span>
                       </AnimatePresence>
                     </div>
                   )}
@@ -214,130 +420,160 @@ export function HeroSection() {
                   <button
                     type="button"
                     onClick={() => setSearchQuery("")}
-                    className="p-1 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-100 transition-colors"
+                    className="p-1 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-100"
                   >
                     <X className="h-3.5 w-3.5" />
                   </button>
                 )}
               </div>
 
-              {/* Animated FIND SHOPS Button */}
-              <m.button
+              {/* Scene 9: FIND SHOPS Button with Hover Advance */}
+              <motion.button
                 type="submit"
-                whileHover={{ scale: 1.03 }}
-                whileTap={{ scale: 0.95 }}
-                className="group relative overflow-hidden w-full sm:w-auto rounded-xl bg-slate-900 hover:bg-[#981495] text-white px-6 py-3 text-xs font-black uppercase tracking-wider transition-all duration-300 shadow-md shrink-0 flex items-center justify-center gap-2 cursor-pointer"
+                initial={{ opacity: 0, x: shouldReduceMotion ? 0 : 25, scale: 0.92 }}
+                animate={{ opacity: 1, x: 0, scale: 1 }}
+                transition={{ duration: 0.5, delay: 0.8 }}
+                whileHover={{ scale: 1.04 }}
+                whileTap={{ scale: 0.96 }}
+                className="group w-full sm:w-auto rounded-full bg-[#1e293b] hover:bg-[#0f172a] text-white px-6 py-3 text-xs font-black uppercase tracking-wider transition-colors duration-200 shadow-lg flex items-center justify-center gap-1.5 cursor-pointer shrink-0"
               >
-                {/* Shimmer Light Beam Effect */}
-                <m.div
-                  animate={{ x: ["-100%", "200%"] }}
-                  transition={{ repeat: Infinity, duration: 2.5, ease: "linear", repeatDelay: 1 }}
-                  className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent transform -skew-x-12"
-                />
-                <span className="relative z-10">FIND SHOPS</span>
-                <ArrowUpRight className="relative z-10 h-4 w-4 transition-transform duration-300 group-hover:translate-x-1 group-hover:-translate-y-1" />
-              </m.button>
-            </m.form>
+                <span>FIND SHOPS</span>
+                <ArrowUpRight className="h-4 w-4 stroke-[2.5] transition-transform duration-200 group-hover:translate-x-1.5 group-hover:-translate-y-0.5" />
+              </motion.button>
+            </motion.form>
 
-            {/* ── Animated Quick Search Suggestions Dropdown ── */}
+            {/* Quick Suggestions Dropdown */}
             <AnimatePresence>
               {isFocused && (
-                <m.div
-                  initial={{ opacity: 0, y: -10, scale: 0.98 }}
-                  animate={{ opacity: 1, y: 4, scale: 1 }}
-                  exit={{ opacity: 0, y: -10, scale: 0.98 }}
-                  transition={{ duration: 0.2, ease: "easeOut" }}
-                  className="absolute left-0 right-0 top-full z-30 mt-2 rounded-2xl bg-white p-4 shadow-2xl border border-purple-100 backdrop-blur-md text-slate-900"
+                <motion.div
+                  initial={{ opacity: 0, y: -8 }}
+                  animate={{ opacity: 1, y: 6 }}
+                  exit={{ opacity: 0, y: -8 }}
+                  transition={{ duration: 0.2 }}
+                  className="absolute left-0 right-0 top-full z-30 mt-2 rounded-2xl bg-white p-4 shadow-2xl border border-slate-100 text-slate-900"
                 >
                   <div className="flex items-center justify-between pb-2 border-b border-slate-100">
-                    <span className="flex items-center gap-1.5 text-xs font-black text-slate-800 uppercase tracking-wider">
-                      <Flame className="h-3.5 w-3.5 text-amber-500 fill-amber-500 animate-pulse" />
-                      Popular in Pappampatti Pirivu
+                    <span className="flex items-center gap-1 text-xs font-bold text-slate-800 uppercase tracking-wider">
+                      <Flame className="h-3.5 w-3.5 text-amber-500 fill-amber-500" />
+                      Popular near you
                     </span>
                     <span className="text-[10px] font-bold text-[#981495]">Tap to search</span>
                   </div>
 
                   <div className="mt-3 flex flex-wrap gap-2">
                     {POPULAR_TAGS.map((tag) => (
-                      <m.button
+                      <button
                         key={tag.query}
                         type="button"
-                        whileHover={{ scale: 1.05, y: -1 }}
-                        whileTap={{ scale: 0.95 }}
                         onClick={() => handleTagClick(tag.query)}
-                        className="inline-flex items-center gap-1.5 rounded-xl bg-purple-50 hover:bg-[#981495] hover:text-white px-3 py-1.5 text-xs font-bold text-[#981495] transition-all duration-200 border border-purple-100 shadow-xs cursor-pointer"
+                        className="inline-flex items-center gap-1.5 rounded-xl bg-purple-50 hover:bg-[#981495] hover:text-white px-3 py-1.5 text-xs font-bold text-[#981495] transition-all cursor-pointer"
                       >
                         <span>{tag.icon}</span>
                         <span>{tag.label}</span>
-                      </m.button>
+                      </button>
                     ))}
                   </div>
-                </m.div>
+                </motion.div>
               )}
             </AnimatePresence>
           </div>
 
-          {/* ── 3 Swiggy Signature Feature Cards overlapping bottom of Hero ── */}
-          <div className="pt-2 grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
-            {FEATURE_CARDS.map((card, index) => (
-              <m.div
-                key={card.id}
-                initial={{ opacity: 0, y: 16 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{
-                  duration: 0.35,
-                  delay: index * 0.08,
-                  ease: [0.22, 1, 0.36, 1],
-                }}
-                whileHover={{ y: -4, scale: 1.02 }}
-                onClick={() => {
-                  navigate({
-                    to: "/",
-                    search: { category: card.category, q: undefined },
-                    resetScroll: false,
-                  });
-                  scrollToShops();
-                }}
-                className="group cursor-pointer rounded-2xl bg-white p-4 shadow-md transition-all duration-300 hover:shadow-xl relative overflow-hidden border border-purple-100 flex items-center justify-between min-h-[120px]"
-              >
-                {/* Left Text Content */}
-                <div className="flex-1 pr-2 space-y-1 z-10">
-                  <div
-                    className={`inline-block rounded-md px-2 py-0.5 text-[9px] font-black tracking-wider uppercase ${card.badgeBg} ${card.badgeText}`}
-                  >
-                    {card.badge}
-                  </div>
-                  <h3 className="text-sm font-black text-slate-900 leading-tight">
-                    {card.title}
-                  </h3>
-                  <p className="text-[10px] font-bold text-slate-500 tracking-tight">
-                    {card.subtitle}
-                  </p>
+          {/* ── Scene 6, 7 & 9: Sequential Promotional Cards with Inner Image Parallax ── */}
+          <motion.div
+            style={shouldReduceMotion ? {} : { y: cardsScrollY }}
+            className="pt-2 flex sm:grid grid-cols-1 sm:grid-cols-3 gap-4 overflow-x-auto snap-x scrollbar-none pb-2 -mx-2 px-2 sm:mx-0 sm:px-0 sm:pb-0"
+          >
+            {FEATURE_CARDS.map((card, index) => {
+              const cardDelay = 0.85 + index * 0.12;
+              return (
+                <motion.div
+                  key={card.id}
+                  initial={{ opacity: 0, y: shouldReduceMotion ? 0 : 40, scale: 0.95 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  transition={{
+                    duration: 0.5,
+                    delay: cardDelay,
+                    ease: [0.16, 1, 0.3, 1],
+                  }}
+                  whileHover={{ y: -8, scale: 1.025 }}
+                  onClick={() => {
+                    navigate({
+                      to: "/",
+                      search: { category: card.category, q: undefined },
+                      resetScroll: false,
+                    });
+                    scrollToShops();
+                  }}
+                  className="group cursor-pointer rounded-2xl bg-white p-4.5 shadow-xl transition-shadow duration-300 hover:shadow-2xl relative overflow-hidden flex items-center justify-between min-h-[125px] border border-white/20 shrink-0 w-[270px] sm:w-auto snap-start"
+                >
+                  {/* Left Text Info */}
+                  <div className="flex-1 pr-2 space-y-1 z-10 flex flex-col justify-between h-full">
+                    <div>
+                      {/* Discount Badge Entrance */}
+                      <motion.div
+                        initial={{ opacity: 0, scale: 0.85 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ duration: 0.35, delay: cardDelay + 0.1 }}
+                        className={`inline-block rounded-md px-2 py-0.5 text-[9px] font-black tracking-wider uppercase ${card.badgeBg} ${card.badgeText}`}
+                      >
+                        {card.badge}
+                      </motion.div>
 
-                  {/* Swiggy Iconic Circular Arrow Button */}
-                  <div className="pt-2">
-                    <div
-                      className={`h-7 w-7 rounded-full ${card.arrowBg} text-white flex items-center justify-center shadow-xs transition-transform duration-200 group-hover:scale-110`}
-                    >
-                      <ArrowUpRight className="h-4 w-4" />
+                      <h3 className="text-sm font-black text-slate-900 leading-tight pt-1">
+                        {card.title}
+                      </h3>
+                      <p className="text-[10px] font-bold text-slate-400 tracking-tight">
+                        {card.subtitle}
+                      </p>
+                    </div>
+
+                    {/* Purple Circle Arrow Button */}
+                    <div className="pt-3">
+                      <div className="h-7 w-7 rounded-full bg-[#981495] text-white flex items-center justify-center shadow-md transition-all duration-200 group-hover:scale-115 group-hover:bg-[#800f7d]">
+                        <ArrowUpRight className="h-4 w-4 stroke-[2.5] transition-transform duration-200 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                {/* Right Image Cutout Preview */}
-                <div className="relative shrink-0 w-[85px] h-[85px] sm:w-[95px] sm:h-[95px] rounded-xl overflow-hidden bg-slate-100 shadow-inner">
-                  <img
-                    src={card.image}
-                    alt={card.title}
-                    className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
-                </div>
-              </m.div>
+                  {/* Scene 7: Right Cutout Image with Parallax Depth Entrance & Hover Zoom */}
+                  <div className="relative shrink-0 w-24 h-24 sm:w-26 sm:h-26 flex items-center justify-center overflow-hidden rounded-xl">
+                    <motion.img
+                      initial={{ opacity: 0, y: shouldReduceMotion ? 0 : 20, scale: 0.9 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      transition={{ duration: 0.5, delay: cardDelay + 0.15 }}
+                      src={card.image}
+                      alt={card.title}
+                      className="h-full w-full object-contain filter drop-shadow-md transition-transform duration-500 group-hover:scale-108 group-hover:-translate-y-1"
+                    />
+                  </div>
+                </motion.div>
+              );
+            })}
+          </motion.div>
+
+          {/* Carousel Dot Indicators */}
+          <div className="flex items-center justify-center gap-1.5 pt-1">
+            {[0, 1, 2, 3].map((dot) => (
+              <button
+                key={dot}
+                type="button"
+                onClick={() => setActiveSlide(dot)}
+                className="relative p-1 focus:outline-none cursor-pointer"
+                aria-label={`Slide ${dot + 1}`}
+              >
+                <motion.div
+                  animate={{
+                    width: activeSlide === dot ? 24 : 8,
+                    opacity: activeSlide === dot ? 1 : 0.4,
+                  }}
+                  transition={{ duration: 0.3, ease: "easeInOut" }}
+                  className="h-2 rounded-full bg-white"
+                />
+              </button>
             ))}
           </div>
         </div>
-      </div>
+      </motion.div>
     </section>
   );
 }

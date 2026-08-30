@@ -306,6 +306,61 @@ input.bg-transparent:focus-visible {
   outline: none !important;
 }
 
+/* Custom MapLibre Price Pin Marker */
+.maplibre-marker-pin {
+  cursor: pointer;
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+  will-change: transform;
+}
+
+.maplibre-marker-pin:hover {
+  transform: scale(1.08);
+  z-index: 40;
+}
+
+.maplibre-marker-pin.selected {
+  transform: scale(1.14);
+  z-index: 50;
+}
+
+.marker-price-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background-color: #ffffff;
+  color: #0f172a;
+  border: 1.5px solid #cbd5e1;
+  padding: 5px 11px;
+  border-radius: 9999px;
+  font-size: 12px;
+  font-weight: 700;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.14);
+  white-space: nowrap;
+  transition: all 0.2s ease;
+}
+
+.maplibre-marker-pin:hover .marker-price-pill,
+.maplibre-marker-pin.hovered .marker-price-pill {
+  border-color: #981495;
+  color: #981495;
+  box-shadow: 0 6px 16px rgba(152, 20, 149, 0.25);
+}
+
+.maplibre-marker-pin.selected .marker-price-pill {
+  background-color: #981495;
+  color: #ffffff;
+  border-color: #981495;
+  box-shadow: 0 8px 20px rgba(152, 20, 149, 0.4);
+}
+
+.shop-name-tag {
+  font-size: 10px;
+  font-weight: 600;
+  opacity: 0.85;
+  border-left: 1px solid currentColor;
+  padding-left: 6px;
+}
+
 ::view-transition-old(root),
 ::view-transition-new(root) {
   animation-duration: 220ms;
