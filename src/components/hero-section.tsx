@@ -364,7 +364,7 @@ export function HeroSection() {
                 ease: [0.16, 1, 0.3, 1],
                 scale: { type: "spring", stiffness: 400, damping: 25 },
               }}
-              className="relative flex flex-col sm:flex-row items-center gap-2 rounded-full bg-white p-2 shadow-2xl transition-all duration-300 z-20"
+              className="relative flex flex-col sm:flex-row items-center gap-2 rounded-2xl sm:rounded-full bg-white p-2 shadow-2xl transition-all duration-300 z-20"
             >
               {/* Location Selector (Slides in from left) */}
               <motion.div

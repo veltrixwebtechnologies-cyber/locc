@@ -103,6 +103,45 @@ export function AppShell({ children }: { children: ReactNode }) {
     <div
       className={`min-h-screen bg-background pb-20 md:pb-0 ${itemCount > 0 && !pathname.startsWith("/cart") && !pathname.startsWith("/checkout") ? "pb-24 md:pb-24" : ""}`}
     >
+      {/* Mobile top nav header */}
+      <header className="sticky top-0 z-50 flex items-center justify-between border-b hairline bg-background/95 px-4 py-2.5 backdrop-blur md:hidden">
+        <Link
+          to="/"
+          search={{ category: undefined, q: undefined }}
+          className="flex shrink-0 items-center gap-2"
+        >
+          <span className="grid h-8 w-8 place-items-center rounded-xl bg-primary text-xs font-bold text-primary-foreground font-display shadow-xs">
+            LS
+          </span>
+          <span className="font-display text-base font-bold text-foreground tracking-tight">LocalShore</span>
+        </Link>
+        <div className="flex items-center gap-2">
+          <Link
+            to="/cities"
+            className="flex items-center gap-1 rounded-full border border-purple-200/60 bg-purple-50/80 px-2.5 py-1 text-[11px] font-bold text-purple-800"
+          >
+            <MapPin className="h-3 w-3 text-purple-600" />
+            <span className="truncate max-w-[85px]">Coimbatore</span>
+          </Link>
+          {isSignedIn ? (
+            <Link
+              to="/profile"
+              className="grid h-8 w-8 place-items-center rounded-full bg-primary text-xs font-bold text-primary-foreground shadow-xs"
+            >
+              {(auth.name?.[0] ?? "U").toUpperCase()}
+            </Link>
+          ) : (
+            <Link
+              to="/auth"
+              search={{ redirect: pathname }}
+              className="rounded-lg bg-primary px-3 py-1.5 text-xs font-bold text-primary-foreground shadow-xs"
+            >
+              Sign in
+            </Link>
+          )}
+        </div>
+      </header>
+
       {/* Desktop top nav */}
       <header
         className={`sticky top-0 z-50 hidden border-b hairline bg-background/90 backdrop-blur transition-shadow duration-300 md:block ${
