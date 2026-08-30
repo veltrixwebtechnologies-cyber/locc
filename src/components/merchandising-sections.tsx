@@ -62,14 +62,9 @@ export function ProductCard({
   const dealTag = `${discountPercent}% OFF`;
 
   return (
-    <m.div
-      initial={{ opacity: 0, y: 12 }}
-      animate={{ opacity: 1, y: 0 }}
-      whileHover={{ y: -4, scale: 1.01 }}
-      whileTap={{ scale: 0.98 }}
-      transition={{ duration: 0.25 }}
+    <div
       data-product-id={product.id}
-      className={`group relative flex min-w-0 flex-col overflow-hidden rounded-2xl border border-amber-300/80 bg-white shadow-xs transition-all duration-300 hover:border-amber-400 hover:shadow-md hover:shadow-amber-500/10 ${
+      className={`group relative flex min-w-0 flex-col overflow-hidden rounded-2xl border border-amber-300/80 bg-white shadow-xs transition-all duration-200 hover:-translate-y-1 hover:border-amber-400 hover:shadow-md hover:shadow-amber-500/10 active:scale-[0.98] ${
         compact ? "p-2.5" : "p-3.5"
       }`}
     >
@@ -101,7 +96,7 @@ export function ProductCard({
       >
         {/* Grey inner padded image container frame */}
         <div className="aspect-[4/3] w-full overflow-hidden rounded-xl bg-slate-50 p-2 flex items-center justify-center border border-amber-200/50 relative">
-          <m.div layoutId={`product-image-${product.id}`} className="h-full w-full flex items-center justify-center">
+          <div className="h-full w-full flex items-center justify-center">
             <SafeProductImage
               src={imageUrl}
               productName={product.name}
@@ -112,7 +107,7 @@ export function ProductCard({
               data-product-image
               className="h-full w-full object-contain transition-transform duration-300 group-hover:scale-105"
             />
-          </m.div>
+          </div>
         </div>
 
         {/* Product details */}
@@ -158,7 +153,7 @@ export function ProductCard({
           addClassName="w-full rounded-xl bg-purple-50 py-1.5 text-xs font-bold text-purple-700 border border-purple-200/60 transition hover:bg-purple-700 hover:text-white"
         />
       </div>
-    </m.div>
+    </div>
   );
 }
 

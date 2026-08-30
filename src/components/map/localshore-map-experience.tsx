@@ -533,12 +533,7 @@ function NeighborhoodMapPreviewCard({ onOpenMap }: { onOpenMap: () => void }) {
         {/* Floating Shop Pins */}
 
         {/* Pin 1: Sri Krishna (Top Right) */}
-        <motion.div
-          initial={{ y: 0 }}
-          animate={{ y: [0, -4, 0] }}
-          transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-          className="absolute top-6 right-10 flex items-center gap-2 rounded-2xl bg-white px-3 py-1.5 shadow-lg border border-slate-100 z-10 transition-transform group-hover:scale-105"
-        >
+        <div className="absolute top-6 right-10 flex items-center gap-2 rounded-2xl bg-white px-3 py-1.5 shadow-lg border border-slate-100 z-10 transition-transform group-hover:scale-105">
           <div className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
             <MapPin className="h-4 w-4 fill-emerald-600 text-emerald-600" />
           </div>
@@ -546,15 +541,10 @@ function NeighborhoodMapPreviewCard({ onOpenMap }: { onOpenMap: () => void }) {
             <div className="text-xs font-bold text-slate-900 leading-tight">Sri Krishna</div>
             <div className="text-[10px] font-semibold text-slate-400">18 min</div>
           </div>
-        </motion.div>
+        </div>
 
         {/* Pin 2: Local Mart (Middle Right) */}
-        <motion.div
-          initial={{ y: 0 }}
-          animate={{ y: [0, -5, 0] }}
-          transition={{ duration: 3.5, delay: 0.5, repeat: Infinity, ease: "easeInOut" }}
-          className="absolute top-24 right-4 flex items-center gap-2 rounded-2xl bg-white px-3 py-1.5 shadow-lg border border-slate-100 z-10 transition-transform group-hover:scale-105"
-        >
+        <div className="absolute top-24 right-4 flex items-center gap-2 rounded-2xl bg-white px-3 py-1.5 shadow-lg border border-slate-100 z-10 transition-transform group-hover:scale-105">
           <div className="flex h-6 w-6 items-center justify-center rounded-full bg-rose-50 text-rose-600">
             <MapPin className="h-4 w-4 fill-rose-600 text-rose-600" />
           </div>
@@ -562,15 +552,10 @@ function NeighborhoodMapPreviewCard({ onOpenMap }: { onOpenMap: () => void }) {
             <div className="text-xs font-bold text-slate-900 leading-tight">Local Mart</div>
             <div className="text-[10px] font-semibold text-slate-400">22 min</div>
           </div>
-        </motion.div>
+        </div>
 
         {/* Pin 3: Fresh Basket (Middle Left) */}
-        <motion.div
-          initial={{ y: 0 }}
-          animate={{ y: [0, -4, 0] }}
-          transition={{ duration: 4.2, delay: 1, repeat: Infinity, ease: "easeInOut" }}
-          className="absolute top-28 left-6 flex items-center gap-2 rounded-2xl bg-white px-3 py-1.5 shadow-lg border border-slate-100 z-10 transition-transform group-hover:scale-105"
-        >
+        <div className="absolute top-28 left-6 flex items-center gap-2 rounded-2xl bg-white px-3 py-1.5 shadow-lg border border-slate-100 z-10 transition-transform group-hover:scale-105">
           <div className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
             <MapPin className="h-4 w-4 fill-emerald-600 text-emerald-600" />
           </div>
@@ -578,15 +563,10 @@ function NeighborhoodMapPreviewCard({ onOpenMap }: { onOpenMap: () => void }) {
             <div className="text-xs font-bold text-slate-900 leading-tight">Fresh Basket</div>
             <div className="text-[10px] font-semibold text-emerald-600">15 min</div>
           </div>
-        </motion.div>
+        </div>
 
         {/* Pin 4: Bake House (Bottom Right) */}
-        <motion.div
-          initial={{ y: 0 }}
-          animate={{ y: [0, -4, 0] }}
-          transition={{ duration: 3.8, delay: 1.5, repeat: Infinity, ease: "easeInOut" }}
-          className="absolute bottom-6 right-16 flex items-center gap-2 rounded-2xl bg-white px-3 py-1.5 shadow-lg border border-slate-100 z-10 transition-transform group-hover:scale-105"
-        >
+        <div className="absolute bottom-6 right-16 flex items-center gap-2 rounded-2xl bg-white px-3 py-1.5 shadow-lg border border-slate-100 z-10 transition-transform group-hover:scale-105">
           <div className="flex h-6 w-6 items-center justify-center rounded-full bg-rose-50 text-rose-600">
             <MapPin className="h-4 w-4 fill-rose-600 text-rose-600" />
           </div>
@@ -594,7 +574,7 @@ function NeighborhoodMapPreviewCard({ onOpenMap }: { onOpenMap: () => void }) {
             <div className="text-xs font-bold text-slate-900 leading-tight">Bake House</div>
             <div className="text-[10px] font-semibold text-slate-400">20 min</div>
           </div>
-        </motion.div>
+        </div>
 
         {/* Map Expand Badge Hint */}
         <div className="absolute bottom-3 left-3 bg-white/90 backdrop-blur-xs px-2.5 py-1 rounded-full text-[11px] font-bold text-[#7e22ce] shadow-xs border border-purple-100 flex items-center gap-1 opacity-90 group-hover:opacity-100">

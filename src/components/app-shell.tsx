@@ -41,7 +41,17 @@ export function AppShell({ children }: { children: ReactNode }) {
   const isSignedIn = Boolean(auth.id);
 
   useEffect(() => {
-    const update = () => setScrolled(window.scrollY > 8);
+    let ticking = false;
+    const update = () => {
+      if (!ticking) {
+        window.requestAnimationFrame(() => {
+          const isScrolled = window.scrollY > 8;
+          setScrolled((prev) => (prev !== isScrolled ? isScrolled : prev));
+          ticking = false;
+        });
+        ticking = true;
+      }
+    };
     update();
     window.addEventListener("scroll", update, { passive: true });
     return () => window.removeEventListener("scroll", update);

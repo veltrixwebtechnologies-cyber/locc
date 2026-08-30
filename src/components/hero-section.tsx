@@ -104,6 +104,16 @@ export function HeroSection() {
   const [suggestionIdx, setSuggestionIdx] = useState(0);
   const [isFocused, setIsFocused] = useState(false);
   const [activeSlide, setActiveSlide] = useState(0);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener("resize", checkMobile, { passive: true });
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
+
+  const disableHeavyMotion = shouldReduceMotion || isMobile;
 
   // ── Scene 10: Scroll Transformation Hooks ──
   const { scrollYProgress } = useScroll({
@@ -154,22 +164,22 @@ export function HeroSection() {
       {/* ── Scene 1 & 10: Camera Push-In Hero Card with Scroll Transformation ── */}
       <motion.div
         style={
-          shouldReduceMotion
+          disableHeavyMotion
             ? {}
             : {
                 scale: heroScale,
                 opacity: heroOpacity,
               }
         }
-        initial={{ opacity: 0, scale: shouldReduceMotion ? 1 : 0.96 }}
+        initial={{ opacity: 0, scale: disableHeavyMotion ? 1 : 0.96 }}
         animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
+        transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
         className="relative overflow-hidden rounded-[36px] bg-[#981495] p-6 sm:p-8 lg:p-12 text-white shadow-2xl"
       >
         {/* Slow Animated Ambient Glows */}
         <motion.div
           animate={
-            shouldReduceMotion
+            disableHeavyMotion
               ? {}
               : {
                   y: [0, 14, 0],
@@ -182,7 +192,7 @@ export function HeroSection() {
         />
         <motion.div
           animate={
-            shouldReduceMotion
+            disableHeavyMotion
               ? {}
               : {
                   y: [0, -14, 0],
