@@ -1,5 +1,6 @@
 import { useState, useMemo, useRef, useEffect } from "react";
-import { MapPin, Locate, ArrowRight, Star, Filter } from "lucide-react";
+import { MapPin, Locate, ArrowRight, Star, Filter, Check } from "lucide-react";
+import { motion } from "framer-motion";
 import { InteractiveMapView, type InteractiveMapViewRef } from "./interactive-map-view";
 
 import type { MapFilterOptions, MapLocation, MapMarkerItem } from "@/lib/map-service/types";
@@ -241,6 +242,16 @@ export function LocalShoreMapExperience({
         </button>
       </div>
 
+      {/* NEIGHBORHOOD MAP PREVIEW CARD (Shown when map is closed, matching exact reference UI) */}
+      {!showDesktopMap && (
+        <NeighborhoodMapPreviewCard
+          onOpenMap={() => {
+            setShowDesktopMap(true);
+            setIsMobileMapOpen(true);
+          }}
+        />
+      )}
+
       {/* MAIN CONTAINER: Dynamic Responsive Split View */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         {/* SHOP CARDS PANEL */}
@@ -440,6 +451,156 @@ export function LocalShoreMapExperience({
             <><span>Show map</span><span>🗺️</span></>
           )}
         </button>
+      </div>
+    </div>
+  );
+}
+
+function NeighborhoodMapPreviewCard({ onOpenMap }: { onOpenMap: () => void }) {
+  return (
+    <div className="w-full rounded-3xl bg-white border border-slate-200/80 shadow-md p-6 sm:p-8 md:p-10 mb-8 flex flex-col lg:flex-row items-center justify-between gap-8 overflow-hidden relative">
+      {/* Left Content Area */}
+      <div className="flex-1 max-w-xl space-y-3">
+        <h3 className="font-display text-2xl sm:text-3xl font-extrabold text-[#1E1B4B] tracking-tight">
+          Your neighborhood, delivered
+        </h3>
+        <p className="text-sm sm:text-base font-semibold text-slate-500">
+          Discover shops around you
+        </p>
+
+        {/* Checklist */}
+        <div className="space-y-2.5 pt-2 pb-2">
+          {[
+            "Real local shops",
+            "No dark stores",
+            "Support your neighborhood",
+            "Faster, fresher delivery",
+          ].map((item, idx) => (
+            <div key={idx} className="flex items-center gap-3">
+              <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-600 font-bold">
+                <Check className="h-3.5 w-3.5 stroke-[3]" />
+              </div>
+              <span className="text-sm font-semibold text-slate-700">{item}</span>
+            </div>
+          ))}
+        </div>
+
+        {/* View on map CTA button */}
+        <div className="pt-2">
+          <button
+            type="button"
+            onClick={onOpenMap}
+            className="inline-flex items-center gap-2 rounded-full bg-[#7e22ce] hover:bg-[#6b21a8] px-6 py-3 text-sm font-bold text-white shadow-md hover:shadow-lg transition-all active:scale-95 group cursor-pointer"
+          >
+            <span>View on map</span>
+            <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+          </button>
+        </div>
+      </div>
+
+      {/* Right Graphic Area: Light Vector Map Canvas with Floating Shop Cards */}
+      <div
+        onClick={onOpenMap}
+        className="relative w-full lg:w-[460px] h-[260px] sm:h-[280px] rounded-2xl bg-slate-50 border border-slate-200/60 overflow-hidden shadow-xs cursor-pointer group"
+      >
+        {/* Stylized Vector Map Background */}
+        <svg className="absolute inset-0 w-full h-full object-cover opacity-65" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <pattern id="mapGrid" width="40" height="40" patternUnits="userSpaceOnUse">
+              <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#E2E8F0" strokeWidth="1" />
+            </pattern>
+          </defs>
+          <rect width="100%" height="100%" fill="#F8FAFC" />
+          <rect width="100%" height="100%" fill="url(#mapGrid)" />
+          
+          <path d="M 40 20 Q 90 10, 120 60 T 160 120 L 60 140 Z" fill="#D1FAE5" opacity="0.6" />
+          <path d="M 320 180 Q 380 160, 420 220 L 340 260 Z" fill="#D1FAE5" opacity="0.6" />
+          <path d="M 380 0 Q 420 80, 460 140" fill="none" stroke="#BAE6FD" strokeWidth="18" opacity="0.7" />
+
+          <path d="M -20 100 L 500 120" fill="none" stroke="#FFFFFF" strokeWidth="14" />
+          <path d="M -20 100 L 500 120" fill="none" stroke="#CBD5E1" strokeWidth="8" />
+
+          <path d="M 180 -10 L 220 300" fill="none" stroke="#FFFFFF" strokeWidth="16" />
+          <path d="M 180 -10 L 220 300" fill="none" stroke="#CBD5E1" strokeWidth="10" />
+
+          <path d="M 60 -10 L 320 300" fill="none" stroke="#FFFFFF" strokeWidth="10" />
+          <path d="M 60 -10 L 320 300" fill="none" stroke="#E2E8F0" strokeWidth="6" />
+
+          <path d="M 300 20 Q 240 140, 480 200" fill="none" stroke="#FFFFFF" strokeWidth="12" />
+          <path d="M 300 20 Q 240 140, 480 200" fill="none" stroke="#CBD5E1" strokeWidth="7" />
+        </svg>
+
+        {/* Floating Shop Pins */}
+
+        {/* Pin 1: Sri Krishna (Top Right) */}
+        <motion.div
+          initial={{ y: 0 }}
+          animate={{ y: [0, -4, 0] }}
+          transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+          className="absolute top-6 right-10 flex items-center gap-2 rounded-2xl bg-white px-3 py-1.5 shadow-lg border border-slate-100 z-10 transition-transform group-hover:scale-105"
+        >
+          <div className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
+            <MapPin className="h-4 w-4 fill-emerald-600 text-emerald-600" />
+          </div>
+          <div>
+            <div className="text-xs font-bold text-slate-900 leading-tight">Sri Krishna</div>
+            <div className="text-[10px] font-semibold text-slate-400">18 min</div>
+          </div>
+        </motion.div>
+
+        {/* Pin 2: Local Mart (Middle Right) */}
+        <motion.div
+          initial={{ y: 0 }}
+          animate={{ y: [0, -5, 0] }}
+          transition={{ duration: 3.5, delay: 0.5, repeat: Infinity, ease: "easeInOut" }}
+          className="absolute top-24 right-4 flex items-center gap-2 rounded-2xl bg-white px-3 py-1.5 shadow-lg border border-slate-100 z-10 transition-transform group-hover:scale-105"
+        >
+          <div className="flex h-6 w-6 items-center justify-center rounded-full bg-rose-50 text-rose-600">
+            <MapPin className="h-4 w-4 fill-rose-600 text-rose-600" />
+          </div>
+          <div>
+            <div className="text-xs font-bold text-slate-900 leading-tight">Local Mart</div>
+            <div className="text-[10px] font-semibold text-slate-400">22 min</div>
+          </div>
+        </motion.div>
+
+        {/* Pin 3: Fresh Basket (Middle Left) */}
+        <motion.div
+          initial={{ y: 0 }}
+          animate={{ y: [0, -4, 0] }}
+          transition={{ duration: 4.2, delay: 1, repeat: Infinity, ease: "easeInOut" }}
+          className="absolute top-28 left-6 flex items-center gap-2 rounded-2xl bg-white px-3 py-1.5 shadow-lg border border-slate-100 z-10 transition-transform group-hover:scale-105"
+        >
+          <div className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
+            <MapPin className="h-4 w-4 fill-emerald-600 text-emerald-600" />
+          </div>
+          <div>
+            <div className="text-xs font-bold text-slate-900 leading-tight">Fresh Basket</div>
+            <div className="text-[10px] font-semibold text-emerald-600">15 min</div>
+          </div>
+        </motion.div>
+
+        {/* Pin 4: Bake House (Bottom Right) */}
+        <motion.div
+          initial={{ y: 0 }}
+          animate={{ y: [0, -4, 0] }}
+          transition={{ duration: 3.8, delay: 1.5, repeat: Infinity, ease: "easeInOut" }}
+          className="absolute bottom-6 right-16 flex items-center gap-2 rounded-2xl bg-white px-3 py-1.5 shadow-lg border border-slate-100 z-10 transition-transform group-hover:scale-105"
+        >
+          <div className="flex h-6 w-6 items-center justify-center rounded-full bg-rose-50 text-rose-600">
+            <MapPin className="h-4 w-4 fill-rose-600 text-rose-600" />
+          </div>
+          <div>
+            <div className="text-xs font-bold text-slate-900 leading-tight">Bake House</div>
+            <div className="text-[10px] font-semibold text-slate-400">20 min</div>
+          </div>
+        </motion.div>
+
+        {/* Map Expand Badge Hint */}
+        <div className="absolute bottom-3 left-3 bg-white/90 backdrop-blur-xs px-2.5 py-1 rounded-full text-[11px] font-bold text-[#7e22ce] shadow-xs border border-purple-100 flex items-center gap-1 opacity-90 group-hover:opacity-100">
+          <span>Click to explore live map</span>
+          <ArrowRight className="h-3 w-3" />
+        </div>
       </div>
     </div>
   );
