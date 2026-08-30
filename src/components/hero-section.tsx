@@ -311,7 +311,6 @@ export function HeroSection() {
             {/* ── Scene 3, 4, 8 & 10: Scooter Entrance & Pristine Delivery Rider Video ── */}
             <div className="flex lg:col-span-5 justify-center lg:justify-end items-center relative my-4 lg:my-0 w-full">
               <motion.div
-                style={shouldReduceMotion ? {} : { x: scooterScrollX }}
                 initial={{
                   opacity: 0,
                   x: shouldReduceMotion ? 0 : 40,
