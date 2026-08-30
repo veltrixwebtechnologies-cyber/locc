@@ -20,7 +20,7 @@ import {
   HeaderCategoryMenu,
   MobileCategoryStrip,
 } from "@/components/category-mega-menu";
-import { Fragment, type ReactNode, useEffect, useState } from "react";
+import { Fragment, type ReactNode, useEffect, useState, useRef } from "react";
 import { useWishlist, useWishlistProducts } from "@/lib/merchandising";
 import { AnimatePresence, m } from "motion/react";
 
@@ -34,9 +34,10 @@ export function AppShell({ children }: { children: ReactNode }) {
   const [scrolled, setScrolled] = useState(false);
   const [headerQuery, setHeaderQuery] = useState("");
   const [searchFocused, setSearchFocused] = useState(false);
-  const [cartBarDismissed, setCartBarDismissed] = useState(false);
+  const [cartBarDismissed, setCartBarDismissed] = useState(true);
   const [userInteracted, setUserInteracted] = useState(false);
   const { itemCount } = cartTotals(cart.lines);
+  const prevItemCountRef = useRef(itemCount);
   const isSignedIn = Boolean(auth.id);
 
   useEffect(() => {
@@ -62,9 +63,12 @@ export function AppShell({ children }: { children: ReactNode }) {
     };
   }, [userInteracted]);
 
-  // Reset dismissed state when a new item is added to cart
+  // Only show floating cart bar when a NEW item is added to cart during the session
   useEffect(() => {
-    setCartBarDismissed(false);
+    if (itemCount > prevItemCountRef.current) {
+      setCartBarDismissed(false);
+    }
+    prevItemCountRef.current = itemCount;
   }, [itemCount]);
 
   const tabs: Array<{
