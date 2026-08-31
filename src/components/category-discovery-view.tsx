@@ -276,7 +276,7 @@ export function CategoryDiscoveryView({
     <div className="mx-auto max-w-7xl px-3 sm:px-6 lg:px-8 py-4 sm:py-6 space-y-4 sm:space-y-6">
       {/* 1. Category Filter Pill Strip Header (Mobile responsive smooth touch scroll) */}
       <div className="relative">
-        <div className="flex items-center gap-2 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden pb-1 touch-pan-x">
+        <div className="flex items-center gap-2 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden pb-1 touch-pan-x overscroll-x-contain">
           {CATEGORY_TABS.map((catKey) => {
             const item = CATEGORY_REGISTRY[catKey];
             if (!item) return null;
@@ -288,7 +288,7 @@ export function CategoryDiscoveryView({
                 key={catKey}
                 type="button"
                 onClick={() => handleSelectTab(catKey)}
-                className={`shrink-0 flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-full text-xs font-bold transition-all duration-200 shadow-2xs ${
+                className={`shrink-0 flex items-center gap-1.5 sm:gap-2 px-3.5 sm:px-4 py-2.5 sm:py-2.5 min-h-[44px] rounded-full text-xs font-bold transition-all duration-200 shadow-2xs ${
                   isSelected
                     ? "bg-[#981495] text-white shadow-md ring-2 ring-[#981495]/30 scale-102"
                     : "bg-white text-slate-700 border border-slate-200/90 hover:bg-slate-50 hover:border-slate-300"

@@ -114,66 +114,89 @@ function Home() {
   const [cat, setCat] = useState<string>(search.category ?? "all");
   const approvedProducts = useQuery({
     queryKey: ["approved-product-catalog"],
+    staleTime: 1000 * 60 * 5,
+    gcTime: 1000 * 60 * 10,
+    retry: 1,
+    refetchOnWindowFocus: false,
     queryFn: async () => {
-      let { data, error } = await (supabase as any)
-        .from("approved_product_catalog")
-        .select(
-          "id,seller_id,name,category,selling_price,image_url,stock,shop_name,business_type,city,state,address_line1",
-        )
-        .order("created_at", { ascending: false });
-      // Keep existing deployments working until the catalog view migration is applied.
-      if (error) {
-        const fallback = await (supabase as any)
-          .from("products")
-          .select("id,seller_id,name,category,selling_price,image_url,stock")
-          .in("status", ["active", "approved"])
+      try {
+        let { data, error } = await (supabase as any)
+          .from("approved_product_catalog")
+          .select(
+            "id,seller_id,name,category,selling_price,image_url,stock,shop_name,business_type,city,state,address_line1",
+          )
           .order("created_at", { ascending: false });
-        data = fallback.data;
-        error = fallback.error;
+        if (error) {
+          const fallback = await (supabase as any)
+            .from("products")
+            .select("id,seller_id,name,category,selling_price,image_url,stock")
+            .in("status", ["active", "approved"])
+            .order("created_at", { ascending: false });
+          data = fallback.data;
+        }
+        return data ?? [];
+      } catch (err) {
+        console.warn("Products query fallback:", err);
+        return [];
       }
-      if (error) throw error;
-      return data ?? [];
     },
   });
+
   const approvedVendors = useQuery({
     queryKey: ["approved-vendors"],
+    staleTime: 1000 * 60 * 5,
+    gcTime: 1000 * 60 * 10,
+    retry: 1,
+    refetchOnWindowFocus: false,
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
-        .from("approved_vendor_catalog")
-        .select(
-          "id,shop_name,business_type,city,state,address_line1,category,shop_logo_path,shop_banner_path",
-        );
-      if (error) throw error;
-      const rows = data ?? [];
-      const paths = Array.from(
-        new Set(
-          rows
-            .flatMap((vendor: any) => [vendor.shop_banner_path, vendor.shop_logo_path])
-            .filter(Boolean),
-        ),
-      ) as string[];
-      const signedByPath = new Map<string, string>();
-      if (paths.length > 0) {
-        const { data: signed } = await supabase.storage
-          .from("seller-docs")
-          .createSignedUrls(paths, 60 * 60);
-        for (const item of signed ?? []) {
-          if (item.path && item.signedUrl) signedByPath.set(item.path, item.signedUrl);
+      try {
+        const { data, error } = await (supabase as any)
+          .from("approved_vendor_catalog")
+          .select(
+            "id,shop_name,business_type,city,state,address_line1,category,shop_logo_path,shop_banner_path",
+          );
+        if (error) throw error;
+        const rows = data ?? [];
+        const paths = Array.from(
+          new Set(
+            rows
+              .flatMap((vendor: any) => [vendor.shop_banner_path, vendor.shop_logo_path])
+              .filter(Boolean),
+          ),
+        ) as string[];
+        const signedByPath = new Map<string, string>();
+        if (paths.length > 0) {
+          try {
+            const { data: signed } = await supabase.storage
+              .from("seller-docs")
+              .createSignedUrls(paths, 60 * 60);
+            for (const item of signed ?? []) {
+              if (item.path && item.signedUrl) signedByPath.set(item.path, item.signedUrl);
+            }
+          } catch (storageErr) {
+            console.warn("Storage signed url query skipped:", storageErr);
+          }
         }
+        return rows.map((vendor: any) => ({
+          ...vendor,
+          storefront_image_url:
+            signedByPath.get(vendor.shop_banner_path) ??
+            signedByPath.get(vendor.shop_logo_path) ??
+            null,
+        }));
+      } catch (err) {
+        console.warn("Vendors query fallback:", err);
+        return [];
       }
-      return rows.map((vendor: any) => ({
-        ...vendor,
-        storefront_image_url:
-          signedByPath.get(vendor.shop_banner_path) ??
-          signedByPath.get(vendor.shop_logo_path) ??
-          null,
-      }));
     },
   });
+
+  const [visibleProductLimit, setVisibleProductLimit] = useState(15);
 
   useEffect(() => {
     setQuery(search.q ?? "");
     setCat(search.category ?? "all");
+    setVisibleProductLimit(15);
 
     if (search.category !== undefined || (search.q && search.q.trim().length > 0)) {
       scrollToShops();
@@ -464,11 +487,23 @@ function Home() {
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
-              {homepageProducts.map((product) => (
-                <ProductCard key={product.id} product={product} />
-              ))}
-            </div>
+            <>
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+                {homepageProducts.slice(0, visibleProductLimit).map((product) => (
+                  <ProductCard key={product.id} product={product} />
+                ))}
+              </div>
+              {homepageProducts.length > visibleProductLimit && (
+                <div className="mt-5 flex justify-center">
+                  <button
+                    onClick={() => setVisibleProductLimit((prev) => prev + 20)}
+                    className="inline-flex items-center gap-2 rounded-full border border-amber-500/40 bg-card px-6 py-2.5 text-xs font-bold text-foreground shadow-sm transition hover:bg-amber-500/10 active:scale-95"
+                  >
+                    <span>Show more products ({homepageProducts.length - visibleProductLimit} remaining)</span>
+                  </button>
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>

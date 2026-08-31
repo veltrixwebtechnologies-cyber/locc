@@ -10,19 +10,34 @@ import { resolveImageUrl } from "@/lib/image-utils";
 function useSlowAutoScroll<T extends HTMLDivElement>(speed = 0.55) {
   const scrollRef = useRef<T>(null);
   const [isPaused, setIsPaused] = useState(false);
+  const [isVisible, setIsVisible] = useState(false);
   const posRef = useRef(0);
 
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
 
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        setIsVisible(entry.isIntersecting);
+      },
+      { threshold: 0.1 }
+    );
+
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el || !isVisible || isPaused) return;
+
     posRef.current = el.scrollLeft;
     let animId: number;
 
     const step = () => {
-      if (!isPaused && el) {
+      if (el) {
         posRef.current += speed;
-        // Seamless loop calculation (3 sets of cloned items)
         const singleSetWidth = el.scrollWidth / 3;
         if (singleSetWidth > 0) {
           if (posRef.current >= singleSetWidth * 2) {
@@ -32,15 +47,13 @@ function useSlowAutoScroll<T extends HTMLDivElement>(speed = 0.55) {
           }
         }
         el.scrollLeft = posRef.current;
-      } else if (el) {
-        posRef.current = el.scrollLeft;
       }
       animId = requestAnimationFrame(step);
     };
 
     animId = requestAnimationFrame(step);
     return () => cancelAnimationFrame(animId);
-  }, [isPaused, speed]);
+  }, [isPaused, isVisible, speed]);
 
   return {
     scrollRef,

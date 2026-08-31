@@ -34,10 +34,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const [scrolled, setScrolled] = useState(false);
   const [headerQuery, setHeaderQuery] = useState("");
   const [searchFocused, setSearchFocused] = useState(false);
-  const [cartBarDismissed, setCartBarDismissed] = useState(true);
-  const [userInteracted, setUserInteracted] = useState(false);
   const { itemCount } = cartTotals(cart.lines);
-  const prevItemCountRef = useRef(itemCount);
   const isSignedIn = Boolean(auth.id);
 
   useEffect(() => {
@@ -56,30 +53,6 @@ export function AppShell({ children }: { children: ReactNode }) {
     window.addEventListener("scroll", update, { passive: true });
     return () => window.removeEventListener("scroll", update);
   }, []);
-
-  // Only show the floating cart bar after the user has actually interacted
-  // with the page (scroll or tap). This prevents the bar from immediately
-  // appearing on mobile open and causing accidental navigation to /cart.
-  useEffect(() => {
-    if (userInteracted) return;
-    const onInteract = () => setUserInteracted(true);
-    window.addEventListener("scroll", onInteract, { once: true, passive: true });
-    window.addEventListener("touchstart", onInteract, { once: true, passive: true });
-    window.addEventListener("pointerdown", onInteract, { once: true });
-    return () => {
-      window.removeEventListener("scroll", onInteract);
-      window.removeEventListener("touchstart", onInteract);
-      window.removeEventListener("pointerdown", onInteract);
-    };
-  }, [userInteracted]);
-
-  // Only show floating cart bar when a NEW item is added to cart during the session
-  useEffect(() => {
-    if (itemCount > prevItemCountRef.current) {
-      setCartBarDismissed(false);
-    }
-    prevItemCountRef.current = itemCount;
-  }, [itemCount]);
 
   const tabs: Array<{
     to: string;
@@ -110,9 +83,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   ];
 
   return (
-    <div
-      className={`min-h-screen bg-background pb-20 md:pb-0 ${itemCount > 0 && !pathname.startsWith("/cart") && !pathname.startsWith("/checkout") ? "pb-24 md:pb-24" : ""}`}
-    >
+    <div className="min-h-screen bg-background pb-20 md:pb-0">
       {/* Mobile top nav header */}
       <header className="sticky top-0 z-50 flex items-center justify-between border-b hairline bg-background/95 px-4 py-2.5 backdrop-blur md:hidden">
         <Link
@@ -357,49 +328,6 @@ export function AppShell({ children }: { children: ReactNode }) {
       <main className="mx-auto w-full max-w-7xl">{children}</main>
 
       <ShopperFooter />
-
-      <AnimatePresence>
-        {itemCount > 0 && !pathname.startsWith("/cart") && !pathname.startsWith("/checkout") && userInteracted && !cartBarDismissed ? (
-          <m.div
-            initial={{ opacity: 0, y: 28, scale: 0.98 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 28, scale: 0.98 }}
-            transition={{ type: "spring", stiffness: 360, damping: 28 }}
-            className="fixed inset-x-0 bottom-[72px] z-50 px-4 md:bottom-5"
-          >
-            <div className="mx-auto flex max-w-xl items-center justify-between gap-4 rounded-2xl bg-primary px-4 py-3 text-primary-foreground shadow-[0_14px_38px_-12px_rgba(42,27,74,0.6)] ring-1 ring-white/20 md:max-w-lg md:px-5">
-              <div className="min-w-0">
-                <p className="text-xs font-medium text-primary-foreground/75">
-                  {itemCount} {itemCount === 1 ? "item" : "items"} in cart
-                </p>
-                <p className="truncate font-display text-base font-bold">
-                  ₹{cartTotals(cart.lines).subtotal}
-                </p>
-              </div>
-              <div className="flex shrink-0 items-center gap-2">
-                <Link
-                  to="/cart"
-                  className="inline-flex shrink-0 items-center gap-2 rounded-xl bg-background px-4 py-2.5 text-sm font-bold text-foreground transition-transform hover:scale-[1.02] active:scale-[0.98]"
-                >
-                  <ShoppingBag className="h-4 w-4 text-primary" />
-                  Review cart
-                  <ArrowRight className="h-4 w-4 text-primary" />
-                </Link>
-                <button
-                  type="button"
-                  aria-label="Dismiss cart bar"
-                  onClick={() => setCartBarDismissed(true)}
-                  className="grid h-7 w-7 place-items-center rounded-full bg-white/15 text-primary-foreground/80 transition-colors hover:bg-white/25"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                    <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
-                  </svg>
-                </button>
-              </div>
-            </div>
-          </m.div>
-        ) : null}
-      </AnimatePresence>
 
       {/* Mobile bottom tab bar */}
       <nav className="fixed inset-x-0 bottom-0 z-40 border-t hairline bg-background/95 backdrop-blur md:hidden">

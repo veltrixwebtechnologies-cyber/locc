@@ -104,28 +104,6 @@ export function HeroSection() {
   const [suggestionIdx, setSuggestionIdx] = useState(0);
   const [isFocused, setIsFocused] = useState(false);
   const [activeSlide, setActiveSlide] = useState(0);
-  const [isMobile, setIsMobile] = useState(false);
-
-  useEffect(() => {
-    const checkMobile = () => setIsMobile(window.innerWidth < 768);
-    checkMobile();
-    window.addEventListener("resize", checkMobile, { passive: true });
-    return () => window.removeEventListener("resize", checkMobile);
-  }, []);
-
-  const disableHeavyMotion = shouldReduceMotion || isMobile;
-
-  // ── Scene 10: Scroll Transformation Hooks ──
-  const { scrollYProgress } = useScroll({
-    target: containerRef,
-    offset: ["start start", "end start"],
-  });
-
-  const heroScale = useTransform(scrollYProgress, [0, 1], [1, 0.96]);
-  const heroOpacity = useTransform(scrollYProgress, [0, 0.85], [1, 0.8]);
-  const scooterScrollX = useTransform(scrollYProgress, [0, 1], [0, 90]);
-  const headlineScrollY = useTransform(scrollYProgress, [0, 1], [0, -30]);
-  const cardsScrollY = useTransform(scrollYProgress, [0, 1], [0, 20]);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -159,230 +137,87 @@ export function HeroSection() {
   return (
     <section
       ref={containerRef}
-      className="mx-auto max-w-7xl px-4 pt-3 pb-6 md:px-8 md:pt-5 overflow-hidden"
+      className="mx-auto max-w-7xl px-3 pt-2 pb-5 sm:px-6 sm:pt-4 md:px-8 md:pt-5 overflow-hidden"
     >
-      {/* ── Scene 1 & 10: Camera Push-In Hero Card with Scroll Transformation ── */}
-      <motion.div
-        style={
-          disableHeavyMotion
-            ? {}
-            : {
-                scale: heroScale,
-                opacity: heroOpacity,
-              }
-        }
-        initial={{ opacity: 0, scale: disableHeavyMotion ? 1 : 0.96 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-        className="relative overflow-hidden rounded-[36px] bg-[#981495] p-6 sm:p-8 lg:p-12 text-white shadow-2xl"
+      {/* ── Scene 1: Camera Push-In Hero Card ── */}
+      <div
+        className="relative overflow-hidden rounded-3xl sm:rounded-[36px] bg-[#981495] p-5 sm:p-8 lg:p-12 text-white shadow-2xl transition-all"
       >
-        {/* Slow Animated Ambient Glows */}
-        <motion.div
-          animate={
-            disableHeavyMotion
-              ? {}
-              : {
-                  y: [0, 14, 0],
-                  opacity: [0.2, 0.35, 0.2],
-                  scale: [1, 1.05, 1],
-                }
-          }
-          transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
-          className="absolute -top-24 -right-24 h-96 w-96 rounded-full bg-purple-400/25 blur-3xl pointer-events-none"
-        />
-        <motion.div
-          animate={
-            disableHeavyMotion
-              ? {}
-              : {
-                  y: [0, -14, 0],
-                  opacity: [0.3, 0.45, 0.3],
-                  scale: [1, 1.08, 1],
-                }
-          }
-          transition={{ duration: 9, repeat: Infinity, ease: "easeInOut" }}
-          className="absolute -bottom-24 -left-24 h-96 w-96 rounded-full bg-purple-900/40 blur-3xl pointer-events-none"
-        />
+        {/* High-Performance Static Ambient Gradient Glows (Replaces infinite keyframe repaints) */}
+        <div className="absolute -top-24 -right-24 h-80 w-80 rounded-full bg-radial from-purple-400/30 to-transparent blur-2xl pointer-events-none" />
+        <div className="absolute -bottom-24 -left-24 h-80 w-80 rounded-full bg-radial from-purple-900/40 to-transparent blur-2xl pointer-events-none" />
 
-        <div className="relative z-10 space-y-7">
-          {/* Top Pill Badges Row (Scene 1: Energetic Badges Arrival) */}
-          <div className="flex flex-wrap items-center gap-2.5">
-            {/* LocalShore Marketplace Badge */}
-            <motion.div
-              initial={{ opacity: 0, y: shouldReduceMotion ? 0 : -20, scale: 0.9 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              transition={{ duration: 0.5, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
-              className="inline-flex items-center gap-1.5 rounded-full bg-white/15 backdrop-blur-md px-3.5 py-1 text-xs font-bold tracking-wide text-white border border-white/20 shadow-sm"
+        <div className="relative z-10 space-y-5 sm:space-y-7">
+          {/* Top Pill Badges Row */}
+          <div className="flex flex-wrap items-center gap-2 sm:gap-2.5">
+            <div
+              className="inline-flex items-center gap-1.5 rounded-full bg-white/15 backdrop-blur-md px-3 py-1 text-[11px] sm:text-xs font-bold tracking-wide text-white border border-white/20 shadow-xs"
             >
               <Sparkles className="h-3.5 w-3.5 text-amber-300 fill-amber-300" />
               <span>LocalShore Marketplace</span>
-            </motion.div>
+            </div>
 
-            {/* "20–30 MIN DELIVERY" Badge with Energetic Spring Overshoot */}
-            <motion.div
-              initial={{ opacity: 0, x: shouldReduceMotion ? 0 : -30, scale: 0.8 }}
-              animate={{ opacity: 1, x: 0, scale: [0.8, 1.12, 1] }}
-              transition={{ duration: 0.5, delay: 0.22, ease: [0.16, 1, 0.3, 1] }}
-              className="inline-flex items-center gap-1 rounded-full bg-[#FACC15] px-3.5 py-1 text-[11px] font-black uppercase text-slate-950 shadow-md tracking-wider"
+            <div
+              className="inline-flex items-center gap-1 rounded-full bg-[#FACC15] px-3 py-1 text-[10px] sm:text-[11px] font-black uppercase text-slate-950 shadow-xs tracking-wider"
             >
               <Zap className="h-3.5 w-3.5 fill-slate-950" />
               20–30 MIN DELIVERY
-            </motion.div>
-          </div>
-
-          {/* Title Headline & 3D Rider Illustration Grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
-            {/* Scene 2: Motion Typography Commercial Headline */}
-            <motion.div
-              style={shouldReduceMotion ? {} : { y: headlineScrollY }}
-              className="lg:col-span-7 space-y-3"
-            >
-              <h1 className="font-display text-3xl font-black tracking-tight sm:text-5xl lg:text-[54px] text-white leading-[1.08]">
-                {/* Line 1: Slides in from left with overshoot */}
-                <motion.span
-                  initial={{
-                    opacity: 0,
-                    x: shouldReduceMotion ? 0 : -60,
-                    filter: shouldReduceMotion ? "none" : "blur(6px)",
-                  }}
-                  animate={{ opacity: 1, x: 0, filter: "blur(0px)" }}
-                  transition={{ duration: 0.55, delay: 0.25, ease: [0.16, 1, 0.3, 1] }}
-                  className="block"
-                >
-                  Order food &amp; groceries.
-                </motion.span>
-
-                {/* Line 2: Follows naturally */}
-                <motion.span
-                  initial={{
-                    opacity: 0,
-                    x: shouldReduceMotion ? 0 : -50,
-                    filter: shouldReduceMotion ? "none" : "blur(6px)",
-                  }}
-                  animate={{ opacity: 1, x: 0, filter: "blur(0px)" }}
-                  transition={{ duration: 0.55, delay: 0.38, ease: [0.16, 1, 0.3, 1] }}
-                  className="block"
-                >
-                  Discover best shops.
-                </motion.span>
-
-                {/* Line 3: Commercial Pop Emphasis on "LocalShore" */}
-                <motion.span
-                  initial={{
-                    opacity: 0,
-                    x: shouldReduceMotion ? 0 : -40,
-                    filter: shouldReduceMotion ? "none" : "blur(6px)",
-                  }}
-                  animate={{ opacity: 1, x: 0, filter: "blur(0px)" }}
-                  transition={{ duration: 0.55, delay: 0.50, ease: [0.16, 1, 0.3, 1] }}
-                  className="block pt-0.5"
-                >
-                  <motion.span
-                    initial={{
-                      opacity: 0,
-                      scale: 0.75,
-                      rotate: shouldReduceMotion ? 0 : -4,
-                    }}
-                    animate={{
-                      opacity: 1,
-                      scale: [0.75, 1.15, 1],
-                      rotate: shouldReduceMotion ? 0 : [-4, 2, 0],
-                    }}
-                    transition={{
-                      duration: 0.6,
-                      delay: 0.55,
-                      ease: [0.16, 1, 0.3, 1],
-                    }}
-                    className="text-[#FACC15] font-extrabold inline-block drop-shadow-md"
-                  >
-                    LocalShore
-                  </motion.span>{" "}
-                  <motion.span
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ duration: 0.4, delay: 0.65 }}
-                  >
-                    it!
-                  </motion.span>
-                </motion.span>
-              </h1>
-
-              {/* Subtitle Description */}
-              <motion.p
-                initial={{ opacity: 0, y: shouldReduceMotion ? 0 : 15 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: 0.65, ease: "easeOut" }}
-                className="text-xs sm:text-sm font-semibold text-purple-100/90 max-w-lg leading-relaxed pt-1"
-              >
-                Support neighborhood vendors with instant fulfillment across Shoreline City.
-              </motion.p>
-            </motion.div>
-
-            {/* ── Scene 3, 4, 8 & 10: Scooter Entrance & Pristine Delivery Rider Video ── */}
-            <div className="flex lg:col-span-5 justify-center lg:justify-end items-center relative my-4 lg:my-0 w-full">
-              <motion.div
-                initial={{
-                  opacity: 0,
-                  x: shouldReduceMotion ? 0 : 40,
-                  scale: 0.9,
-                }}
-                animate={{
-                  opacity: 1,
-                  x: 0,
-                  scale: 1,
-                }}
-                transition={{
-                  duration: 0.8,
-                  delay: 0.3,
-                  ease: [0.16, 1, 0.3, 1],
-                }}
-                className="relative w-full max-w-[340px] sm:max-w-sm lg:max-w-none lg:w-96 aspect-[16/9] lg:h-72 mx-auto overflow-hidden rounded-2xl lg:rounded-3xl shadow-xl lg:shadow-2xl border-2 border-white/30"
-              >
-                {/* High-Fidelity Animated Delivery Rider Video (Plays Once) */}
-                <motion.video
-                  autoPlay
-                  muted
-                  playsInline
-                  animate={
-                    shouldReduceMotion
-                      ? {}
-                      : {
-                          y: [0, -4, 0, -2, 0],
-                        }
-                  }
-                  transition={{
-                    duration: 2.8,
-                    repeat: Infinity,
-                    ease: "easeInOut",
-                  }}
-                  src="/assets/delivery-rider.mp4"
-                  className="w-full h-full object-cover"
-                />
-              </motion.div>
             </div>
           </div>
 
-          {/* ── Scene 5: Search & Location Floating Bar Unfold ── */}
-          <div className="relative max-w-2xl">
-            <motion.form
-              onSubmit={handleSearchSubmit}
-              initial={{ opacity: 0, y: shouldReduceMotion ? 0 : 25, scale: 0.96 }}
-              animate={{ opacity: 1, y: 0, scale: isFocused ? 1.005 : 1 }}
-              transition={{
-                duration: 0.6,
-                delay: 0.7,
-                ease: [0.16, 1, 0.3, 1],
-                scale: { type: "spring", stiffness: 400, damping: 25 },
-              }}
-              className="relative flex flex-col sm:flex-row items-center gap-2 rounded-2xl sm:rounded-full bg-white p-2 shadow-2xl transition-all duration-300 z-20"
-            >
-              {/* Location Selector (Slides in from left) */}
-              <motion.div
-                initial={{ opacity: 0, x: shouldReduceMotion ? 0 : -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.4, delay: 0.75 }}
-                className="flex items-center gap-2 px-4 py-2 text-slate-700 border-b sm:border-b-0 sm:border-r border-slate-200 w-full sm:w-auto shrink-0 group"
+          {/* Title Headline & Delivery Rider Video Grid */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-6 items-center">
+            {/* Motion Typography Commercial Headline */}
+            <div className="lg:col-span-7 space-y-2 sm:space-y-3">
+              <h1 className="font-display text-2xl font-black tracking-tight sm:text-4xl lg:text-[52px] text-white leading-[1.1]">
+                <span className="block">
+                  Order food &amp; groceries.
+                </span>
+
+                <span className="block">
+                  Discover best shops.
+                </span>
+
+                <span className="block pt-0.5">
+                  <span className="text-[#FACC15] font-extrabold inline-block drop-shadow-md">
+                    LocalShore
+                  </span>{" "}
+                  it!
+                </span>
+              </h1>
+
+              <p
+                className="text-xs sm:text-sm font-semibold text-purple-100/90 max-w-lg leading-relaxed pt-0.5 sm:pt-1"
               >
+                Support neighborhood vendors with instant fulfillment across Shoreline City.
+              </p>
+            </div>
+
+            {/* Delivery Rider Card */}
+            <div className="flex lg:col-span-5 justify-center lg:justify-end items-center relative my-2 sm:my-4 lg:my-0 w-full">
+              <div
+                className="relative w-full max-w-[320px] sm:max-w-sm lg:max-w-none lg:w-96 aspect-[16/9] lg:h-72 mx-auto overflow-hidden rounded-2xl lg:rounded-3xl shadow-xl border-2 border-white/30"
+              >
+                <video
+                  autoPlay
+                  muted
+                  playsInline
+                  preload="metadata"
+                  src="/assets/delivery-rider.mp4"
+                  className="w-full h-full object-cover"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Search & Location Floating Bar */}
+          <div className="relative max-w-2xl">
+            <form
+              onSubmit={handleSearchSubmit}
+              className="relative flex flex-col sm:flex-row items-center gap-2 rounded-2xl sm:rounded-full bg-white p-1.5 sm:p-2 shadow-2xl transition-all duration-300 z-20"
+            >
+              {/* Location Selector */}
+              <div className="flex items-center gap-2 px-3 sm:px-4 py-2 text-slate-700 border-b sm:border-b-0 sm:border-r border-slate-200 w-full sm:w-auto shrink-0 group">
                 <MapPin className="h-4 w-4 text-[#981495] shrink-0" />
                 <input
                   type="text"
@@ -392,10 +227,10 @@ export function HeroSection() {
                   className="text-xs sm:text-sm font-bold text-slate-900 bg-transparent outline-none border-none w-full sm:w-[170px] truncate"
                 />
                 <ChevronDown className="h-3.5 w-3.5 text-slate-400 shrink-0" />
-              </motion.div>
+              </div>
 
               {/* Search Field */}
-              <div className="relative flex items-center gap-2 px-3 py-2 w-full flex-1">
+              <div className="relative flex items-center gap-2 px-3 py-1.5 sm:py-2 w-full flex-1 min-h-[44px]">
                 <Search className="h-4 w-4 text-[#981495] shrink-0" />
                 <div className="relative w-full flex items-center">
                   <input
@@ -404,62 +239,41 @@ export function HeroSection() {
                     onFocus={() => setIsFocused(true)}
                     onBlur={() => setTimeout(() => setIsFocused(false), 200)}
                     onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder={isFocused ? "" : `Search "${SEARCH_SUGGESTIONS[suggestionIdx]}"...`}
                     className="relative z-10 text-xs sm:text-sm font-semibold text-slate-900 bg-transparent outline-none border-none w-full"
                   />
-
-                  {!searchQuery && (
-                    <div className="absolute inset-y-0 left-0 flex items-center pointer-events-none overflow-hidden h-full w-full">
-                      <AnimatePresence mode="wait">
-                        <motion.span
-                          key={suggestionIdx}
-                          initial={{ y: 14, opacity: 0 }}
-                          animate={{ y: 0, opacity: 1 }}
-                          exit={{ y: -14, opacity: 0 }}
-                          transition={{ duration: 0.3 }}
-                          className="text-xs sm:text-sm font-medium text-slate-400 truncate"
-                        >
-                          Search &quot;{SEARCH_SUGGESTIONS[suggestionIdx]}&quot;...
-                        </motion.span>
-                      </AnimatePresence>
-                    </div>
-                  )}
                 </div>
 
                 {searchQuery && (
                   <button
                     type="button"
                     onClick={() => setSearchQuery("")}
-                    className="p-1 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-100"
+                    className="p-1 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-100 min-h-[36px] min-w-[36px] flex items-center justify-center"
                   >
                     <X className="h-3.5 w-3.5" />
                   </button>
                 )}
               </div>
 
-              {/* Scene 9: FIND SHOPS Button with Hover Advance */}
-              <motion.button
+              {/* FIND SHOPS Button */}
+              <button
                 type="submit"
-                initial={{ opacity: 0, x: shouldReduceMotion ? 0 : 25, scale: 0.92 }}
-                animate={{ opacity: 1, x: 0, scale: 1 }}
-                transition={{ duration: 0.5, delay: 0.8 }}
-                whileHover={{ scale: 1.04 }}
-                whileTap={{ scale: 0.96 }}
-                className="group w-full sm:w-auto rounded-full bg-[#1e293b] hover:bg-[#0f172a] text-white px-6 py-3 text-xs font-black uppercase tracking-wider transition-colors duration-200 shadow-lg flex items-center justify-center gap-1.5 cursor-pointer shrink-0"
+                className="group w-full sm:w-auto rounded-full bg-[#1e293b] hover:bg-[#0f172a] active:scale-95 text-white px-6 py-3 text-xs font-black uppercase tracking-wider transition-all duration-200 shadow-md flex items-center justify-center gap-1.5 cursor-pointer shrink-0 min-h-[44px]"
               >
                 <span>FIND SHOPS</span>
-                <ArrowUpRight className="h-4 w-4 stroke-[2.5] transition-transform duration-200 group-hover:translate-x-1.5 group-hover:-translate-y-0.5" />
-              </motion.button>
-            </motion.form>
+                <ArrowUpRight className="h-4 w-4 stroke-[2.5] transition-transform duration-200 group-hover:translate-x-1 group-hover:-translate-y-0.5" />
+              </button>
+            </form>
 
             {/* Quick Suggestions Dropdown */}
             <AnimatePresence>
               {isFocused && (
                 <motion.div
-                  initial={{ opacity: 0, y: -8 }}
-                  animate={{ opacity: 1, y: 6 }}
-                  exit={{ opacity: 0, y: -8 }}
-                  transition={{ duration: 0.2 }}
-                  className="absolute left-0 right-0 top-full z-30 mt-2 rounded-2xl bg-white p-4 shadow-2xl border border-slate-100 text-slate-900"
+                  initial={{ opacity: 0, y: -4 }}
+                  animate={{ opacity: 1, y: 4 }}
+                  exit={{ opacity: 0, y: -4 }}
+                  transition={{ duration: 0.15 }}
+                  className="absolute left-0 right-0 top-full z-30 mt-2 rounded-2xl bg-white p-3 sm:p-4 shadow-2xl border border-slate-100 text-slate-900"
                 >
                   <div className="flex items-center justify-between pb-2 border-b border-slate-100">
                     <span className="flex items-center gap-1 text-xs font-bold text-slate-800 uppercase tracking-wider">
@@ -469,13 +283,13 @@ export function HeroSection() {
                     <span className="text-[10px] font-bold text-[#981495]">Tap to search</span>
                   </div>
 
-                  <div className="mt-3 flex flex-wrap gap-2">
+                  <div className="mt-2.5 flex flex-wrap gap-2">
                     {POPULAR_TAGS.map((tag) => (
                       <button
                         key={tag.query}
                         type="button"
                         onClick={() => handleTagClick(tag.query)}
-                        className="inline-flex items-center gap-1.5 rounded-xl bg-purple-50 hover:bg-[#981495] hover:text-white px-3 py-1.5 text-xs font-bold text-[#981495] transition-all cursor-pointer"
+                        className="inline-flex items-center gap-1.5 rounded-xl bg-purple-50 hover:bg-[#981495] hover:text-white px-3 py-2 text-xs font-bold text-[#981495] transition-all cursor-pointer min-h-[38px]"
                       >
                         <span>{tag.icon}</span>
                         <span>{tag.label}</span>
@@ -487,24 +301,12 @@ export function HeroSection() {
             </AnimatePresence>
           </div>
 
-          {/* ── Scene 6, 7 & 9: Sequential Promotional Cards with Inner Image Parallax ── */}
-          <motion.div
-            style={shouldReduceMotion ? {} : { y: cardsScrollY }}
-            className="pt-2 flex sm:grid grid-cols-1 sm:grid-cols-3 gap-4 overflow-x-auto snap-x scrollbar-none pb-2 -mx-2 px-2 sm:mx-0 sm:px-0 sm:pb-0"
-          >
-            {FEATURE_CARDS.map((card, index) => {
-              const cardDelay = 0.85 + index * 0.12;
+          {/* Promotional Cards Strip */}
+          <div className="pt-2 flex sm:grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 overflow-x-auto snap-x snap-mandatory [scrollbar-width:none] [&::-webkit-scrollbar]:hidden overscroll-x-contain touch-pan-x pb-2 -mx-2 px-2 sm:mx-0 sm:px-0 sm:pb-0">
+            {FEATURE_CARDS.map((card) => {
               return (
-                <motion.div
+                <div
                   key={card.id}
-                  initial={{ opacity: 0, y: shouldReduceMotion ? 0 : 40, scale: 0.95 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  transition={{
-                    duration: 0.5,
-                    delay: cardDelay,
-                    ease: [0.16, 1, 0.3, 1],
-                  }}
-                  whileHover={{ y: -8, scale: 1.025 }}
                   onClick={() => {
                     navigate({
                       to: "/",
@@ -513,22 +315,17 @@ export function HeroSection() {
                     });
                     scrollToShops();
                   }}
-                  className="group cursor-pointer rounded-2xl bg-white p-4.5 shadow-xl transition-shadow duration-300 hover:shadow-2xl relative overflow-hidden flex items-center justify-between min-h-[125px] border border-white/20 shrink-0 w-[270px] sm:w-auto snap-start"
+                  className="group cursor-pointer rounded-2xl bg-white p-4 shadow-lg transition-all duration-200 hover:shadow-xl relative overflow-hidden flex items-center justify-between min-h-[120px] border border-white/20 shrink-0 w-[260px] sm:w-auto snap-start active:scale-[0.99]"
                 >
-                  {/* Left Text Info */}
                   <div className="flex-1 pr-2 space-y-1 z-10 flex flex-col justify-between h-full">
                     <div>
-                      {/* Discount Badge Entrance */}
-                      <motion.div
-                        initial={{ opacity: 0, scale: 0.85 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        transition={{ duration: 0.35, delay: cardDelay + 0.1 }}
+                      <div
                         className={`inline-block rounded-md px-2 py-0.5 text-[9px] font-black tracking-wider uppercase ${card.badgeBg} ${card.badgeText}`}
                       >
                         {card.badge}
-                      </motion.div>
+                      </div>
 
-                      <h3 className="text-sm font-black text-slate-900 leading-tight pt-1">
+                      <h3 className="text-xs sm:text-sm font-black text-slate-900 leading-tight pt-1">
                         {card.title}
                       </h3>
                       <p className="text-[10px] font-bold text-slate-400 tracking-tight">
@@ -536,53 +333,47 @@ export function HeroSection() {
                       </p>
                     </div>
 
-                    {/* Purple Circle Arrow Button */}
-                    <div className="pt-3">
-                      <div className="h-7 w-7 rounded-full bg-[#981495] text-white flex items-center justify-center shadow-md transition-all duration-200 group-hover:scale-115 group-hover:bg-[#800f7d]">
-                        <ArrowUpRight className="h-4 w-4 stroke-[2.5] transition-transform duration-200 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+                    <div className="pt-2">
+                      <div className="h-7 w-7 rounded-full bg-[#981495] text-white flex items-center justify-center shadow-xs transition-all duration-200 group-hover:scale-110 group-hover:bg-[#800f7d]">
+                        <ArrowUpRight className="h-4 w-4 stroke-[2.5]" />
                       </div>
                     </div>
                   </div>
 
-                  {/* Scene 7: Right Cutout Image with Parallax Depth Entrance & Hover Zoom */}
-                  <div className="relative shrink-0 w-24 h-24 sm:w-26 sm:h-26 flex items-center justify-center overflow-hidden rounded-xl">
-                    <motion.img
-                      initial={{ opacity: 0, y: shouldReduceMotion ? 0 : 20, scale: 0.9 }}
-                      animate={{ opacity: 1, y: 0, scale: 1 }}
-                      transition={{ duration: 0.5, delay: cardDelay + 0.15 }}
+                  <div className="relative shrink-0 w-22 h-22 sm:w-24 sm:h-24 flex items-center justify-center overflow-hidden rounded-xl">
+                    <img
                       src={card.image}
                       alt={card.title}
-                      className="h-full w-full object-contain filter drop-shadow-md transition-transform duration-500 group-hover:scale-108 group-hover:-translate-y-1"
+                      loading="lazy"
+                      className="h-full w-full object-contain filter drop-shadow-xs transition-transform duration-300 group-hover:scale-105"
                     />
                   </div>
-                </motion.div>
+                </div>
               );
             })}
-          </motion.div>
+          </div>
 
-          {/* Carousel Dot Indicators */}
+          {/* Carousel Indicators */}
           <div className="flex items-center justify-center gap-1.5 pt-1">
             {[0, 1, 2, 3].map((dot) => (
               <button
                 key={dot}
                 type="button"
                 onClick={() => setActiveSlide(dot)}
-                className="relative p-1 focus:outline-none cursor-pointer"
+                className="relative p-1 focus:outline-none cursor-pointer min-h-[24px]"
                 aria-label={`Slide ${dot + 1}`}
               >
-                <motion.div
-                  animate={{
-                    width: activeSlide === dot ? 24 : 8,
-                    opacity: activeSlide === dot ? 1 : 0.4,
-                  }}
-                  transition={{ duration: 0.3, ease: "easeInOut" }}
-                  className="h-2 rounded-full bg-white"
+                <div
+                  className={`h-2 rounded-full bg-white transition-all duration-300 ${
+                    activeSlide === dot ? "w-6 opacity-100" : "w-2 opacity-40"
+                  }`}
                 />
               </button>
             ))}
           </div>
         </div>
-      </motion.div>
+      </div>
     </section>
   );
 }
+

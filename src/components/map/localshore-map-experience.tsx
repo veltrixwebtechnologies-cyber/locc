@@ -69,31 +69,49 @@ export function LocalShoreMapExperience({
     }));
   }, [initialQuery, initialCategory]);
 
-  // Query live Supabase approved vendor catalog & product catalog
+  // Query live Supabase approved vendor catalog & product catalog (cached across app)
   const approvedProducts = useQuery({
-    queryKey: ["map-approved-product-catalog"],
+    queryKey: ["approved-product-catalog"],
+    staleTime: 1000 * 60 * 5,
+    gcTime: 1000 * 60 * 10,
+    retry: 1,
+    refetchOnWindowFocus: false,
     queryFn: async () => {
-      let { data, error } = await (supabase as any)
-        .from("approved_product_catalog")
-        .select("id,seller_id,name,category,selling_price,image_url,stock,shop_name,business_type,city,state,address_line1");
-      if (error) {
-        const fallback = await (supabase as any)
-          .from("products")
-          .select("id,seller_id,name,category,selling_price,image_url,stock")
-          .in("status", ["active", "approved"]);
-        data = fallback.data;
+      try {
+        let { data, error } = await (supabase as any)
+          .from("approved_product_catalog")
+          .select("id,seller_id,name,category,selling_price,image_url,stock,shop_name,business_type,city,state,address_line1");
+        if (error) {
+          const fallback = await (supabase as any)
+            .from("products")
+            .select("id,seller_id,name,category,selling_price,image_url,stock")
+            .in("status", ["active", "approved"]);
+          data = fallback.data;
+        }
+        return data ?? [];
+      } catch (err) {
+        console.warn("Map products query fallback:", err);
+        return [];
       }
-      return data ?? [];
     },
   });
 
   const approvedVendors = useQuery({
-    queryKey: ["map-approved-vendors"],
+    queryKey: ["approved-vendors"],
+    staleTime: 1000 * 60 * 5,
+    gcTime: 1000 * 60 * 10,
+    retry: 1,
+    refetchOnWindowFocus: false,
     queryFn: async () => {
-      const { data } = await (supabase as any)
-        .from("approved_vendor_catalog")
-        .select("id,shop_name,business_type,city,state,address_line1,category,lat,lng");
-      return data ?? [];
+      try {
+        const { data } = await (supabase as any)
+          .from("approved_vendor_catalog")
+          .select("id,shop_name,business_type,city,state,address_line1,category,lat,lng");
+        return data ?? [];
+      } catch (err) {
+        console.warn("Map vendors query fallback:", err);
+        return [];
+      }
     },
   });
 

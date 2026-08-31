@@ -102,17 +102,8 @@ function SwiggyShopCard({
   const isOpen = liveIsOpen !== undefined ? liveIsOpen : store.isOpen;
 
   return (
-    <m.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{
-        duration: 0.36,
-        delay: index * 0.05,
-        ease: [0.22, 1, 0.36, 1],
-      }}
-      className="group shrink-0 w-[260px] sm:w-[273px]"
-    >
-      <div className="relative overflow-hidden rounded-[24px] bg-white transition-shadow duration-300 hover:shadow-[0_8px_32px_-8px_rgba(0,0,0,0.18)]">
+    <div className="group shrink-0 w-[260px] sm:w-[273px] transition-all duration-200">
+      <div className="relative overflow-hidden rounded-[24px] bg-white shadow-xs transition-shadow duration-300 hover:shadow-[0_8px_32px_-8px_rgba(0,0,0,0.18)]">
         {/* Wishlist Button in Top Right */}
         <div className="absolute right-3 top-3 z-20">
           <WishlistButton
@@ -227,7 +218,7 @@ function SwiggyShopCard({
           </div>
         </Link>
       </div>
-    </m.div>
+    </div>
   );
 }
 
@@ -678,16 +669,7 @@ function CategoryCircle({
   const fallback = "https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=300&q=80";
 
   return (
-    <m.div
-      initial={{ opacity: 0, scale: 0.85 }}
-      animate={{ opacity: 1, scale: 1 }}
-      transition={{
-        delay: index * 0.035,
-        duration: 0.3,
-        ease: [0.22, 1, 0.36, 1],
-      }}
-      className="shrink-0"
-    >
+    <div className="shrink-0">
       <Link
         to="/"
         search={{ category: cat.id, q: undefined }}
@@ -708,6 +690,6 @@ function CategoryCircle({
           {cat.label}
         </span>
       </Link>
-    </m.div>
+    </div>
   );
 }
