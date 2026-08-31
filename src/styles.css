@@ -373,3 +373,38 @@ input.bg-transparent:focus-visible {
     scroll-behavior: auto !important;
   }
 }
+
+/* Mobile Safe Area & Touch Helper Utilities */
+.safe-pb {
+  padding-bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
+}
+
+.safe-mb {
+  margin-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+.safe-pt {
+  padding-top: calc(0.75rem + env(safe-area-inset-top, 0px));
+}
+
+/* Hide scrollbars for clean mobile horizontal carousels */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Ensure smooth horizontal scroll on touch devices */
+.touch-scroll {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+}
+
+/* Ensure body prevents horizontal layout break */
+body {
+  overflow-x: hidden;
+  max-width: 100vw;
+}
+

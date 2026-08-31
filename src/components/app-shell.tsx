@@ -83,9 +83,9 @@ export function AppShell({ children }: { children: ReactNode }) {
   ];
 
   return (
-    <div className="min-h-screen bg-background pb-20 md:pb-0">
+    <div className="min-h-screen bg-background pb-[calc(4.5rem+env(safe-area-inset-bottom,0px))] md:pb-0 overflow-x-hidden">
       {/* Mobile top nav header */}
-      <header className="sticky top-0 z-50 flex items-center justify-between border-b hairline bg-background/95 px-4 py-2.5 backdrop-blur md:hidden">
+      <header className="sticky top-0 z-50 flex items-center justify-between border-b hairline bg-background/95 px-3.5 py-2.5 backdrop-blur md:hidden">
         <Link
           to="/"
           search={{ category: undefined, q: undefined }}
@@ -96,18 +96,42 @@ export function AppShell({ children }: { children: ReactNode }) {
           </span>
           <span className="font-display text-base font-bold text-foreground tracking-tight">LocalShore</span>
         </Link>
+        
         <div className="flex items-center gap-2">
           <Link
             to="/cities"
-            className="flex items-center gap-1 rounded-full border border-purple-200/60 bg-purple-50/80 px-2.5 py-1 text-[11px] font-bold text-purple-800"
+            className="flex items-center gap-1 rounded-full border border-purple-200/60 bg-purple-50/80 px-2 py-1 text-[10px] font-bold text-purple-800"
           >
-            <MapPin className="h-3 w-3 text-purple-600" />
-            <span className="truncate max-w-[85px]">Coimbatore</span>
+            <MapPin className="h-3 w-3 text-purple-600 shrink-0" />
+            <span className="truncate max-w-[70px] sm:max-w-[100px]">Coimbatore</span>
           </Link>
+
+          <Link
+            to="/"
+            search={{ category: undefined, q: "" }}
+            className="grid h-8 w-8 place-items-center rounded-lg border hairline bg-muted/60 text-foreground hover:bg-muted"
+            aria-label="Search products"
+          >
+            <Search className="h-4 w-4" />
+          </Link>
+
+          <Link
+            to="/cart"
+            className="relative grid h-8 w-8 place-items-center rounded-lg bg-primary/10 text-primary hover:bg-primary/20"
+            aria-label="View Cart"
+          >
+            <ShoppingBag className="h-4 w-4" />
+            {itemCount > 0 && (
+              <span className="absolute -right-1 -top-1 grid h-4 min-w-[16px] place-items-center rounded-full bg-[var(--marigold)] px-1 font-mono text-[9px] font-bold text-ink">
+                {itemCount}
+              </span>
+            )}
+          </Link>
+
           {isSignedIn ? (
             <Link
               to="/profile"
-              className="grid h-8 w-8 place-items-center rounded-full bg-primary text-xs font-bold text-primary-foreground shadow-xs"
+              className="grid h-8 w-8 place-items-center rounded-full bg-primary text-xs font-bold text-primary-foreground shadow-xs shrink-0"
             >
               {(auth.name?.[0] ?? "U").toUpperCase()}
             </Link>
@@ -115,7 +139,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             <Link
               to="/auth"
               search={{ redirect: pathname }}
-              className="rounded-lg bg-primary px-3 py-1.5 text-xs font-bold text-primary-foreground shadow-xs"
+              className="rounded-lg bg-primary px-2.5 py-1.5 text-xs font-bold text-primary-foreground shadow-xs shrink-0"
             >
               Sign in
             </Link>
@@ -129,7 +153,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           scrolled ? "shadow-[0_8px_28px_-22px_rgba(42,27,74,0.55)]" : "shadow-none"
         }`}
       >
-        <div className="flex h-[72px] w-full items-center gap-5 px-6 lg:px-8">
+        <div className="flex h-[72px] w-full items-center gap-4 lg:gap-5 px-4 md:px-6 lg:px-8">
           <Link
             to="/"
             search={{ category: undefined, q: undefined }}
@@ -152,7 +176,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                 search: { category: undefined, q: undefined },
               })
             }
-            className="hidden min-w-0 shrink-0 items-center gap-2 border-l hairline pl-4 text-left 2xl:flex"
+            className="hidden min-w-0 shrink-0 items-center gap-2 border-l hairline pl-4 text-left xl:flex"
           >
             <MapPin className="h-4 w-4 shrink-0 text-primary" />
             <span>
@@ -166,7 +190,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           <m.form
             animate={{ scale: searchFocused ? 1.015 : 1 }}
             transition={{ type: "spring", stiffness: 420, damping: 34 }}
-            className="relative flex min-w-[240px] flex-1 items-center gap-2 rounded-lg border hairline bg-muted/70 px-3 py-2.5 transition-colors focus-within:border-primary/40 focus-within:bg-background"
+            className="relative flex min-w-[180px] flex-1 items-center gap-2 rounded-lg border hairline bg-muted/70 px-3 py-2.5 transition-colors focus-within:border-primary/40 focus-within:bg-background"
             onSubmit={(event) => {
               event.preventDefault();
               void navigate({
@@ -230,7 +254,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                   <Link
                     to={t.to}
                     data-cart-target={t.to === "/cart" ? "" : undefined}
-                    className={`relative inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+                    className={`relative inline-flex items-center gap-1.5 lg:gap-2 rounded-lg px-2.5 lg:px-3 py-2 text-xs lg:text-sm font-medium transition-colors ${
                       active
                         ? "bg-primary text-primary-foreground"
                         : "text-foreground hover:bg-muted"
@@ -267,7 +291,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             {isSignedIn ? (
               <Link
                 to="/profile"
-                className="ml-2 inline-flex items-center gap-2 rounded-lg border hairline bg-card px-3 py-2 text-sm font-medium text-foreground hover:bg-muted"
+                className="ml-1 lg:ml-2 inline-flex items-center gap-2 rounded-lg border hairline bg-card px-2.5 lg:px-3 py-2 text-sm font-medium text-foreground hover:bg-muted"
                 aria-label="Profile"
               >
                 <span className="grid h-6 w-6 place-items-center rounded-full bg-primary text-[11px] font-bold text-primary-foreground">
@@ -278,7 +302,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               <Link
                 to="/auth"
                 search={{ redirect: pathname }}
-                className="ml-2 inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground hover:bg-[#700b6e]"
+                className="ml-1 lg:ml-2 inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-xs lg:text-sm font-semibold text-primary-foreground hover:bg-[#700b6e]"
               >
                 <LogIn className="h-4 w-4" /> Sign in
               </Link>
@@ -292,7 +316,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       </div>
 
       <div className="hidden border-b border-purple-200/70 bg-purple-50/50 md:block">
-        <div className="flex h-9 w-full items-center justify-between gap-6 px-6 text-[11px] text-foreground/75 lg:px-8">
+        <div className="flex h-9 w-full items-center justify-between gap-6 px-4 md:px-6 text-[11px] text-foreground/75 lg:px-8">
           <div className="flex items-center gap-4">
             <Link to="/cities" className="flex items-center gap-1.5 hover:text-primary transition">
               <MapPin className="h-3.5 w-3.5 text-primary" />
@@ -303,15 +327,15 @@ export function AppShell({ children }: { children: ReactNode }) {
               </span>
             </Link>
           </div>
-          <div className="flex items-center gap-5">
+          <div className="flex items-center gap-4 lg:gap-5">
             <Link to="/best-shops" className="inline-flex items-center gap-1.5 hover:text-primary font-semibold text-amber-800">
-              🏆 Best Shops & Sellers
+              🏆 Best Shops
             </Link>
             <Link to="/brands" className="inline-flex items-center gap-1.5 hover:text-primary font-semibold text-purple-800">
-              🛍️ Brand Stores
+              🛍️ Brands
             </Link>
             <Link to="/explore" className="inline-flex items-center gap-1.5 hover:text-primary font-semibold text-teal-800">
-              ✈️ Travel & Explore
+              ✈️ Explore
             </Link>
             <Link to="/customer-care" className="inline-flex items-center gap-1.5 hover:text-primary">
               <Headphones className="h-3.5 w-3.5 text-primary" />
@@ -325,30 +349,31 @@ export function AppShell({ children }: { children: ReactNode }) {
         <MobileCategoryStrip />
       </div>
 
-      <main className="mx-auto w-full max-w-7xl">{children}</main>
+      <main className="mx-auto w-full max-w-7xl px-3 sm:px-4 md:px-6 lg:px-8">{children}</main>
 
       <ShopperFooter />
 
       {/* Mobile bottom tab bar */}
-      <nav className="fixed inset-x-0 bottom-0 z-40 border-t hairline bg-background/95 backdrop-blur md:hidden">
+      <nav className="fixed inset-x-0 bottom-0 z-40 border-t hairline bg-background/95 backdrop-blur pb-[env(safe-area-inset-bottom,0px)] md:hidden">
         <div className="mx-auto grid max-w-xl grid-cols-5">
-          {tabs.map((t) => {
+          {[
+            { to: "/", label: "Shops", icon: Home, match: (p: string) => p === "/" },
+            { to: "/explore", label: "Explore", icon: Heart, match: (p: string) => p.startsWith("/explore") },
+            { to: "/cart", label: "Cart", icon: ShoppingBag, match: (p: string) => p.startsWith("/cart") },
+            { to: "/orders", label: "Orders", icon: ClipboardList, match: (p: string) => p.startsWith("/orders") || p.startsWith("/order/") },
+            { to: "/profile", label: "Profile", icon: User, match: (p: string) => p.startsWith("/profile") },
+          ].map((t) => {
             const active = t.match(pathname);
             const Icon = t.icon;
-            const badgeCount =
-              t.to === "/cart"
-                ? itemCount
-                : t.to === "/wishlist"
-                  ? (wishlistProducts.data?.length ?? wishlist.data?.length ?? 0)
-                  : 0;
+            const badgeCount = t.to === "/cart" ? itemCount : 0;
             const showBadge = badgeCount > 0;
             return (
               <Link
                 key={t.to}
                 to={t.to}
                 data-cart-target={t.to === "/cart" ? "" : undefined}
-                className={`relative flex flex-col items-center gap-1 py-2.5 text-[11px] font-medium transition-colors ${
-                  active ? "text-primary" : "text-muted-foreground"
+                className={`relative flex flex-col items-center justify-center gap-0.5 py-2 text-[10px] sm:text-[11px] font-medium transition-colors ${
+                  active ? "text-primary font-bold" : "text-muted-foreground"
                 }`}
               >
                 <span className="relative">
@@ -362,14 +387,14 @@ export function AppShell({ children }: { children: ReactNode }) {
                         initial={{ scale: 0.5, opacity: 0 }}
                         animate={{ scale: 1, opacity: 1 }}
                         exit={{ scale: 0.5, opacity: 0 }}
-                        className="absolute -right-2 -top-1.5 min-w-[16px] rounded-full bg-[var(--marigold)] px-1 text-center font-mono text-[9px] leading-4 text-ink"
+                        className="absolute -right-2.5 -top-1.5 min-w-[16px] rounded-full bg-[var(--marigold)] px-1 text-center font-mono text-[9px] font-bold leading-4 text-ink"
                       >
                         {badgeCount}
                       </m.span>
                     )}
                   </AnimatePresence>
                 </span>
-                {t.label}
+                <span className="truncate max-w-[56px] text-center">{t.label}</span>
               </Link>
             );
           })}
