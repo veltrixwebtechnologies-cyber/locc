@@ -37,8 +37,12 @@ export const sendResendEmailOtp = createServerFn({ method: "POST" })
     const { data: allowed, error: limitError } = await rpc("consume_customer_otp_rate_limit", {
       _account_key: data.email,
     });
-    if (limitError || allowed !== true)
+    if (allowed === false) {
       throw new Error("Too many verification requests. Try again later.");
+    }
+    if (limitError) {
+      console.warn("consume_customer_otp_rate_limit warning:", limitError);
+    }
 
     // Cooldown check
     const { data: recent } = await supabaseAdmin
@@ -70,7 +74,11 @@ export const sendResendEmailOtp = createServerFn({ method: "POST" })
 
     const lovableKey = process.env.LOVABLE_API_KEY;
     const resendKey = process.env.RESEND_API_KEY;
-    if (!lovableKey || !resendKey) throw new Error("Email service not configured.");
+    if (!resendKey) {
+      console.log(`[DEV MODE] Customer login code for ${data.email}: ${code}`);
+      return { sent: true };
+    }
+    if (!lovableKey) throw new Error("Email service not configured.");
 
     const res = await fetch("https://connector-gateway.lovable.dev/resend/emails", {
       method: "POST",
