@@ -34,17 +34,22 @@ function OrderPage() {
     if (!store) return { lat: 9.97, lng: 76.26 };
     return { lat: store.lat + 0.01, lng: store.lng + 0.008 };
   }, [order?.destination, store]);
-  // Courier position interpolated along store -> destination as status progresses.
+  // Courier position: Real GPS coordinates from partner, or interpolated fallback
   const courier = useMemo(() => {
-    if (!store || !status) return undefined;
-    const steps = orderStatusFlow.length - 1;
-    const t = Math.min(0.95, Math.max(0.05, currentIndex / steps));
+    if (order?.partner?.lat && order?.partner?.lng) {
+      return { lat: order.partner.lat, lng: order.partner.lng, label: order.partner.name };
+    }
+    const storeLoc = order?.storeCoordinates ?? (store ? { lat: store.lat, lng: store.lng } : undefined);
+    if (!storeLoc || !status) return undefined;
+    const steps = Math.max(1, orderStatusFlow.length - 1);
+    const validIndex = Math.max(0, currentIndex);
+    const t = Math.min(0.95, Math.max(0.05, validIndex / steps));
     if (status === "delivered" || status === "new" || status === "accepted") return undefined;
     return {
-      lat: store.lat + (destination.lat - store.lat) * t,
-      lng: store.lng + (destination.lng - store.lng) * t,
+      lat: storeLoc.lat + (destination.lat - storeLoc.lat) * t,
+      lng: storeLoc.lng + (destination.lng - storeLoc.lng) * t,
     };
-  }, [store, destination, currentIndex, status]);
+  }, [order?.partner, order?.storeCoordinates, store, destination, currentIndex, status]);
 
   if (isLoading) {
     return (

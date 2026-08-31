@@ -5,35 +5,52 @@ import { supabase } from "@/integrations/supabase/client";
 export type OrderStatus =
   | "new"
   | "accepted"
+  | "preparing"
   | "packed"
   | "ready_for_pickup"
   | "assigned"
+  | "rider_assigned"
+  | "rider_accepted"
+  | "rider_at_shop"
   | "picked_up"
   | "out_for_delivery"
+  | "at_customer"
   | "delivered"
   | "cancelled"
-  | "returned";
+  | "returned"
+  | "assignment_failed"
+  | "delivery_failed";
+
 export const orderStatusFlow: OrderStatus[] = [
   "new",
   "accepted",
-  "packed",
+  "preparing",
   "ready_for_pickup",
-  "assigned",
+  "rider_assigned",
+  "rider_at_shop",
   "picked_up",
   "out_for_delivery",
   "delivered",
 ];
+
 export const orderStatusLabel: Record<OrderStatus, string> = {
   new: "Order placed",
-  accepted: "Order accepted",
-  packed: "Packed",
+  accepted: "Shop accepted",
+  preparing: "Shop preparing order",
+  packed: "Order packed",
   ready_for_pickup: "Ready for pickup",
   assigned: "Delivery partner assigned",
-  picked_up: "Picked up",
+  rider_assigned: "Delivery partner assigned",
+  rider_accepted: "Partner heading to shop",
+  rider_at_shop: "Partner arrived at shop",
+  picked_up: "Order picked up",
   out_for_delivery: "Out for delivery",
+  at_customer: "Partner arrived at customer",
   delivered: "Delivered",
   cancelled: "Cancelled",
   returned: "Returned",
+  assignment_failed: "Finding alternative delivery partner",
+  delivery_failed: "Delivery unsuccessful",
 };
 
 export interface Order {
@@ -41,6 +58,7 @@ export interface Order {
   code: string;
   storeId: string;
   storeName: string;
+  storeCoordinates?: { lat: number; lng: number };
   lines: CartLine[];
   subtotal: number;
   deliveryFee: number;
@@ -53,18 +71,37 @@ export interface Order {
   discountAmount?: number;
   createdAt: number;
   status: OrderStatus;
-  partner?: { name: string; rating: number };
+  partner?: { name: string; rating: number; lat?: number; lng?: number };
   etaMin: number;
   distanceKm: number;
 }
 
 function fromRow(row: any): Order {
-  const normalizedStatus = row.status === "shipped" ? "out_for_delivery" : row.status;
+  let normalizedStatus: OrderStatus = row.status === "shipped" ? "out_for_delivery" : row.status;
+  if ((normalizedStatus as string) === "assigned") normalizedStatus = "rider_assigned";
+
+  const partnerData = row.assigned_partner
+    ? {
+        name: row.assigned_partner.full_name ?? "Delivery Partner",
+        rating: Number(row.assigned_partner.rating ?? 5.0),
+        lat: Number.isFinite(Number(row.assigned_partner.current_latitude))
+          ? Number(row.assigned_partner.current_latitude)
+          : undefined,
+        lng: Number.isFinite(Number(row.assigned_partner.current_longitude))
+          ? Number(row.assigned_partner.current_longitude)
+          : undefined,
+      }
+    : undefined;
+
+  const sellerLat = Number(row.seller?.lat ?? row.seller?.wizard_data?.lat ?? 9.9816);
+  const sellerLng = Number(row.seller?.lng ?? row.seller?.wizard_data?.lng ?? 76.2999);
+
   return {
     id: row.id,
     code: row.order_number,
     storeId: row.seller_id,
     storeName: row.seller?.business_name ?? "Local Shore shop",
+    storeCoordinates: Number.isFinite(sellerLat) && Number.isFinite(sellerLng) ? { lat: sellerLat, lng: sellerLng } : undefined,
     lines: (row.order_items ?? []).map((item: any) => ({
       productId: item.product_id,
       storeId: row.seller_id,
@@ -93,8 +130,9 @@ function fromRow(row: any): Order {
     discountAmount: Number(row.discount_amount ?? 0),
     createdAt: new Date(row.placed_at ?? row.created_at).getTime(),
     status: normalizedStatus,
-    etaMin: 30,
-    distanceKm: 2,
+    partner: partnerData,
+    etaMin: 25,
+    distanceKm: 2.4,
   };
 }
 
@@ -106,7 +144,7 @@ async function loadOrders(): Promise<Order[]> {
   try {
     const { data, error } = await (supabase as any)
       .from("orders")
-      .select("*, order_items(*), seller:sellers(business_name)")
+      .select("*, order_items(*), seller:sellers(business_name, lat, lng, wizard_data), assigned_partner:delivery_partners(full_name, rating, current_latitude, current_longitude)")
       .eq("user_id", userId)
       .order("placed_at", { ascending: false });
     if (error) throw error;
