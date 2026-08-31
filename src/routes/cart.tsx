@@ -158,7 +158,7 @@ function CartPage() {
             </Link>
           </m.div>
         ) : (
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-[1fr_340px]">
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-[1fr_340px] pb-28 md:pb-0">
             {/* ── LEFT COLUMN ─────────────────────────────────── */}
             <div className="space-y-4">
               {/* Store info card */}
@@ -200,7 +200,7 @@ function CartPage() {
                       className={`flex items-center gap-3 px-4 py-4 ${idx > 0 ? "border-t border-border/60" : ""}`}
                     >
                       {/* Product thumbnail */}
-                      <div className="h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-muted">
+                      <div className="h-14 w-14 sm:h-16 sm:w-16 shrink-0 overflow-hidden rounded-xl bg-muted">
                         <div className="flex h-full w-full items-center justify-center text-2xl bg-gradient-to-br from-orange-50 to-amber-50">
                           🌿
                         </div>
@@ -212,13 +212,13 @@ function CartPage() {
                         <p className="text-xs text-muted-foreground mt-0.5">
                           {l.unit} · ₹{l.price} each
                         </p>
-                        <span className="mt-1.5 inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-600">
+                        <span className="mt-1 inline-flex items-center gap-1 text-[10px] sm:text-[11px] font-semibold text-emerald-600">
                           <Check className="h-3 w-3" /> Freshly packed
                         </span>
                       </div>
 
-                      {/* Price */}
-                      <span className="hidden font-bold text-foreground sm:block min-w-[48px] text-right">
+                      {/* Item Price Total */}
+                      <span className="font-bold text-sm sm:text-base text-foreground shrink-0">
                         ₹{l.qty * l.price}
                       </span>
 
@@ -233,7 +233,7 @@ function CartPage() {
                       {/* Delete */}
                       <button
                         onClick={() => cartStore.setQty(l.productId, 0)}
-                        className="ml-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-slate-400 hover:bg-red-50 hover:text-red-500 transition-colors"
+                        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-slate-400 hover:bg-red-50 hover:text-red-500 transition-colors"
                         aria-label="Remove item"
                       >
                         <Trash2 className="h-4 w-4" />
@@ -243,7 +243,7 @@ function CartPage() {
                 </AnimatePresence>
 
                 {/* Clear cart link */}
-                <div className="border-t border-border/60 px-4 py-2.5">
+                <div className="border-t border-border/60 px-4 py-2.5 flex items-center justify-between">
                   <button
                     onClick={() => cartStore.clear()}
                     className="inline-flex items-center gap-1.5 text-xs font-semibold text-rose-500 hover:text-rose-700 transition-colors"
@@ -251,6 +251,41 @@ function CartPage() {
                     <Trash2 className="h-3.5 w-3.5" />
                     Clear cart
                   </button>
+                  <span className="text-xs font-medium text-muted-foreground">
+                    {totals.itemCount} {totals.itemCount === 1 ? "item" : "items"}
+                  </span>
+                </div>
+              </div>
+
+              {/* ── MOBILE ONLY: Quick Price Summary right after Cart ── */}
+              <div className="block md:hidden rounded-2xl border border-border bg-card p-4 shadow-sm space-y-3">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-bold text-foreground">Bill Details</p>
+                  {isFreeDelivery ? (
+                    <span className="text-xs font-semibold text-emerald-600 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
+                      Free Delivery Unlocked!
+                    </span>
+                  ) : (
+                    <span className="text-xs text-muted-foreground">
+                      Add ₹{freeDeliveryRemaining} for Free Delivery
+                    </span>
+                  )}
+                </div>
+                <div className="space-y-2 text-xs">
+                  <div className="flex justify-between text-muted-foreground">
+                    <span>Item subtotal</span>
+                    <span className="font-semibold text-foreground">₹{totals.subtotal}</span>
+                  </div>
+                  <div className="flex justify-between text-muted-foreground">
+                    <span>Delivery fee</span>
+                    <span className={isFreeDelivery ? "font-semibold text-emerald-600" : "font-semibold text-foreground"}>
+                      {isFreeDelivery ? "FREE" : `₹${deliveryFee}`}
+                    </span>
+                  </div>
+                  <div className="border-t border-border pt-2 flex justify-between text-sm font-bold text-foreground">
+                    <span>To Pay</span>
+                    <span>₹{total}</span>
+                  </div>
                 </div>
               </div>
 
@@ -347,8 +382,8 @@ function CartPage() {
               </div>
             </div>
 
-            {/* ── RIGHT SIDEBAR ───────────────────────────────── */}
-            <aside className="space-y-3 md:sticky md:top-24 md:self-start">
+            {/* ── RIGHT SIDEBAR (Desktop) ───────────────────────── */}
+            <aside className="hidden md:block space-y-3 md:sticky md:top-24 md:self-start">
               {/* Free delivery progress */}
               <div className="rounded-2xl border border-border bg-card p-4 shadow-sm">
                 <div className="flex items-center gap-2">
@@ -460,6 +495,40 @@ function CartPage() {
                 </div>
               </div>
             </aside>
+          </div>
+        )}
+
+        {/* ── STICKY BOTTOM BAR FOR MOBILE ───────────────────────── */}
+        {cart.lines.length > 0 && (
+          <div className="fixed bottom-0 inset-x-0 z-40 border-t border-border bg-card/95 p-3.5 shadow-[0_-4px_25px_rgba(0,0,0,0.12)] backdrop-blur-md md:hidden">
+            <div className="flex items-center justify-between gap-3 max-w-md mx-auto">
+              <div className="flex flex-col">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                  Total Amount
+                </span>
+                <div className="flex items-baseline gap-1.5">
+                  <span className="text-xl font-bold font-mono text-foreground">₹{total}</span>
+                  {isFreeDelivery ? (
+                    <span className="text-[10px] font-semibold text-emerald-600 bg-emerald-50 px-1.5 py-0.2 rounded">
+                      FREE Del
+                    </span>
+                  ) : (
+                    <span className="text-[10px] text-muted-foreground">incl. taxes</span>
+                  )}
+                </div>
+              </div>
+              <button
+                onClick={() =>
+                  isSignedIn
+                    ? navigate({ to: "/checkout" })
+                    : navigate({ to: "/auth", search: { redirect: "/checkout" } })
+                }
+                className="flex items-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-bold text-primary-foreground shadow-md hover:bg-primary/90 transition-all"
+              >
+                <span>{isSignedIn ? "Proceed to checkout" : "Login to proceed"}</span>
+                <ArrowRight className="h-4 w-4" />
+              </button>
+            </div>
           </div>
         )}
       </div>

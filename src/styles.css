@@ -230,25 +230,26 @@
 }
 
 @keyframes success-check {
-  from { transform: scale(0.5) rotate(-12deg); opacity: 0; }
-  to { transform: scale(1) rotate(0); opacity: 1; }
+  0% { transform: scale(0.3) rotate(-25deg); opacity: 0; }
+  60% { transform: scale(1.18) rotate(6deg); opacity: 1; }
+  100% { transform: scale(1) rotate(0); opacity: 1; }
 }
 
-.success-check { animation: success-check 420ms cubic-bezier(.22, 1, .36, 1) both; }
+.success-check { animation: success-check 550ms cubic-bezier(.22, 1, .36, 1) both; }
 
 @keyframes confetti-fall {
-  from { transform: translate3d(0, -12px, 0) rotate(0); opacity: 0; }
-  12% { opacity: 1; }
-  to { transform: translate3d(0, 190px, 0) rotate(280deg); opacity: 0; }
+  0% { transform: translate3d(0, -20px, 0) rotate(0deg) scale(0.5); opacity: 0; }
+  20% { opacity: 1; transform: translate3d(var(--cx, 0px), 40px, 0) rotate(120deg) scale(1.1); }
+  100% { transform: translate3d(var(--cx, 0px), 360px, 0) rotate(720deg) scale(0.5); opacity: 0; }
 }
 
 .confetti {
   position: absolute;
-  top: 8%;
-  width: 7px;
-  height: 12px;
-  border-radius: 2px;
-  animation: confetti-fall 900ms cubic-bezier(.22, 1, .36, 1) both;
+  top: 5%;
+  width: 9px;
+  height: 15px;
+  border-radius: 3px;
+  animation: confetti-fall 1600ms cubic-bezier(.22, 1, .36, 1) forwards;
 }
 
 .premium-button {

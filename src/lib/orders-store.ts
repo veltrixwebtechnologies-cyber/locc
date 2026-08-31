@@ -141,14 +141,27 @@ async function loadOrders(): Promise<Order[]> {
   const userId = session.session?.user.id;
   if (!userId) return [];
 
+  // 1. Try query with delivery partner details
+  const { data: fullData, error: fullError } = await (supabase as any)
+    .from("orders")
+    .select("*, order_items(*), seller:sellers(business_name, lat, lng, wizard_data), assigned_partner:delivery_partners(full_name, rating, current_latitude, current_longitude)")
+    .eq("user_id", userId)
+    .order("placed_at", { ascending: false });
+
+  if (!fullError && fullData) {
+    return fullData.map(fromRow);
+  }
+
+  // 2. Fallback query if delivery_partners join is blocked by RLS for customer role
   try {
-    const { data, error } = await (supabase as any)
+    const { data: simpleData, error: simpleError } = await (supabase as any)
       .from("orders")
-      .select("*, order_items(*), seller:sellers(business_name, lat, lng, wizard_data), assigned_partner:delivery_partners(full_name, rating, current_latitude, current_longitude)")
+      .select("*, order_items(*), seller:sellers(business_name, lat, lng, wizard_data)")
       .eq("user_id", userId)
       .order("placed_at", { ascending: false });
-    if (error) throw error;
-    return (data ?? []).map(fromRow);
+
+    if (simpleError) throw simpleError;
+    return (simpleData ?? []).map(fromRow);
   } catch (error) {
     console.error("[orders] history query failed", error);
     return [];

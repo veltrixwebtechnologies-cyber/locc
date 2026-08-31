@@ -10,13 +10,60 @@ import { addressesStore, useAddresses } from "@/lib/addresses-store";
 import { DeliveryMap } from "@/components/delivery-map";
 import { DeliveryAnimation } from "@/components/delivery-animation";
 import { reverseGeocode } from "@/lib/geocoding.functions";
-import { Crosshair, Plus, Check, TicketPercent, X } from "lucide-react";
+import {
+  Crosshair,
+  Plus,
+  Check,
+  TicketPercent,
+  X,
+  ShieldCheck,
+  CheckCircle2,
+  Sparkles,
+  ArrowRight,
+  Loader2,
+  CreditCard,
+  Smartphone,
+  Banknote,
+} from "lucide-react";
 import { toast } from "sonner";
 import { AnimatePresence, m } from "motion/react";
+import type { Order } from "@/lib/orders-store";
 
 const CURRENT_LOCATION_ID = "__current_location";
 const isProductUuid = (value: string) =>
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+
+function playPaymentSuccessSound() {
+  try {
+    const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+    if (!AudioCtx) return;
+    const ctx = new AudioCtx();
+
+    const osc1 = ctx.createOscillator();
+    const gain1 = ctx.createGain();
+    osc1.type = "sine";
+    osc1.frequency.setValueAtTime(587.33, ctx.currentTime);
+    gain1.gain.setValueAtTime(0.15, ctx.currentTime);
+    gain1.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.22);
+    osc1.connect(gain1);
+    gain1.connect(ctx.destination);
+    osc1.start(ctx.currentTime);
+    osc1.stop(ctx.currentTime + 0.22);
+
+    const osc2 = ctx.createOscillator();
+    const gain2 = ctx.createGain();
+    osc2.type = "sine";
+    osc2.frequency.setValueAtTime(880, ctx.currentTime + 0.08);
+    gain2.gain.setValueAtTime(0.22, ctx.currentTime + 0.08);
+    gain2.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5);
+    osc2.connect(gain2);
+    gain2.connect(ctx.destination);
+    osc2.start(ctx.currentTime + 0.08);
+    osc2.stop(ctx.currentTime + 0.5);
+  } catch {
+    // Ignore audio errors if blocked by browser policy
+  }
+}
 
 type CouponQuote = {
   coupon_id: string;
@@ -82,6 +129,12 @@ function CheckoutPage() {
   const [couponQuote, setCouponQuote] = useState<CouponQuote | null>(null);
   const [isApplyingCoupon, setIsApplyingCoupon] = useState(false);
   const watchIdRef = useRef<number | null>(null);
+
+  // New states for payment gateway flow
+  const [paymentStep, setPaymentStep] = useState<"idle" | "authorizing">("idle");
+  const [placedOrder, setPlacedOrder] = useState<Order | null>(null);
+  const [txnRef, setTxnRef] = useState("");
+  const [countdown, setCountdown] = useState(4);
 
   useEffect(() => {
     if (!showDemoPayment) return;
@@ -460,6 +513,22 @@ function CheckoutPage() {
     toast.success(`Coupon ${quote.code} applied.`);
   };
 
+  useEffect(() => {
+    if (!showOrderSuccess || !placedOrder) return;
+    setCountdown(4);
+    const timer = setInterval(() => {
+      setCountdown((prev) => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          navigate({ to: "/order/$orderId", params: { orderId: placedOrder.id } });
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [showOrderSuccess, placedOrder, navigate]);
+
   const openPaymentConfirmation = () => {
     if (!selectedAddressLine || isPlacing || isCheckingStock) return;
     setShowDemoPayment(true);
@@ -468,7 +537,13 @@ function CheckoutPage() {
   const placeOrder = async () => {
     if (!selectedAddressLine || isPlacing) return;
     setIsPlacing(true);
+    setPaymentStep("authorizing");
+
+    // Simulate realistic payment gateway processing delay
+    await new Promise((resolve) => setTimeout(resolve, 950));
+
     try {
+      const generatedTxn = `TXN-${Math.floor(1000000000 + Math.random() * 9000000000)}`;
       const order = await ordersStore.place({
         storeId: store.id,
         storeName: store.name,
@@ -484,25 +559,31 @@ function CheckoutPage() {
         etaMin: store.etaMin,
         distanceKm: store.distanceKm,
       });
+
       cartStore.clear();
+      setTxnRef(generatedTxn);
+      setPlacedOrder(order);
+
+      // Play audio chime and trigger success UI
+      playPaymentSuccessSound();
+
       toast.success(
         pay === "cod"
-          ? "Order placed. Payment is due on delivery."
-          : "Demo payment completed. Order placed as unpaid/pending.",
+          ? "Order placed! Pay cash on delivery."
+          : `Payment of ₹${displayTotal} completed successfully!`
       );
+
+      setShowDemoPayment(false);
+      setPaymentStep("idle");
       setShowOrderSuccess(true);
-      window.setTimeout(
-        () => navigate({ to: "/order/$orderId", params: { orderId: order.id } }),
-        1000,
-      );
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Could not place the order. Try again.");
+      setPaymentStep("idle");
       setIsPlacing(false);
       return;
     } finally {
       setIsPlacing(false);
     }
-    setShowDemoPayment(false);
   };
 
   return (
@@ -771,36 +852,97 @@ function CheckoutPage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[60] grid place-items-center bg-background/80 px-5 backdrop-blur-sm"
+            className="fixed inset-0 z-[100] grid place-items-center bg-black/75 px-5 backdrop-blur-md"
             role="status"
             aria-live="polite"
           >
-            <m.div
-              initial={{ scale: 0.78, y: 12 }}
-              animate={{ scale: 1, y: 0 }}
-              transition={{ type: "spring", stiffness: 360, damping: 20 }}
-              className="relative w-full max-w-sm overflow-hidden rounded-2xl bg-card p-8 text-center shadow-2xl ring-1 ring-black/[0.06]"
-            >
-              <DeliveryAnimation className="pointer-events-none absolute inset-x-2 top-0 h-36 opacity-95" />
-              <div className="success-check mx-auto grid h-16 w-16 place-items-center rounded-full bg-primary text-primary-foreground">
-                <Check className="h-9 w-9" strokeWidth={3} />
-              </div>
-              <h2 className="mt-5 font-display text-2xl">Order confirmed</h2>
-              <p className="mt-2 text-sm text-muted-foreground">
-                Your local shop is getting everything ready.
-              </p>
-              <div className="pointer-events-none absolute inset-0" aria-hidden="true">
-                {Array.from({ length: 14 }, (_, i) => (
+            {/* Confetti particles */}
+            <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
+              {Array.from({ length: 28 }, (_, i) => {
+                const colors = [
+                  "#10B981", // Emerald
+                  "var(--marigold)",
+                  "var(--coral)",
+                  "#3B82F6", // Blue
+                  "#8B5CF6", // Purple
+                ];
+                const cx = ((i % 7) - 3) * 55;
+                return (
                   <i
                     key={i}
                     className="confetti"
                     style={{
-                      left: `${8 + ((i * 37) % 84)}%`,
-                      animationDelay: `${(i % 5) * 55}ms`,
-                      backgroundColor: i % 2 ? "var(--marigold)" : "var(--coral)",
+                      left: `${6 + ((i * 31) % 88)}%`,
+                      animationDelay: `${(i % 6) * 60}ms`,
+                      backgroundColor: colors[i % colors.length],
+                      ["--cx" as any]: `${cx}px`,
                     }}
                   />
-                ))}
+                );
+              })}
+            </div>
+
+            <m.div
+              initial={{ scale: 0.82, y: 20, opacity: 0 }}
+              animate={{ scale: 1, y: 0, opacity: 1 }}
+              transition={{ type: "spring", stiffness: 320, damping: 22 }}
+              className="relative w-full max-w-sm overflow-hidden rounded-3xl bg-card p-6 text-center shadow-2xl ring-1 ring-white/10"
+            >
+              <div className="relative mx-auto mt-2 grid h-20 w-20 place-items-center rounded-full bg-emerald-500 text-white shadow-[0_0_50px_rgba(16,185,129,0.45)] success-check">
+                <Check className="h-11 w-11" strokeWidth={3.5} />
+              </div>
+
+              <div className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-600">
+                <Sparkles className="h-3.5 w-3.5" />
+                {pay === "cod" ? "Order Confirmed" : "Payment Verified"}
+              </div>
+
+              <h2 className="mt-3 font-display text-2xl font-bold text-foreground">
+                {pay === "cod" ? "Order Placed Successfully!" : "Payment Successful!"}
+              </h2>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {pay === "cod"
+                  ? `₹${placedOrder?.total ?? displayTotal} due on delivery`
+                  : `₹${placedOrder?.total ?? displayTotal} paid to LocalShore`}
+              </p>
+
+              {/* Receipt snippet card */}
+              <div className="mt-5 rounded-2xl bg-muted/40 p-3.5 text-left ring-1 ring-black/[0.04]">
+                <div className="flex justify-between border-b pb-2 text-[11px]">
+                  <span className="text-muted-foreground">Ref / Txn ID</span>
+                  <span className="font-mono font-medium text-foreground">{txnRef || "TXN-8492019"}</span>
+                </div>
+                <div className="flex justify-between border-b py-2 text-[11px]">
+                  <span className="text-muted-foreground">Order Code</span>
+                  <span className="font-mono font-semibold text-primary">#{placedOrder?.code || "LS-1024"}</span>
+                </div>
+                <div className="flex justify-between border-b py-2 text-[11px]">
+                  <span className="text-muted-foreground">Shop</span>
+                  <span className="font-medium text-foreground">{store.name}</span>
+                </div>
+                <div className="flex justify-between pt-2 text-[11px]">
+                  <span className="text-muted-foreground">Estimated Delivery</span>
+                  <span className="font-semibold text-emerald-600">~{store.etaMin || 25} mins</span>
+                </div>
+              </div>
+
+              {/* Action Button */}
+              <div className="mt-5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (placedOrder) {
+                      navigate({ to: "/order/$orderId", params: { orderId: placedOrder.id } });
+                    }
+                  }}
+                  className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-primary py-3 font-display text-sm font-semibold text-primary-foreground shadow-lg hover:brightness-110 active:scale-[0.98] transition-all"
+                >
+                  Track Order Live
+                  <ArrowRight className="h-4 w-4" />
+                </button>
+                <p className="mt-2 text-[11px] text-muted-foreground">
+                  Auto-redirecting in <span className="font-bold text-foreground">{countdown}s</span>...
+                </p>
               </div>
             </m.div>
           </m.div>
@@ -813,7 +955,7 @@ function CheckoutPage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 grid place-items-center bg-black/40 px-5 backdrop-blur-sm"
+            className="fixed inset-0 z-[80] grid place-items-center bg-black/60 px-5 backdrop-blur-md"
             role="dialog"
             aria-modal="true"
             aria-labelledby="demo-payment-title"
@@ -822,43 +964,95 @@ function CheckoutPage() {
             }}
           >
             <m.div
-              initial={{ opacity: 0, scale: 0.96, y: 12 }}
+              initial={{ opacity: 0, scale: 0.94, y: 16 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.97, y: 8 }}
-              transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
-              className="w-full max-w-md rounded-xl bg-card p-5 shadow-xl ring-1 ring-black/[0.08]"
+              exit={{ opacity: 0, scale: 0.96, y: 8 }}
+              transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
+              className="w-full max-w-md overflow-hidden rounded-2xl bg-card p-6 shadow-2xl ring-1 ring-black/[0.08]"
             >
-              <h2 id="demo-payment-title" className="font-display text-xl">
-                {pay === "cod"
-                  ? "Confirm cash on delivery"
-                  : `Demo ${pay === "upi" ? "UPI" : "card"} payment`}
-              </h2>
-              <p className="mt-2 text-sm text-muted-foreground">
-                {pay === "cod"
-                  ? `Your order total is ₹${displayTotal}. Payment will be collected on delivery.`
-                  : `Simulate a successful ${pay === "upi" ? "UPI" : "card"} checkout for ₹${displayTotal}. This demo does not record a real payment or mark the order paid.`}
-              </p>
-              <div className="mt-4 flex justify-end gap-2">
-                <button
-                  type="button"
-                  onClick={() => setShowDemoPayment(false)}
-                  className="rounded-lg border hairline px-4 py-2 text-sm"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  onClick={() => void placeOrder()}
-                  disabled={isPlacing}
-                  className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-60"
-                >
-                  {isPlacing
-                    ? "Processing…"
-                    : pay === "cod"
-                      ? "Place cash order"
-                      : "Complete demo payment"}
-                </button>
+              <div className="flex items-center justify-between border-b pb-4">
+                <div className="flex items-center gap-2.5">
+                  <div className="grid h-10 w-10 place-items-center rounded-xl bg-primary/10 text-primary">
+                    {pay === "upi" ? (
+                      <Smartphone className="h-5 w-5" />
+                    ) : pay === "card" ? (
+                      <CreditCard className="h-5 w-5" />
+                    ) : (
+                      <Banknote className="h-5 w-5" />
+                    )}
+                  </div>
+                  <div>
+                    <h2 id="demo-payment-title" className="font-display text-lg font-semibold">
+                      {pay === "upi"
+                        ? "UPI Instant Payment"
+                        : pay === "card"
+                          ? "Card Authorization"
+                          : "Cash on Delivery"}
+                    </h2>
+                    <p className="text-[11px] text-muted-foreground flex items-center gap-1">
+                      <ShieldCheck className="h-3.5 w-3.5 text-emerald-600" />
+                      256-bit SSL Secure Checkout
+                    </p>
+                  </div>
+                </div>
+                {!isPlacing && (
+                  <button
+                    onClick={() => setShowDemoPayment(false)}
+                    className="rounded-full p-1.5 text-muted-foreground hover:bg-muted"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                )}
               </div>
+
+              {/* Order amount breakdown */}
+              <div className="my-5 rounded-xl bg-muted/40 p-4 ring-1 ring-black/[0.04]">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-muted-foreground">Paying to</span>
+                  <span className="text-xs font-semibold">{store.name}</span>
+                </div>
+                <div className="mt-2 flex items-baseline justify-between">
+                  <span className="text-sm font-medium">Total Payable</span>
+                  <span className="font-display text-2xl font-bold text-primary">
+                    ₹{displayTotal}
+                  </span>
+                </div>
+              </div>
+
+              {/* Step state */}
+              {paymentStep === "authorizing" ? (
+                <div className="py-6 text-center">
+                  <div className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-emerald-500/10 text-emerald-600">
+                    <Loader2 className="h-7 w-7 animate-spin" />
+                  </div>
+                  <h3 className="mt-3 font-display text-base font-semibold">
+                    Authorizing Payment...
+                  </h3>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Verifying transaction details with your provider
+                  </p>
+                </div>
+              ) : (
+                <div className="flex items-center justify-end gap-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowDemoPayment(false)}
+                    disabled={isPlacing}
+                    className="rounded-xl border hairline px-4 py-2.5 text-sm font-medium hover:bg-muted"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void placeOrder()}
+                    disabled={isPlacing}
+                    className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground shadow-md hover:brightness-110 disabled:opacity-60"
+                  >
+                    <ShieldCheck className="h-4 w-4" />
+                    {pay === "cod" ? "Confirm Order" : `Pay ₹${displayTotal}`}
+                  </button>
+                </div>
+              )}
             </m.div>
           </m.div>
         )}

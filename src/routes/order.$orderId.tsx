@@ -22,7 +22,12 @@ export const Route = createFileRoute("/order/$orderId")({
 function OrderPage() {
   const { orderId } = Route.useParams();
   const { orders, isLoading } = useOrdersState();
-  const order = orders.find((o) => o.id === orderId);
+  const order = orders.find(
+    (o) =>
+      o.id === orderId ||
+      o.code === orderId ||
+      (o.code && o.code.toLowerCase() === orderId.toLowerCase())
+  );
 
   const store = order ? getStore(order.storeId) : undefined;
   const currentIndex = order ? orderStatusFlow.indexOf(order.status) : 0;
