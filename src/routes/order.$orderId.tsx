@@ -289,10 +289,12 @@ function OrderPage() {
       {/* Live delivery map */}
       <div className="mx-5 mt-4">
         <DeliveryMap
+          orderId={order.id}
+          orderStatus={order.status}
           store={store ? { lat: store.lat, lng: store.lng, label: store.name } : undefined}
           destination={destination}
           courier={courier}
-          height={200}
+          height={220}
         />
       </div>
 

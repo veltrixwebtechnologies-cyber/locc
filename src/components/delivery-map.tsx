@@ -1,15 +1,22 @@
-import { MapPin, Navigation, Store } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { Clock, Navigation, MapPin, Store, RotateCw } from "lucide-react";
+import { fetchDeliveryRoute, shouldRecalculateRoute, type AdvancedRouteResult } from "@/lib/map-service/delivery-routing";
+import { supabase } from "@/integrations/supabase/client";
 
 export interface LatLng {
   lat: number;
   lng: number;
+  label?: string;
+  heading?: number;
 }
 
 interface Props {
-  store?: LatLng & { label?: string };
-  destination: LatLng & { label?: string };
-  courier?: LatLng & { label?: string };
+  orderId?: string;
+  assignmentId?: string;
+  store?: LatLng;
+  destination: LatLng;
+  courier?: LatLng;
+  orderStatus?: string;
   accuracyMeters?: number | null;
   interactive?: boolean;
   onDestinationChange?: (p: LatLng) => void;
@@ -17,173 +24,199 @@ interface Props {
   height?: number;
 }
 
-function FallbackMap({
-  store,
-  destination,
-  courier,
-  error,
-}: {
-  store?: LatLng & { label?: string };
-  destination: LatLng & { label?: string };
-  courier?: LatLng & { label?: string };
-  error?: string | null;
-}) {
-  return (
-    <div className="absolute inset-0 overflow-hidden bg-[color-mix(in_oklab,var(--teal)_12%,var(--sand))]">
-      <svg
-        className="absolute inset-0 h-full w-full opacity-80"
-        viewBox="0 0 400 220"
-        preserveAspectRatio="none"
-        aria-hidden="true"
-      >
-        <defs>
-          <pattern id="localshore-map-grid" width="28" height="28" patternUnits="userSpaceOnUse">
-            <path
-              d="M28 0H0V28"
-              fill="none"
-              stroke="var(--teal)"
-              strokeOpacity="0.13"
-              strokeWidth="1"
-            />
-          </pattern>
-        </defs>
-        <rect width="400" height="220" fill="url(#localshore-map-grid)" />
-        <path
-          d="M0 160 C 70 130, 95 172, 150 130 S 225 70, 290 88 S 365 140, 400 96"
-          fill="none"
-          stroke="var(--marigold)"
-          strokeDasharray="8 8"
-          strokeLinecap="round"
-          strokeWidth="4"
-        />
-      </svg>
-      <div className="absolute left-[18%] top-[62%] grid h-8 w-8 place-items-center rounded-full bg-primary text-primary-foreground shadow-sm ring-2 ring-card">
-        <Store className="h-4 w-4" />
-      </div>
-      {courier && (
-        <div className="delivery-pulse absolute left-[52%] top-[42%] grid h-8 w-8 place-items-center rounded-full bg-[var(--coral)] text-primary-foreground shadow-sm ring-2 ring-card">
-          <Navigation className="h-4 w-4" />
-        </div>
-      )}
-      <div className="absolute right-[1lxx`8%] top-[20%] grid h-8 w-8 place-items-center rounded-full bg-[var(--marigold)] text-foreground shadow-sm ring-2 ring-card">
-        <MapPin className="h-4 w-4" />
-      </div>
-      <div className="absolute inset-x-3 bottom-3 rounded-lg bg-card/90 p-3 shadow-sm ring-1 ring-black/[0.04] backdrop-blur">
-        <p className="text-xs font-medium text-foreground">Map preview unavailable</p>
-        <p className="mt-0.5 text-[11px] text-muted-foreground">
-          {error ?? "Your location and delivery address still work; this is a safe route preview."}
-        </p>
-        <p className="mt-2 font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
-          {store?.label ? `${store.label} → ` : ""}
-          {destination.label ?? "Drop-off"} · {destination.lat.toFixed(4)},{" "}
-          {destination.lng.toFixed(4)}
-        </p>
-      </div>
-    </div>
-  );
+function courierScooterSvg(color: string, heading = 0) {
+  const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='36' height='36' viewBox='0 0 36 36' style='transform: rotate(${heading}deg); transform-origin: center;'>
+    <circle cx='18' cy='18' r='16' fill='${color}' stroke='#FFFFFF' stroke-width='2.5' />
+    <path d='M12 24 A 3 3 0 0 1 12 18 A 3 3 0 0 1 12 24 M24 24 A 3 3 0 0 1 24 18 A 3 3 0 0 1 24 24 M12 21 L16 14 L20 14 L22 21 L12 21 M18 14 L18 10 L22 10' fill='none' stroke='#FFFFFF' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/>
+    <circle cx='18' cy='7' r='2.5' fill='#FFC107'/>
+  </svg>`;
+  return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
 }
 
-// Colored circular pin as an SVG data URL (matches Local Shore palette).
-function pinSvg(color: string) {
-  const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='28' height='40' viewBox='0 0 28 40'><path d='M14 0C6.3 0 0 6.3 0 14c0 10.5 14 26 14 26s14-15.5 14-26C28 6.3 21.7 0 14 0z' fill='${color}' stroke='#1F4A50' stroke-width='1.5'/><circle cx='14' cy='14' r='5' fill='#F2E8D5'/></svg>`;
+function pinSvg(color: string, iconType: "store" | "destination") {
+  const innerSymbol = iconType === "store" 
+    ? `<rect x='10' y='10' width='8' height='6' fill='#FFFFFF'/><path d='M8 10 L14 6 L20 10' fill='none' stroke='#FFFFFF' stroke-width='2'/>`
+    : `<circle cx='14' cy='14' r='4' fill='#FFFFFF'/>`;
+  const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='28' height='38' viewBox='0 0 28 38'>
+    <path d='M14 0C6.3 0 0 6.3 0 14c0 10.5 14 24 14 24s14-13.5 14-24C28 6.3 21.7 0 14 0z' fill='${color}' stroke='#FFFFFF' stroke-width='1.5'/>
+    ${innerSymbol}
+  </svg>`;
   return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
 }
 
 export function DeliveryMap({
+  orderId,
+  assignmentId,
   store,
   destination,
-  courier,
+  courier: initialCourier,
+  orderStatus = "out_for_delivery",
   accuracyMeters,
   interactive = false,
   onDestinationChange,
   className,
-  height = 200,
+  height = 240,
 }: Props) {
-  const ref = useRef<HTMLDivElement>(null);
-
+  const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<any>(null);
-
   const LRef = useRef<any>(null);
-
   const markersRef = useRef<Record<string, any>>({});
-
-  const lineRef = useRef<any>(null);
-
-  const accuracyRef = useRef<any>(null);
-  const tilesLoadedRef = useRef(false);
-  const cbRef = useRef(onDestinationChange);
-  const [error, setError] = useState<string | null>(null);
+  const polylineRef = useRef<any>(null);
+  
+  const [courier, setCourier] = useState<LatLng | undefined>(initialCourier);
+  const [routeInfo, setRouteInfo] = useState<AdvancedRouteResult | null>(null);
+  const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
+  const [secAgo, setSecAgo] = useState<number>(0);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    cbRef.current = onDestinationChange;
-  }, [onDestinationChange]);
+  const lastRouteCalculatedAt = useRef<number>(0);
+  const lastRoutePos = useRef<LatLng | null>(null);
+  const currentPhase = useRef<"to_vendor" | "to_customer">("to_customer");
 
-  // Initialize the map once (client-only dynamic import so SSR never touches Leaflet).
+  // Determine current active route phase
+  const phase: "to_vendor" | "to_customer" = 
+    ["accepted", "navigating_to_vendor", "reached_vendor", "rider_assigned", "rider_accepted", "rider_at_shop"].includes(orderStatus)
+      ? "to_vendor"
+      : "to_customer";
+
+  // Keep courier state synced with props
+  useEffect(() => {
+    if (initialCourier) setCourier(initialCourier);
+  }, [initialCourier?.lat, initialCourier?.lng, initialCourier?.heading]);
+
+  // Realtime subscription for customer order tracking
+  useEffect(() => {
+    if (!orderId && !assignmentId) return;
+
+    const channel = supabase
+      .channel(`delivery-map-${orderId || assignmentId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "delivery_assignments",
+          filter: orderId ? `order_id=eq.${orderId}` : `id=eq.${assignmentId}`,
+        },
+        (payload: any) => {
+          const newRow = payload.new;
+          if (newRow?.current_latitude && newRow?.current_longitude) {
+            setCourier({
+              lat: Number(newRow.current_latitude),
+              lng: Number(newRow.current_longitude),
+              heading: Number(newRow.current_heading || 0),
+            });
+            setLastUpdated(new Date());
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [orderId, assignmentId]);
+
+  // Timer for "Updated X seconds ago" display
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setSecAgo(Math.floor((Date.now() - lastUpdated.getTime()) / 1000));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [lastUpdated]);
+
+  // Initialize Leaflet Map once
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
         const L = (await import("leaflet")).default;
         await import("leaflet/dist/leaflet.css");
-        if (cancelled || !ref.current) return;
+        if (cancelled || !mapContainerRef.current) return;
+
         LRef.current = L;
-        const map = L.map(ref.current, {
-          center: [destination.lat, destination.lng],
-          zoom: 14,
+        const initialCenter: [number, number] = courier
+          ? [courier.lat, courier.lng]
+          : [destination.lat, destination.lng];
+
+        const map = L.map(mapContainerRef.current, {
+          center: initialCenter,
+          zoom: 15,
           zoomControl: true,
-          attributionControl: true,
+          attributionControl: false,
         });
+
         L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
           maxZoom: 19,
-          attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
           crossOrigin: true,
-        })
-          .on("load", () => {
-            tilesLoadedRef.current = true;
-            setLoading(false);
-            setError(null);
-          })
-          .on("tileerror", () => {
-            if (!tilesLoadedRef.current) {
-              setLoading(false);
-              setError("Map tiles could not be loaded. Check your network and retry.");
-            }
-          })
-          .addTo(map);
-        mapRef.current = map;
-        window.setTimeout(() => map.invalidateSize(), 0);
-        window.setTimeout(() => map.invalidateSize(), 250);
+        }).addTo(map);
 
-        if (interactive) {
-          map.on("click", (e: { latlng: { lat: number; lng: number } }) => {
-            cbRef.current?.({ lat: e.latlng.lat, lng: e.latlng.lng });
+        mapRef.current = map;
+        setLoading(false);
+
+        if (interactive && onDestinationChange) {
+          map.on("click", (e: any) => {
+            onDestinationChange({ lat: e.latlng.lat, lng: e.latlng.lng });
           });
         }
       } catch (err) {
-        if (cancelled) return;
+        console.error("[DeliveryMap] Leaflet init error", err);
         setLoading(false);
-        setError((err as Error).message ?? "Map failed to load");
       }
     })();
+
     return () => {
       cancelled = true;
-      mapRef.current?.remove?.();
-      mapRef.current = null;
-      markersRef.current = {};
-      lineRef.current = null;
-      accuracyRef.current = null;
-      tilesLoadedRef.current = false;
+      if (mapRef.current) {
+        mapRef.current.remove();
+        mapRef.current = null;
+      }
     };
   }, []);
 
-  // Sync markers + polyline whenever positions change.
+  // Recalculate OSRM Route dynamically
+  useEffect(() => {
+    let active = true;
+    const origin = courier || (phase === "to_customer" && store ? store : undefined);
+    const dest = phase === "to_vendor" && store ? store : destination;
+
+    if (!origin || !dest) return;
+
+    const phaseChanged = currentPhase.current !== phase;
+    currentPhase.current = phase;
+
+    const shouldCalc = shouldRecalculateRoute(
+      origin,
+      lastRoutePos.current,
+      routeInfo?.geometry || null,
+      lastRouteCalculatedAt.current,
+      phaseChanged
+    );
+
+    if (!shouldCalc && routeInfo) return;
+
+    (async () => {
+      const res = await fetchDeliveryRoute(origin, dest, phase);
+      if (active && res) {
+        setRouteInfo(res);
+        lastRouteCalculatedAt.current = Date.now();
+        lastRoutePos.current = origin;
+      }
+    })();
+
+    return () => {
+      active = false;
+    };
+  }, [courier?.lat, courier?.lng, destination.lat, destination.lng, store?.lat, store?.lng, phase]);
+
+  // Sync Leaflet markers and route polyline with animation
   useEffect(() => {
     const map = mapRef.current;
     const L = LRef.current;
     if (!map || !L) return;
 
-    const upsert = (id: string, pos: LatLng | undefined, color: string, draggable = false) => {
+    // Helper: update or animate marker
+    const upsertMarker = (id: string, pos: LatLng | undefined, iconUrl: string, size: [number, number]) => {
       if (!pos) {
         if (markersRef.current[id]) {
           map.removeLayer(markersRef.current[id]);
@@ -191,31 +224,29 @@ export function DeliveryMap({
         }
         return;
       }
+
       let m = markersRef.current[id];
+      const icon = L.icon({
+        iconUrl,
+        iconSize: size,
+        iconAnchor: [size[0] / 2, size[1]],
+      });
+
       if (!m) {
-        const icon = L.icon({
-          iconUrl: pinSvg(color),
-          iconSize: [28, 40],
-          iconAnchor: [14, 40],
-        });
-        m = L.marker([pos.lat, pos.lng], { icon, draggable }).addTo(map);
+        m = L.marker([pos.lat, pos.lng], { icon }).addTo(map);
         markersRef.current[id] = m;
-        if (draggable) {
-          m.on("dragend", () => {
-            const p = m.getLatLng();
-            cbRef.current?.({ lat: p.lat, lng: p.lng });
-          });
-        }
       } else {
-        const current = m.getLatLng();
-        const started = performance.now();
-        const duration = 520;
+        m.setIcon(icon);
+        const startLatLng = m.getLatLng();
+        const startTime = performance.now();
+        const duration = 400; // smooth 400ms transition
+
         const animate = (now: number) => {
-          const t = Math.min(1, (now - started) / duration);
+          const t = Math.min(1, (now - startTime) / duration);
           const eased = 1 - Math.pow(1 - t, 3);
           m.setLatLng([
-            current.lat + (pos.lat - current.lat) * eased,
-            current.lng + (pos.lng - current.lng) * eased,
+            startLatLng.lat + (pos.lat - startLatLng.lat) * eased,
+            startLatLng.lng + (pos.lng - startLatLng.lng) * eased,
           ]);
           if (t < 1) requestAnimationFrame(animate);
         };
@@ -223,77 +254,63 @@ export function DeliveryMap({
       }
     };
 
-    upsert("store", store, "#2A6F77");
-    upsert("dest", destination, "#E3A72E", interactive);
-    upsert("courier", courier, "#D9584C");
+    // Render markers
+    if (store) upsertMarker("store", store, pinSvg("#2A6F77", "store"), [28, 38]);
+    upsertMarker("dest", destination, pinSvg("#E3A72E", "destination"), [28, 38]);
+    if (courier) upsertMarker("courier", courier, courierScooterSvg("#D9584C", courier.heading || 0), [36, 36]);
 
-    if (accuracyRef.current) {
-      map.removeLayer(accuracyRef.current);
-      accuracyRef.current = null;
+    // Render road polyline
+    if (polylineRef.current) {
+      map.removeLayer(polylineRef.current);
+      polylineRef.current = null;
     }
-    if (interactive && typeof accuracyMeters === "number" && Number.isFinite(accuracyMeters)) {
-      accuracyRef.current = L.circle([destination.lat, destination.lng], {
-        radius: accuracyMeters,
-        color: "#981495",
-        weight: 1.5,
-        fillColor: "#981495",
-        fillOpacity: 0.12,
-        opacity: 0.55,
+
+    if (routeInfo?.geometry && routeInfo.geometry.length > 0) {
+      const latLngs = routeInfo.geometry.map(([lng, lat]) => [lat, lng]);
+      polylineRef.current = L.polyline(latLngs, {
+        color: phase === "to_vendor" ? "#2A6F77" : "#E3A72E",
+        weight: 4,
+        opacity: 0.85,
+        lineCap: "round",
+        lineJoin: "round",
       }).addTo(map);
-    }
 
-    // In interactive (address-picking) mode, focus the map on the destination
-    // only — don't zoom out to include a far-away store, which makes the pin
-    // look mislocated.
-    const routePoints = interactive
-      ? ([courier, destination].filter(Boolean) as LatLng[])
-      : ([store, courier, destination].filter(Boolean) as LatLng[]);
-    if (lineRef.current) {
-      map.removeLayer(lineRef.current);
-      lineRef.current = null;
+      map.fitBounds(polylineRef.current.getBounds(), { padding: [40, 40] });
     }
-    if (!interactive && routePoints.length >= 2) {
-      lineRef.current = L.polyline(
-        routePoints.map((p) => [p.lat, p.lng]),
-        { color: "#E3A72E", weight: 3, dashArray: "6 8", opacity: 0.9 },
-      ).addTo(map);
-      map.fitBounds(lineRef.current.getBounds(), { padding: [40, 40] });
-    } else {
-      const zoom =
-        typeof accuracyMeters === "number"
-          ? accuracyMeters <= 30
-            ? 18
-            : accuracyMeters <= 100
-              ? 17
-              : 16
-          : 17;
-      map.setView([destination.lat, destination.lng], zoom);
-      console.info("[geo] map recentered", {
-        lat: destination.lat,
-        lng: destination.lng,
-        zoom,
-        accuracyMeters,
-      });
-    }
-    window.setTimeout(() => map.invalidateSize(), 0);
-  }, [store, destination, courier, accuracyMeters, interactive]);
+  }, [store, destination, courier, routeInfo, phase]);
 
   return (
     <div
-      className={
-        "relative overflow-hidden rounded-xl ring-1 ring-black/[0.04] " + (className ?? "")
-      }
+      className={`relative overflow-hidden rounded-2xl ring-1 ring-black/10 shadow-md ${className ?? ""}`}
       style={{ height }}
     >
-      <div ref={ref} className="h-full w-full" />
-      {(loading || error) && (
-        <FallbackMap
-          store={store}
-          destination={destination}
-          courier={courier}
-          error={loading ? "Loading map preview…" : error}
-        />
-      )}
+      <div ref={mapContainerRef} className="h-full w-full bg-slate-100" />
+
+      {/* Floating Status & Route Summary Banner */}
+      <div className="absolute top-3 left-3 right-3 z-[400] flex items-center justify-between rounded-xl bg-slate-900/90 px-3.5 py-2 text-white shadow-lg backdrop-blur-md ring-1 ring-white/10">
+        <div className="flex items-center gap-2">
+          <span className="relative flex h-2 w-2">
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75"></span>
+            <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500"></span>
+          </span>
+          <span className="text-xs font-medium">
+            {phase === "to_vendor" ? "Partner going to shop 🏪" : "Partner on the way to you 🛵"}
+          </span>
+        </div>
+
+        {routeInfo && (
+          <div className="flex items-center gap-3 text-xs font-mono font-semibold text-emerald-300">
+            <span>{routeInfo.formattedDistance}</span>
+            <span>·</span>
+            <span>~{routeInfo.formattedDuration}</span>
+          </div>
+        )}
+      </div>
+
+      {/* Bottom Live Update Status Indicator */}
+      <div className="absolute bottom-2 right-2 z-[400] rounded-lg bg-slate-900/80 px-2.5 py-1 font-mono text-[10px] text-slate-300 backdrop-blur-sm">
+        Updated {secAgo}s ago
+      </div>
     </div>
   );
 }
