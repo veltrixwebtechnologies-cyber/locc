@@ -71,7 +71,7 @@ export interface Order {
   discountAmount?: number;
   createdAt: number;
   status: OrderStatus;
-  partner?: { name: string; rating: number; lat?: number; lng?: number };
+  partner?: { name: string; rating: number; lat?: number; lng?: number; userRating?: number; vehicle?: string; deliveriesCount?: number };
   etaMin: number;
   distanceKm: number;
 }

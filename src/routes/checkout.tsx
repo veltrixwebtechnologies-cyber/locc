@@ -438,6 +438,22 @@ function CheckoutPage() {
     };
   }, [cartProductIds]);
 
+  useEffect(() => {
+    if (!showOrderSuccess || !placedOrder) return;
+    setCountdown(4);
+    const timer = setInterval(() => {
+      setCountdown((prev) => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          navigate({ to: "/order/$orderId", params: { orderId: placedOrder.id } });
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [showOrderSuccess, placedOrder, navigate]);
+
   const deliveryFee =
     totals.subtotal > 0 ? (store ? Math.round(20 + store.distanceKm * 6) : 25) : 0;
   const total = totals.subtotal + deliveryFee;
@@ -445,7 +461,7 @@ function CheckoutPage() {
   const discountAmount = couponQuote?.discount_amount ?? 0;
   const displayTotal = couponQuote?.total ?? total;
 
-  if (!store || cart.lines.length === 0) {
+  if ((!store || cart.lines.length === 0) && !showOrderSuccess) {
     return (
       <AppShell>
         <div className="mx-5 mt-8 rounded-xl border hairline bg-card p-6 text-center">
@@ -513,29 +529,13 @@ function CheckoutPage() {
     toast.success(`Coupon ${quote.code} applied.`);
   };
 
-  useEffect(() => {
-    if (!showOrderSuccess || !placedOrder) return;
-    setCountdown(4);
-    const timer = setInterval(() => {
-      setCountdown((prev) => {
-        if (prev <= 1) {
-          clearInterval(timer);
-          navigate({ to: "/order/$orderId", params: { orderId: placedOrder.id } });
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-    return () => clearInterval(timer);
-  }, [showOrderSuccess, placedOrder, navigate]);
-
   const openPaymentConfirmation = () => {
     if (!selectedAddressLine || isPlacing || isCheckingStock) return;
     setShowDemoPayment(true);
   };
 
   const placeOrder = async () => {
-    if (!selectedAddressLine || isPlacing) return;
+    if (!selectedAddressLine || isPlacing || !store) return;
     setIsPlacing(true);
     setPaymentStep("authorizing");
 
@@ -812,9 +812,9 @@ function CheckoutPage() {
       {/* Summary */}
       <section className="mx-5 mt-4 rounded-xl bg-card p-4 ring-1 ring-black/[0.04] font-mono text-sm">
         <div className="mb-2 flex items-center justify-between text-xs text-muted-foreground">
-          <span>{store.name}</span>
+          <span>{store?.name}</span>
           <span>
-            {store.distanceKm.toFixed(1)} km · ~{store.etaMin} min
+            {store?.distanceKm?.toFixed(1) ?? "0"} km · ~{store?.etaMin ?? 25} min
           </span>
         </div>
         <Row label={`Items (${totals.itemCount})`} value={`₹${totals.subtotal}`} />
@@ -918,11 +918,11 @@ function CheckoutPage() {
                 </div>
                 <div className="flex justify-between border-b py-2 text-[11px]">
                   <span className="text-muted-foreground">Shop</span>
-                  <span className="font-medium text-foreground">{store.name}</span>
+                  <span className="font-medium text-foreground">{placedOrder?.storeName || store?.name || "Local Shore shop"}</span>
                 </div>
                 <div className="flex justify-between pt-2 text-[11px]">
                   <span className="text-muted-foreground">Estimated Delivery</span>
-                  <span className="font-semibold text-emerald-600">~{store.etaMin || 25} mins</span>
+                  <span className="font-semibold text-emerald-600">~{placedOrder?.etaMin || store?.etaMin || 25} mins</span>
                 </div>
               </div>
 
@@ -1009,7 +1009,7 @@ function CheckoutPage() {
               <div className="my-5 rounded-xl bg-muted/40 p-4 ring-1 ring-black/[0.04]">
                 <div className="flex items-center justify-between">
                   <span className="text-xs text-muted-foreground">Paying to</span>
-                  <span className="text-xs font-semibold">{store.name}</span>
+                  <span className="text-xs font-semibold">{store?.name || placedOrder?.storeName || "Local Shore shop"}</span>
                 </div>
                 <div className="mt-2 flex items-baseline justify-between">
                   <span className="text-sm font-medium">Total Payable</span>

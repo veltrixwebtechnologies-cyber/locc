@@ -65,7 +65,7 @@ function FallbackMap({
           <Navigation className="h-4 w-4" />
         </div>
       )}
-      <div className="absolute right-[18%] top-[20%] grid h-8 w-8 place-items-center rounded-full bg-[var(--marigold)] text-foreground shadow-sm ring-2 ring-card">
+      <div className="absolute right-[1lxx`8%] top-[20%] grid h-8 w-8 place-items-center rounded-full bg-[var(--marigold)] text-foreground shadow-sm ring-2 ring-card">
         <MapPin className="h-4 w-4" />
       </div>
       <div className="absolute inset-x-3 bottom-3 rounded-lg bg-card/90 p-3 shadow-sm ring-1 ring-black/[0.04] backdrop-blur">

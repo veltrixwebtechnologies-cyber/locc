@@ -1,15 +1,16 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { AppShell } from "@/components/app-shell";
 import {
   useOrdersState,
   orderStatusFlow,
   orderStatusLabel,
   type OrderStatus,
+  type Order,
 } from "@/lib/orders-store";
 import { getStore } from "@/lib/mock-data";
 import { DeliveryMap } from "@/components/delivery-map";
-import { MessageCircle, Phone, Star } from "lucide-react";
+import { Clock, MessageCircle, Phone, ShieldCheck, Star, Zap } from "lucide-react";
 import { toast } from "sonner";
 import { m } from "motion/react";
 import { OrderSupport } from "@/components/order-support";
@@ -18,6 +19,177 @@ import { DeliveryAnimation } from "@/components/delivery-animation";
 export const Route = createFileRoute("/order/$orderId")({
   component: OrderPage,
 });
+
+function DeliveryTimingHero({ order }: { order: Order }) {
+  const isDelivered = order.status === "delivered";
+  const isCancelled = order.status === "cancelled";
+
+  const expectedTimeStr = useMemo(() => {
+    const orderTime = new Date(order.createdAt);
+    const etaMs = (order.etaMin || 25) * 60 * 1000;
+    const arrivalTime = new Date(orderTime.getTime() + etaMs);
+    return arrivalTime.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  }, [order.createdAt, order.etaMin]);
+
+  return (
+    <div className="mx-5 mt-4 overflow-hidden rounded-2xl bg-gradient-to-br from-slate-900 via-teal-950 to-emerald-950 p-5 text-white shadow-xl ring-1 ring-white/10">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-2">
+            <span className="relative flex h-2.5 w-2.5">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75"></span>
+              <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-500"></span>
+            </span>
+            <span className="font-mono text-xs font-semibold uppercase tracking-wider text-emerald-400">
+              {isDelivered ? "Order Completed" : isCancelled ? "Order Cancelled" : "Live Delivery Status"}
+            </span>
+          </div>
+
+          <h2 className="mt-2 font-display text-2xl font-bold tracking-tight text-white">
+            {isDelivered
+              ? "Delivered Successfully 🎉"
+              : isCancelled
+              ? "Order Cancelled"
+              : `Arriving in ~${order.etaMin || 25} Mins`}
+          </h2>
+
+          {!isDelivered && !isCancelled && (
+            <p className="mt-1 flex items-center gap-1.5 text-xs text-slate-300">
+              <Clock className="h-3.5 w-3.5 text-emerald-400" />
+              <span>Expected Arrival by <strong className="text-white font-semibold">{expectedTimeStr}</strong></span>
+            </p>
+          )}
+        </div>
+
+        <div className="flex flex-col items-end">
+          <div className="rounded-xl bg-white/10 px-3 py-1.5 backdrop-blur-md border border-white/10 text-right">
+            <p className="font-mono text-[10px] uppercase text-emerald-300">Distance</p>
+            <p className="font-mono text-sm font-bold text-white">{order.distanceKm.toFixed(1)} km</p>
+          </div>
+        </div>
+      </div>
+
+      {!isDelivered && !isCancelled && (
+        <div className="mt-4 border-t border-white/10 pt-3 flex items-center justify-between text-xs text-slate-300">
+          <span className="flex items-center gap-1.5 text-emerald-300 font-medium">
+            <Zap className="h-3.5 w-3.5" />
+            Express Direct Local Dispatch
+          </span>
+          <span className="font-mono text-[11px] text-slate-400">Order #{order.code}</span>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function DeliveryPartnerCard({ partner, orderStatus }: { partner?: Order["partner"]; orderStatus: OrderStatus }) {
+  const [userRating, setUserRating] = useState<number | null>(partner?.userRating ?? null);
+  const [hoverRating, setHoverRating] = useState<number | null>(null);
+
+  const handleRate = (rating: number) => {
+    setUserRating(rating);
+    toast.success(`Thank you! You rated the delivery partner ${rating} ★`);
+  };
+
+  if (!partner) {
+    if (orderStatus === "delivered" || orderStatus === "cancelled" || orderStatus === "returned") {
+      return null;
+    }
+    return (
+      <div className="mx-5 mt-4 rounded-2xl bg-card p-4 border border-dashed border-primary/30 ring-1 ring-black/[0.04] text-center shadow-sm">
+        <div className="flex items-center justify-center gap-2 text-primary font-semibold text-sm">
+          <ShieldCheck className="h-4 w-4 text-emerald-600" />
+          Assigning Top-Rated Local Rider
+        </div>
+        <p className="mt-1 text-xs text-muted-foreground">
+          All Local Shore delivery partners maintain a 4.8★+ safety and speed rating.
+        </p>
+      </div>
+    );
+  }
+
+  const ratingValue = userRating ?? partner.rating ?? 4.9;
+
+  return (
+    <section className="mx-5 mt-4 rounded-2xl bg-card p-5 ring-1 ring-black/[0.06] shadow-sm">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="relative">
+            <div className="grid h-12 w-12 place-items-center rounded-full bg-emerald-600 text-white font-display text-lg font-bold shadow-md">
+              {partner.name.split(" ").map((n) => n[0]).join("")}
+            </div>
+            <div className="absolute -bottom-1 -right-1 grid h-5 w-5 place-items-center rounded-full bg-amber-400 text-slate-950 ring-2 ring-card" title="Verified Partner">
+              <ShieldCheck className="h-3 w-3" />
+            </div>
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <p className="font-semibold text-foreground">{partner.name}</p>
+              <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-medium text-emerald-700">
+                Verified Rider
+              </span>
+            </div>
+            <p className="text-xs text-muted-foreground">{partner.vehicle ?? "Hero Electric Scooter"}</p>
+            <div className="mt-1 flex items-center gap-1 font-mono text-xs">
+              <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400 stroke-amber-400" />
+              <span className="font-bold text-foreground">{ratingValue.toFixed(1)}</span>
+              <span className="text-muted-foreground">({partner.deliveriesCount ?? 340}+ orders)</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => toast.info(`Connecting phone call to ${partner.name}...`)}
+            aria-label="Call Rider"
+            className="grid h-10 w-10 place-items-center rounded-full bg-primary text-primary-foreground shadow-sm hover:brightness-110 active:scale-95 transition-all"
+          >
+            <Phone className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
+            onClick={() => toast.info(`Opening chat with ${partner.name}...`)}
+            aria-label="Message Rider"
+            className="grid h-10 w-10 place-items-center rounded-full border hairline bg-card text-foreground hover:bg-muted active:scale-95 transition-all"
+          >
+            <MessageCircle className="h-4 w-4" />
+          </button>
+        </div>
+      </div>
+
+      {/* Interactive Rider Star Rating Block */}
+      <div className="mt-4 border-t hairline pt-3">
+        <div className="flex items-center justify-between">
+          <span className="text-xs font-medium text-muted-foreground">
+            {userRating ? "Your Rating for Rider:" : "Rate Rider Experience:"}
+          </span>
+          <div className="flex items-center gap-1">
+            {[1, 2, 3, 4, 5].map((star) => (
+              <button
+                key={star}
+                type="button"
+                onMouseEnter={() => setHoverRating(star)}
+                onMouseLeave={() => setHoverRating(null)}
+                onClick={() => handleRate(star)}
+                className="p-1 hover:scale-125 transition-transform"
+                title={`Rate ${star} star${star > 1 ? "s" : ""}`}
+              >
+                <Star
+                  className={`h-4 w-4 transition-colors ${
+                    (hoverRating ?? userRating ?? 0) >= star
+                      ? "fill-amber-400 text-amber-400"
+                      : "text-muted-foreground/30"
+                  }`}
+                />
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
 
 function OrderPage() {
   const { orderId } = Route.useParams();
@@ -35,11 +207,10 @@ function OrderPage() {
 
   const destination = useMemo(() => {
     if (order?.destination) return order.destination;
-    // Fallback for orders saved before destination coordinates existed.
     if (!store) return { lat: 9.97, lng: 76.26 };
     return { lat: store.lat + 0.01, lng: store.lng + 0.008 };
   }, [order?.destination, store]);
-  // Courier position: Real GPS coordinates from partner, or interpolated fallback
+
   const courier = useMemo(() => {
     if (order?.partner?.lat && order?.partner?.lng) {
       return { lat: order.partner.lat, lng: order.partner.lng, label: order.partner.name };
@@ -97,6 +268,9 @@ function OrderPage() {
         </p>
       </div>
 
+      {/* Prominent High-Visibility Delivery Timing Hero */}
+      <DeliveryTimingHero order={order} />
+
       {order.status === "delivered" && (
         <section
           className="mx-5 mt-4 overflow-hidden rounded-2xl bg-primary/5 ring-1 ring-primary/15"
@@ -118,12 +292,12 @@ function OrderPage() {
           store={store ? { lat: store.lat, lng: store.lng, label: store.name } : undefined}
           destination={destination}
           courier={courier}
-          height={180}
+          height={200}
         />
-        <p className="mt-2 px-1 font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
-          Live · {order.distanceKm.toFixed(1)} km · ETA {order.etaMin} min
-        </p>
       </div>
+
+      {/* Delivery Partner & Rider Star Rating Card */}
+      <DeliveryPartnerCard partner={order.partner} orderStatus={order.status} />
 
       {/* Progress */}
       <section className="mx-5 mt-4 rounded-xl bg-card p-4 ring-1 ring-black/[0.04]">
@@ -171,53 +345,6 @@ function OrderPage() {
           })}
         </ol>
       </section>
-
-      {/* Partner */}
-      {order.partner ? (
-        <section className="mx-5 mt-4 flex items-center gap-3 rounded-xl bg-card p-4 ring-1 ring-black/[0.04]">
-          <div className="grid h-12 w-12 place-items-center rounded-full bg-[var(--marigold)]/30 font-display text-lg">
-            {order.partner.name
-              .split(" ")
-              .map((n) => n[0])
-              .join("")}
-          </div>
-          <div className="flex-1">
-            <p className="text-xs text-muted-foreground">Your delivery partner</p>
-            <p className="font-medium">{order.partner.name}</p>
-            <p className="inline-flex items-center gap-1 font-mono text-xs text-muted-foreground">
-              <Star
-                className="h-3 w-3 fill-[var(--marigold)] text-[var(--marigold)]"
-                strokeWidth={0}
-              />
-              {order.partner.rating.toFixed(1)}
-            </p>
-          </div>
-          <div className="flex gap-2">
-            <button
-              aria-label="Chat"
-              className="grid h-10 w-10 place-items-center rounded-full border hairline hover:bg-primary hover:text-primary-foreground"
-            >
-              <MessageCircle className="h-4 w-4" />
-            </button>
-            <button
-              aria-label="Call"
-              className="grid h-10 w-10 place-items-center rounded-full bg-primary text-primary-foreground hover:bg-teal-deep"
-            >
-              <Phone className="h-4 w-4" />
-            </button>
-          </div>
-        </section>
-      ) : (
-        <section className="mx-5 mt-4 rounded-xl bg-card p-4 text-sm text-muted-foreground ring-1 ring-black/[0.04]">
-          {order.status === "delivered"
-            ? "Delivered successfully. Need help with anything?"
-            : order.status === "cancelled"
-              ? "This order was cancelled."
-              : order.status === "returned"
-                ? "This order was returned."
-                : `Finding a delivery partner near ${order.storeName}…`}
-        </section>
-      )}
 
       {order.deliveryOtp &&
       order.status !== "delivered" &&

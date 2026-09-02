@@ -16,7 +16,9 @@ import {
   UserCheck,
   User,
   MapPin,
-  Sparkles
+  Sparkles,
+  Eye,
+  EyeOff
 } from "lucide-react";
 import { toast } from "sonner";
 import { OtpInput, OTP_LENGTH } from "@/components/auth/otp-input";
@@ -28,7 +30,7 @@ export const Route = createFileRoute("/auth")({
   }),
 });
 
-type Mode = "phone" | "email";
+type Mode = "phone" | "email" | "password";
 type AuthIntent = "login" | "signup";
 
 function authErrorMessage(error: unknown, fallback: string) {
@@ -91,6 +93,11 @@ function AuthPage() {
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
   const [emailOtp, setEmailOtp] = useState("");
+
+  // Password flow states
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [forgotPassword, setForgotPassword] = useState(false);
 
   const PENDING_OTP_KEY = "localshore.pending-otp.v1";
 
@@ -389,6 +396,75 @@ function AuthPage() {
     }
   };
 
+  const handlePasswordAuth = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email.trim() || !password) {
+      setError("Please fill in all required fields.");
+      return;
+    }
+    if (intent === "signup" && name.trim().length < 2) {
+      setError("Enter your full name to create an account.");
+      return;
+    }
+    setError(null);
+    setLoading(true);
+    try {
+      if (intent === "signup") {
+        const { data, error: authError } = await supabase.auth.signUp({
+          email: email.trim(),
+          password,
+          options: {
+            data: { display_name: name.trim() || email.split("@")[0] },
+          },
+        });
+        if (authError) throw authError;
+        if (data.user) {
+          await saveProfile(data.user.id, {
+            email: email.trim(),
+            display_name: name.trim() || email.split("@")[0],
+          });
+        }
+        toast.success("Account created successfully!");
+      } else {
+        const { error: authError } = await supabase.auth.signInWithPassword({
+          email: email.trim(),
+          password,
+        });
+        if (authError) throw authError;
+        toast.success("Welcome back!");
+      }
+      done();
+    } catch (err) {
+      console.error("Password auth error", err);
+      setError(authFriendlyError(err, intent === "signup" ? "Could not create account." : "Invalid email or password."));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const sendPasswordReset = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email.trim()) {
+      setError("Please enter your email address.");
+      return;
+    }
+    setError(null);
+    setLoading(true);
+    try {
+      const { error: authError } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+        redirectTo: `${window.location.origin}/auth`,
+      });
+      if (authError) throw authError;
+      toast.success("Password reset instructions sent to your email!");
+      setForgotPassword(false);
+    } catch (err) {
+      console.error("Password reset error", err);
+      setError(authFriendlyError(err, "Could not send password reset email."));
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const switchMode = (m: Mode) => {
     setMode(m);
     setError(null);
@@ -670,12 +746,12 @@ function AuthPage() {
             </button>
           </div>
 
-          {/* SEGMENTED CONTROL 2: Phone vs Email */}
-          <div className="mt-3 grid grid-cols-2 gap-1 rounded-2xl bg-slate-100/90 p-1.5 border border-slate-200/60">
+          {/* SEGMENTED CONTROL 2: Phone vs Email vs Password */}
+          <div className="mt-3 grid grid-cols-3 gap-1 rounded-2xl bg-slate-100/90 p-1.5 border border-slate-200/60">
             <button
               type="button"
               onClick={() => switchMode("phone")}
-              className={`inline-flex items-center justify-center gap-2 rounded-xl py-2.5 text-xs sm:text-sm font-extrabold transition-all duration-200 cursor-pointer ${
+              className={`inline-flex items-center justify-center gap-1.5 rounded-xl py-2.5 text-xs sm:text-sm font-extrabold transition-all duration-200 cursor-pointer ${
                 mode === "phone"
                   ? "bg-white text-[#700b6e] shadow-xs border border-slate-200/80"
                   : "text-slate-500 hover:text-slate-900 font-semibold"
@@ -688,14 +764,27 @@ function AuthPage() {
             <button
               type="button"
               onClick={() => switchMode("email")}
-              className={`inline-flex items-center justify-center gap-2 rounded-xl py-2.5 text-xs sm:text-sm font-extrabold transition-all duration-200 cursor-pointer ${
+              className={`inline-flex items-center justify-center gap-1.5 rounded-xl py-2.5 text-xs sm:text-sm font-extrabold transition-all duration-200 cursor-pointer ${
                 mode === "email"
                   ? "bg-white text-[#700b6e] shadow-xs border border-slate-200/80"
                   : "text-slate-500 hover:text-slate-900 font-semibold"
               }`}
             >
               <Mail className="h-4 w-4 text-[#981495]" />
-              <span>Email</span>
+              <span>Email OTP</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => switchMode("password")}
+              className={`inline-flex items-center justify-center gap-1.5 rounded-xl py-2.5 text-xs sm:text-sm font-extrabold transition-all duration-200 cursor-pointer ${
+                mode === "password"
+                  ? "bg-white text-[#700b6e] shadow-xs border border-slate-200/80"
+                  : "text-slate-500 hover:text-slate-900 font-semibold"
+              }`}
+            >
+              <Lock className="h-4 w-4 text-[#981495]" />
+              <span>Password</span>
             </button>
           </div>
 
@@ -838,7 +927,7 @@ function AuthPage() {
                 </div>
               </form>
             )
-          ) : (
+          ) : mode === "email" ? (
             /* EMAIL FLOW FORM */
             emailStep === "email" ? (
               <form onSubmit={sendEmailOtp} className="mt-5 space-y-4">
@@ -969,6 +1058,149 @@ function AuthPage() {
                     {cooldown > 0 ? `Resend in ${cooldown}s` : "Resend Code"}
                   </button>
                 </div>
+              </form>
+            )
+          ) : (
+            /* PASSWORD FLOW FORM */
+            forgotPassword ? (
+              <form onSubmit={sendPasswordReset} className="mt-5 space-y-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Email Address</label>
+                  <div className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-3.5 py-3 transition-all focus-within:border-[#981495] focus-within:bg-white focus-within:ring-4 focus-within:ring-[#981495]/10">
+                    <Mail className="h-4 w-4 text-slate-400 shrink-0" />
+                    <input
+                      type="email"
+                      autoComplete="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="you@example.com"
+                      className="w-full border-0 bg-transparent text-sm font-semibold text-slate-900 outline-none ring-0 shadow-none placeholder:font-normal placeholder:text-slate-400 focus:outline-none focus:ring-0 focus:shadow-none focus-visible:outline-none focus-visible:ring-0 focus-visible:shadow-none"
+                      autoFocus
+                    />
+                  </div>
+                </div>
+
+                {error && (
+                  <div className="rounded-xl bg-red-50 border border-red-200 p-3 text-xs font-bold text-red-600">
+                    {error}
+                  </div>
+                )}
+
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="group w-full inline-flex items-center justify-center gap-2.5 rounded-2xl bg-gradient-to-r from-[#981495] to-[#700b6e] hover:from-[#821280] hover:to-[#5c095a] text-white font-extrabold py-3.5 px-5 text-sm sm:text-base shadow-md shadow-[#981495]/25 hover:shadow-lg hover:shadow-[#981495]/35 transition-all hover:scale-[1.005] active:scale-[0.995] disabled:opacity-60 cursor-pointer"
+                >
+                  {loading ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <span>Sending reset link…</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>Send Reset Link</span>
+                      <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                    </>
+                  )}
+                </button>
+
+                <div className="text-center pt-1">
+                  <button
+                    type="button"
+                    onClick={() => { setForgotPassword(false); setError(null); }}
+                    className="text-xs font-bold text-[#981495] hover:underline"
+                  >
+                    Back to Sign In
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <form onSubmit={handlePasswordAuth} className="mt-5 space-y-4">
+                {intent === "signup" && (
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">Full Name</label>
+                    <input
+                      type="text"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      placeholder="John Doe"
+                      autoComplete="name"
+                      className="w-full rounded-2xl bg-slate-50 border border-slate-200 px-4 py-3 text-sm font-medium outline-none focus:border-[#981495] focus:bg-white focus:ring-4 focus:ring-[#981495]/10 transition"
+                    />
+                  </div>
+                )}
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Email Address</label>
+                  <div className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-3.5 py-3 transition-all focus-within:border-[#981495] focus-within:bg-white focus-within:ring-4 focus-within:ring-[#981495]/10">
+                    <Mail className="h-4 w-4 text-slate-400 shrink-0" />
+                    <input
+                      type="email"
+                      autoComplete="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="you@example.com"
+                      className="w-full border-0 bg-transparent text-sm font-semibold text-slate-900 outline-none ring-0 shadow-none placeholder:font-normal placeholder:text-slate-400 focus:outline-none focus:ring-0 focus:shadow-none focus-visible:outline-none focus-visible:ring-0 focus-visible:shadow-none"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-xs font-bold text-slate-700">Password</label>
+                    {intent === "login" && (
+                      <button
+                        type="button"
+                        onClick={() => { setForgotPassword(true); setError(null); }}
+                        className="text-xs font-bold text-[#981495] hover:underline cursor-pointer"
+                      >
+                        Forgot password?
+                      </button>
+                    )}
+                  </div>
+                  <div className="relative">
+                    <input
+                      type={showPassword ? "text" : "password"}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="••••••••"
+                      className="w-full rounded-2xl bg-slate-50 border border-slate-200 pl-4 pr-11 py-3 text-sm font-medium outline-none focus:border-[#981495] focus:bg-white focus:ring-4 focus:ring-[#981495]/10 transition"
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 focus:outline-none cursor-pointer"
+                      aria-label={showPassword ? "Hide password" : "Show password"}
+                    >
+                      {showPassword ? <EyeOff className="h-4.5 w-4.5" /> : <Eye className="h-4.5 w-4.5" />}
+                    </button>
+                  </div>
+                </div>
+
+                {error && (
+                  <div className="rounded-xl bg-red-50 border border-red-200 p-3 text-xs font-bold text-red-600">
+                    {error}
+                  </div>
+                )}
+
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="group w-full inline-flex items-center justify-center gap-2.5 rounded-2xl bg-gradient-to-r from-[#981495] to-[#700b6e] hover:from-[#821280] hover:to-[#5c095a] text-white font-extrabold py-3.5 px-5 text-sm sm:text-base shadow-md shadow-[#981495]/25 hover:shadow-lg hover:shadow-[#981495]/35 transition-all hover:scale-[1.005] active:scale-[0.995] disabled:opacity-60 cursor-pointer"
+                >
+                  {loading ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <span>Processing…</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>{intent === "signup" ? "Create Account" : "Sign In"}</span>
+                      <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                    </>
+                  )}
+                </button>
               </form>
             )
           )}
