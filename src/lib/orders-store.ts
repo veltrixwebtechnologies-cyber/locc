@@ -1,3 +1,4 @@
+import { parseCoordinates } from "./coordinates";
 import { useEffect, useState } from "react";
 import type { CartLine } from "./cart-store";
 import { supabase } from "@/integrations/supabase/client";
@@ -104,17 +105,18 @@ function fromRow(row: any): Order {
     ? {
         name: row.assigned_partner.full_name ?? "Delivery Partner",
         rating: Number(row.assigned_partner.rating ?? 5.0),
-        lat: Number.isFinite(Number(row.assigned_partner.current_latitude))
+        lat: row.assigned_partner.current_latitude != null && Number.isFinite(Number(row.assigned_partner.current_latitude))
           ? Number(row.assigned_partner.current_latitude)
           : undefined,
-        lng: Number.isFinite(Number(row.assigned_partner.current_longitude))
+        lng: row.assigned_partner.current_longitude != null && Number.isFinite(Number(row.assigned_partner.current_longitude))
           ? Number(row.assigned_partner.current_longitude)
           : undefined,
       }
     : undefined;
 
-  const sellerLat = Number(row.seller?.lat ?? row.seller?.wizard_data?.lat ?? 9.9816);
-  const sellerLng = Number(row.seller?.lng ?? row.seller?.wizard_data?.lng ?? 76.2999);
+  const sellerPin = parseCoordinates(row.seller?.lat, row.seller?.lng) ?? parseCoordinates(row.seller?.wizard_data?.lat, row.seller?.wizard_data?.lng);
+  const sellerLat = sellerPin?.lat ?? NaN;
+  const sellerLng = sellerPin?.lng ?? NaN;
 
   // Try to extract live data from delivery assignment
   const assignment = Array.isArray(row.delivery_assignments)
@@ -127,8 +129,8 @@ function fromRow(row: any): Order {
   const liveHeading = Number(assignment?.current_heading ?? 0);
 
   // Calculate real distance if partner and destination locations are available
-  const custLat = Number.isFinite(Number(row.customer_latitude)) ? Number(row.customer_latitude) : null;
-  const custLng = Number.isFinite(Number(row.customer_longitude)) ? Number(row.customer_longitude) : null;
+  const custLat = row.customer_latitude != null && Number.isFinite(Number(row.customer_latitude)) ? Number(row.customer_latitude) : null;
+  const custLng = row.customer_longitude != null && Number.isFinite(Number(row.customer_longitude)) ? Number(row.customer_longitude) : null;
   let realDistanceKm = 2.4; // default
   let realEtaMin = 25; // default
   if (livePartnerLat && livePartnerLng && custLat && custLng) {
@@ -182,11 +184,7 @@ function fromRow(row: any): Order {
     deliveryFee: Number(row.shipping_fee),
     total: Number(row.total),
     address: row.buyer_address ?? "",
-    destination:
-      Number.isFinite(Number(row.customer_latitude)) &&
-      Number.isFinite(Number(row.customer_longitude))
-        ? { lat: Number(row.customer_latitude), lng: Number(row.customer_longitude) }
-        : { lat: 9.9816, lng: 76.2999 },
+    destination: parseCoordinates(row.customer_latitude, row.customer_longitude) ?? { lat: NaN, lng: NaN },
     paymentMethod:
       row.payment_method === "upi"
         ? "UPI"
@@ -274,6 +272,7 @@ export const ordersStore = {
     if (!user) throw new Error("Sign in before placing an order");
     if (!order.address.trim()) throw new Error("Add a delivery address before placing the order.");
     if (!order.lines.length) throw new Error("Your cart is empty.");
+    if (!parseCoordinates(order.destination?.lat, order.destination?.lng)) throw new Error("Confirm a valid delivery location pin before placing an order.");
 
     // Curated storefront products are intentionally local demo catalog entries,
     // not rows in approved_product_catalog. Keep their checkout flow usable while

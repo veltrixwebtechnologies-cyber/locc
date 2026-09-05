@@ -1,3 +1,5 @@
+import { RouteRequest } from "@/lib/route-request";
+import { parseCoordinates } from "@/lib/coordinates";
 import { useEffect, useRef, useState } from "react";
 import { Clock, Navigation, MapPin, Store, RotateCw } from "lucide-react";
 import { fetchDeliveryRoute, shouldRecalculateRoute, type AdvancedRouteResult } from "@/lib/map-service/delivery-routing";
@@ -71,6 +73,12 @@ export function DeliveryMap({
   const [secAgo, setSecAgo] = useState<number>(0);
   const [loading, setLoading] = useState(true);
 
+  const hasDestination = !!parseCoordinates(destination.lat, destination.lng);
+  const [routeError, setRouteError] = useState("");
+  const routeEndpoint = useRef("");
+  const routeRequests = useRef(new RouteRequest());
+  const lastRouteAttempt = useRef(0);
+  useEffect(() => () => routeRequests.current.cancel(), []);
   const lastRouteCalculatedAt = useRef<number>(0);
   const lastRoutePos = useRef<LatLng | null>(null);
   const currentPhase = useRef<"to_vendor" | "to_customer">("to_customer");
@@ -83,7 +91,7 @@ export function DeliveryMap({
 
   // Keep courier state synced with props
   useEffect(() => {
-    if (initialCourier) setCourier(initialCourier);
+    setCourier(initialCourier && parseCoordinates(initialCourier.lat, initialCourier.lng) ? initialCourier : undefined);
   }, [initialCourier?.lat, initialCourier?.lng, initialCourier?.heading]);
 
   // Realtime subscription for customer order tracking
@@ -129,6 +137,8 @@ export function DeliveryMap({
 
   // Initialize Leaflet Map once
   useEffect(() => {
+    if (!hasDestination) return;
+    setLoading(true);
     let cancelled = false;
     (async () => {
       try {
@@ -146,7 +156,7 @@ export function DeliveryMap({
           zoom: 15,
           maxZoom: 18,
           zoomControl: true,
-          attributionControl: false,
+          attributionControl: true,
         });
 
         const tileConfig = getMapTileConfig();
@@ -157,7 +167,7 @@ export function DeliveryMap({
         }).addTo(map);
 
         setTimeout(() => {
-          map.invalidateSize();
+          if (!cancelled) map.invalidateSize();
         }, 100);
 
         mapRef.current = map;
@@ -179,44 +189,29 @@ export function DeliveryMap({
       if (mapRef.current) {
         mapRef.current.remove();
         mapRef.current = null;
+        markersRef.current = {};
+        polylineRef.current = null;
       }
     };
-  }, []);
+  }, [hasDestination]);
 
-  // Recalculate OSRM Route dynamically
   useEffect(() => {
-    let active = true;
-    const origin = courier || (phase === "to_customer" && store ? store : undefined);
-    const dest = phase === "to_vendor" && store ? store : destination;
-
-    if (!origin || !dest) return;
-
-    const phaseChanged = currentPhase.current !== phase;
-    currentPhase.current = phase;
-
-    const shouldCalc = shouldRecalculateRoute(
-      origin,
-      lastRoutePos.current,
-      routeInfo?.geometry || null,
-      lastRouteCalculatedAt.current,
-      phaseChanged
-    );
-
-    if (!shouldCalc && routeInfo) return;
-
-    (async () => {
-      const res = await fetchDeliveryRoute(origin, dest, phase);
-      if (active && res) {
-        setRouteInfo(res);
-        lastRouteCalculatedAt.current = Date.now();
-        lastRoutePos.current = origin;
-      }
-    })();
-
-    return () => {
-      active = false;
-    };
-  }, [courier?.lat, courier?.lng, destination.lat, destination.lng, store?.lat, store?.lng, phase]);
+    const origin = courier || (phase === "to_customer" ? store : undefined);
+    const dest = phase === "to_vendor" ? store : destination;
+    const endpoint = [orderId, assignmentId, phase, dest?.lat, dest?.lng].join(":");
+    const changed = routeEndpoint.current !== endpoint;
+    if (changed) { routeRequests.current.cancel(); setRouteInfo(null); setRouteError(""); }
+    routeEndpoint.current = endpoint;
+    if (!origin || !dest || !parseCoordinates(origin.lat, origin.lng) || !parseCoordinates(dest.lat, dest.lng)) {
+      routeRequests.current.cancel(); setRouteInfo(null); return;
+    }
+    if (!changed && (routeRequests.current.busy || Date.now() - lastRouteAttempt.current < 10000)) return;
+    if (!changed && !shouldRecalculateRoute(origin, lastRoutePos.current, routeInfo?.geometry ?? null, lastRouteCalculatedAt.current, false)) return;
+    lastRouteAttempt.current = Date.now();
+    void routeRequests.current.run(signal => fetchDeliveryRoute(origin, dest, phase, 1, signal), result => {
+      setRouteInfo(result); setRouteError(""); lastRouteCalculatedAt.current = Date.now(); lastRoutePos.current = origin;
+    }, error => { setRouteInfo(null); setRouteError(error instanceof Error ? error.message : "Road routing unavailable."); });
+  }, [orderId, assignmentId, courier?.lat, courier?.lng, destination.lat, destination.lng, store?.lat, store?.lng, phase]);
 
   // Sync Leaflet markers and route polyline with animation
   useEffect(() => {
@@ -226,7 +221,7 @@ export function DeliveryMap({
 
     // Helper: update or animate marker
     const upsertMarker = (id: string, pos: LatLng | undefined, iconUrl: string, size: [number, number]) => {
-      if (!pos) {
+      if (!pos || !parseCoordinates(pos.lat, pos.lng)) {
         if (markersRef.current[id]) {
           map.removeLayer(markersRef.current[id]);
           delete markersRef.current[id];
@@ -264,9 +259,9 @@ export function DeliveryMap({
     };
 
     // Render markers
-    if (store) upsertMarker("store", store, pinSvg("#2A6F77", "store"), [28, 38]);
+    upsertMarker("store", store, pinSvg("#2A6F77", "store"), [28, 38]);
     upsertMarker("dest", destination, pinSvg("#E3A72E", "destination"), [28, 38]);
-    if (courier) upsertMarker("courier", courier, courierScooterSvg("#D9584C", courier.heading || 0), [36, 36]);
+    upsertMarker("courier", courier, courierScooterSvg("#D9584C", courier?.heading || 0), [36, 36]);
 
     // Render road polyline
     if (polylineRef.current) {
@@ -286,13 +281,16 @@ export function DeliveryMap({
 
       map.fitBounds(polylineRef.current.getBounds(), { padding: [40, 40] });
     }
-  }, [store, destination, courier, routeInfo, phase]);
+  }, [store, destination, courier, routeInfo, phase, loading]);
+
+  if (!hasDestination) return <div role="status" className="p-4 border rounded-lg">Delivery location pin is missing. Please confirm the address with support.</div>;
 
   return (
     <div
       className={`relative overflow-hidden rounded-2xl ring-1 ring-black/10 shadow-md ${className ?? ""}`}
       style={{ height }}
     >
+      {routeError && <p role="status" className="absolute bottom-8 left-3 right-3 z-[400] rounded bg-white p-3 text-sm text-amber-700">{routeError} No road route is displayed.</p>}
       <div ref={mapContainerRef} className="h-full w-full bg-slate-100" />
 
       {/* Floating Status & Route Summary Banner */}

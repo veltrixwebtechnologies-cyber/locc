@@ -1,3 +1,5 @@
+import { deliveryLocationSignature, isConfirmedDeliveryLocation } from "@/lib/delivery-location";
+import { parseCoordinates } from "@/lib/coordinates";
 import { createFileRoute, Link, useNavigate, redirect } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
@@ -112,6 +114,10 @@ function CheckoutPage() {
     lat: savedAddresses[0]?.lat ?? 9.9816,
     lng: savedAddresses[0]?.lng ?? 76.2999,
   }));
+  const [pinAcquired, setPinAcquired] = useState(() => !!parseCoordinates(savedAddresses[0]?.lat, savedAddresses[0]?.lng));
+  const [confirmedLocation, setConfirmedLocation] = useState("");
+  const [confirmedNewAddress, setConfirmedNewAddress] = useState("");
+  const geocodeRevision = useRef(0);
   const [accuracyMeters, setAccuracyMeters] = useState<number | null>(null);
   const [currentAddress, setCurrentAddress] = useState(() =>
     savedAddresses.length === 0 ? "Map pin location" : "",
@@ -146,26 +152,38 @@ function CheckoutPage() {
   }, [isPlacing, showDemoPayment]);
 
   const chooseAddr = (id: string) => {
+    geocodeRevision.current++;
+    stopLiveLocation();
     setAddr(id);
     if (id === CURRENT_LOCATION_ID) return;
     const a = savedAddresses.find((x) => x.id === id);
-    if (a) setPinCoords({ lat: a.lat, lng: a.lng });
+    if (a) {
+      setPinAcquired(!!parseCoordinates(a.lat, a.lng));
+      setPinCoords({ lat: a.lat, lng: a.lng });
+    }
   };
 
   const updatePin = (coords: { lat: number; lng: number }) => {
+    if (!parseCoordinates(coords.lat, coords.lng)) return;
+    geocodeRevision.current++;
+    stopLiveLocation();
     setPinCoords(coords);
+    setPinAcquired(true);
     setAccuracyMeters(null);
-    if (addr === CURRENT_LOCATION_ID) {
-      setCurrentAddress(`Dropped pin · ${coords.lat.toFixed(5)}, ${coords.lng.toFixed(5)}`);
-      setManualAddress("");
-      setLocStatus("idle");
-      setLocError("");
-    }
+    setAddr(CURRENT_LOCATION_ID);
+    setCurrentAddress("Dropped pin · " + coords.lat.toFixed(5) + ", " + coords.lng.toFixed(5));
+    setManualAddress("");
+    setLocStatus("idle");
+    setLocError("");
   };
 
   const saveNewAddress = () => {
     if (!newLabel.trim() || !newLine.trim()) {
       toast.error("Enter an address label and full address.");
+      return;
+    }
+    if (!pinAcquired || !parseCoordinates(pinCoords.lat, pinCoords.lng) || confirmedNewAddress !== JSON.stringify([newLine.trim(), pinCoords.lat, pinCoords.lng])) {
+      toast.error("Confirm that the map pin matches the new address.");
       return;
     }
     const created = addressesStore.add({
@@ -185,6 +203,11 @@ function CheckoutPage() {
   const [isTracking, setIsTracking] = useState(false);
 
   const applyCoords = async (coords: { lat: number; lng: number }, accuracy: number | null) => {
+    const revision = ++geocodeRevision.current;
+    if (!parseCoordinates(coords.lat, coords.lng) || accuracy === null || accuracy > 100) {
+      setLocStatus("error"); setLocError("Location is approximate. Tap the exact delivery entrance on the map."); return;
+    }
+    setPinAcquired(true);
     console.info("[geo] coords received", coords);
     console.info("[geo] accuracy", { meters: accuracy });
     setPinCoords(coords);
@@ -195,11 +218,13 @@ function CheckoutPage() {
     try {
       console.info("[geo] reverse geocode requested", coords);
       const result = await reverseGeocodeFn({ data: coords });
+      if (revision !== geocodeRevision.current) return;
       console.info("[geo] geocoded address", result.address);
       setCurrentAddress(result.address);
       setManualAddress(result.address);
       if (showAdd && !newLine.trim()) setNewLine(result.address);
     } catch (error) {
+      if (revision !== geocodeRevision.current) return;
       console.warn("[geo] reverse geocode failed", error);
       const fallback = `Current location · ${coords.lat.toFixed(5)}, ${coords.lng.toFixed(5)}`;
       setCurrentAddress(fallback);
@@ -485,7 +510,8 @@ function CheckoutPage() {
     : addr === CURRENT_LOCATION_ID && currentAddress
       ? `Current location · ${currentAddressLine}`
       : "";
-  const canPlace = !!selectedAddressLine;
+  const locationSignature = deliveryLocationSignature(selectedAddressLine, pinCoords);
+  const canPlace = isConfirmedDeliveryLocation(selectedAddressLine, pinCoords, pinAcquired, confirmedLocation);
 
   const applyCoupon = async () => {
     const code = couponCode.trim().toUpperCase();
@@ -530,12 +556,12 @@ function CheckoutPage() {
   };
 
   const openPaymentConfirmation = () => {
-    if (!selectedAddressLine || isPlacing || isCheckingStock) return;
+    if (!canPlace || isPlacing || isCheckingStock) return;
     setShowDemoPayment(true);
   };
 
   const placeOrder = async () => {
-    if (!selectedAddressLine || isPlacing || !store) return;
+    if (!canPlace || isPlacing || !store) return;
     setIsPlacing(true);
     setPaymentStep("authorizing");
 
@@ -659,7 +685,7 @@ function CheckoutPage() {
                   <textarea
                     value={manualAddress}
                     onClick={(e) => e.stopPropagation()}
-                    onChange={(e) => setManualAddress(e.target.value)}
+                    onChange={(e) => { geocodeRevision.current++; setManualAddress(e.target.value); }}
                     placeholder="Correct house, street, area or landmark"
                     rows={2}
                     className="mt-2 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground"
@@ -668,6 +694,12 @@ function CheckoutPage() {
               </div>
             </div>
           )}
+          <label className="flex items-start gap-2 rounded-lg border p-3 text-sm">
+            <input type="checkbox" checked={confirmedLocation === locationSignature && pinAcquired}
+              disabled={!pinAcquired || !selectedAddressLine}
+              onChange={event => { stopLiveLocation(); setConfirmedLocation(event.target.checked ? locationSignature : ""); }} />
+            <span>I checked the map pin: it marks the delivery entrance for this address. { !pinAcquired && "Choose a pin or use precise location first." }</span>
+          </label>
           {savedAddresses.map((a) => (
             <label
               key={a.id}
@@ -705,6 +737,12 @@ function CheckoutPage() {
               <p className="mt-2 font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
                 Uses current pin · {pinCoords.lat.toFixed(4)}, {pinCoords.lng.toFixed(4)}
               </p>
+              <label className="flex gap-2 text-sm mt-2">
+                <input type="checkbox" disabled={!pinAcquired || !newLine.trim()}
+                  checked={confirmedNewAddress === JSON.stringify([newLine.trim(), pinCoords.lat, pinCoords.lng])}
+                  onChange={event => { stopLiveLocation(); setConfirmedNewAddress(event.target.checked ? JSON.stringify([newLine.trim(), pinCoords.lat, pinCoords.lng]) : ""); }} />
+                This pin matches the new address above.
+              </label>
               <div className="mt-2 flex gap-2">
                 <button
                   onClick={saveNewAddress}
