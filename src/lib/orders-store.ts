@@ -26,10 +26,17 @@ function saveDemoOrder(userId: string, order: Order) {
 export type OrderStatus =
   | "new"
   | "accepted"
+  | "vendor_accepted"
+  | "cancelled_by_vendor"
   | "preparing"
   | "packed"
   | "ready_for_pickup"
   | "assigned"
+  | "delivery_partner_assigned"
+  | "going_to_vendor"
+  | "arrived_at_vendor"
+  | "going_to_customer"
+  | "arrived_at_customer"
   | "rider_assigned"
   | "rider_accepted"
   | "rider_at_shop"
@@ -44,23 +51,29 @@ export type OrderStatus =
 
 export const orderStatusFlow: OrderStatus[] = [
   "new",
-  "accepted",
-  "preparing",
+  "vendor_accepted",
   "ready_for_pickup",
-  "rider_assigned",
-  "rider_at_shop",
+  "delivery_partner_assigned",
+  "arrived_at_vendor",
   "picked_up",
   "out_for_delivery",
   "delivered",
 ];
 
 export const orderStatusLabel: Record<OrderStatus, string> = {
-  new: "Order placed",
+  new: "Order placed (Awaiting Vendor)",
   accepted: "Shop accepted",
+  vendor_accepted: "Shop accepted & preparing",
+  cancelled_by_vendor: "Cancelled by vendor",
   preparing: "Shop preparing order",
   packed: "Order packed",
   ready_for_pickup: "Ready for pickup",
   assigned: "Delivery partner assigned",
+  delivery_partner_assigned: "Delivery partner assigned",
+  going_to_vendor: "Partner heading to shop",
+  arrived_at_vendor: "Partner arrived at shop",
+  going_to_customer: "Out for delivery",
+  arrived_at_customer: "Partner arrived at customer",
   rider_assigned: "Delivery partner assigned",
   rider_accepted: "Partner heading to shop",
   rider_at_shop: "Partner arrived at shop",
