@@ -96,6 +96,54 @@ function fromRow(row: any): Order {
   const sellerLat = Number(row.seller?.lat ?? row.seller?.wizard_data?.lat ?? 9.9816);
   const sellerLng = Number(row.seller?.lng ?? row.seller?.wizard_data?.lng ?? 76.2999);
 
+  // Try to extract live data from delivery assignment
+  const assignment = Array.isArray(row.delivery_assignments)
+    ? row.delivery_assignments.find((a: any) => !['expired', 'rejected', 'cancelled'].includes(a.status))
+    : null;
+
+  // Get partner location from assignment if not from direct join
+  const livePartnerLat = assignment?.current_latitude ?? partnerData?.lat;
+  const livePartnerLng = assignment?.current_longitude ?? partnerData?.lng;
+  const liveHeading = Number(assignment?.current_heading ?? 0);
+
+  // Calculate real distance if partner and destination locations are available
+  const custLat = Number.isFinite(Number(row.customer_latitude)) ? Number(row.customer_latitude) : null;
+  const custLng = Number.isFinite(Number(row.customer_longitude)) ? Number(row.customer_longitude) : null;
+  let realDistanceKm = 2.4; // default
+  let realEtaMin = 25; // default
+  if (livePartnerLat && livePartnerLng && custLat && custLng) {
+    const R = 6371;
+    const dLat = ((custLat - livePartnerLat) * Math.PI) / 180;
+    const dLon = ((custLng - livePartnerLng) * Math.PI) / 180;
+    const a = Math.sin(dLat / 2) ** 2 + Math.cos((livePartnerLat * Math.PI) / 180) * Math.cos((custLat * Math.PI) / 180) * Math.sin(dLon / 2) ** 2;
+    realDistanceKm = Math.round(2 * R * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)) * 10) / 10;
+    realEtaMin = Math.max(3, Math.round((realDistanceKm / 22) * 60) + 3);
+  } else if (sellerLat && sellerLng && custLat && custLng) {
+    const R = 6371;
+    const dLat = ((custLat - sellerLat) * Math.PI) / 180;
+    const dLon = ((custLng - sellerLng) * Math.PI) / 180;
+    const a = Math.sin(dLat / 2) ** 2 + Math.cos((sellerLat * Math.PI) / 180) * Math.cos((custLat * Math.PI) / 180) * Math.sin(dLon / 2) ** 2;
+    realDistanceKm = Math.round(2 * R * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)) * 10) / 10;
+    realEtaMin = Math.max(5, Math.round((realDistanceKm / 22) * 60) + 5);
+  }
+
+  // Use assignment ETA if available from server
+  if (assignment?.estimated_delivery_eta) {
+    const etaTime = new Date(assignment.estimated_delivery_eta).getTime();
+    const nowMs = Date.now();
+    if (etaTime > nowMs) {
+      realEtaMin = Math.ceil((etaTime - nowMs) / 60000);
+    }
+  }
+
+  const partnerWithLive = partnerData
+    ? {
+        ...partnerData,
+        lat: Number.isFinite(livePartnerLat) ? livePartnerLat : partnerData.lat,
+        lng: Number.isFinite(livePartnerLng) ? livePartnerLng : partnerData.lng,
+      }
+    : undefined;
+
   return {
     id: row.id,
     code: row.order_number,
@@ -130,9 +178,9 @@ function fromRow(row: any): Order {
     discountAmount: Number(row.discount_amount ?? 0),
     createdAt: new Date(row.placed_at ?? row.created_at).getTime(),
     status: normalizedStatus,
-    partner: partnerData,
-    etaMin: 25,
-    distanceKm: 2.4,
+    partner: partnerWithLive,
+    etaMin: realEtaMin,
+    distanceKm: realDistanceKm,
   };
 }
 
@@ -141,10 +189,10 @@ async function loadOrders(): Promise<Order[]> {
   const userId = session.session?.user.id;
   if (!userId) return [];
 
-  // 1. Try query with delivery partner details
+  // 1. Try query with delivery partner details and assignment location data
   const { data: fullData, error: fullError } = await (supabase as any)
     .from("orders")
-    .select("*, order_items(*), seller:sellers(business_name, lat, lng, wizard_data), assigned_partner:delivery_partners(full_name, rating, current_latitude, current_longitude)")
+    .select("*, order_items(*), seller:sellers(business_name, lat, lng, wizard_data), assigned_partner:delivery_partners(full_name, rating, current_latitude, current_longitude), delivery_assignments(id, status, current_latitude, current_longitude, current_heading, estimated_delivery_eta)")
     .eq("user_id", userId)
     .order("placed_at", { ascending: false });
 
@@ -279,8 +327,9 @@ export function useOrdersState() {
     const channel = supabase
       .channel("shoreline-orders")
       .on("postgres_changes", { event: "*", schema: "public", table: "orders" }, refresh)
+      .on("postgres_changes", { event: "*", schema: "public", table: "order_items" }, refresh)
+      .on("postgres_changes", { event: "*", schema: "public", table: "delivery_assignments" }, refresh)
       .subscribe();
-    const poll = window.setInterval(refresh, 20_000);
     const refreshWhenVisible = () => {
       if (document.visibilityState === "visible") refresh();
     };
@@ -289,7 +338,6 @@ export function useOrdersState() {
     document.addEventListener("visibilitychange", refreshWhenVisible);
     return () => {
       active = false;
-      window.clearInterval(poll);
       window.removeEventListener("focus", refresh);
       window.removeEventListener("storage", refresh);
       document.removeEventListener("visibilitychange", refreshWhenVisible);

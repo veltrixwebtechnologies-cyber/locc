@@ -147,16 +147,16 @@ export function FlipkartBannerRow() {
     <section className="mx-auto max-w-7xl px-4 pt-4 md:px-8">
       <div className="grid grid-cols-1 gap-4 md:grid-cols-12 items-stretch">
         {/* Banner 1: Left - Anand Kirana Store Ad */}
-        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-amber-50 via-orange-50 to-amber-100/80 p-5 text-slate-900 shadow-sm md:col-span-4 flex flex-col justify-between h-full min-h-[220px] border border-amber-200/80">
+        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#FBF4BE] via-amber-100/60 to-[#F3D053]/40 p-5 text-slate-900 shadow-sm md:col-span-4 flex flex-col justify-between h-full min-h-[220px] border border-[#D4AF37]/40">
           <div className="relative z-10">
-            <span className="inline-block rounded-full bg-amber-500/15 px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider text-amber-950 border border-amber-500/30">
+            <span className="inline-block rounded-full bg-gold-gradient px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider text-slate-950 border border-white/40 shadow-xs">
               Anand Kirana Store
             </span>
             <h3 className="mt-2 text-xl font-black tracking-tight text-slate-900 sm:text-2xl">
               Fresh Daily Ration
             </h3>
-            <p className="mt-0.5 text-base font-extrabold text-amber-800">Up to 30% OFF</p>
-            <p className="mt-1 text-[11px] font-medium text-amber-900/80">Since 1978 · Instant 20 min delivery</p>
+            <p className="mt-0.5 text-base font-black text-[#945700]">Up to 30% OFF</p>
+            <p className="mt-1 text-[11px] font-bold text-slate-800">Since 1978 · Instant 20 min delivery</p>
           </div>
 
           <Link
@@ -192,7 +192,7 @@ export function FlipkartBannerRow() {
             </span>
             <h3 className="mt-2 text-xl font-black text-white sm:text-2xl">{slides[activeSlide]?.title}</h3>
             <p className="mt-1 text-xs font-medium text-teal-100">{slides[activeSlide]?.subtitle}</p>
-            <span className="mt-3 inline-block rounded-lg bg-amber-300 px-3 py-1 text-xs font-extrabold text-slate-950 shadow-xs">
+            <span className="mt-3 inline-block rounded-lg bg-gold-gradient px-3 py-1 text-xs font-black text-slate-950 shadow-xs border border-white/40">
               {slides[activeSlide]?.tag}
             </span>
           </div>
@@ -246,7 +246,7 @@ export function FlipkartBannerRow() {
               Kavya Stationery
             </span>
             <h3 className="mt-2 text-lg font-black text-white sm:text-xl">School & Art Supplies</h3>
-            <p className="mt-0.5 text-sm font-extrabold text-amber-300">Starting ₹49</p>
+            <p className="mt-0.5 text-sm font-black text-[#F3D053]">Starting ₹49</p>
             <p className="mt-1 text-[11px] text-purple-100 font-medium">Classroom packs & craft kits</p>
           </div>
 

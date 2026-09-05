@@ -1,7 +1,8 @@
 /* ============================================================
  * Shop Availability — read-only queries for ShorelineShopper
  * ============================================================ */
-import { useQuery } from "@tanstack/react-query";
+import { useEffect } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
 export type ShopStatusKind =
@@ -35,11 +36,11 @@ function dbToStatus(r: any): ShopStatus {
 
 /** Single-shop status (used on store detail page) */
 export function useShopStatus(sellerId: string | null | undefined) {
-  return useQuery({
+  const queryClient = useQueryClient();
+  const query = useQuery({
     queryKey:        ["shop-status", sellerId],
     enabled:         !!sellerId,
     staleTime:       30_000,
-    refetchInterval: 60_000,
     queryFn: async (): Promise<ShopStatus> => {
       const { data, error } = await (supabase as any).rpc("get_shop_status", {
         _seller_id: sellerId,
@@ -48,6 +49,40 @@ export function useShopStatus(sellerId: string | null | undefined) {
       return dbToStatus(data);
     },
   });
+
+  useEffect(() => {
+    if (!sellerId) return;
+    const channel = supabase
+      .channel(`shop-status-${sellerId}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "shop_overrides", filter: `seller_id=eq.${sellerId}` },
+        () => {
+          void queryClient.invalidateQueries({ queryKey: ["shop-status", sellerId] });
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "shop_hours", filter: `seller_id=eq.${sellerId}` },
+        () => {
+          void queryClient.invalidateQueries({ queryKey: ["shop-status", sellerId] });
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "sellers", filter: `id=eq.${sellerId}` },
+        () => {
+          void queryClient.invalidateQueries({ queryKey: ["shop-status", sellerId] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [sellerId, queryClient]);
+
+  return query;
 }
 
 /** Batch statuses for a list of seller IDs (used on home/listing pages) */

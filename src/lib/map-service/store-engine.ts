@@ -9,6 +9,7 @@ import {
 } from "@/lib/mock-data";
 import { calculateHaversineDistanceKm } from "./providers";
 import type { MapMarkerItem, MapFilterOptions, MapLocation } from "./types";
+import { isStoreInCategory } from "@/lib/shop-categories";
 
 export function toStoreCategory(value?: string | null): StoreCategory {
   const category = (value ?? "").toLowerCase();
@@ -65,6 +66,7 @@ export function getCategoryFallbackPrice(cat: StoreCategory, index: number): num
     stationery: [60, 240],
     bakery: [65, 120],
     grocery: [420, 299],
+    restaurants: [120, 250, 380],
   };
   const list = defaults[cat] || [199, 299, 399];
   return list[index % list.length];
@@ -98,6 +100,16 @@ export function formatPriceDisplay(
   return `₹${minPrice}`;
 }
 
+export function isTestEntity(name?: string | null): boolean {
+  if (!name) return true;
+  const lower = name.trim().toLowerCase();
+  if (lower.length <= 2) return true;
+  const testNames = [
+    "sss", "ggg", "rajaaa shop", "roja", "test", "test shop", "q", "sudhan", "tt", "hh", "h", "thiramisu"
+  ];
+  return testNames.includes(lower);
+}
+
 /**
  * Core Product-Aware Map Query Engine
  * Integrates live Supabase vendors/products with local mock catalog.
@@ -114,8 +126,9 @@ export function getMapMarkerItems(
   // Build combined store map (preserving live vendors & mock stores)
   const storeMap = new Map<string, Store>();
 
-  // 1. Add live vendors from Supabase
+  // 1. Add live vendors from Supabase (filtering out test vendors)
   (liveVendors ?? []).forEach((vendor, idx) => {
+    if (isTestEntity(vendor.shop_name)) return;
     storeMap.set(vendor.id, {
       ...APPROVED_STORE,
       id: vendor.id,
@@ -184,12 +197,13 @@ export function getMapMarkerItems(
       return;
     }
 
-    // Apply category filter (checking store category, converted category, and products)
+    // Apply category filter (checking store category, tagline, and product categories)
     if (catFilter) {
-      const matchStoreCat = store.category === catFilter || toStoreCategory(store.category) === catFilter;
+      const matchStoreCat = isStoreInCategory(store.category, catFilter, store.rating) ||
+        isStoreInCategory(store.tagline, catFilter, store.rating);
       const seedProds = productsByStore[store.id] || [];
       const matchProdCat = seedProds.some(
-        (p) => toStoreCategory(p.category) === catFilter || (p.category && p.category.toLowerCase().includes(catFilter.toLowerCase()))
+        (p) => isStoreInCategory(p.category, catFilter, store.rating)
       );
       if (!matchStoreCat && !matchProdCat) {
         return;
@@ -209,7 +223,7 @@ export function getMapMarkerItems(
     // Gather store products (combining live + seed)
     const storeSeedProds = productsByStore[store.id] || [];
     const storeLiveProds = liveProducts
-      .filter((p) => p.seller_id === store.id)
+      .filter((p) => p.seller_id === store.id && !isTestEntity(p.name))
       .map((p) => ({
         id: p.id,
         storeId: store.id,

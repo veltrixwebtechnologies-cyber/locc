@@ -36,6 +36,7 @@ import {
 import { getFallbackProductImage, isValidImageUrl } from "@/lib/image-utils";
 import { scrollToShops } from "@/lib/scroll-utils";
 import { EcosystemMerchandisingStrips } from "@/components/ecosystem-merchandising-strips";
+import { isTestEntity } from "@/lib/map-service/store-engine";
 
 const getCategoryDisplayName = (catName?: string | null): string => {
   if (!catName) return "";
@@ -134,7 +135,7 @@ function Home() {
             .order("created_at", { ascending: false });
           data = fallback.data;
         }
-        return data ?? [];
+        return (data ?? []).filter((p: any) => !isTestEntity(p.name));
       } catch (err) {
         console.warn("Products query fallback:", err);
         return [];
@@ -156,7 +157,7 @@ function Home() {
             "id,shop_name,business_type,city,state,address_line1,category,shop_logo_path,shop_banner_path",
           );
         if (error) throw error;
-        const rows = data ?? [];
+        const rows = (data ?? []).filter((v: any) => !isTestEntity(v.shop_name));
         const paths = Array.from(
           new Set(
             rows
@@ -564,7 +565,7 @@ function Home() {
           Sign in with phone number
         </Link>
         <a
-          href={import.meta.env.VITE_SELLER_HUB_URL || "http://localhost:5174"}
+          href={import.meta.env.VITE_SELLER_HUB_URL || "/seller"}
           className="mt-2 block text-center text-xs text-primary underline-offset-4 hover:underline"
         >
           Become a seller

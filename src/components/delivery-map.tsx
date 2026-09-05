@@ -10,6 +10,8 @@ export interface LatLng {
   heading?: number;
 }
 
+import { getMapTileConfig } from "@/lib/map-provider";
+
 interface Props {
   orderId?: string;
   assignmentId?: string;
@@ -142,14 +144,21 @@ export function DeliveryMap({
         const map = L.map(mapContainerRef.current, {
           center: initialCenter,
           zoom: 15,
+          maxZoom: 18,
           zoomControl: true,
           attributionControl: false,
         });
 
-        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-          maxZoom: 19,
-          crossOrigin: true,
+        const tileConfig = getMapTileConfig();
+        L.tileLayer(tileConfig.url, {
+          maxZoom: tileConfig.maxZoom,
+          subdomains: tileConfig.subdomains,
+          attribution: tileConfig.attribution,
         }).addTo(map);
+
+        setTimeout(() => {
+          map.invalidateSize();
+        }, 100);
 
         mapRef.current = map;
         setLoading(false);

@@ -1,10 +1,10 @@
 import { useState, useMemo, useRef, useEffect } from "react";
-import { MapPin, Locate, ArrowRight, Star, Filter, Check } from "lucide-react";
+import { MapPin, Locate, ArrowRight, Star, Filter, Check, Zap, Store as StoreIcon } from "lucide-react";
 import { motion } from "framer-motion";
 import { InteractiveMapView, type InteractiveMapViewRef } from "./interactive-map-view";
 
 import type { MapFilterOptions, MapLocation, MapMarkerItem } from "@/lib/map-service/types";
-import { getMapMarkerItems } from "@/lib/map-service/store-engine";
+import { getMapMarkerItems, isTestEntity } from "@/lib/map-service/store-engine";
 import { geocodeSearch } from "@/lib/map-service/providers";
 import { Link } from "@tanstack/react-router";
 import { categoryColor, categoryLabel } from "@/lib/mock-data";
@@ -12,14 +12,17 @@ import { getFallbackProductImage, isValidImageUrl } from "@/lib/image-utils";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useDeliveryLocation } from "@/lib/location-store";
 
 // Quick category filter tabs matching the reference design
 const QUICK_FILTERS = [
   { id: "all", label: "All Shops" },
-  { id: "grocery", label: "Groceries" },
-  { id: "boutiques", label: "Fashion" },
-  { id: "stationery", label: "Electronics" },
-  { id: "pharmacy", label: "Health" },
+  { id: "grocery", label: "Kirana & Grocery" },
+  { id: "bakery", label: "Bakeries" },
+  { id: "pharmacy", label: "Pharmacies" },
+  { id: "restaurants", label: "Restaurants" },
+  { id: "fashion", label: "Fashion" },
+  { id: "electronics", label: "Electronics" },
 ] as const;
 
 interface Props {
@@ -88,7 +91,7 @@ export function LocalShoreMapExperience({
             .in("status", ["active", "approved"]);
           data = fallback.data;
         }
-        return data ?? [];
+        return (data ?? []).filter((p: any) => !isTestEntity(p.name));
       } catch (err) {
         console.warn("Map products query fallback:", err);
         return [];
@@ -107,7 +110,7 @@ export function LocalShoreMapExperience({
         const { data } = await (supabase as any)
           .from("approved_vendor_catalog")
           .select("id,shop_name,business_type,city,state,address_line1,category,lat,lng");
-        return data ?? [];
+        return (data ?? []).filter((v: any) => !isTestEntity(v.shop_name));
       } catch (err) {
         console.warn("Map vendors query fallback:", err);
         return [];

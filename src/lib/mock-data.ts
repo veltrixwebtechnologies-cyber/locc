@@ -12,7 +12,8 @@ export type StoreCategory =
   | "kitchen_appliances"
   | "fashion_accessories"
   | "bakery"
-  | "grocery";
+  | "grocery"
+  | "restaurants";
 
 export interface Store {
   id: string;
@@ -43,7 +44,7 @@ const img = (id: string) => `https://images.unsplash.com/${id}?auto=format&fit=c
 export const APPROVED_STORE: Store = {
   id: "approved-catalog",
   name: "Verified local products",
-  category: "grocery",
+  category: "palamuthir",
   tagline: "Approved by Seller Hub",
   distanceKm: 2,
   rating: 5,
@@ -155,7 +156,8 @@ export const categoryColor: Record<StoreCategory, string> = {
   kitchen_appliances: "#475569",
   fashion_accessories: "#EC4899",
   bakery: "#B36A3E",
-  grocery: "#2A6F77",
+  grocery: "#059669",
+  restaurants: "#E11D48",
 };
 
 export const categoryLabel: Record<StoreCategory, string> = {
@@ -172,15 +174,73 @@ export const categoryLabel: Record<StoreCategory, string> = {
   kitchen_appliances: "Kitchen Appliances",
   fashion_accessories: "Fashion Accessories & Gifts",
   bakery: "Bakery",
-  grocery: "Grocery",
+  grocery: "Kirana & Grocery",
+  restaurants: "Restaurants",
 };
 
 export const stores: Store[] = [
-  // ── 1. Grocery ────────────────────────────────────────────────────────────
+  {
+    id: "s_roja_bakes",
+    name: "Roja Bakes & Sweets (பாப்பம்பட்டி பிரிவு)",
+    category: "bakery",
+    tagline: "Oven fresh bread, Roja special Mysurpa, Roti, Puffs & Sweets",
+    distanceKm: 0.4,
+    rating: 4.9,
+    isOpen: true,
+    etaMin: 15,
+    address: "Main Road, Pappampatti Pirivu, Coimbatore",
+    lat: 10.9990,
+    lng: 76.9740,
+    imageUrl: storeImg("photo-1509440159596-0249088772ff"),
+  },
+  {
+    id: "s_roja_mart",
+    name: "Roja Supermarket & Kirana",
+    category: "grocery",
+    tagline: "Daily fresh groceries, Roja atta, snacks & household essentials",
+    distanceKm: 0.6,
+    rating: 4.8,
+    isOpen: true,
+    etaMin: 18,
+    address: "Pappampatti Pirivu Bus Stop, Coimbatore",
+    lat: 10.9985,
+    lng: 76.9730,
+    imageUrl: storeImg("photo-1604719312566-8912e9227c6a"),
+  },
+  // ── 0. Swiggy Featured Restaurants & Bakes ──────────────────────────────────────
+  {
+    id: "s_haribhavanam",
+    name: "Haribhavanam",
+    category: "meat_fish",
+    tagline: "Authentic South Indian Non-Veg, Meals, Biryani & Chettinad Specials",
+    distanceKm: 0.8,
+    rating: 4.9,
+    isOpen: true,
+    etaMin: 20,
+    address: "Trichy Road, Sungam Junction, Coimbatore",
+    lat: 10.9995,
+    lng: 76.9745,
+    imageUrl: storeImg("photo-1555396273-367ea4eb4db5"),
+  },
+  {
+    id: "s_terminal2",
+    name: "Terminal 2 (Unit of Haribhavanam)",
+    category: "meat_fish",
+    tagline: "Gourmet Burgers, Harissa Wraps, Kebabs & Continental Delights",
+    distanceKm: 1.2,
+    rating: 4.8,
+    isOpen: true,
+    etaMin: 22,
+    address: "Race Course Road, Coimbatore",
+    lat: 10.9980,
+    lng: 76.9710,
+    imageUrl: storeImg("photo-1568901346375-23c9450c58cd"),
+  },
+  // ── 1. Fresh Stalls & Bakes ────────────────────────────────────────────────────────────
   {
     id: "s_paap1",
     name: "Sri Krishna Sweets & Bakery (பாப்பம்பட்டி பிரிவு)",
-    category: "grocery",
+    category: "bakery",
     tagline: "Fresh Mysurpa, hot savouries, tea, puffs & daily bakery items",
     distanceKm: 0.3,
     rating: 4.9,
@@ -194,8 +254,8 @@ export const stores: Store[] = [
   {
     id: "s_kiran1",
     name: "Anand Kirana Provision Store",
-    category: "grocery",
-    tagline: "Rice, pulses, coconut oil & daily kitchen ration",
+    category: "flour_mill",
+    tagline: "Fresh batter, pulses, coconut oil & daily kitchen ration",
     distanceKm: 0.4,
     rating: 4.7,
     isOpen: true,
@@ -208,7 +268,7 @@ export const stores: Store[] = [
   {
     id: "s_groc2",
     name: "Singanallur Super Groceries & Rice Mart",
-    category: "grocery",
+    category: "flour_mill",
     tagline: "Bulk Sona Masoori rice, organic pulses, cold pressed oil & spices",
     distanceKm: 3.3,
     rating: 4.8,
@@ -222,8 +282,8 @@ export const stores: Store[] = [
   {
     id: "s_groc3",
     name: "Ondipudur Daily Fresh Supermarket",
-    category: "grocery",
-    tagline: "Complete family groceries, imported snacks & dairy items",
+    category: "palamuthir",
+    tagline: "Complete family fresh produce, fruits & dairy items",
     distanceKm: 5.5,
     rating: 4.7,
     isOpen: true,
@@ -1234,6 +1294,20 @@ const seedProducts = (storeId: string, cat: StoreCategory): Product[] => {
     ],
     bakery: [
       {
+        name: "Roja Special Butter Mysurpa",
+        unit: "250 g",
+        price: 140,
+        category: "Sweets",
+        imageUrl: img("photo-1555507036-ab1f4038808a"),
+      },
+      {
+        name: "Roja Oven Fresh Butter Roti",
+        unit: "4 pcs",
+        price: 40,
+        category: "Bakes",
+        imageUrl: img("photo-1509440159596-0249088772ff"),
+      },
+      {
         name: "Fresh Oven Butter Croissant",
         unit: "1 pc",
         price: 65,
@@ -1264,29 +1338,66 @@ const seedProducts = (storeId: string, cat: StoreCategory): Product[] => {
     ],
     grocery: [
       {
-        name: "Sona Masoori Premium Rice",
+        name: "Sona Masoori Premium Rice (பொன்னி அரிசி)",
         unit: "5 kg",
-        price: 320,
+        price: 340,
         category: "Staples",
         imageUrl: img("photo-1586201375761-83865001e31c"),
       },
       {
-        name: "Cold Pressed Pure Coconut Oil",
+        name: "Cold Pressed Pure Coconut Oil (தேங்காய் எண்ணெய்)",
         unit: "1 Litre",
         price: 240,
         category: "Oils",
         imageUrl: img("photo-1604719312566-8912e9227c6a"),
       },
       {
-        name: "Organic Toor Dal",
+        name: "Organic Unpolished Toor Dal (துவரம் பருப்பு)",
         unit: "1 kg",
-        price: 140,
+        price: 145,
         category: "Pulses",
         imageUrl: img("photo-1586201375761-83865001e31c"),
       },
+      {
+        name: "Premium Whole Urad Dal (உளுந்தம் பருப்பு)",
+        unit: "1 kg",
+        price: 135,
+        category: "Pulses",
+        imageUrl: img("photo-1586201375761-83865001e31c"),
+      },
+      {
+        name: "Natural Country Jaggery Powder (நாட்டுச் சர்க்கரை)",
+        unit: "1 kg",
+        price: 90,
+        category: "Staples",
+        imageUrl: img("photo-1615485290382-441e4d049cb5"),
+      },
+      {
+        name: "Pure Farm Cow Ghee (பசும் நெய்)",
+        unit: "500 ml",
+        price: 320,
+        category: "Dairy & Ghee",
+        imageUrl: img("photo-1604719312566-8912e9227c6a"),
+      },
+    ],
+    restaurants: [
+      {
+        name: "Special South Indian Meals",
+        unit: "1 Plate",
+        price: 150,
+        category: "Meals",
+        imageUrl: img("photo-1626777552726-4a6b54c97e46"),
+      },
+      {
+        name: "Chettinad Chicken Biryani",
+        unit: "1 Bucket",
+        price: 280,
+        category: "Biryani",
+        imageUrl: img("photo-1563379091339-03b21ab4a4f8"),
+      },
     ],
   };
-  return (catalogs[cat] || catalogs.grocery).map((p, i) => ({
+  return (catalogs[cat] || catalogs.palamuthir).map((p, i) => ({
     ...p,
     id: `${storeId}-p${i}`,
     storeId,

@@ -15,7 +15,7 @@ import {
   CheckCircle2,
   Info,
 } from "lucide-react";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { AppShell } from "@/components/app-shell";
 import { WishlistButton } from "@/components/wishlist-button";
 import { CompareButton } from "@/components/compare-button";
@@ -75,6 +75,23 @@ function ProductPage() {
       return null;
     },
   });
+
+  useEffect(() => {
+    if (!isUuid || !productId) return;
+    const channel = supabase
+      .channel(`product-realtime-${productId}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "products", filter: `id=eq.${productId}` },
+        () => {
+          void queryClient.invalidateQueries({ queryKey: ["product", productId] });
+        }
+      )
+      .subscribe();
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [productId, isUuid, queryClient]);
 
   // Fetch reviews
   const reviews = useQuery({

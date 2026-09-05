@@ -12,7 +12,7 @@
  *
  * Respects prefers-reduced-motion, mobile responsiveness, zero layout shift, and 100% LocalShore branding.
  */
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import {
   motion,
@@ -30,8 +30,14 @@ import {
   ChevronDown,
   Flame,
   X,
+  ShoppingBag,
+  Store,
+  ChevronRight,
 } from "lucide-react";
 import { scrollToShops } from "@/lib/scroll-utils";
+import { useDeliveryLocation } from "@/lib/location-store";
+import { LocationModal } from "@/components/ui/location-modal";
+import { getInstantSearchResults, type SearchResultItem } from "@/lib/search-service";
 
 interface SwiggyFeatureCard {
   id: string;
@@ -97,13 +103,23 @@ const POPULAR_TAGS = [
 export function HeroSection() {
   const navigate = useNavigate();
   const shouldReduceMotion = useReducedMotion();
-  const containerRef = useRef<HTMLDivElement>(null);
 
+  const containerRef = useRef<HTMLDivElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  const [deliveryLocation] = useDeliveryLocation();
+  const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [locationText, setLocationText] = useState("Pappampatti Pirivu, Coimbatore");
   const [suggestionIdx, setSuggestionIdx] = useState(0);
   const [isFocused, setIsFocused] = useState(false);
   const [activeSlide, setActiveSlide] = useState(0);
+
+  const handleReplayVideo = () => {
+    if (videoRef.current) {
+      videoRef.current.currentTime = 0;
+      videoRef.current.play().catch(() => {});
+    }
+  };
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -134,18 +150,33 @@ export function HeroSection() {
     handleSearchSubmit(undefined, query);
   };
 
+  // Instant live search results for products and shops inside the app
+  const searchResults: SearchResultItem[] = useMemo(() => {
+    return getInstantSearchResults(searchQuery);
+  }, [searchQuery]);
+
+  const productResults: SearchResultItem[] = useMemo(() => {
+    return searchResults.filter((r: SearchResultItem) => r.type === "Product" || r.type === "Dish");
+  }, [searchResults]);
+
+  const shopResults: SearchResultItem[] = useMemo(() => {
+    return searchResults.filter((r: SearchResultItem) => r.type === "Shop" || r.type === "Restaurant");
+  }, [searchResults]);
+
   return (
     <section
       ref={containerRef}
-      className="mx-auto max-w-7xl px-3 pt-2 pb-5 sm:px-6 sm:pt-4 md:px-8 md:pt-5 overflow-hidden"
+      className="mx-auto max-w-7xl px-3 pt-2 pb-5 sm:px-6 sm:pt-4 md:px-8 md:pt-5"
     >
       {/* ── Scene 1: Camera Push-In Hero Card ── */}
       <div
-        className="relative overflow-hidden rounded-3xl sm:rounded-[36px] bg-[#981495] p-5 sm:p-8 lg:p-12 text-white shadow-2xl transition-all"
+        className="relative rounded-3xl sm:rounded-[36px] bg-[#981495] p-5 sm:p-8 lg:p-12 text-white shadow-2xl transition-all"
       >
-        {/* High-Performance Static Ambient Gradient Glows (Replaces infinite keyframe repaints) */}
-        <div className="absolute -top-24 -right-24 h-80 w-80 rounded-full bg-radial from-purple-400/30 to-transparent blur-2xl pointer-events-none" />
-        <div className="absolute -bottom-24 -left-24 h-80 w-80 rounded-full bg-radial from-purple-900/40 to-transparent blur-2xl pointer-events-none" />
+        {/* Isolated Overflow-Hidden Layer for Background Glows (Prevents search dropdown clipping) */}
+        <div className="absolute inset-0 overflow-hidden rounded-3xl sm:rounded-[36px] pointer-events-none z-0">
+          <div className="absolute -top-24 -right-24 h-80 w-80 rounded-full bg-radial from-purple-400/30 to-transparent blur-2xl" />
+          <div className="absolute -bottom-24 -left-24 h-80 w-80 rounded-full bg-radial from-purple-900/40 to-transparent blur-2xl" />
+        </div>
 
         <div className="relative z-10 space-y-5 sm:space-y-7">
           {/* Top Pill Badges Row */}
@@ -153,12 +184,12 @@ export function HeroSection() {
             <div
               className="inline-flex items-center gap-1.5 rounded-full bg-white/15 backdrop-blur-md px-3 py-1 text-[11px] sm:text-xs font-bold tracking-wide text-white border border-white/20 shadow-xs"
             >
-              <Sparkles className="h-3.5 w-3.5 text-amber-300 fill-amber-300" />
+              <Sparkles className="h-3.5 w-3.5 text-[#F3D053] fill-[#F3D053]" />
               <span>LocalShore Marketplace</span>
             </div>
 
             <div
-              className="inline-flex items-center gap-1 rounded-full bg-[#FACC15] px-3 py-1 text-[10px] sm:text-[11px] font-black uppercase text-slate-950 shadow-xs tracking-wider"
+              className="inline-flex items-center gap-1 rounded-full bg-gold-gradient px-3.5 py-1 text-[10px] sm:text-[11px] font-black uppercase text-slate-950 shadow-md tracking-wider border border-white/30"
             >
               <Zap className="h-3.5 w-3.5 fill-slate-950" />
               20–30 MIN DELIVERY
@@ -179,7 +210,7 @@ export function HeroSection() {
                 </span>
 
                 <span className="block pt-0.5">
-                  <span className="text-[#FACC15] font-extrabold inline-block drop-shadow-md">
+                  <span className="text-gold-gradient font-black inline-block drop-shadow-md">
                     LocalShore
                   </span>{" "}
                   it!
@@ -194,40 +225,45 @@ export function HeroSection() {
             </div>
 
             {/* Delivery Rider Card */}
-            <div className="flex lg:col-span-5 justify-center lg:justify-end items-center relative my-2 sm:my-4 lg:my-0 w-full">
+            <div
+              onClick={handleReplayVideo}
+              title="Click to replay animation"
+              className="flex lg:col-span-5 justify-center lg:justify-end items-center relative my-2 sm:my-4 lg:my-0 w-full cursor-pointer group"
+            >
               <div
                 className="relative w-full max-w-[320px] sm:max-w-sm lg:max-w-none lg:w-96 aspect-[16/9] lg:h-72 mx-auto overflow-hidden rounded-2xl lg:rounded-3xl shadow-xl border-2 border-white/30"
               >
                 <video
+                  ref={videoRef}
+                  src="/assets/delivery-rider-loop.mp4"
+                  poster="/assets/delivery-rider-final.png"
                   autoPlay
                   muted
                   playsInline
-                  preload="metadata"
-                  src="/assets/delivery-rider.mp4"
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-cover pointer-events-none"
                 />
               </div>
             </div>
           </div>
 
           {/* Search & Location Floating Bar */}
-          <div className="relative max-w-2xl">
+          <div className="relative max-w-2xl z-40">
             <form
               onSubmit={handleSearchSubmit}
               className="relative flex flex-col sm:flex-row items-center gap-2 rounded-2xl sm:rounded-full bg-white p-1.5 sm:p-2 shadow-2xl transition-all duration-300 z-20"
             >
               {/* Location Selector */}
-              <div className="flex items-center gap-2 px-3 sm:px-4 py-2 text-slate-700 border-b sm:border-b-0 sm:border-r border-slate-200 w-full sm:w-auto shrink-0 group">
+              <button
+                type="button"
+                onClick={() => setIsLocationModalOpen(true)}
+                className="flex items-center gap-2 px-3 sm:px-4 py-2 text-slate-700 border-b sm:border-b-0 sm:border-r border-slate-200 w-full sm:w-auto shrink-0 group cursor-pointer hover:bg-purple-50/50 transition-colors rounded-2xl sm:rounded-l-full text-left"
+              >
                 <MapPin className="h-4 w-4 text-[#981495] shrink-0" />
-                <input
-                  type="text"
-                  value={locationText}
-                  onChange={(e) => setLocationText(e.target.value)}
-                  placeholder="Enter location"
-                  className="text-xs sm:text-sm font-bold text-slate-900 bg-transparent outline-none border-none w-full sm:w-[170px] truncate"
-                />
-                <ChevronDown className="h-3.5 w-3.5 text-slate-400 shrink-0" />
-              </div>
+                <span className="text-xs sm:text-sm font-bold text-slate-900 w-full sm:w-[170px] truncate">
+                  {deliveryLocation.area}
+                </span>
+                <ChevronDown className="h-3.5 w-3.5 text-slate-400 shrink-0 group-hover:text-[#981495] transition-colors" />
+              </button>
 
               {/* Search Field */}
               <div className="relative flex items-center gap-2 px-3 py-1.5 sm:py-2 w-full flex-1 min-h-[44px]">
@@ -237,8 +273,11 @@ export function HeroSection() {
                     type="text"
                     value={searchQuery}
                     onFocus={() => setIsFocused(true)}
-                    onBlur={() => setTimeout(() => setIsFocused(false), 200)}
-                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onBlur={() => setTimeout(() => setIsFocused(false), 250)}
+                    onChange={(e) => {
+                      setSearchQuery(e.target.value);
+                      setIsFocused(true);
+                    }}
                     placeholder={isFocused ? "" : `Search "${SEARCH_SUGGESTIONS[suggestionIdx]}"...`}
                     className="relative z-10 text-xs sm:text-sm font-semibold text-slate-900 bg-transparent outline-none border-none w-full"
                   />
@@ -265,37 +304,155 @@ export function HeroSection() {
               </button>
             </form>
 
-            {/* Quick Suggestions Dropdown */}
+            {/* Live Instant Search Dropdown */}
             <AnimatePresence>
-              {isFocused && (
+              {(isFocused || searchQuery.trim().length > 0) && (
                 <motion.div
                   initial={{ opacity: 0, y: -4 }}
                   animate={{ opacity: 1, y: 4 }}
                   exit={{ opacity: 0, y: -4 }}
                   transition={{ duration: 0.15 }}
-                  className="absolute left-0 right-0 top-full z-30 mt-2 rounded-2xl bg-white p-3 sm:p-4 shadow-2xl border border-slate-100 text-slate-900"
+                  className="absolute left-0 right-0 top-full z-30 mt-2 rounded-2xl bg-white p-3 sm:p-4 shadow-2xl border border-purple-100/80 text-slate-900 max-h-[440px] overflow-y-auto"
                 >
-                  <div className="flex items-center justify-between pb-2 border-b border-slate-100">
-                    <span className="flex items-center gap-1 text-xs font-bold text-slate-800 uppercase tracking-wider">
-                      <Flame className="h-3.5 w-3.5 text-amber-500 fill-amber-500" />
-                      Popular near you
-                    </span>
-                    <span className="text-[10px] font-bold text-[#981495]">Tap to search</span>
-                  </div>
+                  {!searchQuery.trim() ? (
+                    <div>
+                      <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+                        <span className="flex items-center gap-1 text-xs font-bold text-slate-800 uppercase tracking-wider">
+                          <Flame className="h-3.5 w-3.5 text-amber-500 fill-amber-500" />
+                          Popular search categories
+                        </span>
+                        <span className="text-[10px] font-bold text-[#981495]">Tap to filter</span>
+                      </div>
 
-                  <div className="mt-2.5 flex flex-wrap gap-2">
-                    {POPULAR_TAGS.map((tag) => (
-                      <button
-                        key={tag.query}
-                        type="button"
-                        onClick={() => handleTagClick(tag.query)}
-                        className="inline-flex items-center gap-1.5 rounded-xl bg-purple-50 hover:bg-[#981495] hover:text-white px-3 py-2 text-xs font-bold text-[#981495] transition-all cursor-pointer min-h-[38px]"
-                      >
-                        <span>{tag.icon}</span>
-                        <span>{tag.label}</span>
-                      </button>
-                    ))}
-                  </div>
+                      <div className="mt-2.5 flex flex-wrap gap-2">
+                        {POPULAR_TAGS.map((tag) => (
+                          <button
+                            key={tag.query}
+                            type="button"
+                            onMouseDown={(e) => e.preventDefault()}
+                            onClick={() => handleTagClick(tag.query)}
+                            className="inline-flex items-center gap-1.5 rounded-xl bg-purple-50 hover:bg-[#981495] hover:text-white px-3 py-2 text-xs font-bold text-[#981495] transition-all cursor-pointer min-h-[38px]"
+                          >
+                            <span>{tag.icon}</span>
+                            <span>{tag.label}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {searchResults.length === 0 ? (
+                        <div className="py-6 text-center text-slate-500">
+                          <ShoppingBag className="h-8 w-8 text-slate-300 mx-auto mb-2" />
+                          <p className="text-xs font-bold text-slate-700">No matching products or shops found</p>
+                          <p className="text-[11px] text-slate-400 mt-0.5">Try searching for "Batter", "Chicken", "Bakery", "Pharmacy", or "Sweets"</p>
+                        </div>
+                      ) : (
+                        <>
+                          {/* 1. Products Section */}
+                          {productResults.length > 0 && (
+                            <div>
+                              <div className="flex items-center justify-between pb-1.5 border-b border-slate-100 mb-2">
+                                <span className="flex items-center gap-1.5 text-xs font-extrabold text-slate-800 uppercase tracking-wider">
+                                  <ShoppingBag className="h-3.5 w-3.5 text-purple-600" />
+                                  Products in local shops ({productResults.length})
+                                </span>
+                                <span className="text-[10px] font-bold text-purple-700">Instant Delivery</span>
+                              </div>
+
+                              <div className="space-y-1.5">
+                                {productResults.slice(0, 5).map((item: SearchResultItem) => (
+                                  <button
+                                    key={item.id}
+                                    type="button"
+                                    onMouseDown={(e) => e.preventDefault()}
+                                    onClick={() => {
+                                      setIsFocused(false);
+                                      navigate({ to: item.url as any });
+                                    }}
+                                    className="w-full flex items-center gap-3 p-2 rounded-xl hover:bg-purple-50/80 transition-colors text-left group"
+                                  >
+                                    <img
+                                      src={item.imageUrl}
+                                      alt={item.title}
+                                      className="w-10 h-10 rounded-lg object-cover border border-slate-200 shrink-0"
+                                    />
+                                    <div className="flex-1 min-w-0">
+                                      <h4 className="text-xs font-bold text-slate-900 group-hover:text-purple-700 truncate">
+                                        {item.title}
+                                      </h4>
+                                      <div className="flex items-center gap-2 text-[11px] text-slate-500 mt-0.5">
+                                        <span className="font-extrabold text-emerald-600 bg-emerald-50 px-1.5 py-0.2 rounded border border-emerald-200/50">
+                                          ₹{item.price}
+                                        </span>
+                                        <span className="truncate text-slate-600 font-semibold">
+                                          {item.subtitle}
+                                        </span>
+                                      </div>
+                                    </div>
+                                    <ChevronRight className="h-4 w-4 text-slate-300 group-hover:text-purple-600 shrink-0" />
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* 2. Shops Section */}
+                          {shopResults.length > 0 && (
+                            <div>
+                              <div className="flex items-center justify-between pb-1.5 border-b border-slate-100 mb-2">
+                                <span className="flex items-center gap-1.5 text-xs font-extrabold text-slate-800 uppercase tracking-wider">
+                                  <Store className="h-3.5 w-3.5 text-purple-600" />
+                                  Matching Local Shops ({shopResults.length})
+                                </span>
+                              </div>
+
+                              <div className="space-y-1.5">
+                                {shopResults.slice(0, 3).map((item: SearchResultItem) => (
+                                  <button
+                                    key={item.id}
+                                    type="button"
+                                    onMouseDown={(e) => e.preventDefault()}
+                                    onClick={() => {
+                                      setIsFocused(false);
+                                      navigate({ to: item.url as any });
+                                    }}
+                                    className="w-full flex items-center gap-3 p-2 rounded-xl hover:bg-purple-50/80 transition-colors text-left group"
+                                  >
+                                    <img
+                                      src={item.imageUrl}
+                                      alt={item.title}
+                                      className="w-10 h-10 rounded-lg object-cover border border-slate-200 shrink-0"
+                                    />
+                                    <div className="flex-1 min-w-0">
+                                      <h4 className="text-xs font-bold text-slate-900 group-hover:text-purple-700 truncate">
+                                        {item.title}
+                                      </h4>
+                                      <p className="text-[11px] text-slate-500 mt-0.5 font-medium truncate">
+                                        {item.subtitle}
+                                      </p>
+                                    </div>
+                                    <ChevronRight className="h-4 w-4 text-slate-300 group-hover:text-purple-600 shrink-0" />
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* View all button */}
+                          <button
+                            type="button"
+                            onMouseDown={(e) => e.preventDefault()}
+                            onClick={() => handleSearchSubmit(undefined, searchQuery)}
+                            className="w-full mt-2 py-2 px-3 rounded-xl bg-purple-900 hover:bg-purple-950 text-white text-xs font-bold flex items-center justify-center gap-1.5 transition-colors shadow-sm cursor-pointer"
+                          >
+                            <span>View all product & shop results for "{searchQuery}"</span>
+                            <ArrowUpRight className="h-3.5 w-3.5" />
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  )}
                 </motion.div>
               )}
             </AnimatePresence>
@@ -373,6 +530,7 @@ export function HeroSection() {
           </div>
         </div>
       </div>
+      <LocationModal isOpen={isLocationModalOpen} onClose={() => setIsLocationModalOpen(false)} />
     </section>
   );
 }

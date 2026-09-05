@@ -30,16 +30,16 @@ export function EcosystemMerchandisingStrips() {
         initial={{ opacity: 0, y: 12 }}
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true }}
-        className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-purple-900 via-purple-800 to-indigo-900 p-6 text-white shadow-xl"
+        className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-purple-950 via-purple-900 to-indigo-950 p-6 text-white shadow-xl border border-purple-200/50"
       >
         <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
           <div className="flex items-start gap-4">
-            <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-amber-400/20 text-amber-300 backdrop-blur-sm">
+            <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-white/10 text-[#F3D053] backdrop-blur-sm border border-white/20">
               <Trophy className="h-6 w-6" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="rounded-full bg-amber-400 px-2.5 py-0.5 text-[10px] font-extrabold uppercase text-slate-900">
+                <span className="rounded-full bg-gold-gradient px-2.5 py-0.5 text-[10px] font-black uppercase text-slate-950 shadow-xs border border-white/30">
                   {USER_REWARDS.tier} Member
                 </span>
                 <span className="text-xs text-purple-200">LocalShore Club</span>
@@ -55,7 +55,7 @@ export function EcosystemMerchandisingStrips() {
           <div className="flex shrink-0 items-center gap-2">
             <Link
               to="/rewards"
-              className="inline-flex items-center gap-1.5 rounded-xl bg-amber-400 px-4 py-2.5 text-xs font-extrabold text-slate-900 transition hover:bg-amber-300"
+              className="inline-flex items-center gap-1.5 rounded-xl bg-gold-gradient px-4 py-2.5 text-xs font-black text-slate-950 shadow-md transition hover:scale-105 active:scale-95 border border-white/30"
             >
               <Sparkles className="h-4 w-4" /> Redeem Points
             </Link>
@@ -120,10 +120,10 @@ export function EcosystemMerchandisingStrips() {
       </section>
 
       {/* 3. Best Shops & Best Sellers Strip */}
-      <section className="rounded-3xl border border-amber-200/80 bg-gradient-to-br from-amber-50/50 via-orange-50/30 to-rose-50/40 p-5">
+      <section className="rounded-3xl border border-amber-200/80 bg-gradient-to-br from-[#FBF4BE]/40 via-amber-50/40 to-orange-50/30 p-5 shadow-sm">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="grid h-8 w-8 place-items-center rounded-xl bg-amber-400 text-slate-900 font-bold text-sm">
+            <div className="grid h-8 w-8 place-items-center rounded-xl bg-gold-gradient text-slate-900 font-black text-sm shadow-xs">
               🏆
             </div>
             <div>
@@ -133,7 +133,7 @@ export function EcosystemMerchandisingStrips() {
           </div>
           <Link
             to="/best-shops"
-            className="flex items-center gap-1 rounded-xl bg-amber-400/80 px-3 py-1.5 text-xs font-bold text-slate-900 transition hover:bg-amber-400"
+            className="flex items-center gap-1 rounded-xl bg-gold-gradient px-3.5 py-1.5 text-xs font-black text-slate-950 transition hover:scale-105 shadow-xs border border-white/40"
           >
             Explore Leaderboard <ArrowRight className="h-3 w-3" />
           </Link>

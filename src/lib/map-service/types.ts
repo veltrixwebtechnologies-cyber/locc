@@ -18,6 +18,9 @@ export interface RouteResult {
   distanceMeters: number;
   durationSeconds: number;
   geometry: [number, number][]; // Array of [lng, lat]
+  distanceKm?: number;
+  durationMins?: number;
+  steps?: { instruction: string; distanceMeters: number; durationSeconds: number }[];
 }
 
 export interface MapMarkerItem {

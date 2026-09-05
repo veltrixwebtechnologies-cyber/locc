@@ -23,6 +23,9 @@ import {
 import { Fragment, type ReactNode, useEffect, useState, useRef } from "react";
 import { useWishlist, useWishlistProducts } from "@/lib/merchandising";
 import { AnimatePresence, m } from "motion/react";
+import { SwiggyInstantSearchDropdown } from "@/components/ui/swiggy-instant-search-dropdown";
+import { useDeliveryLocation } from "@/lib/location-store";
+import { LocationModal } from "@/components/ui/location-modal";
 
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
@@ -31,6 +34,8 @@ export function AppShell({ children }: { children: ReactNode }) {
   const auth = useAuth();
   const wishlist = useWishlist();
   const wishlistProducts = useWishlistProducts();
+  const [deliveryLocation] = useDeliveryLocation();
+  const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [headerQuery, setHeaderQuery] = useState("");
   const [searchFocused, setSearchFocused] = useState(false);
@@ -98,13 +103,14 @@ export function AppShell({ children }: { children: ReactNode }) {
         </Link>
         
         <div className="flex items-center gap-2">
-          <Link
-            to="/cities"
-            className="flex items-center gap-1 rounded-full border border-purple-200/60 bg-purple-50/80 px-2 py-1 text-[10px] font-bold text-purple-800"
+          <button
+            type="button"
+            onClick={() => setIsLocationModalOpen(true)}
+            className="flex items-center gap-1 rounded-full border border-purple-200/60 bg-purple-50/80 px-2 py-1 text-[10px] font-bold text-purple-800 hover:bg-purple-100 transition cursor-pointer"
           >
             <MapPin className="h-3 w-3 text-purple-600 shrink-0" />
-            <span className="truncate max-w-[70px] sm:max-w-[100px]">Coimbatore</span>
-          </Link>
+            <span className="truncate max-w-[70px] sm:max-w-[100px]">{deliveryLocation.area}</span>
+          </button>
 
           <Link
             to="/"
@@ -170,19 +176,14 @@ export function AppShell({ children }: { children: ReactNode }) {
           </Link>
           <button
             type="button"
-            onClick={() =>
-              navigate({
-                to: "/",
-                search: { category: undefined, q: undefined },
-              })
-            }
-            className="hidden min-w-0 shrink-0 items-center gap-2 border-l hairline pl-4 text-left xl:flex"
+            onClick={() => setIsLocationModalOpen(true)}
+            className="hidden min-w-0 shrink-0 items-center gap-2 border-l hairline pl-4 text-left xl:flex cursor-pointer hover:opacity-80 transition"
           >
             <MapPin className="h-4 w-4 shrink-0 text-primary" />
             <span>
               <span className="block text-[10px] font-medium text-muted-foreground">Deliver to</span>
               <span className="flex items-center gap-1 text-xs font-bold text-foreground">
-                Coimbatore, TN
+                {deliveryLocation.area}
                 <svg className="h-3 w-3 text-muted-foreground" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M6 9l6 6 6-6"/></svg>
               </span>
             </span>
@@ -193,47 +194,34 @@ export function AppShell({ children }: { children: ReactNode }) {
             className="relative flex min-w-[180px] flex-1 items-center gap-2 rounded-lg border hairline bg-muted/70 px-3 py-2.5 transition-colors focus-within:border-primary/40 focus-within:bg-background"
             onSubmit={(event) => {
               event.preventDefault();
+              setSearchFocused(false);
               void navigate({
-                to: "/",
+                to: "/search",
                 search: {
-                  category: undefined,
-                  q: headerQuery.trim() || undefined,
+                  q: headerQuery.trim(),
                 },
               });
             }}
             onFocus={() => setSearchFocused(true)}
-            onBlur={() => window.setTimeout(() => setSearchFocused(false), 120)}
+            onBlur={() => window.setTimeout(() => setSearchFocused(false), 200)}
           >
             <Search className="h-4 w-4 shrink-0 text-muted-foreground" />
             <input
               value={headerQuery}
               onChange={(event) => setHeaderQuery(event.target.value)}
-              placeholder="Search for products, brands and shops"
-              aria-label="Search products, brands and shops"
+              placeholder="Search for restaurants, shops, dishes or products"
+              aria-label="Search restaurants, shops, dishes or products"
               className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
             />
             <AnimatePresence>
-              {searchFocused && headerQuery.length === 0 && (
-                <m.div
-                  initial={{ opacity: 0, y: -6, scale: 0.98 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  exit={{ opacity: 0, y: -6, scale: 0.98 }}
-                  className="absolute left-0 right-0 top-full z-50 mt-2 rounded-xl border hairline bg-background p-2 shadow-xl"
-                >
-                  <p className="px-2 py-1 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-                    Try searching
-                  </p>
-                  {["Fresh groceries", "Milk and breakfast", "Local bakery"].map((suggestion) => (
-                    <button
-                      key={suggestion}
-                      type="button"
-                      onMouseDown={() => setHeaderQuery(suggestion)}
-                      className="block w-full rounded-lg px-2 py-2 text-left text-sm hover:bg-muted"
-                    >
-                      {suggestion}
-                    </button>
-                  ))}
-                </m.div>
+              {searchFocused && (
+                <div className="absolute left-0 right-0 top-full z-50 mt-2">
+                  <SwiggyInstantSearchDropdown
+                    query={headerQuery}
+                    onSelectResult={() => setSearchFocused(false)}
+                    onClearQuery={() => setHeaderQuery("")}
+                  />
+                </div>
               )}
             </AnimatePresence>
           </m.form>
@@ -318,14 +306,20 @@ export function AppShell({ children }: { children: ReactNode }) {
       <div className="hidden border-b border-purple-200/70 bg-purple-50/50 md:block">
         <div className="flex h-9 w-full items-center justify-between gap-6 px-4 md:px-6 text-[11px] text-foreground/75 lg:px-8">
           <div className="flex items-center gap-4">
-            <Link to="/cities" className="flex items-center gap-1.5 hover:text-primary transition">
+            <button
+              type="button"
+              onClick={() => setIsLocationModalOpen(true)}
+              className="flex items-center gap-1.5 hover:text-primary transition cursor-pointer text-left"
+            >
               <MapPin className="h-3.5 w-3.5 text-primary" />
               <span>
                 Delivering to{" "}
-                <strong className="font-semibold text-foreground underline decoration-dotted">Coimbatore, TN</strong>
-                <span className="ml-1.5 text-[10px] text-purple-600 font-bold">(View Cities)</span>
+                <strong className="font-semibold text-foreground underline decoration-dotted">
+                  {deliveryLocation.area}, {deliveryLocation.city}
+                </strong>
+                <span className="ml-1.5 text-[10px] text-purple-600 font-bold">(Change Location)</span>
               </span>
-            </Link>
+            </button>
           </div>
           <div className="flex items-center gap-4 lg:gap-5">
             <Link to="/best-shops" className="inline-flex items-center gap-1.5 hover:text-primary font-semibold text-amber-800">
@@ -400,6 +394,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           })}
         </div>
       </nav>
+      <LocationModal isOpen={isLocationModalOpen} onClose={() => setIsLocationModalOpen(false)} />
     </div>
   );
 }
