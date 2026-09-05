@@ -147,11 +147,27 @@ export function useDeliveryLocation(): [DeliveryLocation, (loc: DeliveryLocation
 /**
  * Auto-detect live GPS location on application load if permissions are granted or on initial session
  */
+let autoGPSDone = false;
+
 export function initAutoGPSLocation() {
-  if (typeof window === "undefined" || !navigator.geolocation) return;
+  if (typeof window === "undefined" || !navigator.geolocation || autoGPSDone) return;
+
+  const sessionKey = "localshore_auto_gps_done";
+  try {
+    if (sessionStorage.getItem(sessionKey)) {
+      autoGPSDone = true;
+      return;
+    }
+  } catch {
+    // Ignore storage errors
+  }
 
   const tryDetect = () => {
-    detectCurrentGPSLocation().catch((err) => {
+    autoGPSDone = true;
+    try {
+      sessionStorage.setItem(sessionKey, "1");
+    } catch {}
+    detectCurrentGPSLocation({ silent: true }).catch((err) => {
       console.warn("Auto GPS detection skipped:", err);
     });
   };
@@ -171,10 +187,12 @@ export function initAutoGPSLocation() {
 /**
  * Detect Current GPS Location using Browser Geolocation API
  */
-export async function detectCurrentGPSLocation(): Promise<DeliveryLocation> {
+export async function detectCurrentGPSLocation(options?: { silent?: boolean }): Promise<DeliveryLocation> {
   if (typeof window === "undefined" || !navigator.geolocation) {
     throw new Error("Geolocation is not supported by your browser.");
   }
+
+  const silent = options?.silent ?? false;
 
   return new Promise((resolve, reject) => {
     navigator.geolocation.getCurrentPosition(
@@ -249,9 +267,12 @@ export async function detectCurrentGPSLocation(): Promise<DeliveryLocation> {
         };
 
         setActiveDeliveryLocation(newLoc);
-        toast.success("Live Location Set", {
-          description: `${area}, ${city}`,
-        });
+        if (!silent) {
+          toast.success("Live Location Set", {
+            id: "live-location-toast",
+            description: `${area}, ${city}`,
+          });
+        }
         resolve(newLoc);
       },
       (error) => {
@@ -264,7 +285,9 @@ export async function detectCurrentGPSLocation(): Promise<DeliveryLocation> {
         } else if (error.code === error.TIMEOUT) {
           msg = "GPS request timed out. Please try again or select a location hub.";
         }
-        toast.error("Geolocation Error", { description: msg });
+        if (!silent) {
+          toast.error("Geolocation Error", { id: "live-location-toast-err", description: msg });
+        }
         reject(new Error(msg));
       },
       {

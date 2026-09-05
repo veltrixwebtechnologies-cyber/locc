@@ -33,7 +33,7 @@ export function LocationModal({ isOpen, onClose }: LocationModalProps) {
   const handleUseCurrentLocation = async () => {
     setIsLocating(true);
     try {
-      await detectCurrentGPSLocation();
+      await detectCurrentGPSLocation({ silent: false });
       onClose();
     } catch {
       // Error toast is already handled inside store
