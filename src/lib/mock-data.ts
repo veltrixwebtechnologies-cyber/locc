@@ -178,7 +178,7 @@ export const categoryLabel: Record<StoreCategory, string> = {
   restaurants: "Restaurants",
 };
 
-export const stores: Store[] = [
+const legacyStores: Store[] = [
   {
     id: "s_roja_bakes",
     name: "Roja Bakes & Sweets (பாப்பம்பட்டி பிரிவு)",
@@ -990,6 +990,67 @@ export const stores: Store[] = [
     lat: 11.0050,
     lng: 77.0880,
     imageUrl: storeImg("photo-1513519245088-0e12902e5a38"),
+  },
+];
+
+// Curated LocalShoree starter catalog: a small set of original neighborhood shops,
+// each with products generated from its category below.
+export const stores: Store[] = [
+  {
+    id: "s_localshore_daily",
+    name: "LocalShore Daily Basket",
+    category: "grocery",
+    tagline: "Everyday groceries, pantry staples and trusted local essentials",
+    distanceKm: 0.8,
+    rating: 4.9,
+    isOpen: true,
+    etaMin: 20,
+    address: "18 Market Street, Pappampatti, Coimbatore",
+    lat: 11.0031,
+    lng: 77.0862,
+    imageUrl: storeImg("photo-1604719312566-8912e9227c6a"),
+  },
+  {
+    id: "s_green_coast_fresh",
+    name: "Green Coast Fresh Market",
+    category: "palamuthir",
+    tagline: "Farm-fresh fruits, greens and seasonal produce picked for today",
+    distanceKm: 1.1,
+    rating: 4.8,
+    isOpen: true,
+    etaMin: 25,
+    address: "5 Garden Avenue, Pappampatti, Coimbatore",
+    lat: 11.0047,
+    lng: 77.0871,
+    imageUrl: storeImg("photo-1610832958506-aa56368176cf"),
+  },
+  {
+    id: "s_ammas_hearth",
+    name: "Amma's Hearth Kitchen",
+    category: "restaurants",
+    tagline: "Comforting South Indian meals, biryani and homestyle favorites",
+    distanceKm: 1.6,
+    rating: 4.9,
+    isOpen: true,
+    etaMin: 30,
+    address: "42 Temple Road, Singanallur, Coimbatore",
+    lat: 11.0018,
+    lng: 77.0258,
+    imageUrl: storeImg("photo-1555396273-367ea4eb4db5"),
+  },
+  {
+    id: "s_corner_bakehouse",
+    name: "The Corner Bakehouse",
+    category: "bakery",
+    tagline: "Small-batch breads, warm puffs, cakes and sweet treats",
+    distanceKm: 1.9,
+    rating: 4.7,
+    isOpen: true,
+    etaMin: 25,
+    address: "9 Station Road, Ondipudur, Coimbatore",
+    lat: 10.9938,
+    lng: 77.0523,
+    imageUrl: storeImg("photo-1509440159596-0249088772ff"),
   },
 ];
 
