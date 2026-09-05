@@ -120,8 +120,6 @@ export function isTestEntity(name?: string | null): boolean {
   const testNames = [
     "sss",
     "ggg",
-    "rajaaa shop",
-    "roja",
     "test",
     "test shop",
     "q",
