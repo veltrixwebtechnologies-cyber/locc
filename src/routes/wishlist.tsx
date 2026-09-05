@@ -32,7 +32,12 @@ function WishlistPage() {
           Saved products
         </p>
         <h1 className="mt-1 font-display text-3xl flex items-baseline gap-2">
-          Wishlist {products.data?.length ? <span className="text-lg font-sans font-normal text-muted-foreground">({products.data.length} {products.data.length === 1 ? "item" : "items"})</span> : null}
+          Wishlist{" "}
+          {products.data?.length ? (
+            <span className="text-lg font-sans font-normal text-muted-foreground">
+              ({products.data.length} {products.data.length === 1 ? "item" : "items"})
+            </span>
+          ) : null}
         </h1>
       </div>
 

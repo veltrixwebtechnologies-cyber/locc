@@ -55,7 +55,7 @@ export function ShopCategoryNavBar({
       (c) =>
         c.name.toLowerCase().includes(q) ||
         c.description.toLowerCase().includes(q) ||
-        c.keywords.some((k) => k.toLowerCase().includes(q))
+        c.keywords.some((k) => k.toLowerCase().includes(q)),
     );
   }, [searchQuery]);
 
@@ -65,48 +65,65 @@ export function ShopCategoryNavBar({
       {
         title: "Essentials & Daily Shopping",
         categories: ALL_SHOP_CATEGORIES.filter((c) =>
-          ["all", "favorites", "grocery", "supermarkets", "pharmacy", "fruits_veg", "meat_fish"].includes(c.id)
+          [
+            "all",
+            "favorites",
+            "grocery",
+            "supermarkets",
+            "pharmacy",
+            "fruits_veg",
+            "meat_fish",
+          ].includes(c.id),
         ),
       },
       {
         title: "Food, Bakeries & Sweets",
         categories: ALL_SHOP_CATEGORIES.filter((c) =>
-          ["bakery", "sweet_shops", "restaurants", "cafes"].includes(c.id)
+          ["bakery", "sweet_shops", "restaurants", "cafes"].includes(c.id),
         ),
       },
       {
         title: "Fashion, Accessories & Beauty",
         categories: ALL_SHOP_CATEGORIES.filter((c) =>
-          ["fashion", "boutiques", "footwear", "jewellery", "beauty"].includes(c.id)
+          ["fashion", "boutiques", "footwear", "jewellery", "beauty"].includes(c.id),
         ),
       },
       {
         title: "Electronics, Gadgets & Spares",
         categories: ALL_SHOP_CATEGORIES.filter((c) =>
-          ["electronics", "mobile", "auto", "repair"].includes(c.id)
+          ["electronics", "mobile", "auto", "repair"].includes(c.id),
         ),
       },
       {
         title: "Home, Hardware & Supplies",
         categories: ALL_SHOP_CATEGORIES.filter((c) =>
-          ["home_kitchen", "furniture", "hardware", "pooja"].includes(c.id)
+          ["home_kitchen", "furniture", "hardware", "pooja"].includes(c.id),
         ),
       },
       {
         title: "Books, Leisure & Services",
         categories: ALL_SHOP_CATEGORIES.filter((c) =>
-          ["books_stationery", "sports", "toys", "gifts", "flowers", "pet_shops", "local_services"].includes(c.id)
+          [
+            "books_stationery",
+            "sports",
+            "toys",
+            "gifts",
+            "flowers",
+            "pet_shops",
+            "local_services",
+          ].includes(c.id),
         ),
       },
     ];
   }, []);
 
   return (
-    <div className={`w-full bg-white/95 backdrop-blur-md border-b border-purple-100/80 sticky top-[64px] z-30 py-2.5 transition-all ${className}`}>
+    <div
+      className={`w-full bg-white/95 backdrop-blur-md border-b border-purple-100/80 sticky top-[64px] z-30 py-2.5 transition-all ${className}`}
+    >
       <div className="mx-auto max-w-7xl px-3 sm:px-6 flex items-center gap-2">
         {/* Scrollable Container */}
         <div className="flex-1 overflow-x-auto scrollbar-none [scrollbar-width:none] [&::-webkit-scrollbar]:hidden flex items-center gap-2 py-0.5 px-0.5">
-          
           {/* Desktop Visibility (Top 10 Priority) */}
           <div className="hidden lg:flex items-center gap-2">
             {DESKTOP_PRIORITY_CATEGORIES.map((cat) => {
@@ -151,9 +168,7 @@ export function ShopCategoryNavBar({
                   }`}
                 >
                   <Icon
-                    className={`h-3.5 w-3.5 ${
-                      isSelected ? "text-[#F3D053]" : "text-purple-600"
-                    }`}
+                    className={`h-3.5 w-3.5 ${isSelected ? "text-[#F3D053]" : "text-purple-600"}`}
                   />
                   <span>{cat.name}</span>
                 </button>
@@ -195,7 +210,9 @@ export function ShopCategoryNavBar({
                   <Store className="h-5 w-5 text-[#F3D053]" />
                 </div>
                 <div>
-                  <DialogTitle className="text-xl font-bold text-white">All Shop Categories</DialogTitle>
+                  <DialogTitle className="text-xl font-bold text-white">
+                    All Shop Categories
+                  </DialogTitle>
                   <p className="text-xs text-purple-200 mt-0.5">
                     Browse all 30+ specialized local business types in your neighborhood
                   </p>
@@ -233,8 +250,12 @@ export function ShopCategoryNavBar({
                 </h4>
                 {filteredDrawerCategories.length === 0 ? (
                   <div className="py-12 text-center text-slate-500">
-                    <p className="text-sm font-medium">No shop categories found matching "{searchQuery}"</p>
-                    <p className="text-xs text-slate-400 mt-1">Try searching for bakery, grocery, medical, or clothing.</p>
+                    <p className="text-sm font-medium">
+                      No shop categories found matching "{searchQuery}"
+                    </p>
+                    <p className="text-xs text-slate-400 mt-1">
+                      Try searching for bakery, grocery, medical, or clothing.
+                    </p>
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -252,7 +273,9 @@ export function ShopCategoryNavBar({
                               : "bg-white text-slate-800 border-slate-200 hover:border-purple-300 hover:shadow-sm"
                           }`}
                         >
-                          <div className={`p-2.5 rounded-xl shrink-0 ${isSelected ? "bg-white/10 text-[#F3D053]" : "bg-purple-50 text-purple-700"}`}>
+                          <div
+                            className={`p-2.5 rounded-xl shrink-0 ${isSelected ? "bg-white/10 text-[#F3D053]" : "bg-purple-50 text-purple-700"}`}
+                          >
                             <Icon className="h-5 w-5" />
                           </div>
                           <div className="flex-1 min-w-0">
@@ -260,7 +283,9 @@ export function ShopCategoryNavBar({
                               <h5 className="text-xs font-bold truncate">{cat.name}</h5>
                               {isSelected && <Check className="h-3.5 w-3.5 text-[#F3D053]" />}
                             </div>
-                            <p className={`text-[11px] mt-0.5 line-clamp-2 leading-relaxed ${isSelected ? "text-purple-200" : "text-slate-500"}`}>
+                            <p
+                              className={`text-[11px] mt-0.5 line-clamp-2 leading-relaxed ${isSelected ? "text-purple-200" : "text-slate-500"}`}
+                            >
                               {cat.description}
                             </p>
                           </div>
@@ -292,7 +317,9 @@ export function ShopCategoryNavBar({
                               : "bg-white text-slate-800 border-slate-200 hover:border-purple-300 hover:shadow-sm"
                           }`}
                         >
-                          <div className={`p-2.5 rounded-xl shrink-0 ${isSelected ? "bg-white/10 text-[#F3D053]" : "bg-purple-50 text-purple-700"}`}>
+                          <div
+                            className={`p-2.5 rounded-xl shrink-0 ${isSelected ? "bg-white/10 text-[#F3D053]" : "bg-purple-50 text-purple-700"}`}
+                          >
                             <Icon className="h-5 w-5" />
                           </div>
                           <div className="flex-1 min-w-0">
@@ -300,7 +327,9 @@ export function ShopCategoryNavBar({
                               <h5 className="text-xs font-bold truncate">{cat.name}</h5>
                               {isSelected && <Check className="h-3.5 w-3.5 text-[#F3D053]" />}
                             </div>
-                            <p className={`text-[11px] mt-0.5 line-clamp-2 leading-relaxed ${isSelected ? "text-purple-200" : "text-slate-500"}`}>
+                            <p
+                              className={`text-[11px] mt-0.5 line-clamp-2 leading-relaxed ${isSelected ? "text-purple-200" : "text-slate-500"}`}
+                            >
                               {cat.description}
                             </p>
                           </div>

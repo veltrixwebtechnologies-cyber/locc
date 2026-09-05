@@ -21,7 +21,7 @@ function useSlowAutoScroll<T extends HTMLDivElement>(speed = 0.55) {
       ([entry]) => {
         setIsVisible(entry.isIntersecting);
       },
-      { threshold: 0.1 }
+      { threshold: 0.1 },
     );
 
     observer.observe(el);
@@ -76,7 +76,8 @@ export function SwiggyTopDealsStrip() {
       subtitle: "Fresh staples & local produce",
       category: "grocery",
       bgColor: "#ffc200",
-      image: "https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=400&q=80",
+      image:
+        "https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=400&q=80",
     },
     {
       id: "deal-pharmacy",
@@ -85,7 +86,8 @@ export function SwiggyTopDealsStrip() {
       subtitle: "24x7 Chemist in 15 mins",
       category: "pharmacy",
       bgColor: "#ffc200",
-      image: "https://images.unsplash.com/photo-1587854692152-cbe660dbde88?auto=format&fit=crop&w=400&q=80",
+      image:
+        "https://images.unsplash.com/photo-1587854692152-cbe660dbde88?auto=format&fit=crop&w=400&q=80",
     },
     {
       id: "deal-bakery",
@@ -94,7 +96,8 @@ export function SwiggyTopDealsStrip() {
       subtitle: "Oven baked breads & cakes",
       category: "bakery",
       bgColor: "#ffc200",
-      image: "https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=400&q=80",
+      image:
+        "https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=400&q=80",
     },
     {
       id: "deal-stationery",
@@ -103,15 +106,14 @@ export function SwiggyTopDealsStrip() {
       subtitle: "School, office & gadget needs",
       category: "stationery",
       bgColor: "#ffc200",
-      image: "https://images.unsplash.com/photo-1519682337058-a94d519337bc?auto=format&fit=crop&w=400&q=80",
+      image:
+        "https://images.unsplash.com/photo-1519682337058-a94d519337bc?auto=format&fit=crop&w=400&q=80",
     },
   ];
 
   return (
     <div className="w-full overflow-hidden py-3">
-      <div
-        className="flex gap-3 overflow-x-auto px-5 md:px-8 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
-      >
+      <div className="flex gap-3 overflow-x-auto px-5 md:px-8 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
         {deals.map((deal) => (
           <Link
             key={deal.id}
@@ -170,7 +172,8 @@ export function SwiggyFeaturedBanner() {
       buttonBg: "#284a75",
       bgGradient: "from-[#ebf3fe] via-[#f4f8ff] to-white",
       borderColor: "border-[#d8e6fa]",
-      image: "https://images.unsplash.com/photo-1604719312566-8912e9227c6a?auto=format&fit=crop&w=500&q=80",
+      image:
+        "https://images.unsplash.com/photo-1604719312566-8912e9227c6a?auto=format&fit=crop&w=500&q=80",
     },
     {
       id: "ad-2",
@@ -183,7 +186,8 @@ export function SwiggyFeaturedBanner() {
       buttonBg: "#115e59",
       bgGradient: "from-[#eefcf6] via-[#f4fdf9] to-white",
       borderColor: "border-[#cceee0]",
-      image: "https://images.unsplash.com/photo-1587854692152-cbe660dbde88?auto=format&fit=crop&w=500&q=80",
+      image:
+        "https://images.unsplash.com/photo-1587854692152-cbe660dbde88?auto=format&fit=crop&w=500&q=80",
     },
     {
       id: "ad-3",
@@ -196,7 +200,8 @@ export function SwiggyFeaturedBanner() {
       buttonBg: "#92400e",
       bgGradient: "from-[#fff8ee] via-[#fffcf6] to-white",
       borderColor: "border-[#fde6c7]",
-      image: "https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=500&q=80",
+      image:
+        "https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=500&q=80",
     },
     {
       id: "ad-4",
@@ -209,7 +214,8 @@ export function SwiggyFeaturedBanner() {
       buttonBg: "#5b21b6",
       bgGradient: "from-[#faf5ff] via-[#fcf8ff] to-white",
       borderColor: "border-[#ebd9fc]",
-      image: "https://images.unsplash.com/photo-1519682337058-a94d519337bc?auto=format&fit=crop&w=500&q=80",
+      image:
+        "https://images.unsplash.com/photo-1519682337058-a94d519337bc?auto=format&fit=crop&w=500&q=80",
     },
   ];
 
@@ -217,10 +223,7 @@ export function SwiggyFeaturedBanner() {
   const { scrollRef, pauseHandlers } = useSlowAutoScroll<HTMLDivElement>(0.55);
 
   // Triple items array for infinite seamless looping
-  const tripleAdBanners = useMemo(
-    () => [...adBanners, ...adBanners, ...adBanners],
-    [adBanners]
-  );
+  const tripleAdBanners = useMemo(() => [...adBanners, ...adBanners, ...adBanners], [adBanners]);
 
   return (
     <div className="w-full overflow-hidden py-3" {...pauseHandlers}>
@@ -243,9 +246,7 @@ export function SwiggyFeaturedBanner() {
                 <h3 className="text-xl sm:text-2xl font-black text-slate-900 leading-tight tracking-tight">
                   {ad.headline}
                 </h3>
-                <p className="text-xs font-semibold text-slate-500 truncate">
-                  {ad.subtitle}
-                </p>
+                <p className="text-xs font-semibold text-slate-500 truncate">{ad.subtitle}</p>
 
                 <div className="pt-2">
                   <Link
@@ -258,18 +259,12 @@ export function SwiggyFeaturedBanner() {
                   </Link>
                 </div>
 
-                <p className="text-[9px] text-slate-400 font-medium pt-0.5">
-                  *T&amp;C apply
-                </p>
+                <p className="text-[9px] text-slate-400 font-medium pt-0.5">*T&amp;C apply</p>
               </div>
 
               {/* Right Image + Floating Merchant Logo Badge */}
               <div className="relative shrink-0 w-[130px] sm:w-[160px] h-[105px] sm:h-[120px] rounded-2xl overflow-hidden bg-slate-100 border border-white/80 shadow-xs">
-                <img
-                  src={ad.image}
-                  alt={ad.merchant}
-                  className="h-full w-full object-cover"
-                />
+                <img src={ad.image} alt={ad.merchant} className="h-full w-full object-cover" />
 
                 {/* Floating Rounded Merchant Logo Badge (Top Right) */}
                 <div className="absolute top-2 right-2 flex items-center gap-1 rounded-xl bg-white/95 backdrop-blur-xs px-2 py-1 shadow-md border border-slate-100">
@@ -293,11 +288,7 @@ export function SwiggyFeaturedBanner() {
 }
 
 /* ─── 3. Shoreline ₹99 Local Budget Store ────────────────────────────────────── */
-export function Swiggy99StoreSection({
-  products = [],
-}: {
-  products?: MerchandisingProduct[];
-}) {
+export function Swiggy99StoreSection({ products = [] }: { products?: MerchandisingProduct[] }) {
   const localBudgetItems = [
     {
       id: "b1",
@@ -306,7 +297,8 @@ export function Swiggy99StoreSection({
       selling_price: 45,
       mrp: 60,
       category: "Grocery",
-      image_url: "https://images.unsplash.com/photo-1571771894821-ce9b6c11b08e?auto=format&fit=crop&w=400&q=80",
+      image_url:
+        "https://images.unsplash.com/photo-1571771894821-ce9b6c11b08e?auto=format&fit=crop&w=400&q=80",
       shop_name: "Anand Kirana",
       average_rating: 4.7,
     },
@@ -317,7 +309,8 @@ export function Swiggy99StoreSection({
       selling_price: 72,
       mrp: 85,
       category: "Dairy & Eggs",
-      image_url: "https://images.unsplash.com/photo-1582722872445-44dc5f7e3c8f?auto=format&fit=crop&w=400&q=80",
+      image_url:
+        "https://images.unsplash.com/photo-1582722872445-44dc5f7e3c8f?auto=format&fit=crop&w=400&q=80",
       shop_name: "Anand Kirana",
       average_rating: 4.8,
     },
@@ -328,7 +321,8 @@ export function Swiggy99StoreSection({
       selling_price: 40,
       mrp: 55,
       category: "Fresh",
-      image_url: "https://images.unsplash.com/photo-1592924357228-91a4daadcfea?auto=format&fit=crop&w=400&q=80",
+      image_url:
+        "https://images.unsplash.com/photo-1592924357228-91a4daadcfea?auto=format&fit=crop&w=400&q=80",
       shop_name: "Nadar Provisions",
       average_rating: 4.6,
     },
@@ -339,7 +333,8 @@ export function Swiggy99StoreSection({
       selling_price: 22,
       mrp: 30,
       category: "Pharmacy",
-      image_url: "https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?auto=format&fit=crop&w=400&q=80",
+      image_url:
+        "https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?auto=format&fit=crop&w=400&q=80",
       shop_name: "Sagar Medicals",
       average_rating: 4.9,
     },
@@ -350,7 +345,8 @@ export function Swiggy99StoreSection({
       selling_price: 65,
       mrp: 80,
       category: "Bakery",
-      image_url: "https://images.unsplash.com/photo-1555507036-ab1f4038808a?auto=format&fit=crop&w=400&q=80",
+      image_url:
+        "https://images.unsplash.com/photo-1555507036-ab1f4038808a?auto=format&fit=crop&w=400&q=80",
       shop_name: "Coastline Bakes",
       average_rating: 4.9,
     },
@@ -361,7 +357,8 @@ export function Swiggy99StoreSection({
       selling_price: 60,
       mrp: 75,
       category: "Stationery",
-      image_url: "https://images.unsplash.com/photo-1583485088034-697b5bc36b92?auto=format&fit=crop&w=400&q=80",
+      image_url:
+        "https://images.unsplash.com/photo-1583485088034-697b5bc36b92?auto=format&fit=crop&w=400&q=80",
       shop_name: "Kavya Stationery",
       average_rating: 4.5,
     },
@@ -369,7 +366,9 @@ export function Swiggy99StoreSection({
 
   const itemsToDisplay = useMemo(() => {
     if (products && products.length > 0) {
-      const cheapProducts = products.filter((p: any) => Number(p.price ?? p.selling_price ?? 99) <= 250);
+      const cheapProducts = products.filter(
+        (p: any) => Number(p.price ?? p.selling_price ?? 99) <= 250,
+      );
       const source = cheapProducts.length > 0 ? cheapProducts : products;
       return source.slice(0, 10).map((p: any) => ({
         id: p.id,
@@ -405,9 +404,7 @@ export function Swiggy99StoreSection({
           <div className="flex items-center gap-2.5">
             {/* 99 Store Badge Icon */}
             <div className="flex items-center justify-center rounded-xl bg-slate-900 px-3 py-1 shadow-sm">
-              <span className="text-lg font-black tracking-tight text-[#ffc200]">
-                99 store
-              </span>
+              <span className="text-lg font-black tracking-tight text-[#ffc200]">99 store</span>
             </div>
 
             <div>
@@ -448,7 +445,10 @@ export function Swiggy99StoreSection({
         </button>
 
         {/* Horizontal Row of Products */}
-        <div ref={scrollRef} className="flex gap-3 overflow-x-auto pb-2 pt-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden scroll-smooth">
+        <div
+          ref={scrollRef}
+          className="flex gap-3 overflow-x-auto pb-2 pt-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden scroll-smooth"
+        >
           {itemsToDisplay.map((item: any) => {
             const sellingPrice = Number(item.selling_price);
             const mrp = Number(item.mrp);
@@ -500,9 +500,7 @@ export function Swiggy99StoreSection({
                   {/* Price row */}
                   <div className="flex items-center gap-1.5">
                     {mrp > sellingPrice && (
-                      <span className="text-[10px] text-slate-400 line-through">
-                        ₹{mrp}
-                      </span>
+                      <span className="text-[10px] text-slate-400 line-through">₹{mrp}</span>
                     )}
                     <span className="rounded-md bg-[#ffc200] px-1.5 py-0.5 text-[11px] font-black text-slate-900">
                       ₹{sellingPrice}

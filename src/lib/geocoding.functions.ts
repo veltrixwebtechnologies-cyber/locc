@@ -8,6 +8,8 @@ const geocodeInput = z.object({
 
 type GeocodeResult = {
   address: string;
+  area?: string;
+  city?: string;
 };
 
 let lastNominatimRequestAt = 0;
@@ -45,16 +47,45 @@ export const reverseGeocode = createServerFn({ method: "GET" })
       if (response.ok) {
         const payload = (await response.json()) as {
           display_name?: string;
+          address?: Record<string, string>;
           error?: string;
         };
 
-        if (payload.display_name && !payload.error) {
-          return { address: payload.display_name };
+        if (payload && !payload.error) {
+          const addrObj = payload.address || {};
+          const area =
+            addrObj.suburb ||
+            addrObj.neighbourhood ||
+            addrObj.residential ||
+            addrObj.village ||
+            addrObj.road ||
+            addrObj.town ||
+            addrObj.city_district ||
+            "Live GPS Location";
+
+          const district =
+            addrObj.city ||
+            addrObj.town ||
+            addrObj.county ||
+            addrObj.state_district ||
+            "Coimbatore";
+          const state = addrObj.state || "TN";
+          const city = `${district}, ${state}`;
+
+          return {
+            address: payload.display_name || `${area}, ${city}`,
+            area,
+            city,
+          };
         }
       }
     } catch {
       // Fallback below
     }
 
-    return { address: `Near ${data.lat.toFixed(4)}, ${data.lng.toFixed(4)}` };
+    return {
+      address: `Near ${data.lat.toFixed(4)}, ${data.lng.toFixed(4)}, Coimbatore`,
+      area: `GPS (${data.lat.toFixed(3)}, ${data.lng.toFixed(3)})`,
+      city: "Coimbatore, TN",
+    };
   });

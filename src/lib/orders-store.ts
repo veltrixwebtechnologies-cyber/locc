@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import type { CartLine } from "./cart-store";
 import { supabase } from "@/integrations/supabase/client";
+import { isValidCoordinate, normalizeCoordinate, haversineDistanceKm } from "@/lib/geo";
 
 const isUuid = (value: string) =>
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
@@ -84,14 +85,22 @@ export interface Order {
   deliveryFee: number;
   total: number;
   address: string;
-  destination: { lat: number; lng: number };
+  destination: { lat: number; lng: number } | null;
   paymentMethod: string;
   deliveryOtp?: string;
   couponCode?: string;
   discountAmount?: number;
   createdAt: number;
   status: OrderStatus;
-  partner?: { name: string; rating: number; lat?: number; lng?: number; userRating?: number; vehicle?: string; deliveriesCount?: number };
+  partner?: {
+    name: string;
+    rating: number;
+    lat?: number;
+    lng?: number;
+    userRating?: number;
+    vehicle?: string;
+    deliveriesCount?: number;
+  };
   etaMin: number;
   distanceKm: number;
 }
@@ -113,37 +122,40 @@ function fromRow(row: any): Order {
       }
     : undefined;
 
-  const sellerLat = Number(row.seller?.lat ?? row.seller?.wizard_data?.lat ?? 9.9816);
-  const sellerLng = Number(row.seller?.lng ?? row.seller?.wizard_data?.lng ?? 76.2999);
+  const sellerCoordinates =
+    normalizeCoordinate({ lat: row.seller?.lat, lng: row.seller?.lng }) ??
+    normalizeCoordinate(row.seller?.wizard_data?.pickupCoordinates) ??
+    normalizeCoordinate(row.seller?.wizard_data?.shopCoordinates) ??
+    null;
 
   // Try to extract live data from delivery assignment
   const assignment = Array.isArray(row.delivery_assignments)
-    ? row.delivery_assignments.find((a: any) => !['expired', 'rejected', 'cancelled'].includes(a.status))
+    ? row.delivery_assignments.find(
+        (a: any) => !["expired", "rejected", "cancelled"].includes(a.status),
+      )
     : null;
 
   // Get partner location from assignment if not from direct join
   const livePartnerLat = assignment?.current_latitude ?? partnerData?.lat;
   const livePartnerLng = assignment?.current_longitude ?? partnerData?.lng;
-  const liveHeading = Number(assignment?.current_heading ?? 0);
-
   // Calculate real distance if partner and destination locations are available
-  const custLat = Number.isFinite(Number(row.customer_latitude)) ? Number(row.customer_latitude) : null;
-  const custLng = Number.isFinite(Number(row.customer_longitude)) ? Number(row.customer_longitude) : null;
+  const custLat = isValidCoordinate(row.customer_latitude, row.customer_longitude)
+    ? row.customer_latitude
+    : null;
+  const custLng = isValidCoordinate(row.customer_latitude, row.customer_longitude)
+    ? row.customer_longitude
+    : null;
   let realDistanceKm = 2.4; // default
   let realEtaMin = 25; // default
   if (livePartnerLat && livePartnerLng && custLat && custLng) {
-    const R = 6371;
-    const dLat = ((custLat - livePartnerLat) * Math.PI) / 180;
-    const dLon = ((custLng - livePartnerLng) * Math.PI) / 180;
-    const a = Math.sin(dLat / 2) ** 2 + Math.cos((livePartnerLat * Math.PI) / 180) * Math.cos((custLat * Math.PI) / 180) * Math.sin(dLon / 2) ** 2;
-    realDistanceKm = Math.round(2 * R * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)) * 10) / 10;
+    realDistanceKm =
+      Math.round(haversineDistanceKm(livePartnerLat, livePartnerLng, custLat, custLng) * 10) / 10;
     realEtaMin = Math.max(3, Math.round((realDistanceKm / 22) * 60) + 3);
-  } else if (sellerLat && sellerLng && custLat && custLng) {
-    const R = 6371;
-    const dLat = ((custLat - sellerLat) * Math.PI) / 180;
-    const dLon = ((custLng - sellerLng) * Math.PI) / 180;
-    const a = Math.sin(dLat / 2) ** 2 + Math.cos((sellerLat * Math.PI) / 180) * Math.cos((custLat * Math.PI) / 180) * Math.sin(dLon / 2) ** 2;
-    realDistanceKm = Math.round(2 * R * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)) * 10) / 10;
+  } else if (sellerCoordinates && custLat && custLng) {
+    realDistanceKm =
+      Math.round(
+        haversineDistanceKm(sellerCoordinates.lat, sellerCoordinates.lng, custLat, custLng) * 10,
+      ) / 10;
     realEtaMin = Math.max(5, Math.round((realDistanceKm / 22) * 60) + 5);
   }
 
@@ -169,7 +181,7 @@ function fromRow(row: any): Order {
     code: row.order_number,
     storeId: row.seller_id,
     storeName: row.seller?.business_name ?? "Local Shore shop",
-    storeCoordinates: Number.isFinite(sellerLat) && Number.isFinite(sellerLng) ? { lat: sellerLat, lng: sellerLng } : undefined,
+    storeCoordinates: sellerCoordinates ?? undefined,
     lines: (row.order_items ?? []).map((item: any) => ({
       productId: item.product_id,
       storeId: row.seller_id,
@@ -182,11 +194,9 @@ function fromRow(row: any): Order {
     deliveryFee: Number(row.shipping_fee),
     total: Number(row.total),
     address: row.buyer_address ?? "",
-    destination:
-      Number.isFinite(Number(row.customer_latitude)) &&
-      Number.isFinite(Number(row.customer_longitude))
-        ? { lat: Number(row.customer_latitude), lng: Number(row.customer_longitude) }
-        : { lat: 9.9816, lng: 76.2999 },
+    destination: isValidCoordinate(row.customer_latitude, row.customer_longitude)
+      ? { lat: row.customer_latitude, lng: row.customer_longitude }
+      : null,
     paymentMethod:
       row.payment_method === "upi"
         ? "UPI"
@@ -213,7 +223,9 @@ async function loadOrders(): Promise<Order[]> {
   // 1. Try query with delivery partner details and assignment location data
   const { data: fullData, error: fullError } = await (supabase as any)
     .from("orders")
-    .select("*, order_items(*), seller:sellers(business_name, lat, lng, wizard_data), assigned_partner:delivery_partners(full_name, rating, current_latitude, current_longitude), delivery_assignments(id, status, current_latitude, current_longitude, current_heading, estimated_delivery_eta)")
+    .select(
+      "*, order_items(*), seller:sellers(business_name, lat, lng, wizard_data), assigned_partner:delivery_partners(full_name, rating, current_latitude, current_longitude), delivery_assignments(id, status, current_latitude, current_longitude, current_heading, estimated_delivery_eta)",
+    )
     .eq("user_id", userId)
     .order("placed_at", { ascending: false });
 
@@ -302,8 +314,14 @@ export const ordersStore = {
       p_payment_method:
         order.paymentMethod === "UPI" ? "upi" : order.paymentMethod === "Card" ? "card" : "cod",
       p_coupon_code: order.couponCode ?? null,
-      p_customer_latitude: Number.isFinite(order.destination?.lat) ? order.destination.lat : null,
-      p_customer_longitude: Number.isFinite(order.destination?.lng) ? order.destination.lng : null,
+      p_customer_latitude:
+        order.destination && isValidCoordinate(order.destination.lat, order.destination.lng)
+          ? order.destination.lat
+          : null,
+      p_customer_longitude:
+        order.destination && isValidCoordinate(order.destination.lat, order.destination.lng)
+          ? order.destination.lng
+          : null,
     };
 
     const { data: created, error } = await (supabase as any).rpc("place_order_once", {
@@ -365,7 +383,11 @@ export function useOrdersState() {
       .channel("shoreline-orders")
       .on("postgres_changes", { event: "*", schema: "public", table: "orders" }, refresh)
       .on("postgres_changes", { event: "*", schema: "public", table: "order_items" }, refresh)
-      .on("postgres_changes", { event: "*", schema: "public", table: "delivery_assignments" }, refresh)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "delivery_assignments" },
+        refresh,
+      )
       .subscribe();
     const refreshWhenVisible = () => {
       if (document.visibilityState === "visible") refresh();

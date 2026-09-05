@@ -98,7 +98,9 @@ export const cartStore = {
     persist();
     if (previousStoreName && typeof window !== "undefined") {
       try {
-        toast.info(`Cart updated to ${storeName}. Items from ${previousStoreName} were replaced for single-shop checkout.`);
+        toast.info(
+          `Cart updated to ${storeName}. Items from ${previousStoreName} were replaced for single-shop checkout.`,
+        );
       } catch {
         // Safe fallback
       }

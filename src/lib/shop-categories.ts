@@ -66,7 +66,8 @@ export const ALL_SHOP_CATEGORIES: ShopCategoryConfig[] = [
     slug: "all-shops",
     iconName: "Grid",
     icon: Grid,
-    description: "Explore all verified local businesses, specialty stores, and markets near your location.",
+    description:
+      "Explore all verified local businesses, specialty stores, and markets near your location.",
     displayOrder: 1,
     active: true,
     keywords: ["all", "shops", "stores", "local", "everything", "bazaar", "market"],
@@ -81,7 +82,8 @@ export const ALL_SHOP_CATEGORIES: ShopCategoryConfig[] = [
     slug: "local-favorites",
     iconName: "Star",
     icon: Star,
-    description: "Curated local shops with highest customer ratings, repeat buyers, and top community trust.",
+    description:
+      "Curated local shops with highest customer ratings, repeat buyers, and top community trust.",
     displayOrder: 2,
     active: true,
     keywords: ["favorite", "favorites", "popular", "top rated", "curated", "best", "trusted"],
@@ -96,10 +98,23 @@ export const ALL_SHOP_CATEGORIES: ShopCategoryConfig[] = [
     slug: "kirana-grocery",
     iconName: "ShoppingBag",
     icon: ShoppingBag,
-    description: "Daily kitchen ration, staples, cold-pressed oils, fresh batter, rice & neighborhood provisions.",
+    description:
+      "Daily kitchen ration, staples, cold-pressed oils, fresh batter, rice & neighborhood provisions.",
     displayOrder: 3,
     active: true,
-    keywords: ["kirana", "grocery", "groceries", "ration", "provisions", "flour", "rice", "pulses", "oil", "maavu", "batter"],
+    keywords: [
+      "kirana",
+      "grocery",
+      "groceries",
+      "ration",
+      "provisions",
+      "flour",
+      "rice",
+      "pulses",
+      "oil",
+      "maavu",
+      "batter",
+    ],
     desktopPriority: true,
     mobilePriority: true,
     heading: "Groceries Near You",
@@ -111,7 +126,8 @@ export const ALL_SHOP_CATEGORIES: ShopCategoryConfig[] = [
     slug: "supermarkets",
     iconName: "Store",
     icon: Store,
-    description: "Multi-departmental supermarkets for complete monthly family ration & household goods.",
+    description:
+      "Multi-departmental supermarkets for complete monthly family ration & household goods.",
     displayOrder: 4,
     active: true,
     keywords: ["supermarket", "supermarkets", "mart", "departmental", "hypermarket", "bulk"],
@@ -126,10 +142,23 @@ export const ALL_SHOP_CATEGORIES: ShopCategoryConfig[] = [
     slug: "bakeries",
     iconName: "Cake",
     icon: Cake,
-    description: "Fresh bread, hot chicken/veg puffs, birthday cakes, butter biscuits, tea rusks & pastries.",
+    description:
+      "Fresh bread, hot chicken/veg puffs, birthday cakes, butter biscuits, tea rusks & pastries.",
     displayOrder: 5,
     active: true,
-    keywords: ["bakery", "bakeries", "cake", "cakes", "bread", "puffs", "baked", "pastry", "rusk", "cookies", "bakes"],
+    keywords: [
+      "bakery",
+      "bakeries",
+      "cake",
+      "cakes",
+      "bread",
+      "puffs",
+      "baked",
+      "pastry",
+      "rusk",
+      "cookies",
+      "bakes",
+    ],
     desktopPriority: true,
     mobilePriority: true,
     heading: "Best Bakeries Near You",
@@ -141,10 +170,21 @@ export const ALL_SHOP_CATEGORIES: ShopCategoryConfig[] = [
     slug: "sweet-shops",
     iconName: "Candy",
     icon: Candy,
-    description: "Traditional South Indian sweets, melt-in-mouth mysurpa, halwa, savouries & festive mithai.",
+    description:
+      "Traditional South Indian sweets, melt-in-mouth mysurpa, halwa, savouries & festive mithai.",
     displayOrder: 6,
     active: true,
-    keywords: ["sweet", "sweets", "mithai", "savouries", "laddu", "mysurpa", "halwa", "karasev", "snacks"],
+    keywords: [
+      "sweet",
+      "sweets",
+      "mithai",
+      "savouries",
+      "laddu",
+      "mysurpa",
+      "halwa",
+      "karasev",
+      "snacks",
+    ],
     desktopPriority: false,
     mobilePriority: false,
     heading: "Sweet Shops Near You",
@@ -156,10 +196,21 @@ export const ALL_SHOP_CATEGORIES: ShopCategoryConfig[] = [
     slug: "restaurants",
     iconName: "Utensils",
     icon: Utensils,
-    description: "Authentic South Indian non-veg meals, Chettinad biryani, tiffin & local dining spots.",
+    description:
+      "Authentic South Indian non-veg meals, Chettinad biryani, tiffin & local dining spots.",
     displayOrder: 7,
     active: true,
-    keywords: ["restaurant", "restaurants", "food", "hotel", "meals", "biryani", "tiffin", "dining", "eatery"],
+    keywords: [
+      "restaurant",
+      "restaurants",
+      "food",
+      "hotel",
+      "meals",
+      "biryani",
+      "tiffin",
+      "dining",
+      "eatery",
+    ],
     desktopPriority: true,
     mobilePriority: true,
     heading: "Restaurants Near You",
@@ -174,7 +225,17 @@ export const ALL_SHOP_CATEGORIES: ShopCategoryConfig[] = [
     description: "Filter coffee, hot tea, fresh fruit juices, coolers & quick evening snacks.",
     displayOrder: 8,
     active: true,
-    keywords: ["cafe", "cafes", "tea", "coffee", "juice", "beverage", "snacks", "filter coffee", "chai"],
+    keywords: [
+      "cafe",
+      "cafes",
+      "tea",
+      "coffee",
+      "juice",
+      "beverage",
+      "snacks",
+      "filter coffee",
+      "chai",
+    ],
     desktopPriority: false,
     mobilePriority: false,
     heading: "Cafés & Tea Shops Near You",
@@ -186,10 +247,22 @@ export const ALL_SHOP_CATEGORIES: ShopCategoryConfig[] = [
     slug: "pharmacies",
     iconName: "Pill",
     icon: Pill,
-    description: "24/7 chemist shops, prescribed medicines, healthcare products, OTC care & surgicals.",
+    description:
+      "24/7 chemist shops, prescribed medicines, healthcare products, OTC care & surgicals.",
     displayOrder: 9,
     active: true,
-    keywords: ["pharmacy", "pharmacies", "medical", "medicals", "chemist", "medicine", "health", "wellness", "otc", "first aid"],
+    keywords: [
+      "pharmacy",
+      "pharmacies",
+      "medical",
+      "medicals",
+      "chemist",
+      "medicine",
+      "health",
+      "wellness",
+      "otc",
+      "first aid",
+    ],
     desktopPriority: true,
     mobilePriority: true,
     heading: "Medical Shops Near You",
@@ -201,10 +274,21 @@ export const ALL_SHOP_CATEGORIES: ShopCategoryConfig[] = [
     slug: "fruits-vegetables",
     iconName: "Apple",
     icon: Apple,
-    description: "Palamuthir Nilayam, farm-fresh organic fruits, green leafy veggies, tender coconut & daily produce.",
+    description:
+      "Palamuthir Nilayam, farm-fresh organic fruits, green leafy veggies, tender coconut & daily produce.",
     displayOrder: 10,
     active: true,
-    keywords: ["palamuthir", "fruits", "vegetables", "veggies", "organic", "greens", "coconut", "produce", "farm"],
+    keywords: [
+      "palamuthir",
+      "fruits",
+      "vegetables",
+      "veggies",
+      "organic",
+      "greens",
+      "coconut",
+      "produce",
+      "farm",
+    ],
     desktopPriority: false,
     mobilePriority: false,
     heading: "Fruits & Vegetable Markets Near You",
@@ -216,10 +300,22 @@ export const ALL_SHOP_CATEGORIES: ShopCategoryConfig[] = [
     slug: "meat-fish",
     iconName: "Drumstick",
     icon: Drumstick,
-    description: "Tender mutton, country chicken (nattu kozhi), fresh sea fish, prawns, crab & farm eggs.",
+    description:
+      "Tender mutton, country chicken (nattu kozhi), fresh sea fish, prawns, crab & farm eggs.",
     displayOrder: 11,
     active: true,
-    keywords: ["meat", "fish", "chicken", "mutton", "seafood", "eggs", "poultry", "vanjaram", "prawns", "nattu kozhi"],
+    keywords: [
+      "meat",
+      "fish",
+      "chicken",
+      "mutton",
+      "seafood",
+      "eggs",
+      "poultry",
+      "vanjaram",
+      "prawns",
+      "nattu kozhi",
+    ],
     desktopPriority: false,
     mobilePriority: false,
     heading: "Meat & Seafood Outlets Near You",
@@ -231,10 +327,21 @@ export const ALL_SHOP_CATEGORIES: ShopCategoryConfig[] = [
     slug: "fashion-clothing",
     iconName: "Shirt",
     icon: Shirt,
-    description: "Local menswear, cotton dhotis, readymade shirts, women ethnic wear & kids apparel.",
+    description:
+      "Local menswear, cotton dhotis, readymade shirts, women ethnic wear & kids apparel.",
     displayOrder: 12,
     active: true,
-    keywords: ["fashion", "clothing", "apparel", "shirts", "dhotis", "readymade", "dress", "garments", "menswear"],
+    keywords: [
+      "fashion",
+      "clothing",
+      "apparel",
+      "shirts",
+      "dhotis",
+      "readymade",
+      "dress",
+      "garments",
+      "menswear",
+    ],
     desktopPriority: true,
     mobilePriority: true,
     heading: "Fashion Stores Near You",
@@ -246,10 +353,22 @@ export const ALL_SHOP_CATEGORIES: ShopCategoryConfig[] = [
     slug: "boutiques",
     iconName: "Sparkles",
     icon: Sparkles,
-    description: "Designer boutiques, Kanchipuram silk sarees, custom kurti stitching & Aari embroidery.",
+    description:
+      "Designer boutiques, Kanchipuram silk sarees, custom kurti stitching & Aari embroidery.",
     displayOrder: 13,
     active: true,
-    keywords: ["boutique", "boutiques", "designer", "silk saree", "saree", "kurti", "embroidery", "aari", "bridal", "tailoring"],
+    keywords: [
+      "boutique",
+      "boutiques",
+      "designer",
+      "silk saree",
+      "saree",
+      "kurti",
+      "embroidery",
+      "aari",
+      "bridal",
+      "tailoring",
+    ],
     desktopPriority: false,
     mobilePriority: false,
     heading: "Designer Boutiques Near You",
@@ -261,7 +380,8 @@ export const ALL_SHOP_CATEGORIES: ShopCategoryConfig[] = [
     slug: "footwear",
     iconName: "Footprints",
     icon: Footprints,
-    description: "Daily slippers, formal leather shoes, ethnic sandals, sports shoes & school footwear.",
+    description:
+      "Daily slippers, formal leather shoes, ethnic sandals, sports shoes & school footwear.",
     displayOrder: 14,
     active: true,
     keywords: ["footwear", "shoes", "slippers", "sandals", "chappal", "boots", "leather"],
@@ -276,10 +396,22 @@ export const ALL_SHOP_CATEGORIES: ShopCategoryConfig[] = [
     slug: "jewellery-watches",
     iconName: "Gem",
     icon: Gem,
-    description: "Gold-plated kammal, chains, silver anklets, bangles, watches & gift accessory sets.",
+    description:
+      "Gold-plated kammal, chains, silver anklets, bangles, watches & gift accessory sets.",
     displayOrder: 15,
     active: true,
-    keywords: ["jewellery", "watches", "gold", "silver", "kammal", "bangles", "chain", "anklets", "earrings", "gifts"],
+    keywords: [
+      "jewellery",
+      "watches",
+      "gold",
+      "silver",
+      "kammal",
+      "bangles",
+      "chain",
+      "anklets",
+      "earrings",
+      "gifts",
+    ],
     desktopPriority: false,
     mobilePriority: false,
     heading: "Jewellery & Watch Stores Near You",
@@ -291,10 +423,20 @@ export const ALL_SHOP_CATEGORIES: ShopCategoryConfig[] = [
     slug: "electronics",
     iconName: "Tv",
     icon: Tv,
-    description: "Smart TVs, soundbars, home appliances, refrigerators & consumer electronics showrooms.",
+    description:
+      "Smart TVs, soundbars, home appliances, refrigerators & consumer electronics showrooms.",
     displayOrder: 16,
     active: true,
-    keywords: ["electronics", "tv", "appliances", "fridge", "washing machine", "audio", "showrooms", "gadgets"],
+    keywords: [
+      "electronics",
+      "tv",
+      "appliances",
+      "fridge",
+      "washing machine",
+      "audio",
+      "showrooms",
+      "gadgets",
+    ],
     desktopPriority: true,
     mobilePriority: true,
     heading: "Electronics Shops Near You",
@@ -306,10 +448,20 @@ export const ALL_SHOP_CATEGORIES: ShopCategoryConfig[] = [
     slug: "mobile-accessories",
     iconName: "Smartphone",
     icon: Smartphone,
-    description: "Smartphones, chargers, bluetooth earphones, back covers, glass guards & mobile repair.",
+    description:
+      "Smartphones, chargers, bluetooth earphones, back covers, glass guards & mobile repair.",
     displayOrder: 17,
     active: true,
-    keywords: ["mobile", "smartphone", "cellphone", "charger", "earphones", "accessories", "screen guard", "case"],
+    keywords: [
+      "mobile",
+      "smartphone",
+      "cellphone",
+      "charger",
+      "earphones",
+      "accessories",
+      "screen guard",
+      "case",
+    ],
     desktopPriority: false,
     mobilePriority: false,
     heading: "Mobile & Accessory Stores Near You",
@@ -321,10 +473,21 @@ export const ALL_SHOP_CATEGORIES: ShopCategoryConfig[] = [
     slug: "books-stationery",
     iconName: "BookOpen",
     icon: BookOpen,
-    description: "Textbooks, school notebooks, pens, office supplies, greeting cards & art materials.",
+    description:
+      "Textbooks, school notebooks, pens, office supplies, greeting cards & art materials.",
     displayOrder: 18,
     active: true,
-    keywords: ["books", "stationery", "notebooks", "pens", "school", "office", "textbooks", "paper", "book stall"],
+    keywords: [
+      "books",
+      "stationery",
+      "notebooks",
+      "pens",
+      "school",
+      "office",
+      "textbooks",
+      "paper",
+      "book stall",
+    ],
     desktopPriority: true,
     mobilePriority: false,
     heading: "Book & Stationery Shops Near You",
@@ -336,10 +499,20 @@ export const ALL_SHOP_CATEGORIES: ShopCategoryConfig[] = [
     slug: "beauty-care",
     iconName: "Heart",
     icon: Heart,
-    description: "Cosmetics, skincare, herbal hair oils, soaps, perfumes & personal grooming products.",
+    description:
+      "Cosmetics, skincare, herbal hair oils, soaps, perfumes & personal grooming products.",
     displayOrder: 19,
     active: true,
-    keywords: ["beauty", "care", "cosmetics", "skincare", "hair oil", "perfume", "grooming", "makeup"],
+    keywords: [
+      "beauty",
+      "care",
+      "cosmetics",
+      "skincare",
+      "hair oil",
+      "perfume",
+      "grooming",
+      "makeup",
+    ],
     desktopPriority: true,
     mobilePriority: false,
     heading: "Beauty & Care Near You",
@@ -351,10 +524,21 @@ export const ALL_SHOP_CATEGORIES: ShopCategoryConfig[] = [
     slug: "home-kitchen",
     iconName: "CookingPot",
     icon: CookingPot,
-    description: "Stainless steel vessels, mixer grinders, pressure cookers, non-stick cookware & gas stoves.",
+    description:
+      "Stainless steel vessels, mixer grinders, pressure cookers, non-stick cookware & gas stoves.",
     displayOrder: 20,
     active: true,
-    keywords: ["kitchen", "home", "cookware", "utensils", "cooker", "mixer", "grinder", "stoves", "vessels"],
+    keywords: [
+      "kitchen",
+      "home",
+      "cookware",
+      "utensils",
+      "cooker",
+      "mixer",
+      "grinder",
+      "stoves",
+      "vessels",
+    ],
     desktopPriority: false,
     mobilePriority: false,
     heading: "Home & Kitchen Stores Near You",
@@ -366,10 +550,21 @@ export const ALL_SHOP_CATEGORIES: ShopCategoryConfig[] = [
     slug: "furniture-home-decor",
     iconName: "Armchair",
     icon: Armchair,
-    description: "Interior decor studios, brass Agal lamps, designer curtains, wallpapers & home furnishings.",
+    description:
+      "Interior decor studios, brass Agal lamps, designer curtains, wallpapers & home furnishings.",
     displayOrder: 21,
     active: true,
-    keywords: ["furniture", "decor", "interior", "curtains", "sofa", "brass", "lamps", "wallpapers", "mats"],
+    keywords: [
+      "furniture",
+      "decor",
+      "interior",
+      "curtains",
+      "sofa",
+      "brass",
+      "lamps",
+      "wallpapers",
+      "mats",
+    ],
     desktopPriority: false,
     mobilePriority: false,
     heading: "Furniture & Home Decor Near You",
@@ -381,7 +576,8 @@ export const ALL_SHOP_CATEGORIES: ShopCategoryConfig[] = [
     slug: "hardware-electrical",
     iconName: "Hammer",
     icon: Hammer,
-    description: "Electrical fittings, LED bulbs, switches, plumbing, tools, paint & hardware supplies.",
+    description:
+      "Electrical fittings, LED bulbs, switches, plumbing, tools, paint & hardware supplies.",
     displayOrder: 22,
     active: true,
     keywords: ["hardware", "electrical", "plumbing", "tools", "paint", "bulbs", "wires", "pipes"],
@@ -441,7 +637,8 @@ export const ALL_SHOP_CATEGORIES: ShopCategoryConfig[] = [
     slug: "flower-shops",
     iconName: "Flower2",
     icon: Flower2,
-    description: "Fresh jasmine garlands (mullai/malli), puja flowers, bouquets & floral arrangements.",
+    description:
+      "Fresh jasmine garlands (mullai/malli), puja flowers, bouquets & floral arrangements.",
     displayOrder: 26,
     active: true,
     keywords: ["flowers", "florist", "malli", "jasmine", "garland", "puja flowers", "bouquets"],
@@ -471,7 +668,8 @@ export const ALL_SHOP_CATEGORIES: ShopCategoryConfig[] = [
     slug: "pooja-stores",
     iconName: "Flame",
     icon: Flame,
-    description: "Camphor, incense sticks (agarbatti), brass lamps, pooja oil, kumkum & divine items.",
+    description:
+      "Camphor, incense sticks (agarbatti), brass lamps, pooja oil, kumkum & divine items.",
     displayOrder: 28,
     active: true,
     keywords: ["pooja", "puja", "agarbatti", "camphor", "incense", "sambrani", "kumkum", "divine"],
@@ -516,10 +714,20 @@ export const ALL_SHOP_CATEGORIES: ShopCategoryConfig[] = [
     slug: "local-services",
     iconName: "Briefcase",
     icon: Briefcase,
-    description: "Xerox & printing, DTP, key duplication, tailoring & neighborhood service centers.",
+    description:
+      "Xerox & printing, DTP, key duplication, tailoring & neighborhood service centers.",
     displayOrder: 31,
     active: true,
-    keywords: ["services", "local_services", "xerox", "printing", "dtp", "key duplication", "laundry", "tailor"],
+    keywords: [
+      "services",
+      "local_services",
+      "xerox",
+      "printing",
+      "dtp",
+      "key duplication",
+      "laundry",
+      "tailor",
+    ],
     desktopPriority: false,
     mobilePriority: false,
     heading: "Local Services Near You",
@@ -566,14 +774,14 @@ export function getCategoryByIdOrSlug(idOrSlug?: string | null): ShopCategoryCon
 
   const normalized = idOrSlug.toLowerCase().trim();
   const found = ALL_SHOP_CATEGORIES.find(
-    (c) => c.id.toLowerCase() === normalized || c.slug.toLowerCase() === normalized
+    (c) => c.id.toLowerCase() === normalized || c.slug.toLowerCase() === normalized,
   );
 
   if (found) return found;
 
   // Fallback matching by keyword
   const keywordMatch = ALL_SHOP_CATEGORIES.find((c) =>
-    c.keywords.some((k) => normalized.includes(k) || k.includes(normalized))
+    c.keywords.some((k) => normalized.includes(k) || k.includes(normalized)),
   );
 
   return keywordMatch || ALL_SHOP_CATEGORIES[0];
@@ -586,9 +794,13 @@ export function getCategoryByIdOrSlug(idOrSlug?: string | null): ShopCategoryCon
 export function isStoreInCategory(
   storeCategory: string,
   targetCategoryIdOrSlug: string,
-  storeRating: number = 4.5
+  storeRating: number = 4.5,
 ): boolean {
-  if (!targetCategoryIdOrSlug || targetCategoryIdOrSlug === "all" || targetCategoryIdOrSlug === "all-shops") {
+  if (
+    !targetCategoryIdOrSlug ||
+    targetCategoryIdOrSlug === "all" ||
+    targetCategoryIdOrSlug === "all-shops"
+  ) {
     return true;
   }
 
@@ -626,7 +838,11 @@ export function isStoreInCategory(
         storeCatLower.includes("mart")
       );
     case "bakery":
-      return storeCatLower === "bakery" || storeCatLower.includes("bake") || storeCatLower.includes("cake");
+      return (
+        storeCatLower === "bakery" ||
+        storeCatLower.includes("bake") ||
+        storeCatLower.includes("cake")
+      );
     case "sweet_shops":
       return storeCatLower.includes("sweet") || storeCatLower.includes("mithai");
     case "restaurants":
@@ -638,11 +854,23 @@ export function isStoreInCategory(
         storeCatLower.includes("tiffin")
       );
     case "cafes":
-      return storeCatLower.includes("cafe") || storeCatLower.includes("tea") || storeCatLower.includes("coffee");
+      return (
+        storeCatLower.includes("cafe") ||
+        storeCatLower.includes("tea") ||
+        storeCatLower.includes("coffee")
+      );
     case "pharmacy":
-      return storeCatLower === "pharmacy" || storeCatLower.includes("pharm") || storeCatLower.includes("med");
+      return (
+        storeCatLower === "pharmacy" ||
+        storeCatLower.includes("pharm") ||
+        storeCatLower.includes("med")
+      );
     case "fruits_veg":
-      return storeCatLower === "palamuthir" || storeCatLower.includes("fruit") || storeCatLower.includes("veggie");
+      return (
+        storeCatLower === "palamuthir" ||
+        storeCatLower.includes("fruit") ||
+        storeCatLower.includes("veggie")
+      );
     case "meat_fish":
       return (
         storeCatLower === "meat_fish" ||
@@ -660,7 +888,11 @@ export function isStoreInCategory(
         storeCatLower.includes("cloth")
       );
     case "boutiques":
-      return storeCatLower === "boutiques" || storeCatLower.includes("boutique") || storeCatLower.includes("silk");
+      return (
+        storeCatLower === "boutiques" ||
+        storeCatLower.includes("boutique") ||
+        storeCatLower.includes("silk")
+      );
     case "footwear":
       return storeCatLower.includes("footwear") || storeCatLower.includes("shoe");
     case "jewellery":
@@ -671,17 +903,37 @@ export function isStoreInCategory(
         storeCatLower.includes("chain")
       );
     case "electronics":
-      return storeCatLower === "showrooms" || storeCatLower.includes("electro") || storeCatLower.includes("tv");
+      return (
+        storeCatLower === "showrooms" ||
+        storeCatLower.includes("electro") ||
+        storeCatLower.includes("tv")
+      );
     case "mobile":
       return storeCatLower.includes("mobile") || storeCatLower.includes("phone");
     case "books_stationery":
-      return storeCatLower === "stationery" || storeCatLower.includes("stationer") || storeCatLower.includes("book");
+      return (
+        storeCatLower === "stationery" ||
+        storeCatLower.includes("stationer") ||
+        storeCatLower.includes("book")
+      );
     case "beauty":
-      return storeCatLower.includes("beauty") || storeCatLower.includes("care") || storeCatLower.includes("cosmetic");
+      return (
+        storeCatLower.includes("beauty") ||
+        storeCatLower.includes("care") ||
+        storeCatLower.includes("cosmetic")
+      );
     case "home_kitchen":
-      return storeCatLower === "kitchen_appliances" || storeCatLower.includes("kitchen") || storeCatLower.includes("vessel");
+      return (
+        storeCatLower === "kitchen_appliances" ||
+        storeCatLower.includes("kitchen") ||
+        storeCatLower.includes("vessel")
+      );
     case "furniture":
-      return storeCatLower === "home_decor" || storeCatLower.includes("decor") || storeCatLower.includes("furniture");
+      return (
+        storeCatLower === "home_decor" ||
+        storeCatLower.includes("decor") ||
+        storeCatLower.includes("furniture")
+      );
     case "hardware":
       return storeCatLower.includes("hardware") || storeCatLower.includes("electric");
     case "sports":

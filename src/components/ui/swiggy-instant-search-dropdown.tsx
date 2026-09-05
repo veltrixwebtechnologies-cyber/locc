@@ -1,7 +1,8 @@
 import React, { useMemo } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { getInstantSearchResults, SearchResultItem } from "@/lib/search-service";
+import { SearchResultItem } from "@/lib/search-service";
 import { Store, Utensils, ShoppingBag, ChevronRight, X, Search } from "lucide-react";
+import { useLiveSearchResults } from "@/hooks/use-live-search-results";
 
 interface SwiggyInstantSearchDropdownProps {
   query: string;
@@ -21,12 +22,15 @@ export function HighlightText({ text, query }: { text: string; query: string }) 
     <>
       {parts.map((part, index) =>
         part.toLowerCase() === trimmed.toLowerCase() ? (
-          <strong key={index} className="font-extrabold text-foreground underline decoration-primary/40 underline-offset-2">
+          <strong
+            key={index}
+            className="font-extrabold text-foreground underline decoration-primary/40 underline-offset-2"
+          >
             {part}
           </strong>
         ) : (
           <span key={index}>{part}</span>
-        )
+        ),
       )}
     </>
   );
@@ -40,9 +44,7 @@ export function SwiggyInstantSearchDropdown({
 }: SwiggyInstantSearchDropdownProps) {
   const navigate = useNavigate();
 
-  const results = useMemo(() => {
-    return getInstantSearchResults(query);
-  }, [query]);
+  const { results, isLoading } = useLiveSearchResults(query);
 
   const handleResultClick = (item: SearchResultItem) => {
     if (onSelectResult) onSelectResult();
@@ -51,7 +53,9 @@ export function SwiggyInstantSearchDropdown({
 
   if (!query.trim()) {
     return (
-      <div className={`w-full bg-background rounded-2xl border hairline shadow-2xl p-4 animate-in fade-in zoom-in-95 duration-150 ${className}`}>
+      <div
+        className={`w-full bg-background rounded-2xl border hairline shadow-2xl p-4 animate-in fade-in zoom-in-95 duration-150 ${className}`}
+      >
         <div className="flex items-center justify-between pb-2 mb-2 border-b border-border/50">
           <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
             Popular Searches
@@ -70,8 +74,7 @@ export function SwiggyInstantSearchDropdown({
               type="button"
               onMouseDown={(e) => {
                 e.preventDefault();
-                const res = getInstantSearchResults(item.label)[0];
-                if (res) handleResultClick(res);
+                void navigate({ to: "/search", search: { q: item.label } });
               }}
               className="flex items-center justify-between w-full px-3 py-2 text-left rounded-xl hover:bg-muted/80 transition-colors text-sm group"
             >
@@ -89,18 +92,36 @@ export function SwiggyInstantSearchDropdown({
     );
   }
 
+  if (isLoading) {
+    return (
+      <div
+        className={`w-full bg-background rounded-2xl border hairline shadow-2xl p-6 text-center animate-in fade-in zoom-in-95 duration-150 ${className}`}
+      >
+        <Search className="w-10 h-10 mx-auto mb-2 text-muted-foreground/50 stroke-1 animate-pulse" />
+        <p className="text-sm font-semibold text-foreground">Searching live catalog...</p>
+        <p className="text-xs text-muted-foreground mt-1">Checking approved shops and products</p>
+      </div>
+    );
+  }
+
   if (results.length === 0) {
     return (
-      <div className={`w-full bg-background rounded-2xl border hairline shadow-2xl p-6 text-center animate-in fade-in zoom-in-95 duration-150 ${className}`}>
+      <div
+        className={`w-full bg-background rounded-2xl border hairline shadow-2xl p-6 text-center animate-in fade-in zoom-in-95 duration-150 ${className}`}
+      >
         <ShoppingBag className="w-10 h-10 mx-auto mb-2 text-muted-foreground/50 stroke-1" />
         <p className="text-sm font-semibold text-foreground">No matches found for "{query}"</p>
-        <p className="text-xs text-muted-foreground mt-1">Try searching for restaurants like "Haribhavanam" or dishes like "Harissa"</p>
+        <p className="text-xs text-muted-foreground mt-1">
+          Try searching for restaurants like "Haribhavanam" or dishes like "Harissa"
+        </p>
       </div>
     );
   }
 
   return (
-    <div className={`w-full bg-background rounded-2xl border hairline shadow-2xl overflow-hidden max-h-[480px] overflow-y-auto animate-in fade-in zoom-in-95 duration-150 ${className}`}>
+    <div
+      className={`w-full bg-background rounded-2xl border hairline shadow-2xl overflow-hidden max-h-[480px] overflow-y-auto animate-in fade-in zoom-in-95 duration-150 ${className}`}
+    >
       <div className="sticky top-0 bg-background/95 backdrop-blur-md px-4 py-2.5 border-b border-border/50 flex items-center justify-between z-10">
         <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
           Results ({results.length})

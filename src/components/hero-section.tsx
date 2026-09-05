@@ -14,13 +14,7 @@
  */
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import {
-  motion,
-  AnimatePresence,
-  useReducedMotion,
-  useScroll,
-  useTransform,
-} from "framer-motion";
+import { motion, AnimatePresence, useReducedMotion, useScroll, useTransform } from "framer-motion";
 import {
   MapPin,
   Search,
@@ -37,7 +31,8 @@ import {
 import { scrollToShops } from "@/lib/scroll-utils";
 import { useDeliveryLocation } from "@/lib/location-store";
 import { LocationModal } from "@/components/ui/location-modal";
-import { getInstantSearchResults, type SearchResultItem } from "@/lib/search-service";
+import { type SearchResultItem } from "@/lib/search-service";
+import { useLiveSearchResults } from "@/hooks/use-live-search-results";
 
 interface SwiggyFeatureCard {
   id: string;
@@ -137,11 +132,10 @@ export function HeroSection() {
     }
 
     navigate({
-      to: "/",
-      search: { q: queryToUse.trim(), category: undefined },
+      to: "/search",
+      search: { q: queryToUse.trim() },
       resetScroll: false,
     });
-    scrollToShops();
     setIsFocused(false);
   };
 
@@ -150,17 +144,16 @@ export function HeroSection() {
     handleSearchSubmit(undefined, query);
   };
 
-  // Instant live search results for products and shops inside the app
-  const searchResults: SearchResultItem[] = useMemo(() => {
-    return getInstantSearchResults(searchQuery);
-  }, [searchQuery]);
+  const { results: searchResults, isLoading: isSearchLoading } = useLiveSearchResults(searchQuery);
 
   const productResults: SearchResultItem[] = useMemo(() => {
     return searchResults.filter((r: SearchResultItem) => r.type === "Product" || r.type === "Dish");
   }, [searchResults]);
 
   const shopResults: SearchResultItem[] = useMemo(() => {
-    return searchResults.filter((r: SearchResultItem) => r.type === "Shop" || r.type === "Restaurant");
+    return searchResults.filter(
+      (r: SearchResultItem) => r.type === "Shop" || r.type === "Restaurant",
+    );
   }, [searchResults]);
 
   return (
@@ -169,9 +162,7 @@ export function HeroSection() {
       className="mx-auto max-w-7xl px-3 pt-2 pb-5 sm:px-6 sm:pt-4 md:px-8 md:pt-5"
     >
       {/* ── Scene 1: Camera Push-In Hero Card ── */}
-      <div
-        className="relative rounded-3xl sm:rounded-[36px] bg-[#981495] p-5 sm:p-8 lg:p-12 text-white shadow-2xl transition-all"
-      >
+      <div className="relative rounded-3xl sm:rounded-[36px] bg-[#981495] p-5 sm:p-8 lg:p-12 text-white shadow-2xl transition-all">
         {/* Isolated Overflow-Hidden Layer for Background Glows (Prevents search dropdown clipping) */}
         <div className="absolute inset-0 overflow-hidden rounded-3xl sm:rounded-[36px] pointer-events-none z-0">
           <div className="absolute -top-24 -right-24 h-80 w-80 rounded-full bg-radial from-purple-400/30 to-transparent blur-2xl" />
@@ -181,16 +172,12 @@ export function HeroSection() {
         <div className="relative z-10 space-y-5 sm:space-y-7">
           {/* Top Pill Badges Row */}
           <div className="flex flex-wrap items-center gap-2 sm:gap-2.5">
-            <div
-              className="inline-flex items-center gap-1.5 rounded-full bg-white/15 backdrop-blur-md px-3 py-1 text-[11px] sm:text-xs font-bold tracking-wide text-white border border-white/20 shadow-xs"
-            >
+            <div className="inline-flex items-center gap-1.5 rounded-full bg-white/15 backdrop-blur-md px-3 py-1 text-[11px] sm:text-xs font-bold tracking-wide text-white border border-white/20 shadow-xs">
               <Sparkles className="h-3.5 w-3.5 text-[#F3D053] fill-[#F3D053]" />
               <span>LocalShore Marketplace</span>
             </div>
 
-            <div
-              className="inline-flex items-center gap-1 rounded-full bg-gold-gradient px-3.5 py-1 text-[10px] sm:text-[11px] font-black uppercase text-slate-950 shadow-md tracking-wider border border-white/30"
-            >
+            <div className="inline-flex items-center gap-1 rounded-full bg-gold-gradient px-3.5 py-1 text-[10px] sm:text-[11px] font-black uppercase text-slate-950 shadow-md tracking-wider border border-white/30">
               <Zap className="h-3.5 w-3.5 fill-slate-950" />
               20–30 MIN DELIVERY
             </div>
@@ -201,13 +188,9 @@ export function HeroSection() {
             {/* Motion Typography Commercial Headline */}
             <div className="lg:col-span-7 space-y-2 sm:space-y-3">
               <h1 className="font-display text-2xl font-black tracking-tight sm:text-4xl lg:text-[52px] text-white leading-[1.1]">
-                <span className="block">
-                  Order food &amp; groceries.
-                </span>
+                <span className="block">Order food &amp; groceries.</span>
 
-                <span className="block">
-                  Discover best shops.
-                </span>
+                <span className="block">Discover best shops.</span>
 
                 <span className="block pt-0.5">
                   <span className="text-gold-gradient font-black inline-block drop-shadow-md">
@@ -217,9 +200,7 @@ export function HeroSection() {
                 </span>
               </h1>
 
-              <p
-                className="text-xs sm:text-sm font-semibold text-purple-100/90 max-w-lg leading-relaxed pt-0.5 sm:pt-1"
-              >
+              <p className="text-xs sm:text-sm font-semibold text-purple-100/90 max-w-lg leading-relaxed pt-0.5 sm:pt-1">
                 Support neighborhood vendors with instant fulfillment across Shoreline City.
               </p>
             </div>
@@ -230,16 +211,16 @@ export function HeroSection() {
               title="Click to replay animation"
               className="flex lg:col-span-5 justify-center lg:justify-end items-center relative my-2 sm:my-4 lg:my-0 w-full cursor-pointer group"
             >
-              <div
-                className="relative w-full max-w-[320px] sm:max-w-sm lg:max-w-none lg:w-96 aspect-[16/9] lg:h-72 mx-auto overflow-hidden rounded-2xl lg:rounded-3xl shadow-xl border-2 border-white/30"
-              >
+              <div className="relative w-full max-w-[320px] sm:max-w-sm lg:max-w-none lg:w-96 aspect-[16/9] lg:h-72 mx-auto overflow-hidden rounded-2xl lg:rounded-3xl shadow-xl border-2 border-white/30">
                 <video
                   ref={videoRef}
                   src="/assets/delivery-rider-loop.mp4"
                   poster="/assets/delivery-rider-final.png"
+                  preload="auto"
                   autoPlay
                   muted
                   playsInline
+                  {...({ fetchPriority: "high" } as Record<string, string>)}
                   className="w-full h-full object-cover pointer-events-none"
                 />
               </div>
@@ -275,10 +256,13 @@ export function HeroSection() {
                     onFocus={() => setIsFocused(true)}
                     onBlur={() => setTimeout(() => setIsFocused(false), 250)}
                     onChange={(e) => {
-                      setSearchQuery(e.target.value);
+                      const val = e.target.value;
+                      setSearchQuery(val);
                       setIsFocused(true);
                     }}
-                    placeholder={isFocused ? "" : `Search "${SEARCH_SUGGESTIONS[suggestionIdx]}"...`}
+                    placeholder={
+                      isFocused ? "" : `Search "${SEARCH_SUGGESTIONS[suggestionIdx]}"...`
+                    }
                     className="relative z-10 text-xs sm:text-sm font-semibold text-slate-900 bg-transparent outline-none border-none w-full"
                   />
                 </div>
@@ -341,11 +325,25 @@ export function HeroSection() {
                     </div>
                   ) : (
                     <div className="space-y-4">
-                      {searchResults.length === 0 ? (
+                      {isSearchLoading ? (
+                        <div className="py-6 text-center text-slate-500">
+                          <Search className="h-8 w-8 text-slate-300 mx-auto mb-2 animate-pulse" />
+                          <p className="text-xs font-bold text-slate-700">
+                            Searching live catalog...
+                          </p>
+                          <p className="text-[11px] text-slate-400 mt-0.5">
+                            Checking approved shops and products
+                          </p>
+                        </div>
+                      ) : searchResults.length === 0 ? (
                         <div className="py-6 text-center text-slate-500">
                           <ShoppingBag className="h-8 w-8 text-slate-300 mx-auto mb-2" />
-                          <p className="text-xs font-bold text-slate-700">No matching products or shops found</p>
-                          <p className="text-[11px] text-slate-400 mt-0.5">Try searching for "Batter", "Chicken", "Bakery", "Pharmacy", or "Sweets"</p>
+                          <p className="text-xs font-bold text-slate-700">
+                            No matching products or shops found
+                          </p>
+                          <p className="text-[11px] text-slate-400 mt-0.5">
+                            Try searching for "Batter", "Chicken", "Bakery", "Pharmacy", or "Sweets"
+                          </p>
                         </div>
                       ) : (
                         <>
@@ -357,7 +355,9 @@ export function HeroSection() {
                                   <ShoppingBag className="h-3.5 w-3.5 text-purple-600" />
                                   Products in local shops ({productResults.length})
                                 </span>
-                                <span className="text-[10px] font-bold text-purple-700">Instant Delivery</span>
+                                <span className="text-[10px] font-bold text-purple-700">
+                                  Instant Delivery
+                                </span>
                               </div>
 
                               <div className="space-y-1.5">
@@ -534,4 +534,3 @@ export function HeroSection() {
     </section>
   );
 }
-

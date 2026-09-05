@@ -15,12 +15,13 @@ export interface GeocodeResult {
 }
 
 export interface RouteResult {
-  distanceMeters: number;
-  durationSeconds: number;
+  distanceMeters: number | null;
+  durationSeconds: number | null;
   geometry: [number, number][]; // Array of [lng, lat]
   distanceKm?: number;
   durationMins?: number;
   steps?: { instruction: string; distanceMeters: number; durationSeconds: number }[];
+  status: "success" | "fallback" | "error";
 }
 
 export interface MapMarkerItem {

@@ -1,9 +1,9 @@
 import type { GeocodeResult, RouteResult, MapLocation } from "./types";
+import { isValidCoordinate, haversineDistanceKm } from "@/lib/geo";
 
 // Default OpenStreetMap tile provider (No API key required)
 const CUSTOM_TILE_URL =
-  import.meta.env.VITE_MAP_TILE_URL ||
-  "https://tile.openstreetmap.org/{z}/{x}/{y}.png";
+  import.meta.env.VITE_MAP_TILE_URL || "https://tile.openstreetmap.org/{z}/{x}/{y}.png";
 const CUSTOM_STYLE_URL = import.meta.env.VITE_MAP_STYLE_URL;
 
 export function getMapLibreStyle() {
@@ -45,8 +45,9 @@ export function getMapLibreStyle() {
  */
 export async function geocodeSearch(query: string): Promise<GeocodeResult[]> {
   if (!query || query.trim().length < 2) return [];
-  
-  const baseUrl = import.meta.env.VITE_GEOCODING_API_URL || "https://nominatim.openstreetmap.org/search";
+
+  const baseUrl =
+    import.meta.env.VITE_GEOCODING_API_URL || "https://nominatim.openstreetmap.org/search";
   const params = new URLSearchParams({
     q: query,
     format: "json",
@@ -64,7 +65,7 @@ export async function geocodeSearch(query: string): Promise<GeocodeResult[]> {
     });
     if (!res.ok) throw new Error(`Geocoding HTTP error ${res.status}`);
     const data = await res.json();
-    
+
     return (data || []).map((item: any) => ({
       placeName: item.display_name,
       lat: parseFloat(item.lat),
@@ -84,8 +85,9 @@ export async function fetchOSRMRoute(
   startLat: number,
   startLng: number,
   endLat: number,
-  endLng: number
+  endLng: number,
 ): Promise<RouteResult | null> {
+  if (!isValidCoordinate(startLat, startLng) || !isValidCoordinate(endLat, endLng)) return null;
   const osrmUrl =
     import.meta.env.VITE_ROUTING_API_URL ||
     `https://router.project-osrm.org/route/v1/driving/${startLng},${startLat};${endLng},${endLat}?overview=full&geometries=geojson&steps=true`;
@@ -108,37 +110,17 @@ export async function fetchOSRMRoute(
       durationMins,
       geometry: mainRoute.geometry.coordinates, // [lng, lat][]
       steps: (mainRoute.legs?.[0]?.steps || []).map((step: any) => ({
-        instruction: step.maneuver?.type ? `${step.maneuver.type} ${step.name || ""}`.trim() : step.name || "Drive ahead",
+        instruction: step.maneuver?.type
+          ? `${step.maneuver.type} ${step.name || ""}`.trim()
+          : step.name || "Drive ahead",
         distanceMeters: Math.round(step.distance),
         durationSeconds: Math.round(step.duration),
       })),
+      status: "success",
     };
   } catch (err) {
     console.warn("OSRM routing fetch failed:", err);
-    // Straight line mathematical fallback if network fails
-    const R = 6371; // Earth radius in KM
-    const dLat = ((endLat - startLat) * Math.PI) / 180;
-    const dLng = ((endLng - startLng) * Math.PI) / 180;
-    const a =
-      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-      Math.cos((startLat * Math.PI) / 180) *
-        Math.cos((endLat * Math.PI) / 180) *
-        Math.sin(dLng / 2) *
-        Math.sin(dLng / 2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    const distKm = +(R * c).toFixed(2);
-
-    return {
-      distanceMeters: Math.round(distKm * 1000),
-      durationSeconds: Math.round((distKm / 25) * 3600),
-      distanceKm: distKm,
-      durationMins: Math.max(2, Math.round((distKm / 25) * 60)), // Estimate at 25km/h city speed
-      geometry: [
-        [startLng, startLat],
-        [endLng, endLat],
-      ],
-      steps: [{ instruction: "Proceed towards destination", distanceMeters: distKm * 1000, durationSeconds: (distKm / 25) * 3600 }],
-    };
+    return null;
   }
 }
 
@@ -149,19 +131,9 @@ export function calculateHaversineDistanceKm(
   lat1: number,
   lon1: number,
   lat2: number,
-  lon2: number
+  lon2: number,
 ): number {
-  const R = 6371; // Earth's radius in KM
-  const dLat = ((lat2 - lat1) * Math.PI) / 180;
-  const dLon = ((lon2 - lon1) * Math.PI) / 180;
-  const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos((lat1 * Math.PI) / 180) *
-      Math.cos((lat2 * Math.PI) / 180) *
-      Math.sin(dLon / 2) *
-      Math.sin(dLon / 2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return parseFloat((R * c).toFixed(2));
+  return haversineDistanceKm(lat1, lon1, lat2, lon2);
 }
 
 /**
@@ -171,20 +143,20 @@ export async function fetchMapRoute(
   startLatOrOrigin: number | { lat: number; lng: number },
   startLngOrDest: number | { lat: number; lng: number },
   endLat?: number,
-  endLng?: number
+  endLng?: number,
 ): Promise<RouteResult | null> {
   if (typeof startLatOrOrigin === "object" && typeof startLngOrDest === "object") {
     return fetchOSRMRoute(
       startLatOrOrigin.lat,
       startLatOrOrigin.lng,
       startLngOrDest.lat,
-      startLngOrDest.lng
+      startLngOrDest.lng,
     );
   }
   return fetchOSRMRoute(
     startLatOrOrigin as number,
     startLngOrDest as number,
-    endLat ?? 0,
-    endLng ?? 0
+    endLat ?? NaN,
+    endLng ?? NaN,
   );
 }

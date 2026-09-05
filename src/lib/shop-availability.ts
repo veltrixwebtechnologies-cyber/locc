@@ -5,12 +5,7 @@ import { useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
-export type ShopStatusKind =
-  | "open"
-  | "closed"
-  | "closed_override"
-  | "open_override"
-  | "holiday";
+export type ShopStatusKind = "open" | "closed" | "closed_override" | "open_override" | "holiday";
 
 export interface ShopStatus {
   status: ShopStatusKind;
@@ -24,13 +19,13 @@ export interface ShopStatus {
 
 function dbToStatus(r: any): ShopStatus {
   return {
-    status:         r.status,
-    isOpen:         r.is_open,
-    label:          r.label,
-    opensAt:        r.opens_at,
-    closesAt:       r.closes_at,
+    status: r.status,
+    isOpen: r.is_open,
+    label: r.label,
+    opensAt: r.opens_at,
+    closesAt: r.closes_at,
     overrideReason: r.override_reason,
-    checkedAt:      r.checked_at,
+    checkedAt: r.checked_at,
   };
 }
 
@@ -38,9 +33,9 @@ function dbToStatus(r: any): ShopStatus {
 export function useShopStatus(sellerId: string | null | undefined) {
   const queryClient = useQueryClient();
   const query = useQuery({
-    queryKey:        ["shop-status", sellerId],
-    enabled:         !!sellerId,
-    staleTime:       30_000,
+    queryKey: ["shop-status", sellerId],
+    enabled: !!sellerId,
+    staleTime: 30_000,
     queryFn: async (): Promise<ShopStatus> => {
       const { data, error } = await (supabase as any).rpc("get_shop_status", {
         _seller_id: sellerId,
@@ -56,24 +51,29 @@ export function useShopStatus(sellerId: string | null | undefined) {
       .channel(`shop-status-${sellerId}`)
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "shop_overrides", filter: `seller_id=eq.${sellerId}` },
+        {
+          event: "*",
+          schema: "public",
+          table: "shop_overrides",
+          filter: `seller_id=eq.${sellerId}`,
+        },
         () => {
           void queryClient.invalidateQueries({ queryKey: ["shop-status", sellerId] });
-        }
+        },
       )
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "shop_hours", filter: `seller_id=eq.${sellerId}` },
         () => {
           void queryClient.invalidateQueries({ queryKey: ["shop-status", sellerId] });
-        }
+        },
       )
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "sellers", filter: `id=eq.${sellerId}` },
         () => {
           void queryClient.invalidateQueries({ queryKey: ["shop-status", sellerId] });
-        }
+        },
       )
       .subscribe();
 
@@ -89,9 +89,9 @@ export function useShopStatus(sellerId: string | null | undefined) {
 export function useShopsStatus(sellerIds: string[]) {
   const key = sellerIds.slice().sort().join(",");
   return useQuery({
-    queryKey:        ["shops-status", key],
-    enabled:         sellerIds.length > 0,
-    staleTime:       60_000,
+    queryKey: ["shops-status", key],
+    enabled: sellerIds.length > 0,
+    staleTime: 60_000,
     refetchInterval: 120_000,
     queryFn: async (): Promise<Map<string, ShopStatus>> => {
       const { data, error } = await (supabase as any).rpc("get_shops_status", {

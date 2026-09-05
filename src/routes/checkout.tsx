@@ -10,6 +10,7 @@ import { addressesStore, useAddresses } from "@/lib/addresses-store";
 import { DeliveryMap } from "@/components/delivery-map";
 import { DeliveryAnimation } from "@/components/delivery-animation";
 import { reverseGeocode } from "@/lib/geocoding.functions";
+import { isValidCoordinate } from "@/lib/geo";
 import {
   Crosshair,
   Plus,
@@ -108,10 +109,24 @@ function CheckoutPage() {
 
   const savedAddresses = useAddresses();
   const [addr, setAddr] = useState<string>(() => savedAddresses[0]?.id ?? CURRENT_LOCATION_ID);
-  const [pinCoords, setPinCoords] = useState<{ lat: number; lng: number }>(() => ({
-    lat: savedAddresses[0]?.lat ?? 9.9816,
-    lng: savedAddresses[0]?.lng ?? 76.2999,
-  }));
+  const [pinCoords, setPinCoords] = useState<{ lat: number; lng: number } | null>(() => {
+    const first = savedAddresses[0];
+    return first &&
+      typeof first.lat === "number" &&
+      typeof first.lng === "number" &&
+      isValidCoordinate(first.lat, first.lng)
+      ? { lat: first.lat, lng: first.lng }
+      : null;
+  });
+  const [pinConfirmed, setPinConfirmed] = useState<boolean>(() => {
+    const first = savedAddresses[0];
+    return (
+      !!first &&
+      typeof first.lat === "number" &&
+      typeof first.lng === "number" &&
+      isValidCoordinate(first.lat, first.lng)
+    );
+  });
   const [accuracyMeters, setAccuracyMeters] = useState<number | null>(null);
   const [currentAddress, setCurrentAddress] = useState(() =>
     savedAddresses.length === 0 ? "Map pin location" : "",
@@ -147,13 +162,32 @@ function CheckoutPage() {
 
   const chooseAddr = (id: string) => {
     setAddr(id);
-    if (id === CURRENT_LOCATION_ID) return;
+    if (id === CURRENT_LOCATION_ID) {
+      if (manualAddress.trim()) {
+        setPinCoords(null);
+        setPinConfirmed(false);
+      }
+      return;
+    }
     const a = savedAddresses.find((x) => x.id === id);
-    if (a) setPinCoords({ lat: a.lat, lng: a.lng });
+    if (
+      a &&
+      typeof a.lat === "number" &&
+      typeof a.lng === "number" &&
+      isValidCoordinate(a.lat, a.lng)
+    ) {
+      setPinCoords({ lat: a.lat, lng: a.lng });
+      setPinConfirmed(true);
+    } else {
+      setPinCoords(null);
+      setPinConfirmed(false);
+      setCurrentAddress("Destination location unavailable.");
+    }
   };
 
   const updatePin = (coords: { lat: number; lng: number }) => {
     setPinCoords(coords);
+    setPinConfirmed(true);
     setAccuracyMeters(null);
     if (addr === CURRENT_LOCATION_ID) {
       setCurrentAddress(`Dropped pin · ${coords.lat.toFixed(5)}, ${coords.lng.toFixed(5)}`);
@@ -171,8 +205,8 @@ function CheckoutPage() {
     const created = addressesStore.add({
       label: newLabel.trim(),
       line: newLine.trim(),
-      lat: pinCoords.lat,
-      lng: pinCoords.lng,
+      lat: pinCoords?.lat ?? null,
+      lng: pinCoords?.lng ?? null,
     });
     setAddr(created.id);
     setNewLabel("");
@@ -188,6 +222,7 @@ function CheckoutPage() {
     console.info("[geo] coords received", coords);
     console.info("[geo] accuracy", { meters: accuracy });
     setPinCoords(coords);
+    setPinConfirmed(true);
     setAccuracyMeters(accuracy);
     setAddr(CURRENT_LOCATION_ID);
     setCurrentAddress(`Finding address for ${coords.lat.toFixed(5)}, ${coords.lng.toFixed(5)}…`);
@@ -201,9 +236,10 @@ function CheckoutPage() {
       if (showAdd && !newLine.trim()) setNewLine(result.address);
     } catch (error) {
       console.warn("[geo] reverse geocode failed", error);
-      const fallback = `Current location · ${coords.lat.toFixed(5)}, ${coords.lng.toFixed(5)}`;
-      setCurrentAddress(fallback);
+      setCurrentAddress("Destination location unavailable.");
       setManualAddress("");
+      setPinConfirmed(false);
+      setPinCoords(null);
     }
     setLocStatus("ok");
   };
@@ -485,7 +521,11 @@ function CheckoutPage() {
     : addr === CURRENT_LOCATION_ID && currentAddress
       ? `Current location · ${currentAddressLine}`
       : "";
-  const canPlace = !!selectedAddressLine;
+  const canPlace =
+    !!selectedAddressLine &&
+    !!pinCoords &&
+    isValidCoordinate(pinCoords.lat, pinCoords.lng) &&
+    pinConfirmed;
 
   const applyCoupon = async () => {
     const code = couponCode.trim().toUpperCase();
@@ -531,11 +571,19 @@ function CheckoutPage() {
 
   const openPaymentConfirmation = () => {
     if (!selectedAddressLine || isPlacing || isCheckingStock) return;
+    if (!canPlace) {
+      toast.error("Confirm the delivery location before continuing.");
+      return;
+    }
     setShowDemoPayment(true);
   };
 
   const placeOrder = async () => {
     if (!selectedAddressLine || isPlacing || !store) return;
+    if (!canPlace || !pinCoords) {
+      toast.error("Confirm the delivery location before placing the order.");
+      return;
+    }
     setIsPlacing(true);
     setPaymentStep("authorizing");
 
@@ -570,7 +618,7 @@ function CheckoutPage() {
       toast.success(
         pay === "cod"
           ? "Order placed! Pay cash on delivery."
-          : `Payment of ₹${displayTotal} completed successfully!`
+          : `Payment of ₹${displayTotal} completed successfully!`,
       );
 
       setShowDemoPayment(false);
@@ -624,9 +672,15 @@ function CheckoutPage() {
           />
         </div>
         <p className="mt-2 font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
-          Pin · {pinCoords.lat.toFixed(4)}, {pinCoords.lng.toFixed(4)}
+          Pin ·{" "}
+          {pinCoords ? `${pinCoords.lat.toFixed(4)}, ${pinCoords.lng.toFixed(4)}` : "unavailable"}
           {typeof accuracyMeters === "number" ? ` · accuracy ±${Math.round(accuracyMeters)} m` : ""}
         </p>
+        {!pinConfirmed && (
+          <p className="mt-1 text-[11px] text-amber-700">
+            Previous pin is invalid until you confirm the delivery location again.
+          </p>
+        )}
         {locStatus === "ok" && (
           <p className="mt-1 text-[11px] text-primary">
             Location updated — address matched to the pin below.
@@ -659,7 +713,12 @@ function CheckoutPage() {
                   <textarea
                     value={manualAddress}
                     onClick={(e) => e.stopPropagation()}
-                    onChange={(e) => setManualAddress(e.target.value)}
+                    onChange={(e) => {
+                      setManualAddress(e.target.value);
+                      setCurrentAddress(e.target.value);
+                      setPinConfirmed(false);
+                      setPinCoords(null);
+                    }}
                     placeholder="Correct house, street, area or landmark"
                     rows={2}
                     className="mt-2 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground"
@@ -703,7 +762,10 @@ function CheckoutPage() {
                 className="mt-2 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
               />
               <p className="mt-2 font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
-                Uses current pin · {pinCoords.lat.toFixed(4)}, {pinCoords.lng.toFixed(4)}
+                Uses current pin ·{" "}
+                {pinCoords
+                  ? `${pinCoords.lat.toFixed(4)}, ${pinCoords.lng.toFixed(4)}`
+                  : "unavailable"}
               </p>
               <div className="mt-2 flex gap-2">
                 <button
@@ -857,7 +919,10 @@ function CheckoutPage() {
             aria-live="polite"
           >
             {/* Confetti particles */}
-            <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
+            <div
+              className="pointer-events-none absolute inset-0 overflow-hidden"
+              aria-hidden="true"
+            >
               {Array.from({ length: 28 }, (_, i) => {
                 const colors = [
                   "#10B981", // Emerald
@@ -910,19 +975,27 @@ function CheckoutPage() {
               <div className="mt-5 rounded-2xl bg-muted/40 p-3.5 text-left ring-1 ring-black/[0.04]">
                 <div className="flex justify-between border-b pb-2 text-[11px]">
                   <span className="text-muted-foreground">Ref / Txn ID</span>
-                  <span className="font-mono font-medium text-foreground">{txnRef || "TXN-8492019"}</span>
+                  <span className="font-mono font-medium text-foreground">
+                    {txnRef || "TXN-8492019"}
+                  </span>
                 </div>
                 <div className="flex justify-between border-b py-2 text-[11px]">
                   <span className="text-muted-foreground">Order Code</span>
-                  <span className="font-mono font-semibold text-primary">#{placedOrder?.code || "LS-1024"}</span>
+                  <span className="font-mono font-semibold text-primary">
+                    #{placedOrder?.code || "LS-1024"}
+                  </span>
                 </div>
                 <div className="flex justify-between border-b py-2 text-[11px]">
                   <span className="text-muted-foreground">Shop</span>
-                  <span className="font-medium text-foreground">{placedOrder?.storeName || store?.name || "Local Shore shop"}</span>
+                  <span className="font-medium text-foreground">
+                    {placedOrder?.storeName || store?.name || "Local Shore shop"}
+                  </span>
                 </div>
                 <div className="flex justify-between pt-2 text-[11px]">
                   <span className="text-muted-foreground">Estimated Delivery</span>
-                  <span className="font-semibold text-emerald-600">~{placedOrder?.etaMin || store?.etaMin || 25} mins</span>
+                  <span className="font-semibold text-emerald-600">
+                    ~{placedOrder?.etaMin || store?.etaMin || 25} mins
+                  </span>
                 </div>
               </div>
 
@@ -941,7 +1014,8 @@ function CheckoutPage() {
                   <ArrowRight className="h-4 w-4" />
                 </button>
                 <p className="mt-2 text-[11px] text-muted-foreground">
-                  Auto-redirecting in <span className="font-bold text-foreground">{countdown}s</span>...
+                  Auto-redirecting in{" "}
+                  <span className="font-bold text-foreground">{countdown}s</span>...
                 </p>
               </div>
             </m.div>
@@ -1009,7 +1083,9 @@ function CheckoutPage() {
               <div className="my-5 rounded-xl bg-muted/40 p-4 ring-1 ring-black/[0.04]">
                 <div className="flex items-center justify-between">
                   <span className="text-xs text-muted-foreground">Paying to</span>
-                  <span className="text-xs font-semibold">{store?.name || placedOrder?.storeName || "Local Shore shop"}</span>
+                  <span className="text-xs font-semibold">
+                    {store?.name || placedOrder?.storeName || "Local Shore shop"}
+                  </span>
                 </div>
                 <div className="mt-2 flex items-baseline justify-between">
                   <span className="text-sm font-medium">Total Payable</span>

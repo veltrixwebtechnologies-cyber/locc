@@ -1,5 +1,14 @@
 import { useState, useMemo, useRef, useEffect } from "react";
-import { MapPin, Locate, ArrowRight, Star, Filter, Check, Zap, Store as StoreIcon } from "lucide-react";
+import {
+  MapPin,
+  Locate,
+  ArrowRight,
+  Star,
+  Filter,
+  Check,
+  Zap,
+  Store as StoreIcon,
+} from "lucide-react";
 import { motion } from "framer-motion";
 import { InteractiveMapView, type InteractiveMapViewRef } from "./interactive-map-view";
 
@@ -81,10 +90,13 @@ export function LocalShoreMapExperience({
     refetchOnWindowFocus: false,
     queryFn: async () => {
       try {
-        let { data, error } = await (supabase as any)
+        const { data: catData, error: catError } = await (supabase as any)
           .from("approved_product_catalog")
-          .select("id,seller_id,name,category,selling_price,image_url,stock,shop_name,business_type,city,state,address_line1");
-        if (error) {
+          .select(
+            "id,seller_id,name,category,selling_price,image_url,stock,shop_name,business_type,city,state,address_line1",
+          );
+        let data = catData;
+        if (catError) {
           const fallback = await (supabase as any)
             .from("products")
             .select("id,seller_id,name,category,selling_price,image_url,stock")
@@ -124,7 +136,7 @@ export function LocalShoreMapExperience({
       userLocation,
       filters,
       approvedProducts.data ?? [],
-      approvedVendors.data ?? []
+      approvedVendors.data ?? [],
     );
   }, [userLocation, filters, approvedProducts.data, approvedVendors.data]);
 
@@ -169,7 +181,7 @@ export function LocalShoreMapExperience({
         },
         (err) => {
           toast.error("Location permission denied or unavailable.");
-        }
+        },
       );
     }
   };
@@ -211,7 +223,8 @@ export function LocalShoreMapExperience({
             </span>
           </div>
           <p className="mt-0.5 text-xs md:text-sm text-slate-500 font-medium">
-            <strong className="text-slate-900 font-bold">{markerItems.length} local stores</strong> verified in this area
+            <strong className="text-slate-900 font-bold">{markerItems.length} local stores</strong>{" "}
+            verified in this area
           </p>
         </div>
 
@@ -266,6 +279,7 @@ export function LocalShoreMapExperience({
       {/* NEIGHBORHOOD MAP PREVIEW CARD (Shown when map is closed, matching exact reference UI) */}
       {!showDesktopMap && (
         <NeighborhoodMapPreviewCard
+          markers={markerItems}
           onOpenMap={() => {
             setShowDesktopMap(true);
             setIsMobileMapOpen(true);
@@ -276,21 +290,27 @@ export function LocalShoreMapExperience({
       {/* MAIN CONTAINER: Dynamic Responsive Split View */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         {/* SHOP CARDS PANEL */}
-        <div className={`flex flex-col transition-all duration-300 ${
-          showDesktopMap ? "lg:col-span-6" : "lg:col-span-12"
-        }`}>
+        <div
+          className={`flex flex-col transition-all duration-300 ${
+            showDesktopMap ? "lg:col-span-6" : "lg:col-span-12"
+          }`}
+        >
           {markerItems.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/50 p-12 text-center">
               <div className="mx-auto text-4xl mb-3">🔍</div>
               <p className="font-bold text-slate-900 text-base">No shops found nearby</p>
-              <p className="mt-1 text-xs text-slate-500">Try adjusting your category or search filters.</p>
+              <p className="mt-1 text-xs text-slate-500">
+                Try adjusting your category or search filters.
+              </p>
             </div>
           ) : (
-            <div className={`grid gap-4 pb-8 ${
-              showDesktopMap 
-                ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-2" 
-                : "grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4"
-            }`}>
+            <div
+              className={`grid gap-4 pb-8 ${
+                showDesktopMap
+                  ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-2"
+                  : "grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4"
+              }`}
+            >
               {markerItems.map((item) => {
                 const isSelected = selectedMarkerId === item.id;
                 const imgUrl = isValidImageUrl(item.productImage)
@@ -323,7 +343,7 @@ export function LocalShoreMapExperience({
                         alt={item.productName}
                         className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
                       />
-                      
+
                       {/* Top Pick Badge */}
                       <div className="absolute top-2.5 left-2.5 rounded-full bg-white/95 backdrop-blur-xs px-2.5 py-1 text-[10px] font-bold text-slate-900 shadow-sm border border-slate-200/40">
                         {item.distanceKm <= 2 ? "Top Pick" : "Verified Store"}
@@ -338,7 +358,10 @@ export function LocalShoreMapExperience({
                         }}
                         className="absolute top-2.5 right-2.5 flex h-8 w-8 items-center justify-center rounded-full bg-white/90 text-slate-500 shadow-md hover:text-red-500 hover:scale-110 active:scale-90 transition-all"
                       >
-                        <svg className="h-4 w-4 fill-none stroke-current stroke-[2]" viewBox="0 0 24 24">
+                        <svg
+                          className="h-4 w-4 fill-none stroke-current stroke-[2]"
+                          viewBox="0 0 24 24"
+                        >
                           <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
                         </svg>
                       </button>
@@ -362,11 +385,15 @@ export function LocalShoreMapExperience({
                           <div className="flex items-center gap-0.5 shrink-0 text-[12px] font-bold text-slate-700">
                             <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
                             <span>{item.rating.toFixed(1)}</span>
-                            <span className="font-normal text-slate-400 ml-0.5">({Math.floor(item.rating * 15)})</span>
+                            <span className="font-normal text-slate-400 ml-0.5">
+                              ({Math.floor(item.rating * 15)})
+                            </span>
                           </div>
                         </div>
 
-                        <p className="text-xs text-slate-500 line-clamp-1 mt-0.5">{item.productName}</p>
+                        <p className="text-xs text-slate-500 line-clamp-1 mt-0.5">
+                          {item.productName}
+                        </p>
 
                         <p className="text-[11px] font-semibold text-[#981495] flex items-center gap-1.5 mt-1">
                           <span className="h-1.5 w-1.5 rounded-full bg-[#981495] inline-block animate-pulse" />
@@ -377,7 +404,9 @@ export function LocalShoreMapExperience({
                       {/* Price & View Shop Footer */}
                       <div className="mt-2 flex items-center justify-between pt-2.5 border-t border-slate-100">
                         <div>
-                          <span className="font-extrabold text-[14px] text-slate-900">₹{priceMin}–₹{priceMax}</span>
+                          <span className="font-extrabold text-[14px] text-slate-900">
+                            ₹{priceMin}–₹{priceMax}
+                          </span>
                           <span className="text-[10px] text-slate-400 ml-1">total</span>
                         </div>
                         <Link
@@ -467,9 +496,15 @@ export function LocalShoreMapExperience({
           className="pointer-events-auto flex items-center gap-2 rounded-full bg-[#981495] px-5 py-3 text-xs font-bold text-white shadow-2xl hover:scale-105 active:scale-95 transition-all"
         >
           {isMobileMapOpen ? (
-            <><span>Show list</span><span>📋</span></>
+            <>
+              <span>Show list</span>
+              <span>📋</span>
+            </>
           ) : (
-            <><span>Show map</span><span>🗺️</span></>
+            <>
+              <span>Show map</span>
+              <span>🗺️</span>
+            </>
           )}
         </button>
       </div>
@@ -477,7 +512,29 @@ export function LocalShoreMapExperience({
   );
 }
 
-function NeighborhoodMapPreviewCard({ onOpenMap }: { onOpenMap: () => void }) {
+function NeighborhoodMapPreviewCard({
+  markers = [],
+  onOpenMap,
+}: {
+  markers?: MapMarkerItem[];
+  onOpenMap: () => void;
+}) {
+  const topNearest = useMemo(() => {
+    return [...markers].sort((a, b) => a.distanceKm - b.distanceKm).slice(0, 4);
+  }, [markers]);
+
+  const p0 = topNearest[0] || { shopName: "Fresh Basket", distanceKm: 0.8, eta: 12 };
+  const p1 = topNearest[1] || { shopName: "Sri Krishna", distanceKm: 1.2, eta: 15 };
+  const p2 = topNearest[2] || { shopName: "Local Mart", distanceKm: 1.8, eta: 18 };
+  const p3 = topNearest[3] || { shopName: "Bake House", distanceKm: 2.3, eta: 22 };
+
+  const getEtaText = (item: any) => {
+    if (item.etaMin) return `${item.etaMin} min`;
+    if (item.eta) return `${item.eta} min`;
+    const min = Math.max(10, Math.round((item.distanceKm || 1) * 5 + 10));
+    return `${min} min`;
+  };
+
   return (
     <div className="w-full rounded-3xl bg-white border border-slate-200/80 shadow-md p-6 sm:p-8 md:p-10 mb-8 flex flex-col lg:flex-row items-center justify-between gap-8 overflow-hidden relative">
       {/* Left Content Area */}
@@ -486,15 +543,15 @@ function NeighborhoodMapPreviewCard({ onOpenMap }: { onOpenMap: () => void }) {
           Your neighborhood, delivered
         </h3>
         <p className="text-sm sm:text-base font-semibold text-slate-500">
-          Discover shops around you
+          Discover nearest verified shops around you
         </p>
 
         {/* Checklist */}
         <div className="space-y-2.5 pt-2 pb-2">
           {[
-            "Real local shops",
+            "Real local shops near your address",
             "No dark stores",
-            "Support your neighborhood",
+            "Support your neighborhood vendors",
             "Faster, fresher delivery",
           ].map((item, idx) => (
             <div key={idx} className="flex items-center gap-3">
@@ -519,13 +576,16 @@ function NeighborhoodMapPreviewCard({ onOpenMap }: { onOpenMap: () => void }) {
         </div>
       </div>
 
-      {/* Right Graphic Area: Light Vector Map Canvas with Floating Shop Cards */}
+      {/* Right Graphic Area: Light Vector Map Canvas with Floating Dynamic Shop Cards */}
       <div
         onClick={onOpenMap}
         className="relative w-full lg:w-[460px] h-[260px] sm:h-[280px] rounded-2xl bg-slate-50 border border-slate-200/60 overflow-hidden shadow-xs cursor-pointer group"
       >
         {/* Stylized Vector Map Background */}
-        <svg className="absolute inset-0 w-full h-full object-cover opacity-65" xmlns="http://www.w3.org/2000/svg">
+        <svg
+          className="absolute inset-0 w-full h-full object-cover opacity-65"
+          xmlns="http://www.w3.org/2000/svg"
+        >
           <defs>
             <pattern id="mapGrid" width="40" height="40" patternUnits="userSpaceOnUse">
               <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#E2E8F0" strokeWidth="1" />
@@ -533,10 +593,16 @@ function NeighborhoodMapPreviewCard({ onOpenMap }: { onOpenMap: () => void }) {
           </defs>
           <rect width="100%" height="100%" fill="#F8FAFC" />
           <rect width="100%" height="100%" fill="url(#mapGrid)" />
-          
+
           <path d="M 40 20 Q 90 10, 120 60 T 160 120 L 60 140 Z" fill="#D1FAE5" opacity="0.6" />
           <path d="M 320 180 Q 380 160, 420 220 L 340 260 Z" fill="#D1FAE5" opacity="0.6" />
-          <path d="M 380 0 Q 420 80, 460 140" fill="none" stroke="#BAE6FD" strokeWidth="18" opacity="0.7" />
+          <path
+            d="M 380 0 Q 420 80, 460 140"
+            fill="none"
+            stroke="#BAE6FD"
+            strokeWidth="18"
+            opacity="0.7"
+          />
 
           <path d="M -20 100 L 500 120" fill="none" stroke="#FFFFFF" strokeWidth="14" />
           <path d="M -20 100 L 500 120" fill="none" stroke="#CBD5E1" strokeWidth="8" />
@@ -551,49 +617,59 @@ function NeighborhoodMapPreviewCard({ onOpenMap }: { onOpenMap: () => void }) {
           <path d="M 300 20 Q 240 140, 480 200" fill="none" stroke="#CBD5E1" strokeWidth="7" />
         </svg>
 
-        {/* Floating Shop Pins */}
+        {/* Dynamic Floating Shop Pins Sorted Nearest First */}
 
-        {/* Pin 1: Sri Krishna (Top Right) */}
+        {/* Pin 1: Nearest Store (Top Left) */}
+        <div className="absolute top-28 left-6 flex items-center gap-2 rounded-2xl bg-white px-3 py-1.5 shadow-lg border border-emerald-200 z-10 transition-transform group-hover:scale-105">
+          <div className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
+            <MapPin className="h-4 w-4 fill-emerald-600 text-emerald-600" />
+          </div>
+          <div>
+            <div className="text-xs font-bold text-slate-900 leading-tight truncate max-w-[110px]">
+              {p0.shopName}
+            </div>
+            <div className="text-[10px] font-bold text-emerald-600">
+              {getEtaText(p0)} ({p0.distanceKm} km)
+            </div>
+          </div>
+        </div>
+
+        {/* Pin 2: 2nd Nearest Store (Top Right) */}
         <div className="absolute top-6 right-10 flex items-center gap-2 rounded-2xl bg-white px-3 py-1.5 shadow-lg border border-slate-100 z-10 transition-transform group-hover:scale-105">
           <div className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
             <MapPin className="h-4 w-4 fill-emerald-600 text-emerald-600" />
           </div>
           <div>
-            <div className="text-xs font-bold text-slate-900 leading-tight">Sri Krishna</div>
-            <div className="text-[10px] font-semibold text-slate-400">18 min</div>
+            <div className="text-xs font-bold text-slate-900 leading-tight truncate max-w-[110px]">
+              {p1.shopName}
+            </div>
+            <div className="text-[10px] font-semibold text-slate-500">{getEtaText(p1)}</div>
           </div>
         </div>
 
-        {/* Pin 2: Local Mart (Middle Right) */}
+        {/* Pin 3: 3rd Nearest Store (Middle Right) */}
         <div className="absolute top-24 right-4 flex items-center gap-2 rounded-2xl bg-white px-3 py-1.5 shadow-lg border border-slate-100 z-10 transition-transform group-hover:scale-105">
           <div className="flex h-6 w-6 items-center justify-center rounded-full bg-rose-50 text-rose-600">
             <MapPin className="h-4 w-4 fill-rose-600 text-rose-600" />
           </div>
           <div>
-            <div className="text-xs font-bold text-slate-900 leading-tight">Local Mart</div>
-            <div className="text-[10px] font-semibold text-slate-400">22 min</div>
+            <div className="text-xs font-bold text-slate-900 leading-tight truncate max-w-[110px]">
+              {p2.shopName}
+            </div>
+            <div className="text-[10px] font-semibold text-slate-500">{getEtaText(p2)}</div>
           </div>
         </div>
 
-        {/* Pin 3: Fresh Basket (Middle Left) */}
-        <div className="absolute top-28 left-6 flex items-center gap-2 rounded-2xl bg-white px-3 py-1.5 shadow-lg border border-slate-100 z-10 transition-transform group-hover:scale-105">
-          <div className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
-            <MapPin className="h-4 w-4 fill-emerald-600 text-emerald-600" />
-          </div>
-          <div>
-            <div className="text-xs font-bold text-slate-900 leading-tight">Fresh Basket</div>
-            <div className="text-[10px] font-semibold text-emerald-600">15 min</div>
-          </div>
-        </div>
-
-        {/* Pin 4: Bake House (Bottom Right) */}
+        {/* Pin 4: 4th Nearest Store (Bottom Right) */}
         <div className="absolute bottom-6 right-16 flex items-center gap-2 rounded-2xl bg-white px-3 py-1.5 shadow-lg border border-slate-100 z-10 transition-transform group-hover:scale-105">
           <div className="flex h-6 w-6 items-center justify-center rounded-full bg-rose-50 text-rose-600">
             <MapPin className="h-4 w-4 fill-rose-600 text-rose-600" />
           </div>
           <div>
-            <div className="text-xs font-bold text-slate-900 leading-tight">Bake House</div>
-            <div className="text-[10px] font-semibold text-slate-400">20 min</div>
+            <div className="text-xs font-bold text-slate-900 leading-tight truncate max-w-[110px]">
+              {p3.shopName}
+            </div>
+            <div className="text-[10px] font-semibold text-slate-500">{getEtaText(p3)}</div>
           </div>
         </div>
 
@@ -606,4 +682,3 @@ function NeighborhoodMapPreviewCard({ onOpenMap }: { onOpenMap: () => void }) {
     </div>
   );
 }
-

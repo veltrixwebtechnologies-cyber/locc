@@ -2,13 +2,29 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { AppShell } from "@/components/app-shell";
 import {
-  Sparkles, Gift, ArrowRight, ChevronRight, Trophy, Star, Clock,
-  TrendingUp, ShieldCheck, Zap, Users, MessageSquare, UserCheck, Cake,
+  Sparkles,
+  Gift,
+  ArrowRight,
+  ChevronRight,
+  Trophy,
+  Star,
+  Clock,
+  TrendingUp,
+  ShieldCheck,
+  Zap,
+  Users,
+  MessageSquare,
+  UserCheck,
+  Cake,
 } from "lucide-react";
 import { m } from "motion/react";
 import {
-  REWARD_TIERS, REWARD_ACTIONS, REDEEM_OPTIONS, SAMPLE_REWARD_HISTORY,
-  SAMPLE_REWARDS_SUMMARY, type RewardTransaction,
+  REWARD_TIERS,
+  REWARD_ACTIONS,
+  REDEEM_OPTIONS,
+  SAMPLE_REWARD_HISTORY,
+  SAMPLE_REWARDS_SUMMARY,
+  type RewardTransaction,
 } from "@/lib/rewards-data";
 
 export const Route = createFileRoute("/rewards")({ component: RewardsPage });
@@ -35,13 +51,16 @@ function RewardsPage() {
   const s = SAMPLE_REWARDS_SUMMARY;
   const currentTier = REWARD_TIERS.find((t) => t.id === s.currentTier)!;
   const nextTier = REWARD_TIERS.find((t) => t.id === s.nextTier)!;
-  const progress = ((s.currentPoints - currentTier.minPoints) / (nextTier.minPoints - currentTier.minPoints)) * 100;
+  const progress =
+    ((s.currentPoints - currentTier.minPoints) / (nextTier.minPoints - currentTier.minPoints)) *
+    100;
   const [historyFilter, setHistoryFilter] = useState<"all" | RewardTransaction["type"]>("all");
   const [showAllActions, setShowAllActions] = useState(false);
 
-  const filteredHistory = historyFilter === "all"
-    ? SAMPLE_REWARD_HISTORY
-    : SAMPLE_REWARD_HISTORY.filter((t) => t.type === historyFilter);
+  const filteredHistory =
+    historyFilter === "all"
+      ? SAMPLE_REWARD_HISTORY
+      : SAMPLE_REWARD_HISTORY.filter((t) => t.type === historyFilter);
 
   const visibleActions = showAllActions ? REWARD_ACTIONS : REWARD_ACTIONS.slice(0, 4);
 
@@ -50,7 +69,13 @@ function RewardsPage() {
       <div className="mx-auto max-w-5xl px-4 py-6 sm:px-6">
         {/* Breadcrumb */}
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <Link to="/" search={{ category: undefined, q: undefined }} className="hover:text-primary">Home</Link>
+          <Link
+            to="/"
+            search={{ category: undefined, q: undefined }}
+            className="hover:text-primary"
+          >
+            Home
+          </Link>
           <ChevronRight className="h-3 w-3" />
           <span className="font-semibold text-foreground">Rewards</span>
         </div>
@@ -66,7 +91,9 @@ function RewardsPage() {
             <div>
               <div className="flex items-center gap-2">
                 <Sparkles className="h-5 w-5 text-amber-300" />
-                <span className="text-xs font-bold uppercase tracking-widest text-purple-200">LocalShore Rewards</span>
+                <span className="text-xs font-bold uppercase tracking-widest text-purple-200">
+                  LocalShore Rewards
+                </span>
               </div>
               <p className="mt-3 font-display text-4xl font-extrabold sm:text-5xl">
                 🪙 {s.currentPoints.toLocaleString()}
@@ -106,16 +133,43 @@ function RewardsPage() {
         {/* ── Stats Row ────────────────────────────────────────────────── */}
         <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
           {[
-            { label: "Current Points", value: s.currentPoints.toLocaleString(), icon: Sparkles, color: "text-purple-700 bg-purple-50" },
-            { label: "This Month", value: `+${s.earnedThisMonth}`, icon: TrendingUp, color: "text-emerald-700 bg-emerald-50" },
-            { label: "Lifetime", value: s.lifetimePoints.toLocaleString(), icon: Trophy, color: "text-amber-700 bg-amber-50" },
-            { label: "Expiring Soon", value: s.expiringPoints.toString(), icon: Clock, color: "text-rose-600 bg-rose-50" },
+            {
+              label: "Current Points",
+              value: s.currentPoints.toLocaleString(),
+              icon: Sparkles,
+              color: "text-purple-700 bg-purple-50",
+            },
+            {
+              label: "This Month",
+              value: `+${s.earnedThisMonth}`,
+              icon: TrendingUp,
+              color: "text-emerald-700 bg-emerald-50",
+            },
+            {
+              label: "Lifetime",
+              value: s.lifetimePoints.toLocaleString(),
+              icon: Trophy,
+              color: "text-amber-700 bg-amber-50",
+            },
+            {
+              label: "Expiring Soon",
+              value: s.expiringPoints.toString(),
+              icon: Clock,
+              color: "text-rose-600 bg-rose-50",
+            },
           ].map((stat) => (
-            <div key={stat.label} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-xs">
-              <div className={`inline-flex h-9 w-9 items-center justify-center rounded-xl ${stat.color}`}>
+            <div
+              key={stat.label}
+              className="rounded-2xl border border-slate-200 bg-white p-4 shadow-xs"
+            >
+              <div
+                className={`inline-flex h-9 w-9 items-center justify-center rounded-xl ${stat.color}`}
+              >
                 <stat.icon className="h-4 w-4" />
               </div>
-              <p className="mt-2 font-display text-xl font-extrabold text-slate-900">{stat.value}</p>
+              <p className="mt-2 font-display text-xl font-extrabold text-slate-900">
+                {stat.value}
+              </p>
               <p className="text-[11px] font-semibold text-slate-500">{stat.label}</p>
             </div>
           ))}
@@ -131,18 +185,28 @@ function RewardsPage() {
                 <div
                   key={tier.id}
                   className={`rounded-2xl border p-4 transition ${
-                    isActive ? "border-purple-300 bg-purple-50 ring-2 ring-purple-200" : "border-slate-200 bg-white"
+                    isActive
+                      ? "border-purple-300 bg-purple-50 ring-2 ring-purple-200"
+                      : "border-slate-200 bg-white"
                   }`}
                 >
                   <div className="flex items-center gap-2">
                     <span className="text-lg">{tierIcon(tier.id)}</span>
                     <span className="text-sm font-bold text-slate-900">{tier.name}</span>
-                    {isActive && <span className="rounded-full bg-purple-700 px-2 py-0.5 text-[9px] font-bold text-white">You</span>}
+                    {isActive && (
+                      <span className="rounded-full bg-purple-700 px-2 py-0.5 text-[9px] font-bold text-white">
+                        You
+                      </span>
+                    )}
                   </div>
-                  <p className="mt-1 text-[11px] text-slate-500">{tier.minPoints.toLocaleString()}+ points</p>
+                  <p className="mt-1 text-[11px] text-slate-500">
+                    {tier.minPoints.toLocaleString()}+ points
+                  </p>
                   <ul className="mt-2 space-y-1">
                     {tier.benefits.slice(0, 2).map((b) => (
-                      <li key={b} className="text-[11px] text-slate-600">• {b}</li>
+                      <li key={b} className="text-[11px] text-slate-600">
+                        • {b}
+                      </li>
                     ))}
                   </ul>
                 </div>
@@ -158,7 +222,10 @@ function RewardsPage() {
             <p className="mt-0.5 text-xs text-slate-500">Complete actions to earn Shore Points</p>
             <div className="mt-3 space-y-2">
               {visibleActions.map((action) => (
-                <div key={action.id} className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white p-3.5 transition hover:border-purple-200 hover:shadow-xs">
+                <div
+                  key={action.id}
+                  className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white p-3.5 transition hover:border-purple-200 hover:shadow-xs"
+                >
                   <span className="text-xl">{action.icon}</span>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-bold text-slate-900">{action.title}</p>
@@ -170,7 +237,10 @@ function RewardsPage() {
                 </div>
               ))}
               {!showAllActions && REWARD_ACTIONS.length > 4 && (
-                <button onClick={() => setShowAllActions(true)} className="w-full rounded-xl bg-slate-50 py-2.5 text-xs font-bold text-purple-700 hover:bg-purple-50 transition">
+                <button
+                  onClick={() => setShowAllActions(true)}
+                  className="w-full rounded-xl bg-slate-50 py-2.5 text-xs font-bold text-purple-700 hover:bg-purple-50 transition"
+                >
                   Show all {REWARD_ACTIONS.length} ways to earn →
                 </button>
               )}
@@ -183,7 +253,10 @@ function RewardsPage() {
             <p className="mt-0.5 text-xs text-slate-500">Use your points for rewards</p>
             <div className="mt-3 space-y-2">
               {REDEEM_OPTIONS.map((opt) => (
-                <div key={opt.id} className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white p-3.5 transition hover:border-purple-200 hover:shadow-xs">
+                <div
+                  key={opt.id}
+                  className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white p-3.5 transition hover:border-purple-200 hover:shadow-xs"
+                >
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-bold text-slate-900">{opt.title}</p>
                     <p className="text-[11px] text-slate-500">{opt.description}</p>
@@ -211,7 +284,9 @@ function RewardsPage() {
                 key={f}
                 onClick={() => setHistoryFilter(f)}
                 className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-bold capitalize transition ${
-                  historyFilter === f ? "bg-purple-700 text-white" : "bg-slate-100 text-slate-600 hover:bg-purple-50"
+                  historyFilter === f
+                    ? "bg-purple-700 text-white"
+                    : "bg-slate-100 text-slate-600 hover:bg-purple-50"
                 }`}
               >
                 {f}
@@ -225,16 +300,26 @@ function RewardsPage() {
               </div>
             ) : (
               filteredHistory.map((tx) => (
-                <div key={tx.id} className="flex items-center gap-3 rounded-2xl border border-slate-100 bg-white p-3.5">
+                <div
+                  key={tx.id}
+                  className="flex items-center gap-3 rounded-2xl border border-slate-100 bg-white p-3.5"
+                >
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-semibold text-slate-900">{tx.description}</p>
                     <p className="text-[11px] text-slate-400">
                       {tx.orderId && <span className="font-mono">{tx.orderId} · </span>}
-                      {new Date(tx.date).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
+                      {new Date(tx.date).toLocaleDateString("en-IN", {
+                        day: "numeric",
+                        month: "short",
+                        year: "numeric",
+                      })}
                     </p>
                   </div>
-                  <span className={`shrink-0 font-display text-base font-extrabold ${txColor(tx.type)}`}>
-                    {txSign(tx.type)}{Math.abs(tx.points)}
+                  <span
+                    className={`shrink-0 font-display text-base font-extrabold ${txColor(tx.type)}`}
+                  >
+                    {txSign(tx.type)}
+                    {Math.abs(tx.points)}
                   </span>
                 </div>
               ))

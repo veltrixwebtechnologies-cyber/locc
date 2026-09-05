@@ -573,7 +573,8 @@ export function useToggleWishlist() {
             .eq("item_key", productId),
         ]);
         if (wRes.error && wRes.error.code !== "PGRST116") throw wRes.error;
-        if (weRes.error && weRes.error.code !== "PGRST205" && weRes.error.status !== 404) throw weRes.error;
+        if (weRes.error && weRes.error.code !== "PGRST205" && weRes.error.status !== 404)
+          throw weRes.error;
       } else {
         if (isUuid) {
           const { data: userData, error: userError } = await supabase.auth.getUser();
@@ -665,4 +666,3 @@ export async function recordRecentProductView(productId: string) {
     console.warn("Recent view RPC skipped:", err);
   }
 }
-

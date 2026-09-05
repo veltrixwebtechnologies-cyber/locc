@@ -64,7 +64,10 @@ function CartPage() {
     totals.subtotal > 0 ? (store ? Math.round(20 + store.distanceKm * 6) : 25) : 0;
   const freeDeliveryTarget = 500;
   const freeDeliveryRemaining = Math.max(0, freeDeliveryTarget - totals.subtotal);
-  const freeDeliveryProgress = Math.min(100, Math.round((totals.subtotal / freeDeliveryTarget) * 100));
+  const freeDeliveryProgress = Math.min(
+    100,
+    Math.round((totals.subtotal / freeDeliveryTarget) * 100),
+  );
   const isFreeDelivery = freeDeliveryRemaining === 0;
   const effectiveDelivery = isFreeDelivery ? 0 : deliveryFee;
   const total = totals.subtotal + effectiveDelivery;
@@ -208,7 +211,9 @@ function CartPage() {
 
                       {/* Product info */}
                       <div className="flex-1 min-w-0">
-                        <p className="font-semibold text-sm text-foreground line-clamp-1">{l.name}</p>
+                        <p className="font-semibold text-sm text-foreground line-clamp-1">
+                          {l.name}
+                        </p>
                         <p className="text-xs text-muted-foreground mt-0.5">
                           {l.unit} · ₹{l.price} each
                         </p>
@@ -278,7 +283,13 @@ function CartPage() {
                   </div>
                   <div className="flex justify-between text-muted-foreground">
                     <span>Delivery fee</span>
-                    <span className={isFreeDelivery ? "font-semibold text-emerald-600" : "font-semibold text-foreground"}>
+                    <span
+                      className={
+                        isFreeDelivery
+                          ? "font-semibold text-emerald-600"
+                          : "font-semibold text-foreground"
+                      }
+                    >
                       {isFreeDelivery ? "FREE" : `₹${deliveryFee}`}
                     </span>
                   </div>
@@ -336,17 +347,38 @@ function CartPage() {
               {/* ── Trust badges strip ──────────────────────── */}
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                 {[
-                  { icon: <Truck className="h-4 w-4 text-primary" />, title: "Fast local delivery", sub: "20–40 mins" },
-                  { icon: <Package className="h-4 w-4 text-primary" />, title: "Freshly packed", sub: "by local shops" },
-                  { icon: <ShieldCheck className="h-4 w-4 text-primary" />, title: "Secure checkout", sub: "100% safe" },
-                  { icon: <RotateCcw className="h-4 w-4 text-primary" />, title: "Easy returns", sub: "Hassle-free" },
+                  {
+                    icon: <Truck className="h-4 w-4 text-primary" />,
+                    title: "Fast local delivery",
+                    sub: "20–40 mins",
+                  },
+                  {
+                    icon: <Package className="h-4 w-4 text-primary" />,
+                    title: "Freshly packed",
+                    sub: "by local shops",
+                  },
+                  {
+                    icon: <ShieldCheck className="h-4 w-4 text-primary" />,
+                    title: "Secure checkout",
+                    sub: "100% safe",
+                  },
+                  {
+                    icon: <RotateCcw className="h-4 w-4 text-primary" />,
+                    title: "Easy returns",
+                    sub: "Hassle-free",
+                  },
                 ].map((b) => (
-                  <div key={b.title} className="flex items-center gap-2.5 rounded-xl border border-border bg-card p-3">
+                  <div
+                    key={b.title}
+                    className="flex items-center gap-2.5 rounded-xl border border-border bg-card p-3"
+                  >
                     <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10">
                       {b.icon}
                     </div>
                     <div>
-                      <p className="text-[11px] font-bold text-foreground leading-tight">{b.title}</p>
+                      <p className="text-[11px] font-bold text-foreground leading-tight">
+                        {b.title}
+                      </p>
                       <p className="text-[10px] text-muted-foreground">{b.sub}</p>
                     </div>
                   </div>
@@ -356,7 +388,8 @@ function CartPage() {
               {/* ── Social proof ────────────────────────────── */}
               <div className="rounded-2xl border border-border bg-card px-4 py-3 text-center">
                 <p className="text-xs font-semibold text-muted-foreground">
-                  Loved by <span className="text-foreground font-bold">10,000+</span> customers in Coimbatore ❤️
+                  Loved by <span className="text-foreground font-bold">10,000+</span> customers in
+                  Coimbatore ❤️
                 </p>
                 <div className="mt-2 flex items-center justify-center gap-6 text-xs">
                   <span className="flex items-center gap-1.5 border-r border-border pr-6">
@@ -416,7 +449,9 @@ function CartPage() {
                     <p className="text-xs font-bold text-amber-800">
                       Yay! You're saving ₹{Math.round(deliveryFee * 0.3)} on delivery 🎉
                     </p>
-                    <p className="text-[11px] text-amber-600">Add more items to get FREE delivery!</p>
+                    <p className="text-[11px] text-amber-600">
+                      Add more items to get FREE delivery!
+                    </p>
                   </div>
                   <span className="text-2xl shrink-0">🛵</span>
                 </div>
@@ -442,7 +477,9 @@ function CartPage() {
                         i
                       </span>
                     </span>
-                    <span className={`font-medium ${isFreeDelivery ? "text-emerald-600" : "text-foreground"}`}>
+                    <span
+                      className={`font-medium ${isFreeDelivery ? "text-emerald-600" : "text-foreground"}`}
+                    >
                       {isFreeDelivery ? "FREE" : `₹${deliveryFee}`}
                     </span>
                   </div>
@@ -487,7 +524,9 @@ function CartPage() {
                 <div className="mt-3 flex items-center gap-2.5 rounded-xl border border-border bg-muted/40 p-3">
                   <ShieldCheck className="h-5 w-5 shrink-0 text-slate-400" />
                   <div>
-                    <p className="text-[11px] font-bold text-foreground">Safe &amp; Secure Payments</p>
+                    <p className="text-[11px] font-bold text-foreground">
+                      Safe &amp; Secure Payments
+                    </p>
                     <p className="text-[10px] text-muted-foreground">
                       Your payment information is 100% secure
                     </p>

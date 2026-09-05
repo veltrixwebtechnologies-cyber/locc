@@ -135,16 +135,16 @@ function StorePage() {
         products,
         store: vendor
           ? ({
-            ...APPROVED_STORE,
-            id: vendor.id,
-            name: vendor.shop_name || APPROVED_STORE.name,
-            category: toStoreCategory(vendor.category),
-            tagline: vendor.business_type || "Approved local vendor",
-            address:
-              [vendor.address_line1, vendor.city, vendor.state].filter(Boolean).join(", ") ||
-              APPROVED_STORE.address,
-            imageUrl,
-          } as Store)
+              ...APPROVED_STORE,
+              id: vendor.id,
+              name: vendor.shop_name || APPROVED_STORE.name,
+              category: toStoreCategory(vendor.category),
+              tagline: vendor.business_type || "Approved local vendor",
+              address:
+                [vendor.address_line1, vendor.city, vendor.state].filter(Boolean).join(", ") ||
+                APPROVED_STORE.address,
+              imageUrl,
+            } as Store)
           : null,
       };
     },
@@ -181,7 +181,11 @@ function StorePage() {
         {/* Header */}
         <div className="relative overflow-hidden bg-card md:rounded-2xl md:border md:hairline">
           <div className="relative aspect-[16/9] w-full overflow-hidden bg-[var(--sand)] md:aspect-[21/7]">
-            <img src={resolveImageUrl(store.imageUrl, store.name, store.category)} alt={store.name} className="h-full w-full object-cover" />
+            <img
+              src={resolveImageUrl(store.imageUrl, store.name, store.category)}
+              alt={store.name}
+              className="h-full w-full object-cover"
+            />
             <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-black/10 to-transparent" />
             <Link
               to="/"
@@ -341,9 +345,7 @@ function StorePage() {
                                     ₹{mrp}
                                   </span>
                                 </div>
-                                <p className="mt-0.5 text-xs font-black text-purple-700">
-                                  20% OFF
-                                </p>
+                                <p className="mt-0.5 text-xs font-black text-purple-700">20% OFF</p>
                               </div>
                             </div>
                           </Link>

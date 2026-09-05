@@ -94,15 +94,20 @@ export function isValidImageUrl(url?: string | null): boolean {
   return true;
 }
 
-export function resolveImageUrl(url?: string | null, name?: string | null, category?: string | null): string {
+export function resolveImageUrl(
+  url?: string | null,
+  name?: string | null,
+  category?: string | null,
+): string {
   const fallback = getFallbackProductImage(name, category);
   if (!url || typeof url !== "string") return fallback;
   const trimmed = url.trim();
   if (trimmed === "" || trimmed === "null" || trimmed === "undefined") return fallback;
   if (/^(https?:|data:|blob:)/i.test(trimmed)) return trimmed;
-  
+
   // If it's a relative storage path (e.g. GUID/filename.jpg), format as a valid Supabase public storage URL
-  const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || "https://flbygucibbrfcwcgzyea.supabase.co";
+  const SUPABASE_URL =
+    import.meta.env.VITE_SUPABASE_URL || "https://flbygucibbrfcwcgzyea.supabase.co";
   return `${SUPABASE_URL}/storage/v1/object/public/product-images/${trimmed}`;
 }
 

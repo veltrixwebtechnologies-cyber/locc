@@ -35,7 +35,7 @@ export const InteractiveMapView = forwardRef<InteractiveMapViewRef, Props>(
       onUserLocationChange,
       className = "h-[650px] w-full",
     },
-    ref
+    ref,
   ) => {
     const containerRef = useRef<HTMLDivElement>(null);
     const mapRef = useRef<maplibregl.Map | null>(null);
@@ -48,7 +48,9 @@ export const InteractiveMapView = forwardRef<InteractiveMapViewRef, Props>(
 
     const [showSearchThisArea, setShowSearchThisArea] = useState(false);
     const [activeMarker, setActiveMarker] = useState<MapMarkerItem | null>(null);
-    const [routeInfo, setRouteInfo] = useState<{ distanceKm: number; durationMins: number } | null>(null);
+    const [routeInfo, setRouteInfo] = useState<{ distanceKm: number; durationMins: number } | null>(
+      null,
+    );
 
     // Synchronize activeMarker with selectedMarkerId prop
     useEffect(() => {
@@ -146,10 +148,7 @@ export const InteractiveMapView = forwardRef<InteractiveMapViewRef, Props>(
       });
 
       map.addControl(new maplibregl.NavigationControl({ showCompass: true }), "top-right");
-      map.addControl(
-        new maplibregl.AttributionControl({ compact: true }),
-        "bottom-right"
-      );
+      map.addControl(new maplibregl.AttributionControl({ compact: true }), "bottom-right");
 
       map.on("error", (e) => {
         const err = e.error as any;
@@ -190,15 +189,7 @@ export const InteractiveMapView = forwardRef<InteractiveMapViewRef, Props>(
             filter: ["has", "point_count"],
             paint: {
               "circle-color": "#F59E0B",
-              "circle-radius": [
-                "step",
-                ["get", "point_count"],
-                18,
-                5,
-                24,
-                15,
-                30,
-              ],
+              "circle-radius": ["step", ["get", "point_count"], 18, 5, 24, 15, 30],
               "circle-stroke-width": 3,
               "circle-stroke-color": "#1E1B4B",
             },
@@ -328,7 +319,7 @@ export const InteractiveMapView = forwardRef<InteractiveMapViewRef, Props>(
           markerInst.setLngLat([marker.lng, marker.lat]);
           const el = markerInst.getElement();
           el.className = getMarkerClass(isSelected, isHovered);
-          
+
           // Always sync priceDisplay and shopName DOM content
           const pill = el.querySelector(".marker-price-pill");
           if (pill) {
@@ -391,13 +382,15 @@ export const InteractiveMapView = forwardRef<InteractiveMapViewRef, Props>(
             if (mapRef.current) {
               mapRef.current.flyTo({ center: [userLocation.lng, userLocation.lat], zoom: 14 });
             }
-          }
+          },
         );
       }
     };
 
     return (
-      <div className={`relative overflow-hidden rounded-2xl border border-border bg-card shadow-lg ${className}`}>
+      <div
+        className={`relative overflow-hidden rounded-2xl border border-border bg-card shadow-lg ${className}`}
+      >
         {/* Map Container */}
         <div ref={containerRef} className="h-full w-full" />
 
@@ -499,7 +492,8 @@ export const InteractiveMapView = forwardRef<InteractiveMapViewRef, Props>(
         {/* Route Stats Overlay Banner (if route active) */}
         {routeInfo && (
           <div className="absolute top-4 right-14 z-20 rounded-xl border border-amber-500/40 bg-card/95 px-3.5 py-2 shadow-lg backdrop-blur text-xs font-bold text-foreground">
-            <span className="text-[#F59E0B] font-extrabold">{routeInfo.distanceKm} km</span> · Approx {routeInfo.durationMins} mins drive
+            <span className="text-[#F59E0B] font-extrabold">{routeInfo.distanceKm} km</span> ·
+            Approx {routeInfo.durationMins} mins drive
           </div>
         )}
 
@@ -526,7 +520,9 @@ export const InteractiveMapView = forwardRef<InteractiveMapViewRef, Props>(
                         geometry: { type: "LineString", coordinates: g },
                       };
                       if (m.getSource("directions-route")) {
-                        (m.getSource("directions-route") as maplibregl.GeoJSONSource).setData(geojson);
+                        (m.getSource("directions-route") as maplibregl.GeoJSONSource).setData(
+                          geojson,
+                        );
                       } else {
                         m.addSource("directions-route", { type: "geojson", data: geojson });
                         m.addLayer({
@@ -555,7 +551,7 @@ export const InteractiveMapView = forwardRef<InteractiveMapViewRef, Props>(
         )}
       </div>
     );
-  }
+  },
 );
 
 function getMarkerClass(isSelected: boolean, isHovered: boolean): string {
@@ -563,4 +559,3 @@ function getMarkerClass(isSelected: boolean, isHovered: boolean): string {
 }
 
 InteractiveMapView.displayName = "InteractiveMapView";
-

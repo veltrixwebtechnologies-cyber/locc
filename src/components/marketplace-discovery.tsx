@@ -33,7 +33,6 @@ export function MarketplaceDiscovery({ products }: { products: MerchandisingProd
     <section className="mt-6 px-5 md:px-8">
       <div className="overflow-hidden rounded-2xl border border-[#ead9a8] bg-card shadow-sm">
         <div className="grid lg:grid-cols-[1fr_250px]">
-
           <div className="p-4 md:p-5">
             <div className="mb-3 flex items-center justify-between">
               <div>
@@ -157,7 +156,9 @@ function DiscoveryProductCard({
     };
   }, [product?.image_url]);
 
-  const sellingPrice = product ? Number(product.discount_price ?? product.selling_price ?? 0) : null;
+  const sellingPrice = product
+    ? Number(product.discount_price ?? product.selling_price ?? 0)
+    : null;
 
   return (
     <Link
@@ -183,9 +184,7 @@ function DiscoveryProductCard({
             <span className="text-sm font-black text-slate-900">₹{sellingPrice}</span>
           </div>
         )}
-        <p className="mt-0.5 text-xs font-black text-purple-700">
-          Best Pick
-        </p>
+        <p className="mt-0.5 text-xs font-black text-purple-700">Best Pick</p>
       </div>
     </Link>
   );

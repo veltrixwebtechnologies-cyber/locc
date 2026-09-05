@@ -38,7 +38,8 @@ export interface DeliveryCategory {
 }
 
 const catImg = (id: string) => `https://images.unsplash.com/${id}?auto=format&fit=crop&w=300&q=75`;
-const storeImg = (id: string) => `https://images.unsplash.com/${id}?auto=format&fit=crop&w=800&q=75`;
+const storeImg = (id: string) =>
+  `https://images.unsplash.com/${id}?auto=format&fit=crop&w=800&q=75`;
 const img = (id: string) => `https://images.unsplash.com/${id}?auto=format&fit=crop&w=300&q=75`;
 
 export const APPROVED_STORE: Store = {
@@ -189,8 +190,8 @@ const legacyStores: Store[] = [
     isOpen: true,
     etaMin: 15,
     address: "Main Road, Pappampatti Pirivu, Coimbatore",
-    lat: 10.9990,
-    lng: 76.9740,
+    lat: 10.999,
+    lng: 76.974,
     imageUrl: storeImg("photo-1509440159596-0249088772ff"),
   },
   {
@@ -204,7 +205,7 @@ const legacyStores: Store[] = [
     etaMin: 18,
     address: "Pappampatti Pirivu Bus Stop, Coimbatore",
     lat: 10.9985,
-    lng: 76.9730,
+    lng: 76.973,
     imageUrl: storeImg("photo-1604719312566-8912e9227c6a"),
   },
   // ── 0. Swiggy Featured Restaurants & Bakes ──────────────────────────────────────
@@ -232,8 +233,8 @@ const legacyStores: Store[] = [
     isOpen: true,
     etaMin: 22,
     address: "Race Course Road, Coimbatore",
-    lat: 10.9980,
-    lng: 76.9710,
+    lat: 10.998,
+    lng: 76.971,
     imageUrl: storeImg("photo-1568901346375-23c9450c58cd"),
   },
   // ── 1. Fresh Stalls & Bakes ────────────────────────────────────────────────────────────
@@ -262,7 +263,7 @@ const legacyStores: Store[] = [
     etaMin: 18,
     address: "12, Trichy Road, Pappampatti Pirivu, Coimbatore",
     lat: 11.0027,
-    lng: 77.0860,
+    lng: 77.086,
     imageUrl: storeImg("photo-1604719312566-8912e9227c6a"),
   },
   {
@@ -552,7 +553,7 @@ const legacyStores: Store[] = [
     etaMin: 22,
     address: "Near SBI ATM, Pappampatti Pirivu, Coimbatore",
     lat: 11.0031,
-    lng: 77.0860,
+    lng: 77.086,
     imageUrl: storeImg("photo-1441986300917-64674bd600d8"),
   },
   {
@@ -580,7 +581,7 @@ const legacyStores: Store[] = [
     etaMin: 32,
     address: "Commercial Hub, Singanallur Junction, Coimbatore",
     lat: 10.9975,
-    lng: 77.0270,
+    lng: 77.027,
     imageUrl: storeImg("photo-1617137984095-74e4e5e3613f"),
   },
   {
@@ -593,8 +594,8 @@ const legacyStores: Store[] = [
     isOpen: true,
     etaMin: 37,
     address: "Main Market, Ondipudur Hub, Coimbatore",
-    lat: 10.9930,
-    lng: 77.0510,
+    lat: 10.993,
+    lng: 77.051,
     imageUrl: storeImg("photo-1441986300917-64674bd600d8"),
   },
 
@@ -828,7 +829,7 @@ const legacyStores: Store[] = [
     etaMin: 40,
     address: "Greenway Road, Ondipudur Hub, Coimbatore",
     lat: 10.9919,
-    lng: 77.0530,
+    lng: 77.053,
     imageUrl: storeImg("photo-1584100936595-c0654b55a2e2"),
   },
 
@@ -871,8 +872,8 @@ const legacyStores: Store[] = [
     isOpen: true,
     etaMin: 32,
     address: "High Street, Singanallur Junction, Coimbatore",
-    lat: 10.9970,
-    lng: 77.0260,
+    lat: 10.997,
+    lng: 77.026,
     imageUrl: storeImg("photo-1549465220-1a8b9238cd48"),
   },
   {
@@ -929,7 +930,7 @@ const legacyStores: Store[] = [
     isOpen: true,
     etaMin: 40,
     address: "Trichy Road, Ondipudur Hub, Coimbatore",
-    lat: 10.9910,
+    lat: 10.991,
     lng: 77.0532,
     imageUrl: storeImg("photo-1509440159596-0249088772ff"),
   },
@@ -987,8 +988,8 @@ const legacyStores: Store[] = [
     isOpen: true,
     etaMin: 25,
     address: "15, Fancy Bazaar, Pappampatti Pirivu, Coimbatore",
-    lat: 11.0050,
-    lng: 77.0880,
+    lat: 11.005,
+    lng: 77.088,
     imageUrl: storeImg("photo-1513519245088-0e12902e5a38"),
   },
 ];
@@ -1243,7 +1244,7 @@ const seedProducts = (storeId: string, cat: StoreCategory): Product[] => {
     ],
     showrooms: [
       {
-        name: "Smart 4K Ultra HD LED TV 43\"",
+        name: 'Smart 4K Ultra HD LED TV 43"',
         unit: "1 unit",
         price: 22990,
         category: "Electronics",
@@ -1466,7 +1467,7 @@ const seedProducts = (storeId: string, cat: StoreCategory): Product[] => {
 };
 
 export const productsByStore: Record<string, Product[]> = Object.fromEntries(
-  stores.map((s) => [s.id, seedProducts(s.id, s.category)])
+  stores.map((s) => [s.id, seedProducts(s.id, s.category)]),
 );
 
 export const getStore = (id: string) => stores.find((s) => s.id === id);

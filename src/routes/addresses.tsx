@@ -13,8 +13,7 @@ function AddressesPage() {
 
   const add = () => {
     if (!label.trim() || !line.trim()) return;
-    // Default coords to central Kochi; user can drag on checkout map.
-    addressesStore.add({ label: label.trim(), line: line.trim(), lat: 9.9816, lng: 76.2999 });
+    addressesStore.add({ label: label.trim(), line: line.trim(), lat: null, lng: null });
     setLabel("");
     setLine("");
   };
@@ -50,7 +49,9 @@ function AddressesPage() {
               <p className="text-sm font-semibold">{a.label}</p>
               <p className="text-sm text-muted-foreground">{a.line}</p>
               <p className="mt-0.5 font-mono text-[10px] text-muted-foreground">
-                {a.lat.toFixed(4)}, {a.lng.toFixed(4)}
+                {typeof a.lat === "number" && typeof a.lng === "number"
+                  ? `${a.lat.toFixed(4)}, ${a.lng.toFixed(4)}`
+                  : "Coordinates unavailable"}
               </p>
             </div>
             <button

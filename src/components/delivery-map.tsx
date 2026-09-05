@@ -1,6 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { Clock, Navigation, MapPin, Store, RotateCw } from "lucide-react";
-import { fetchDeliveryRoute, shouldRecalculateRoute, type AdvancedRouteResult } from "@/lib/map-service/delivery-routing";
+import {
+  fetchDeliveryRoute,
+  shouldRecalculateRoute,
+  type AdvancedRouteResult,
+} from "@/lib/map-service/delivery-routing";
 import { supabase } from "@/integrations/supabase/client";
 
 export interface LatLng {
@@ -16,7 +20,7 @@ interface Props {
   orderId?: string;
   assignmentId?: string;
   store?: LatLng;
-  destination: LatLng;
+  destination: LatLng | null;
   courier?: LatLng;
   orderStatus?: string;
   accuracyMeters?: number | null;
@@ -36,9 +40,10 @@ function courierScooterSvg(color: string, heading = 0) {
 }
 
 function pinSvg(color: string, iconType: "store" | "destination") {
-  const innerSymbol = iconType === "store" 
-    ? `<rect x='10' y='10' width='8' height='6' fill='#FFFFFF'/><path d='M8 10 L14 6 L20 10' fill='none' stroke='#FFFFFF' stroke-width='2'/>`
-    : `<circle cx='14' cy='14' r='4' fill='#FFFFFF'/>`;
+  const innerSymbol =
+    iconType === "store"
+      ? `<rect x='10' y='10' width='8' height='6' fill='#FFFFFF'/><path d='M8 10 L14 6 L20 10' fill='none' stroke='#FFFFFF' stroke-width='2'/>`
+      : `<circle cx='14' cy='14' r='4' fill='#FFFFFF'/>`;
   const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='28' height='38' viewBox='0 0 28 38'>
     <path d='M14 0C6.3 0 0 6.3 0 14c0 10.5 14 24 14 24s14-13.5 14-24C28 6.3 21.7 0 14 0z' fill='${color}' stroke='#FFFFFF' stroke-width='1.5'/>
     ${innerSymbol}
@@ -64,7 +69,7 @@ export function DeliveryMap({
   const LRef = useRef<any>(null);
   const markersRef = useRef<Record<string, any>>({});
   const polylineRef = useRef<any>(null);
-  
+
   const [courier, setCourier] = useState<LatLng | undefined>(initialCourier);
   const [routeInfo, setRouteInfo] = useState<AdvancedRouteResult | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
@@ -76,10 +81,16 @@ export function DeliveryMap({
   const currentPhase = useRef<"to_vendor" | "to_customer">("to_customer");
 
   // Determine current active route phase
-  const phase: "to_vendor" | "to_customer" = 
-    ["accepted", "navigating_to_vendor", "reached_vendor", "rider_assigned", "rider_accepted", "rider_at_shop"].includes(orderStatus)
-      ? "to_vendor"
-      : "to_customer";
+  const phase: "to_vendor" | "to_customer" = [
+    "accepted",
+    "navigating_to_vendor",
+    "reached_vendor",
+    "rider_assigned",
+    "rider_accepted",
+    "rider_at_shop",
+  ].includes(orderStatus)
+    ? "to_vendor"
+    : "to_customer";
 
   // Keep courier state synced with props
   useEffect(() => {
@@ -110,7 +121,7 @@ export function DeliveryMap({
             });
             setLastUpdated(new Date());
           }
-        }
+        },
       )
       .subscribe();
 
@@ -139,7 +150,11 @@ export function DeliveryMap({
         LRef.current = L;
         const initialCenter: [number, number] = courier
           ? [courier.lat, courier.lng]
-          : [destination.lat, destination.lng];
+          : destination
+            ? [destination.lat, destination.lng]
+            : store
+              ? [store.lat, store.lng]
+              : [11.02, 76.99];
 
         const map = L.map(mapContainerRef.current, {
           center: initialCenter,
@@ -199,7 +214,7 @@ export function DeliveryMap({
       lastRoutePos.current,
       routeInfo?.geometry || null,
       lastRouteCalculatedAt.current,
-      phaseChanged
+      phaseChanged,
     );
 
     if (!shouldCalc && routeInfo) return;
@@ -216,7 +231,15 @@ export function DeliveryMap({
     return () => {
       active = false;
     };
-  }, [courier?.lat, courier?.lng, destination.lat, destination.lng, store?.lat, store?.lng, phase]);
+  }, [
+    courier?.lat,
+    courier?.lng,
+    destination?.lat,
+    destination?.lng,
+    store?.lat,
+    store?.lng,
+    phase,
+  ]);
 
   // Sync Leaflet markers and route polyline with animation
   useEffect(() => {
@@ -225,7 +248,12 @@ export function DeliveryMap({
     if (!map || !L) return;
 
     // Helper: update or animate marker
-    const upsertMarker = (id: string, pos: LatLng | undefined, iconUrl: string, size: [number, number]) => {
+    const upsertMarker = (
+      id: string,
+      pos: LatLng | undefined,
+      iconUrl: string,
+      size: [number, number],
+    ) => {
       if (!pos) {
         if (markersRef.current[id]) {
           map.removeLayer(markersRef.current[id]);
@@ -265,8 +293,16 @@ export function DeliveryMap({
 
     // Render markers
     if (store) upsertMarker("store", store, pinSvg("#2A6F77", "store"), [28, 38]);
-    upsertMarker("dest", destination, pinSvg("#E3A72E", "destination"), [28, 38]);
-    if (courier) upsertMarker("courier", courier, courierScooterSvg("#D9584C", courier.heading || 0), [36, 36]);
+    if (destination) {
+      upsertMarker("dest", destination, pinSvg("#E3A72E", "destination"), [28, 38]);
+    }
+    if (courier)
+      upsertMarker(
+        "courier",
+        courier,
+        courierScooterSvg("#D9584C", courier.heading || 0),
+        [36, 36],
+      );
 
     // Render road polyline
     if (polylineRef.current) {

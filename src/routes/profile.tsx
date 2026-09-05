@@ -49,7 +49,12 @@ import { useAddresses, addressesStore, type Address } from "@/lib/addresses-stor
 import { useOrders } from "@/lib/orders-store";
 import { useWishlistProducts } from "@/lib/merchandising";
 import { stores } from "@/lib/mock-data";
-import { profileStore, useProfileExtra, type PaymentMethod, type RewardItem } from "@/lib/profile-store";
+import {
+  profileStore,
+  useProfileExtra,
+  type PaymentMethod,
+  type RewardItem,
+} from "@/lib/profile-store";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/profile")({
@@ -68,7 +73,15 @@ function ProfilePage() {
 
   // Active sub-tab state for smooth browsing
   const [activeTab, setActiveTab] = useState<
-    "all" | "account" | "localshore" | "activity" | "offers" | "delivery" | "notifications" | "settings" | "support"
+    | "all"
+    | "account"
+    | "localshore"
+    | "activity"
+    | "offers"
+    | "delivery"
+    | "notifications"
+    | "settings"
+    | "support"
   >("all");
 
   // Modals state
@@ -143,7 +156,8 @@ function ProfilePage() {
                       {auth.name || "LocalShore Member"}
                     </h1>
                     <span className="inline-flex items-center gap-1 rounded-full bg-purple-100 px-2.5 py-0.5 text-xs font-bold text-purple-800 border border-purple-200">
-                      <Sparkles className="h-3 w-3 fill-purple-600 text-purple-600" /> LocalShore Member
+                      <Sparkles className="h-3 w-3 fill-purple-600 text-purple-600" /> LocalShore
+                      Member
                     </span>
                   </div>
 
@@ -195,7 +209,9 @@ function ProfilePage() {
                   Welcome to LocalShore 👋
                 </h1>
                 <p className="mt-2 text-sm text-slate-600 leading-relaxed">
-                  Sign in to track orders in real time, save delivery addresses, follow your favorite local shops, unlock exclusive neighborhood discounts, and earn LocalShore Shore Points.
+                  Sign in to track orders in real time, save delivery addresses, follow your
+                  favorite local shops, unlock exclusive neighborhood discounts, and earn LocalShore
+                  Shore Points.
                 </p>
               </div>
 
@@ -222,17 +238,46 @@ function ProfilePage() {
         {/* ── GUEST BENEFIT CARDS ────────────────────────────────────────────── */}
         {!signedIn && (
           <div className="mt-6">
-            <h2 className="font-display text-base font-bold text-slate-900">Why create a LocalShore account?</h2>
+            <h2 className="font-display text-base font-bold text-slate-900">
+              Why create a LocalShore account?
+            </h2>
             <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
               {[
-                { title: "Live Order Tracking", desc: "Follow instant 20-min store delivery", icon: Package },
-                { title: "Saved Addresses", desc: "One-tap checkout for home & work", icon: MapPin },
-                { title: "Follow Local Shops", desc: "Get updates from neighborhood stores", icon: Store },
-                { title: "Wishlist & Price Alerts", desc: "Save products and catch discounts", icon: Heart },
-                { title: "Local Offers", desc: "Unlock exclusive neighborhood coupons", icon: Ticket },
-                { title: "Shore Points", desc: "Earn rewards on every local purchase", icon: Sparkles },
+                {
+                  title: "Live Order Tracking",
+                  desc: "Follow instant 20-min store delivery",
+                  icon: Package,
+                },
+                {
+                  title: "Saved Addresses",
+                  desc: "One-tap checkout for home & work",
+                  icon: MapPin,
+                },
+                {
+                  title: "Follow Local Shops",
+                  desc: "Get updates from neighborhood stores",
+                  icon: Store,
+                },
+                {
+                  title: "Wishlist & Price Alerts",
+                  desc: "Save products and catch discounts",
+                  icon: Heart,
+                },
+                {
+                  title: "Local Offers",
+                  desc: "Unlock exclusive neighborhood coupons",
+                  icon: Ticket,
+                },
+                {
+                  title: "Shore Points",
+                  desc: "Earn rewards on every local purchase",
+                  icon: Sparkles,
+                },
               ].map((b, i) => (
-                <div key={i} className="rounded-2xl border border-slate-200/80 bg-white p-3.5 text-center shadow-xs">
+                <div
+                  key={i}
+                  className="rounded-2xl border border-slate-200/80 bg-white p-3.5 text-center shadow-xs"
+                >
                   <div className="mx-auto grid h-9 w-9 place-items-center rounded-xl bg-purple-50 text-purple-700">
                     <b.icon className="h-4 w-4" />
                   </div>
@@ -256,7 +301,9 @@ function ProfilePage() {
                 <Package className="h-5.5 w-5.5" />
               </div>
               <div>
-                <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Orders</p>
+                <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                  Orders
+                </p>
                 <p className="text-base font-extrabold text-slate-900">
                   {orders.length} {orders.length === 1 ? "Order" : "Orders"}
                 </p>
@@ -271,7 +318,9 @@ function ProfilePage() {
                 <Heart className="h-5.5 w-5.5" />
               </div>
               <div>
-                <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Wishlist</p>
+                <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                  Wishlist
+                </p>
                 <p className="text-base font-extrabold text-slate-900">
                   {wishlistProducts.data?.length ?? 0} Saved
                 </p>
@@ -287,7 +336,9 @@ function ProfilePage() {
                 <Ticket className="h-5.5 w-5.5" />
               </div>
               <div>
-                <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Coupons</p>
+                <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                  Coupons
+                </p>
                 <p className="text-base font-extrabold text-slate-900">
                   {profileExtra.savedCoupons.length} Available
                 </p>
@@ -303,7 +354,9 @@ function ProfilePage() {
                 <Sparkles className="h-5.5 w-5.5" />
               </div>
               <div>
-                <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Rewards</p>
+                <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                  Rewards
+                </p>
                 <p className="text-base font-extrabold text-slate-900">
                   {profileExtra.rewardsPoints} Points
                 </p>
@@ -353,7 +406,9 @@ function ProfilePage() {
                       <h2 className="font-display text-lg font-bold text-slate-900 flex items-center gap-2">
                         <User className="h-5 w-5 text-purple-700" /> Account Settings
                       </h2>
-                      <p className="text-xs text-slate-500">Manage personal details, addresses, and payment methods</p>
+                      <p className="text-xs text-slate-500">
+                        Manage personal details, addresses, and payment methods
+                      </p>
                     </div>
                   </div>
 
@@ -361,9 +416,15 @@ function ProfilePage() {
                     {/* Personal Info Row */}
                     <div className="flex flex-col gap-3 rounded-2xl bg-purple-50/40 p-4 border border-purple-100/60 sm:flex-row sm:items-center sm:justify-between">
                       <div>
-                        <p className="text-xs font-bold uppercase tracking-wider text-purple-900">Personal Information</p>
-                        <p className="mt-1 text-sm font-semibold text-slate-900">{auth.name || "Customer"}</p>
-                        <p className="text-xs text-slate-600">{auth.email} • {maskPhone(auth.phone)}</p>
+                        <p className="text-xs font-bold uppercase tracking-wider text-purple-900">
+                          Personal Information
+                        </p>
+                        <p className="mt-1 text-sm font-semibold text-slate-900">
+                          {auth.name || "Customer"}
+                        </p>
+                        <p className="text-xs text-slate-600">
+                          {auth.email} • {maskPhone(auth.phone)}
+                        </p>
                       </div>
                       <button
                         type="button"
@@ -378,7 +439,8 @@ function ProfilePage() {
                     <div>
                       <div className="flex items-center justify-between">
                         <h3 className="text-sm font-bold text-slate-900 flex items-center gap-1.5">
-                          <MapPin className="h-4 w-4 text-purple-700" /> Saved Addresses ({addresses.length})
+                          <MapPin className="h-4 w-4 text-purple-700" /> Saved Addresses (
+                          {addresses.length})
                         </h3>
                         <button
                           type="button"
@@ -392,7 +454,9 @@ function ProfilePage() {
                       {addresses.length === 0 ? (
                         <div className="mt-3 rounded-2xl border border-dashed border-slate-200 p-5 text-center">
                           <MapPin className="mx-auto h-6 w-6 text-slate-400" />
-                          <p className="mt-2 text-xs font-medium text-slate-700">No saved addresses found</p>
+                          <p className="mt-2 text-xs font-medium text-slate-700">
+                            No saved addresses found
+                          </p>
                           <button
                             type="button"
                             onClick={() => setIsAddAddressOpen(true)}
@@ -419,11 +483,16 @@ function ProfilePage() {
                                     </span>
                                   )}
                                 </div>
-                                <p className="mt-2 line-clamp-2 text-xs text-slate-600 leading-snug">{addr.line}</p>
+                                <p className="mt-2 line-clamp-2 text-xs text-slate-600 leading-snug">
+                                  {addr.line}
+                                </p>
                               </div>
 
                               <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-2 text-[11px]">
-                                <span className="font-mono text-slate-400">Lat: {addr.lat.toFixed(2)}, Lng: {addr.lng.toFixed(2)}</span>
+                                <span className="font-mono text-slate-400">
+                                  Lat: {typeof addr.lat === "number" ? addr.lat.toFixed(2) : "—"},
+                                  Lng: {typeof addr.lng === "number" ? addr.lng.toFixed(2) : "—"}
+                                </span>
                                 <button
                                   type="button"
                                   onClick={() => {
@@ -475,7 +544,9 @@ function ProfilePage() {
                                     </span>
                                   )}
                                 </p>
-                                <p className="text-[11px] font-mono text-slate-500">{pay.subtitle}</p>
+                                <p className="text-[11px] font-mono text-slate-500">
+                                  {pay.subtitle}
+                                </p>
                               </div>
                             </div>
 
@@ -505,7 +576,9 @@ function ProfilePage() {
                       <h2 className="font-display text-lg font-bold text-slate-900 flex items-center gap-2">
                         <Store className="h-5 w-5 text-purple-700" /> Your LocalShore
                       </h2>
-                      <p className="text-xs text-slate-500">Neighborhood sellers, favorite stores, and local offers</p>
+                      <p className="text-xs text-slate-500">
+                        Neighborhood sellers, favorite stores, and local offers
+                      </p>
                     </div>
                     <Link
                       to="/"
@@ -518,9 +591,13 @@ function ProfilePage() {
 
                   {/* Favorite Shops */}
                   <div className="mt-5">
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500">Favorite Shops ({favoriteStores.length})</h3>
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                      Favorite Shops ({favoriteStores.length})
+                    </h3>
                     {favoriteStores.length === 0 ? (
-                      <p className="mt-2 text-xs text-slate-500">No favorite shops saved yet. Click the heart icon on any store to follow it!</p>
+                      <p className="mt-2 text-xs text-slate-500">
+                        No favorite shops saved yet. Click the heart icon on any store to follow it!
+                      </p>
                     ) : (
                       <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
                         {favoriteStores.map((shop) => (
@@ -545,7 +622,9 @@ function ProfilePage() {
                               <p className="text-[11px] text-slate-500 truncate">{shop.address}</p>
                             </div>
                             <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-2 text-[11px]">
-                              <span className="font-semibold text-slate-600">{shop.distanceKm} km away</span>
+                              <span className="font-semibold text-slate-600">
+                                {shop.distanceKm} km away
+                              </span>
                               <span className="font-bold text-purple-700">Visit Shop →</span>
                             </div>
                           </Link>
@@ -556,7 +635,9 @@ function ProfilePage() {
 
                   {/* Recently Visited Shops */}
                   <div className="mt-6 border-t border-slate-100 pt-5">
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500">Recently Visited Sellers</h3>
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                      Recently Visited Sellers
+                    </h3>
                     <div className="mt-3 flex overflow-x-auto gap-3 pb-2 scrollbar-none">
                       {visitedStores.map((shop) => (
                         <Link
@@ -570,7 +651,9 @@ function ProfilePage() {
                           </div>
                           <div>
                             <p className="text-xs font-bold text-slate-900">{shop.name}</p>
-                            <p className="text-[10px] text-slate-500">{shop.distanceKm} km · {shop.etaMin} mins</p>
+                            <p className="text-[10px] text-slate-500">
+                              {shop.distanceKm} km · {shop.etaMin} mins
+                            </p>
                           </div>
                         </Link>
                       ))}
@@ -589,7 +672,10 @@ function ProfilePage() {
                       </h2>
                       <p className="text-xs text-slate-500">Recent orders, reviews, and wishlist</p>
                     </div>
-                    <Link to="/orders" className="text-xs font-bold text-purple-700 hover:underline">
+                    <Link
+                      to="/orders"
+                      className="text-xs font-bold text-purple-700 hover:underline"
+                    >
                       View all orders →
                     </Link>
                   </div>
@@ -601,13 +687,16 @@ function ProfilePage() {
                         <div>
                           <div className="flex items-center gap-2">
                             <span className="h-2.5 w-2.5 rounded-full bg-emerald-500 animate-pulse" />
-                            <span className="text-xs font-bold text-emerald-900 uppercase">Order #{recentOrder.code || recentOrder.id.slice(0, 8)}</span>
+                            <span className="text-xs font-bold text-emerald-900 uppercase">
+                              Order #{recentOrder.code || recentOrder.id.slice(0, 8)}
+                            </span>
                             <span className="rounded-full bg-emerald-200 px-2 py-0.5 text-[10px] font-bold text-emerald-900 capitalize">
                               {recentOrder.status.replace(/_/g, " ")}
                             </span>
                           </div>
                           <p className="mt-1 text-xs text-slate-700">
-                            {recentOrder.storeName} · {recentOrder.lines.length} items · Total ₹{recentOrder.total}
+                            {recentOrder.storeName} · {recentOrder.lines.length} items · Total ₹
+                            {recentOrder.total}
                           </p>
                         </div>
                         <Link
@@ -622,22 +711,37 @@ function ProfilePage() {
                   ) : (
                     <div className="mt-5 rounded-2xl border border-slate-200 p-4 text-center">
                       <p className="text-xs text-slate-600">No active orders right now.</p>
-                      <Link to="/" search={{ category: undefined, q: undefined }} className="mt-1 text-xs font-bold text-purple-700 underline">Start shopping from neighborhood stores</Link>
+                      <Link
+                        to="/"
+                        search={{ category: undefined, q: undefined }}
+                        className="mt-1 text-xs font-bold text-purple-700 underline"
+                      >
+                        Start shopping from neighborhood stores
+                      </Link>
                     </div>
                   )}
 
                   {/* Reviews Pending */}
                   <div className="mt-6 border-t border-slate-100 pt-5">
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500">Rate Your Recent Purchases</h3>
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                      Rate Your Recent Purchases
+                    </h3>
                     {profileExtra.pendingReviewItems.length === 0 ? (
-                      <p className="mt-2 text-xs text-slate-500">All purchased items have been reviewed! Thank you.</p>
+                      <p className="mt-2 text-xs text-slate-500">
+                        All purchased items have been reviewed! Thank you.
+                      </p>
                     ) : (
                       <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
                         {profileExtra.pendingReviewItems.map((rev) => (
-                          <div key={rev.id} className="flex items-center justify-between rounded-2xl border border-amber-200 bg-amber-50/40 p-3.5">
+                          <div
+                            key={rev.id}
+                            className="flex items-center justify-between rounded-2xl border border-amber-200 bg-amber-50/40 p-3.5"
+                          >
                             <div>
                               <p className="text-xs font-bold text-slate-900">{rev.productName}</p>
-                              <p className="text-[11px] text-slate-600">{rev.shopName} · {rev.purchasedDate}</p>
+                              <p className="text-[11px] text-slate-600">
+                                {rev.shopName} · {rev.purchasedDate}
+                              </p>
                             </div>
                             <button
                               type="button"
@@ -662,7 +766,9 @@ function ProfilePage() {
                       <h2 className="font-display text-lg font-bold text-slate-900 flex items-center gap-2">
                         <Sparkles className="h-5 w-5 text-purple-700" /> LocalShore Rewards & Offers
                       </h2>
-                      <p className="text-xs text-slate-500">Points, active coupons, and cashback credits</p>
+                      <p className="text-xs text-slate-500">
+                        Points, active coupons, and cashback credits
+                      </p>
                     </div>
                   </div>
 
@@ -677,8 +783,12 @@ function ProfilePage() {
                           Loyalty Tier 1
                         </span>
                       </div>
-                      <p className="mt-3 font-display text-3xl font-extrabold text-white">{profileExtra.rewardsPoints} Shore Points</p>
-                      <p className="mt-1 text-xs text-purple-200">100 Points = ₹50 Discount Voucher</p>
+                      <p className="mt-3 font-display text-3xl font-extrabold text-white">
+                        {profileExtra.rewardsPoints} Shore Points
+                      </p>
+                      <p className="mt-1 text-xs text-purple-200">
+                        100 Points = ₹50 Discount Voucher
+                      </p>
                       <button
                         type="button"
                         onClick={() => setIsRedeemOpen(true)}
@@ -690,25 +800,42 @@ function ProfilePage() {
 
                     {/* Store Credits */}
                     <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
-                      <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Refund & Store Credits</p>
-                      <p className="mt-3 font-display text-3xl font-extrabold text-slate-900">₹150.00</p>
-                      <p className="mt-1 text-xs text-slate-600">Auto-applied at checkout for instant delivery</p>
+                      <p className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                        Refund & Store Credits
+                      </p>
+                      <p className="mt-3 font-display text-3xl font-extrabold text-slate-900">
+                        ₹150.00
+                      </p>
+                      <p className="mt-1 text-xs text-slate-600">
+                        Auto-applied at checkout for instant delivery
+                      </p>
                     </div>
                   </div>
 
                   {/* Saved Coupons List */}
                   <div className="mt-6">
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500">Available Coupons ({profileExtra.savedCoupons.length})</h3>
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                      Available Coupons ({profileExtra.savedCoupons.length})
+                    </h3>
                     <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
                       {profileExtra.savedCoupons.map((c, i) => (
-                        <div key={i} className="flex items-center justify-between rounded-2xl border border-purple-200 bg-purple-50/50 p-3.5">
+                        <div
+                          key={i}
+                          className="flex items-center justify-between rounded-2xl border border-purple-200 bg-purple-50/50 p-3.5"
+                        >
                           <div>
                             <div className="flex items-center gap-2">
-                              <span className="font-mono text-xs font-bold text-purple-900 bg-white px-2 py-0.5 rounded border border-purple-200">{c.code}</span>
-                              <span className="text-xs font-extrabold text-purple-700">{c.discountText}</span>
+                              <span className="font-mono text-xs font-bold text-purple-900 bg-white px-2 py-0.5 rounded border border-purple-200">
+                                {c.code}
+                              </span>
+                              <span className="text-xs font-extrabold text-purple-700">
+                                {c.discountText}
+                              </span>
                             </div>
                             <p className="mt-1 text-xs text-slate-700">{c.title}</p>
-                            <p className="text-[10px] text-slate-500">Min. order ₹{c.minOrder} · {c.expires}</p>
+                            <p className="text-[10px] text-slate-500">
+                              Min. order ₹{c.minOrder} · {c.expires}
+                            </p>
                           </div>
                           <button
                             type="button"
@@ -743,7 +870,9 @@ function ProfilePage() {
                       <input
                         type="checkbox"
                         checked={profileExtra.deliveryPreferences.contactless}
-                        onChange={(e) => profileStore.updateDeliveryPreferences({ contactless: e.target.checked })}
+                        onChange={(e) =>
+                          profileStore.updateDeliveryPreferences({ contactless: e.target.checked })
+                        }
                         className="h-4 w-4 rounded accent-purple-700"
                       />
                     </label>
@@ -753,7 +882,11 @@ function ProfilePage() {
                       <input
                         type="checkbox"
                         checked={profileExtra.deliveryPreferences.callBeforeDelivery}
-                        onChange={(e) => profileStore.updateDeliveryPreferences({ callBeforeDelivery: e.target.checked })}
+                        onChange={(e) =>
+                          profileStore.updateDeliveryPreferences({
+                            callBeforeDelivery: e.target.checked,
+                          })
+                        }
                         className="h-4 w-4 rounded accent-purple-700"
                       />
                     </label>
@@ -762,7 +895,9 @@ function ProfilePage() {
                       <span className="font-bold text-slate-800 block mb-1">Preferred Slot</span>
                       <select
                         value={profileExtra.deliveryPreferences.preferredSlot}
-                        onChange={(e) => profileStore.updateDeliveryPreferences({ preferredSlot: e.target.value })}
+                        onChange={(e) =>
+                          profileStore.updateDeliveryPreferences({ preferredSlot: e.target.value })
+                        }
                         className="w-full rounded-xl border border-slate-200 bg-white p-2 text-xs font-semibold text-slate-800"
                       >
                         <option value="Anytime">Anytime (Instant 20-30 min)</option>
@@ -772,10 +907,14 @@ function ProfilePage() {
                     </div>
 
                     <div>
-                      <span className="font-bold text-slate-800 block mb-1">Delivery Instructions</span>
+                      <span className="font-bold text-slate-800 block mb-1">
+                        Delivery Instructions
+                      </span>
                       <textarea
                         value={profileExtra.deliveryPreferences.instructions}
-                        onChange={(e) => profileStore.updateDeliveryPreferences({ instructions: e.target.value })}
+                        onChange={(e) =>
+                          profileStore.updateDeliveryPreferences({ instructions: e.target.value })
+                        }
                         rows={2}
                         className="w-full rounded-xl border border-slate-200 bg-white p-2 text-xs text-slate-800 placeholder:text-slate-400"
                         placeholder="e.g. Leave with gate guard"
@@ -786,7 +925,9 @@ function ProfilePage() {
               )}
 
               {/* 7. NOTIFICATIONS PREFERENCES */}
-              {(activeTab === "all" || activeTab === "notifications" || activeTab === "settings") && (
+              {(activeTab === "all" ||
+                activeTab === "notifications" ||
+                activeTab === "settings") && (
                 <section className="rounded-3xl border border-slate-200/80 bg-white p-5 shadow-xs">
                   <h2 className="font-display text-base font-bold text-slate-900 flex items-center gap-2 border-b border-slate-100 pb-3">
                     <Bell className="h-4.5 w-4.5 text-purple-700" /> Notifications
@@ -800,7 +941,10 @@ function ProfilePage() {
                       { key: "localDeals", label: "Local Deals & Discounts" },
                       { key: "promotionalOffers", label: "Promotional SMS / Email" },
                     ].map((item) => (
-                      <label key={item.key} className="flex items-center justify-between cursor-pointer py-1.5 border-b hairline last:border-0">
+                      <label
+                        key={item.key}
+                        className="flex items-center justify-between cursor-pointer py-1.5 border-b hairline last:border-0"
+                      >
                         <span className="font-semibold text-slate-700">{item.label}</span>
                         <input
                           type="checkbox"
@@ -871,7 +1015,11 @@ function ProfilePage() {
           <div className="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <h3 className="font-display text-lg font-bold text-slate-900">Edit Profile</h3>
-              <button type="button" onClick={() => setIsEditProfileOpen(false)} className="text-slate-400 hover:text-slate-700">
+              <button
+                type="button"
+                onClick={() => setIsEditProfileOpen(false)}
+                className="text-slate-400 hover:text-slate-700"
+              >
                 <X className="h-5 w-5" />
               </button>
             </div>
@@ -946,7 +1094,11 @@ function ProfilePage() {
           <div className="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <h3 className="font-display text-lg font-bold text-slate-900">Add New Address</h3>
-              <button type="button" onClick={() => setIsAddAddressOpen(false)} className="text-slate-400 hover:text-slate-700">
+              <button
+                type="button"
+                onClick={() => setIsAddAddressOpen(false)}
+                className="text-slate-400 hover:text-slate-700"
+              >
                 <X className="h-5 w-5" />
               </button>
             </div>
@@ -961,7 +1113,9 @@ function ProfilePage() {
                       type="button"
                       onClick={() => setNewAddrLabel(lbl)}
                       className={`flex-1 rounded-xl py-2 font-bold text-xs border ${
-                        newAddrLabel === lbl ? "bg-purple-700 text-white border-purple-700" : "bg-slate-50 text-slate-700 border-slate-200"
+                        newAddrLabel === lbl
+                          ? "bg-purple-700 text-white border-purple-700"
+                          : "bg-slate-50 text-slate-700 border-slate-200"
                       }`}
                     >
                       {lbl}
@@ -971,7 +1125,9 @@ function ProfilePage() {
               </div>
 
               <div>
-                <label className="font-bold text-slate-800 block mb-1">Address Line & Landmark</label>
+                <label className="font-bold text-slate-800 block mb-1">
+                  Address Line & Landmark
+                </label>
                 <textarea
                   value={newAddrLine}
                   onChange={(e) => setNewAddrLine(e.target.value)}
@@ -1027,7 +1183,11 @@ function ProfilePage() {
           <div className="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <h3 className="font-display text-lg font-bold text-slate-900">Add Payment Method</h3>
-              <button type="button" onClick={() => setIsAddPaymentOpen(false)} className="text-slate-400 hover:text-slate-700">
+              <button
+                type="button"
+                onClick={() => setIsAddPaymentOpen(false)}
+                className="text-slate-400 hover:text-slate-700"
+              >
                 <X className="h-5 w-5" />
               </button>
             </div>
@@ -1038,7 +1198,9 @@ function ProfilePage() {
                   type="button"
                   onClick={() => setNewPayType("upi")}
                   className={`flex-1 rounded-xl py-2 font-bold text-xs border ${
-                    newPayType === "upi" ? "bg-purple-700 text-white border-purple-700" : "bg-slate-50 text-slate-700 border-slate-200"
+                    newPayType === "upi"
+                      ? "bg-purple-700 text-white border-purple-700"
+                      : "bg-slate-50 text-slate-700 border-slate-200"
                   }`}
                 >
                   UPI ID
@@ -1047,7 +1209,9 @@ function ProfilePage() {
                   type="button"
                   onClick={() => setNewPayType("card")}
                   className={`flex-1 rounded-xl py-2 font-bold text-xs border ${
-                    newPayType === "card" ? "bg-purple-700 text-white border-purple-700" : "bg-slate-50 text-slate-700 border-slate-200"
+                    newPayType === "card"
+                      ? "bg-purple-700 text-white border-purple-700"
+                      : "bg-slate-50 text-slate-700 border-slate-200"
                   }`}
                 >
                   Debit / Credit Card
@@ -1120,22 +1284,49 @@ function ProfilePage() {
           <div className="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <h3 className="font-display text-lg font-bold text-slate-900">Redeem Shore Points</h3>
-              <button type="button" onClick={() => setIsRedeemOpen(false)} className="text-slate-400 hover:text-slate-700">
+              <button
+                type="button"
+                onClick={() => setIsRedeemOpen(false)}
+                className="text-slate-400 hover:text-slate-700"
+              >
                 <X className="h-5 w-5" />
               </button>
             </div>
 
             <div className="mt-4 space-y-3">
               {[
-                { id: "rw-1", title: "₹50 Discount Voucher", pointsRequired: 100, description: "Valid on any neighborhood store order above ₹199", discountCode: "SHORE50" },
-                { id: "rw-2", title: "Free Instant Delivery Pass", pointsRequired: 150, description: "Waives delivery fee for 3 consecutive orders", discountCode: "FREEPASS3" },
-                { id: "rw-3", title: "₹100 Bakery Voucher", pointsRequired: 200, description: "Valid at all local bakeries above ₹299", discountCode: "BAKERY100" },
+                {
+                  id: "rw-1",
+                  title: "₹50 Discount Voucher",
+                  pointsRequired: 100,
+                  description: "Valid on any neighborhood store order above ₹199",
+                  discountCode: "SHORE50",
+                },
+                {
+                  id: "rw-2",
+                  title: "Free Instant Delivery Pass",
+                  pointsRequired: 150,
+                  description: "Waives delivery fee for 3 consecutive orders",
+                  discountCode: "FREEPASS3",
+                },
+                {
+                  id: "rw-3",
+                  title: "₹100 Bakery Voucher",
+                  pointsRequired: 200,
+                  description: "Valid at all local bakeries above ₹299",
+                  discountCode: "BAKERY100",
+                },
               ].map((rw) => (
-                <div key={rw.id} className="flex items-center justify-between rounded-2xl border border-slate-200 p-3.5">
+                <div
+                  key={rw.id}
+                  className="flex items-center justify-between rounded-2xl border border-slate-200 p-3.5"
+                >
                   <div>
                     <p className="text-xs font-bold text-slate-900">{rw.title}</p>
                     <p className="text-[11px] text-slate-500">{rw.description}</p>
-                    <span className="mt-1 inline-block text-xs font-black text-purple-700">{rw.pointsRequired} Points</span>
+                    <span className="mt-1 inline-block text-xs font-black text-purple-700">
+                      {rw.pointsRequired} Points
+                    </span>
                   </div>
                   <button
                     type="button"
@@ -1166,7 +1357,11 @@ function ProfilePage() {
           <div className="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <h3 className="font-display text-lg font-bold text-slate-900">Rate Product</h3>
-              <button type="button" onClick={() => setIsReviewOpen(null)} className="text-slate-400 hover:text-slate-700">
+              <button
+                type="button"
+                onClick={() => setIsReviewOpen(null)}
+                className="text-slate-400 hover:text-slate-700"
+              >
                 <X className="h-5 w-5" />
               </button>
             </div>
@@ -1182,7 +1377,9 @@ function ProfilePage() {
                       onClick={() => setReviewRating(star)}
                       className="p-1"
                     >
-                      <Star className={`h-6 w-6 ${star <= reviewRating ? "fill-amber-400 text-amber-400" : "text-slate-300"}`} />
+                      <Star
+                        className={`h-6 w-6 ${star <= reviewRating ? "fill-amber-400 text-amber-400" : "text-slate-300"}`}
+                      />
                     </button>
                   ))}
                 </div>
@@ -1233,7 +1430,11 @@ function ProfilePage() {
               <h3 className="font-display text-lg font-bold text-slate-900 flex items-center gap-2">
                 <Lock className="h-4.5 w-4.5 text-purple-700" /> Security & Privacy
               </h3>
-              <button type="button" onClick={() => setIsSecurityOpen(false)} className="text-slate-400 hover:text-slate-700">
+              <button
+                type="button"
+                onClick={() => setIsSecurityOpen(false)}
+                className="text-slate-400 hover:text-slate-700"
+              >
                 <X className="h-5 w-5" />
               </button>
             </div>
@@ -1244,7 +1445,9 @@ function ProfilePage() {
                   <p className="font-bold text-slate-900">Active Login Sessions</p>
                   <p className="text-[11px] text-slate-500">Current device (Chrome / Linux)</p>
                 </div>
-                <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-800">Active</span>
+                <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-800">
+                  Active
+                </span>
               </div>
 
               <div className="rounded-2xl border border-slate-200 p-3 flex items-center justify-between">
@@ -1252,7 +1455,9 @@ function ProfilePage() {
                   <p className="font-bold text-slate-900">Two-Factor Auth (2FA)</p>
                   <p className="text-[11px] text-slate-500">SMS OTP Verification</p>
                 </div>
-                <span className="rounded-full bg-purple-100 px-2 py-0.5 text-[10px] font-bold text-purple-800">Enabled</span>
+                <span className="rounded-full bg-purple-100 px-2 py-0.5 text-[10px] font-bold text-purple-800">
+                  Enabled
+                </span>
               </div>
 
               <button

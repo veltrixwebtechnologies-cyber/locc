@@ -48,7 +48,8 @@ export function EcosystemMerchandisingStrips() {
                 You have {USER_REWARDS.pointsBalance.toLocaleString()} Rewards Points!
               </h3>
               <p className="mt-0.5 text-xs text-purple-200">
-                Redeem for ₹{USER_REWARDS.cashbackEquivalent} instant cashback, free delivery, or brand vouchers.
+                Redeem for ₹{USER_REWARDS.cashbackEquivalent} instant cashback, free delivery, or
+                brand vouchers.
               </p>
             </div>
           </div>
@@ -75,9 +76,13 @@ export function EcosystemMerchandisingStrips() {
           <div>
             <div className="flex items-center gap-1.5">
               <ShoppingBag className="h-4 w-4 text-purple-600" />
-              <h2 className="font-display text-lg font-bold text-slate-900">Official Brand Stores</h2>
+              <h2 className="font-display text-lg font-bold text-slate-900">
+                Official Brand Stores
+              </h2>
             </div>
-            <p className="text-xs text-slate-500">Authentic products shipped directly from verified brand hubs</p>
+            <p className="text-xs text-slate-500">
+              Authentic products shipped directly from verified brand hubs
+            </p>
           </div>
           <Link
             to="/brands"
@@ -127,7 +132,9 @@ export function EcosystemMerchandisingStrips() {
               🏆
             </div>
             <div>
-              <h2 className="font-display text-base font-bold text-slate-900">Best of LocalShore</h2>
+              <h2 className="font-display text-base font-bold text-slate-900">
+                Best of LocalShore
+              </h2>
               <p className="text-xs text-slate-500">Highest rated shops & top customer choices</p>
             </div>
           </div>
@@ -148,7 +155,11 @@ export function EcosystemMerchandisingStrips() {
               className="group flex items-center gap-3 rounded-2xl bg-white p-3 shadow-xs border border-slate-200 transition hover:shadow-md"
             >
               <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-xl bg-slate-100">
-                <img src={shop.imageUrl} alt={shop.shopName} className="h-full w-full object-cover" />
+                <img
+                  src={shop.imageUrl}
+                  alt={shop.shopName}
+                  className="h-full w-full object-cover"
+                />
                 <span className="absolute top-1 left-1 rounded-md bg-slate-900/80 px-1 py-0.2 text-[9px] font-bold text-white">
                   #{i + 1}
                 </span>
@@ -180,7 +191,8 @@ export function EcosystemMerchandisingStrips() {
             Shop local around the globe with LocalShore Explore
           </h3>
           <p className="mt-1 text-xs text-teal-100 leading-relaxed">
-            Duty-free perks, international local discovery, and exclusive shopping experiences in Dubai, Singapore & London.
+            Duty-free perks, international local discovery, and exclusive shopping experiences in
+            Dubai, Singapore & London.
           </p>
           <div className="mt-4">
             <Link
@@ -198,7 +210,9 @@ export function EcosystemMerchandisingStrips() {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-1.5">
                 <Newspaper className="h-4 w-4 text-purple-600" />
-                <h3 className="font-display text-base font-bold text-slate-900">LocalShore Stories</h3>
+                <h3 className="font-display text-base font-bold text-slate-900">
+                  LocalShore Stories
+                </h3>
               </div>
               <Link to="/news" className="text-xs font-bold text-purple-700 hover:underline">
                 Read all
@@ -208,11 +222,17 @@ export function EcosystemMerchandisingStrips() {
               {recentArticles.map((article) => (
                 <div key={article.id} className="flex items-start gap-2.5">
                   <div className="h-10 w-10 shrink-0 overflow-hidden rounded-lg bg-slate-100">
-                    <img src={article.imageUrl} alt={article.title} className="h-full w-full object-cover" />
+                    <img
+                      src={article.imageUrl}
+                      alt={article.title}
+                      className="h-full w-full object-cover"
+                    />
                   </div>
                   <div className="min-w-0">
                     <p className="truncate text-xs font-bold text-slate-800">{article.title}</p>
-                    <p className="text-[10px] text-slate-400">{article.readingTime} min read · {article.author}</p>
+                    <p className="text-[10px] text-slate-400">
+                      {article.readingTime} min read · {article.author}
+                    </p>
                   </div>
                 </div>
               ))}
@@ -226,7 +246,10 @@ export function EcosystemMerchandisingStrips() {
                 Delivering to {activeCitiesCount} active cities in South India
               </span>
             </div>
-            <Link to="/cities" className="text-xs font-extrabold text-emerald-800 hover:underline shrink-0">
+            <Link
+              to="/cities"
+              className="text-xs font-extrabold text-emerald-800 hover:underline shrink-0"
+            >
               View Cities →
             </Link>
           </div>

@@ -85,7 +85,7 @@ function ProductPage() {
         { event: "*", schema: "public", table: "products", filter: `id=eq.${productId}` },
         () => {
           void queryClient.invalidateQueries({ queryKey: ["product", productId] });
-        }
+        },
       )
       .subscribe();
     return () => {
@@ -232,9 +232,7 @@ function ProductPage() {
     },
   });
 
-  const canReview = Boolean(
-    auth.id && deliveredProductOrder.data && !existingReview.data?.length,
-  );
+  const canReview = Boolean(auth.id && deliveredProductOrder.data && !existingReview.data?.length);
 
   const submitReview = useMutation({
     mutationFn: async () => {
@@ -242,8 +240,7 @@ function ProductPage() {
       if (!session.session?.user) throw new Error("Sign in to review this product.");
       if (!deliveredProductOrder.data)
         throw new Error("You can review this product after it has been delivered.");
-      if (existingReview.data?.length)
-        throw new Error("You have already reviewed this product.");
+      if (existingReview.data?.length) throw new Error("You have already reviewed this product.");
       if (!body.trim()) throw new Error("Write a short review first.");
       const { error } = await (supabase as any).from("reviews").insert({
         product_id: productId,
@@ -305,9 +302,7 @@ function ProductPage() {
   const currentPrice = Number(item.discount_price ?? item.selling_price);
   const originalMrp = Number(item.mrp || currentPrice * 1.1);
   const discountPercent =
-    originalMrp > currentPrice
-      ? Math.round(((originalMrp - currentPrice) / originalMrp) * 100)
-      : 0;
+    originalMrp > currentPrice ? Math.round(((originalMrp - currentPrice) / originalMrp) * 100) : 0;
 
   const itemQtyInCart = cart.lines.find((line) => line.productId === item.id)?.qty ?? 0;
 
@@ -317,7 +312,11 @@ function ProductPage() {
         {/* Breadcrumb Bar */}
         <nav aria-label="Breadcrumb" className="border-b border-border/60 bg-muted/30">
           <div className="mx-auto flex max-w-7xl items-center gap-2 px-4 py-3 text-xs text-muted-foreground md:px-8">
-            <Link to="/" search={{ category: undefined, q: undefined }} className="hover:text-primary transition-colors">
+            <Link
+              to="/"
+              search={{ category: undefined, q: undefined }}
+              className="hover:text-primary transition-colors"
+            >
               Home
             </Link>
             <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/60" />
@@ -351,8 +350,9 @@ function ProductPage() {
                     Product Details
                   </h2>
                   <ChevronDown
-                    className={`h-5 w-5 text-muted-foreground transition-transform duration-200 ${showDetails ? "rotate-180" : ""
-                      }`}
+                    className={`h-5 w-5 text-muted-foreground transition-transform duration-200 ${
+                      showDetails ? "rotate-180" : ""
+                    }`}
                   />
                 </button>
 
@@ -396,14 +396,17 @@ function ProductPage() {
                         Key Features & Storage
                       </span>
                       <p className="text-xs leading-relaxed text-muted-foreground">
-                        Keep chilled for maximum crisp refreshment. Store in a cool, dry place away from direct sunlight. Serve cold.
+                        Keep chilled for maximum crisp refreshment. Store in a cool, dry place away
+                        from direct sunlight. Serve cold.
                       </p>
                     </div>
 
                     <div className="pt-2">
                       <button
                         type="button"
-                        onClick={() => toast.info("Full manufacturer specifications available on packaging.")}
+                        onClick={() =>
+                          toast.info("Full manufacturer specifications available on packaging.")
+                        }
                         className="inline-flex items-center gap-1 font-semibold text-emerald-700 hover:text-emerald-800 transition-colors"
                       >
                         View more details <ChevronDown className="h-3.5 w-3.5" />
@@ -427,7 +430,8 @@ function ProductPage() {
                       {item.name}
                     </h1>
                     <p className="mt-1.5 text-xs text-muted-foreground">
-                      Sold by <strong className="text-foreground font-semibold">{item.shop_name}</strong>
+                      Sold by{" "}
+                      <strong className="text-foreground font-semibold">{item.shop_name}</strong>
                     </p>
                   </div>
                   <WishlistButton
@@ -471,9 +475,7 @@ function ProductPage() {
                     </span>
                   )}
                 </div>
-                <p className="mt-1 text-[11px] text-muted-foreground">
-                  (Inclusive of all taxes)
-                </p>
+                <p className="mt-1 text-[11px] text-muted-foreground">(Inclusive of all taxes)</p>
 
                 {/* Primary Add to Cart Button */}
                 <div className="mt-6">
@@ -499,7 +501,9 @@ function ProductPage() {
                     </button>
                   ) : (
                     <div className="flex items-center gap-3">
-                      <span className="text-xs font-semibold text-muted-foreground">Quantity in cart:</span>
+                      <span className="text-xs font-semibold text-muted-foreground">
+                        Quantity in cart:
+                      </span>
                       <QtyStepper
                         qty={itemQtyInCart}
                         max={item.stock}
@@ -522,7 +526,10 @@ function ProductPage() {
                 <div className="mt-4 flex items-center justify-between border-t border-border/60 pt-4 text-xs text-muted-foreground">
                   <span className="inline-flex items-center gap-1.5">
                     <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
-                    <strong className="font-semibold text-foreground">{Number(item.average_rating || 4.7).toFixed(1)}</strong> ({item.review_count || 34} reviews)
+                    <strong className="font-semibold text-foreground">
+                      {Number(item.average_rating || 4.7).toFixed(1)}
+                    </strong>{" "}
+                    ({item.review_count || 34} reviews)
                   </span>
                   <div className="flex items-center gap-2">
                     <Link
@@ -550,7 +557,8 @@ function ProductPage() {
                     <div>
                       <p className="text-xs font-bold text-foreground">Round The Clock Delivery</p>
                       <p className="text-[11px] leading-relaxed text-muted-foreground">
-                        Get items delivered to your doorstep from local dark stores near you, whenever you need them.
+                        Get items delivered to your doorstep from local dark stores near you,
+                        whenever you need them.
                       </p>
                     </div>
                   </div>
@@ -562,7 +570,8 @@ function ProductPage() {
                     <div>
                       <p className="text-xs font-bold text-foreground">Best Prices & Offers</p>
                       <p className="text-[11px] leading-relaxed text-muted-foreground">
-                        Best price destination with offers directly from local merchants & manufacturers.
+                        Best price destination with offers directly from local merchants &
+                        manufacturers.
                       </p>
                     </div>
                   </div>
@@ -574,7 +583,8 @@ function ProductPage() {
                     <div>
                       <p className="text-xs font-bold text-foreground">Wide Assortment</p>
                       <p className="text-[11px] leading-relaxed text-muted-foreground">
-                        Choose from 30,000+ verified products across food, personal care, household & more.
+                        Choose from 30,000+ verified products across food, personal care, household
+                        & more.
                       </p>
                     </div>
                   </div>
@@ -610,13 +620,19 @@ function ProductPage() {
           <section className="mt-12 rounded-2xl border border-[#ead9a8] bg-card p-6 shadow-sm">
             <h2 className="font-display text-xl font-bold text-foreground">Customer Reviews</h2>
             {!auth.id ? (
-              <p className="mt-2 text-xs text-muted-foreground">Sign in to write a review for this product.</p>
+              <p className="mt-2 text-xs text-muted-foreground">
+                Sign in to write a review for this product.
+              </p>
             ) : deliveredProductOrder.isLoading || existingReview.isLoading ? (
               <p className="mt-2 text-xs text-muted-foreground">Checking your order status…</p>
             ) : existingReview.data?.length ? (
-              <p className="mt-2 text-xs text-muted-foreground">You have already submitted a review for this product.</p>
+              <p className="mt-2 text-xs text-muted-foreground">
+                You have already submitted a review for this product.
+              </p>
             ) : !canReview ? (
-              <p className="mt-2 text-xs text-muted-foreground">Purchase and receive this product to write a review.</p>
+              <p className="mt-2 text-xs text-muted-foreground">
+                Purchase and receive this product to write a review.
+              </p>
             ) : (
               <div className="mt-4 grid gap-3 md:max-w-xl">
                 <label className="text-xs font-medium text-foreground">
@@ -655,13 +671,17 @@ function ProductPage() {
                 <article key={review.id} className="border-b border-border/40 pb-3 last:border-0">
                   <div className="flex items-center gap-1 text-amber-400">
                     {"★".repeat(review.rating)}
-                    <span className="text-xs font-bold text-foreground ml-2">{review.title || `${review.rating}.0`}</span>
+                    <span className="text-xs font-bold text-foreground ml-2">
+                      {review.title || `${review.rating}.0`}
+                    </span>
                   </div>
                   <p className="mt-1 text-xs text-foreground/90 leading-relaxed">{review.body}</p>
                 </article>
               ))}
               {!reviews.data?.length && (
-                <p className="text-xs text-muted-foreground">No approved customer reviews yet. Be the first to review!</p>
+                <p className="text-xs text-muted-foreground">
+                  No approved customer reviews yet. Be the first to review!
+                </p>
               )}
             </div>
           </section>
@@ -714,10 +734,11 @@ function ProductGallery({
             key={`${thumb.label}-${index}`}
             type="button"
             onClick={() => setSelectedIdx(index)}
-            className={`relative h-20 w-20 shrink-0 overflow-hidden rounded-xl border bg-white p-2 transition-all ${selectedIdx === index
+            className={`relative h-20 w-20 shrink-0 overflow-hidden rounded-xl border bg-white p-2 transition-all ${
+              selectedIdx === index
                 ? "border-emerald-600 ring-2 ring-emerald-600/30 shadow-md"
                 : "border-border/70 hover:border-emerald-500/60"
-              }`}
+            }`}
           >
             <ProductThumb
               src={thumb.url || undefined}
@@ -1008,7 +1029,9 @@ function ShopCardItem({ store }: { store: Store }) {
             {store.rating.toFixed(1)}
           </span>
           <span>{store.distanceKm.toFixed(1)} km</span>
-          <span className="font-semibold text-emerald-700 dark:text-emerald-400">⚡ {store.etaMin} mins</span>
+          <span className="font-semibold text-emerald-700 dark:text-emerald-400">
+            ⚡ {store.etaMin} mins
+          </span>
         </div>
 
         <Link
@@ -1022,4 +1045,3 @@ function ShopCardItem({ store }: { store: Store }) {
     </div>
   );
 }
-

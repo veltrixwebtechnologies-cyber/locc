@@ -1,7 +1,18 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { AppShell } from "@/components/app-shell";
-import { ChevronRight, Trophy, Star, MapPin, Clock, Users, TrendingUp, Zap, Heart, ShoppingBag } from "lucide-react";
+import {
+  ChevronRight,
+  Trophy,
+  Star,
+  MapPin,
+  Clock,
+  Users,
+  TrendingUp,
+  Zap,
+  Heart,
+  ShoppingBag,
+} from "lucide-react";
 import { m } from "motion/react";
 import { BEST_SHOPS, BEST_SELLERS, type ShopMetrics } from "@/lib/platform-data";
 
@@ -22,7 +33,13 @@ function BestShopsPage() {
     <AppShell>
       <div className="mx-auto max-w-5xl px-4 py-6 sm:px-6 pb-12">
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <Link to="/" search={{ category: undefined, q: undefined }} className="hover:text-primary">Home</Link>
+          <Link
+            to="/"
+            search={{ category: undefined, q: undefined }}
+            className="hover:text-primary"
+          >
+            Home
+          </Link>
           <ChevronRight className="h-3 w-3" />
           <span className="font-semibold text-foreground">Best Shops</span>
         </div>
@@ -34,9 +51,12 @@ function BestShopsPage() {
           className="mt-5 rounded-3xl bg-gradient-to-br from-amber-600 via-orange-600 to-rose-600 p-6 text-white shadow-xl sm:p-8"
         >
           <Trophy className="h-8 w-8 text-amber-200" />
-          <h1 className="mt-3 font-display text-3xl font-extrabold sm:text-4xl">Best of LocalShore</h1>
+          <h1 className="mt-3 font-display text-3xl font-extrabold sm:text-4xl">
+            Best of LocalShore
+          </h1>
           <p className="mt-2 max-w-lg text-sm text-amber-100">
-            Discover the highest-rated shops and bestselling products near you. Rankings are based on ratings, delivery speed, and customer satisfaction.
+            Discover the highest-rated shops and bestselling products near you. Rankings are based
+            on ratings, delivery speed, and customer satisfaction.
           </p>
         </m.div>
 
@@ -70,7 +90,11 @@ function BestShopsPage() {
               >
                 <div className="flex flex-col sm:flex-row">
                   <div className="relative aspect-[16/10] sm:aspect-auto sm:w-48 shrink-0 overflow-hidden">
-                    <img src={shop.imageUrl} alt={shop.shopName} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                    <img
+                      src={shop.imageUrl}
+                      alt={shop.shopName}
+                      className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                    />
                     <div className="absolute top-2 left-2">
                       <span className="flex items-center gap-1 rounded-full bg-slate-900/80 px-2.5 py-1 text-white text-[11px] font-bold backdrop-blur-sm">
                         #{i + 1}
@@ -80,10 +104,14 @@ function BestShopsPage() {
                   <div className="flex-1 p-4 sm:p-5">
                     <div className="flex items-start justify-between">
                       <div>
-                        <span className={`inline-block rounded-full px-2.5 py-0.5 text-[10px] font-bold ${badgeColor[shop.badge]}`}>
+                        <span
+                          className={`inline-block rounded-full px-2.5 py-0.5 text-[10px] font-bold ${badgeColor[shop.badge]}`}
+                        >
                           {shop.badgeLabel}
                         </span>
-                        <h3 className="mt-1.5 text-base font-bold text-slate-900">{shop.shopName}</h3>
+                        <h3 className="mt-1.5 text-base font-bold text-slate-900">
+                          {shop.shopName}
+                        </h3>
                         <p className="mt-0.5 text-xs text-slate-500">{shop.category}</p>
                       </div>
                       <div className="flex items-center gap-1 rounded-lg bg-emerald-50 px-2 py-1">
@@ -94,9 +122,17 @@ function BestShopsPage() {
 
                     <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
                       {[
-                        { label: "Orders", value: shop.totalOrders.toLocaleString(), icon: ShoppingBag },
+                        {
+                          label: "Orders",
+                          value: shop.totalOrders.toLocaleString(),
+                          icon: ShoppingBag,
+                        },
                         { label: "Repeat Rate", value: `${shop.repeatCustomerRate}%`, icon: Users },
-                        { label: "Avg Delivery", value: `${shop.avgDeliveryMins} min`, icon: Clock },
+                        {
+                          label: "Avg Delivery",
+                          value: `${shop.avgDeliveryMins} min`,
+                          icon: Clock,
+                        },
                         { label: "Satisfaction", value: `${shop.satisfactionScore}%`, icon: Heart },
                       ].map((s) => (
                         <div key={s.label} className="rounded-xl bg-slate-50 p-2 text-center">
@@ -136,7 +172,11 @@ function BestShopsPage() {
                 className="group overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xs transition hover:shadow-md"
               >
                 <div className="relative aspect-square overflow-hidden">
-                  <img src={item.imageUrl} alt={item.name} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                  <img
+                    src={item.imageUrl}
+                    alt={item.name}
+                    className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                  />
                   {item.trending && (
                     <span className="absolute top-2 left-2 rounded-full bg-rose-500 px-2 py-0.5 text-[9px] font-bold text-white flex items-center gap-0.5">
                       <Zap className="h-2.5 w-2.5" /> Trending

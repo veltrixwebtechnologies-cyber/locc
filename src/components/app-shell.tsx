@@ -24,7 +24,7 @@ import { Fragment, type ReactNode, useEffect, useState, useRef } from "react";
 import { useWishlist, useWishlistProducts } from "@/lib/merchandising";
 import { AnimatePresence, m } from "motion/react";
 import { SwiggyInstantSearchDropdown } from "@/components/ui/swiggy-instant-search-dropdown";
-import { useDeliveryLocation } from "@/lib/location-store";
+import { useDeliveryLocation, initAutoGPSLocation } from "@/lib/location-store";
 import { LocationModal } from "@/components/ui/location-modal";
 
 export function AppShell({ children }: { children: ReactNode }) {
@@ -41,6 +41,10 @@ export function AppShell({ children }: { children: ReactNode }) {
   const [searchFocused, setSearchFocused] = useState(false);
   const { itemCount } = cartTotals(cart.lines);
   const isSignedIn = Boolean(auth.id);
+
+  useEffect(() => {
+    initAutoGPSLocation();
+  }, []);
 
   useEffect(() => {
     let ticking = false;
@@ -99,9 +103,11 @@ export function AppShell({ children }: { children: ReactNode }) {
           <span className="grid h-8 w-8 place-items-center rounded-xl bg-primary text-xs font-bold text-primary-foreground font-display shadow-xs">
             LS
           </span>
-          <span className="font-display text-base font-bold text-foreground tracking-tight">LocalShore</span>
+          <span className="font-display text-base font-bold text-foreground tracking-tight">
+            LocalShore
+          </span>
         </Link>
-        
+
         <div className="flex items-center gap-2">
           <button
             type="button"
@@ -113,8 +119,8 @@ export function AppShell({ children }: { children: ReactNode }) {
           </button>
 
           <Link
-            to="/"
-            search={{ category: undefined, q: "" }}
+            to="/search"
+            search={{ q: "" }}
             className="grid h-8 w-8 place-items-center rounded-lg border hairline bg-muted/60 text-foreground hover:bg-muted"
             aria-label="Search products"
           >
@@ -181,10 +187,20 @@ export function AppShell({ children }: { children: ReactNode }) {
           >
             <MapPin className="h-4 w-4 shrink-0 text-primary" />
             <span>
-              <span className="block text-[10px] font-medium text-muted-foreground">Deliver to</span>
+              <span className="block text-[10px] font-medium text-muted-foreground">
+                Deliver to
+              </span>
               <span className="flex items-center gap-1 text-xs font-bold text-foreground">
                 {deliveryLocation.area}
-                <svg className="h-3 w-3 text-muted-foreground" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M6 9l6 6 6-6"/></svg>
+                <svg
+                  className="h-3 w-3 text-muted-foreground"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.5"
+                >
+                  <path d="M6 9l6 6 6-6" />
+                </svg>
               </span>
             </span>
           </button>
@@ -209,8 +225,8 @@ export function AppShell({ children }: { children: ReactNode }) {
             <input
               value={headerQuery}
               onChange={(event) => setHeaderQuery(event.target.value)}
-              placeholder="Search for restaurants, shops, dishes or products"
-              aria-label="Search restaurants, shops, dishes or products"
+              placeholder="Search shops, products, brands..."
+              aria-label="Search shops, products, brands"
               className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
             />
             <AnimatePresence>
@@ -317,21 +333,35 @@ export function AppShell({ children }: { children: ReactNode }) {
                 <strong className="font-semibold text-foreground underline decoration-dotted">
                   {deliveryLocation.area}, {deliveryLocation.city}
                 </strong>
-                <span className="ml-1.5 text-[10px] text-purple-600 font-bold">(Change Location)</span>
+                <span className="ml-1.5 text-[10px] text-purple-600 font-bold">
+                  (Change Location)
+                </span>
               </span>
             </button>
           </div>
           <div className="flex items-center gap-4 lg:gap-5">
-            <Link to="/best-shops" className="inline-flex items-center gap-1.5 hover:text-primary font-semibold text-amber-800">
+            <Link
+              to="/best-shops"
+              className="inline-flex items-center gap-1.5 hover:text-primary font-semibold text-amber-800"
+            >
               🏆 Best Shops
             </Link>
-            <Link to="/brands" className="inline-flex items-center gap-1.5 hover:text-primary font-semibold text-purple-800">
+            <Link
+              to="/brands"
+              className="inline-flex items-center gap-1.5 hover:text-primary font-semibold text-purple-800"
+            >
               🛍️ Brands
             </Link>
-            <Link to="/explore" className="inline-flex items-center gap-1.5 hover:text-primary font-semibold text-teal-800">
+            <Link
+              to="/explore"
+              className="inline-flex items-center gap-1.5 hover:text-primary font-semibold text-teal-800"
+            >
               ✈️ Explore
             </Link>
-            <Link to="/customer-care" className="inline-flex items-center gap-1.5 hover:text-primary">
+            <Link
+              to="/customer-care"
+              className="inline-flex items-center gap-1.5 hover:text-primary"
+            >
               <Headphones className="h-3.5 w-3.5 text-primary" />
               Customer Care
             </Link>
@@ -352,10 +382,30 @@ export function AppShell({ children }: { children: ReactNode }) {
         <div className="mx-auto grid max-w-xl grid-cols-5">
           {[
             { to: "/", label: "Shops", icon: Home, match: (p: string) => p === "/" },
-            { to: "/explore", label: "Explore", icon: Heart, match: (p: string) => p.startsWith("/explore") },
-            { to: "/cart", label: "Cart", icon: ShoppingBag, match: (p: string) => p.startsWith("/cart") },
-            { to: "/orders", label: "Orders", icon: ClipboardList, match: (p: string) => p.startsWith("/orders") || p.startsWith("/order/") },
-            { to: "/profile", label: "Profile", icon: User, match: (p: string) => p.startsWith("/profile") },
+            {
+              to: "/explore",
+              label: "Explore",
+              icon: Heart,
+              match: (p: string) => p.startsWith("/explore"),
+            },
+            {
+              to: "/cart",
+              label: "Cart",
+              icon: ShoppingBag,
+              match: (p: string) => p.startsWith("/cart"),
+            },
+            {
+              to: "/orders",
+              label: "Orders",
+              icon: ClipboardList,
+              match: (p: string) => p.startsWith("/orders") || p.startsWith("/order/"),
+            },
+            {
+              to: "/profile",
+              label: "Profile",
+              icon: User,
+              match: (p: string) => p.startsWith("/profile"),
+            },
           ].map((t) => {
             const active = t.match(pathname);
             const Icon = t.icon;

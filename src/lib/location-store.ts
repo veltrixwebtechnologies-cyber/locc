@@ -11,8 +11,8 @@ import { reverseGeocode } from "@/lib/geocoding.functions";
 export interface DeliveryLocation {
   id: string;
   label: string; // Full formatted address label (e.g. "Pappampatti Pirivu, Coimbatore, TN")
-  area: string;  // Locality (e.g. "Pappampatti Pirivu")
-  city: string;  // City & State (e.g. "Coimbatore, TN")
+  area: string; // Locality (e.g. "Pappampatti Pirivu")
+  city: string; // City & State (e.g. "Coimbatore, TN")
   lat: number;
   lng: number;
   isGPS?: boolean;
@@ -40,8 +40,8 @@ export const PRESET_LOCATIONS: DeliveryLocation[] = [
     label: "Gandhipuram, Coimbatore, TN",
     area: "Gandhipuram",
     city: "Coimbatore, TN",
-    lat: 11.0168,
-    lng: 76.9558,
+    lat: 11.0172,
+    lng: 76.9562,
   },
   {
     id: "peelamedu",
@@ -73,7 +73,7 @@ export const PRESET_LOCATIONS: DeliveryLocation[] = [
     area: "Tidal Park",
     city: "Coimbatore, TN",
     lat: 11.0264,
-    lng: 77.0180,
+    lng: 77.018,
   },
 ];
 
@@ -107,30 +107,65 @@ export function getActiveDeliveryLocation(): DeliveryLocation {
 }
 
 export function setActiveDeliveryLocation(loc: DeliveryLocation) {
-  activeLocation = loc;
+  activeLocation = { ...loc };
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(loc));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(activeLocation));
   } catch {
     // Ignore storage errors
   }
   notifyListeners();
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new CustomEvent("localshore_location_change", { detail: activeLocation }));
+  }
 }
 
 /**
  * Custom React Hook to subscribe to active delivery location updates
  */
 export function useDeliveryLocation(): [DeliveryLocation, (loc: DeliveryLocation) => void] {
-  const [loc, setLoc] = useState<DeliveryLocation>(activeLocation);
+  const [loc, setLoc] = useState<DeliveryLocation>(() => ({ ...activeLocation }));
 
   useEffect(() => {
-    const handleChange = () => setLoc(activeLocation);
+    const handleChange = () => {
+      setLoc({ ...activeLocation });
+    };
     LISTENERS.add(handleChange);
+    if (typeof window !== "undefined") {
+      window.addEventListener("localshore_location_change", handleChange);
+    }
     return () => {
       LISTENERS.delete(handleChange);
+      if (typeof window !== "undefined") {
+        window.removeEventListener("localshore_location_change", handleChange);
+      }
     };
   }, []);
 
   return [loc, setActiveDeliveryLocation];
+}
+
+/**
+ * Auto-detect live GPS location on application load if permissions are granted or on initial session
+ */
+export function initAutoGPSLocation() {
+  if (typeof window === "undefined" || !navigator.geolocation) return;
+
+  const tryDetect = () => {
+    detectCurrentGPSLocation().catch((err) => {
+      console.warn("Auto GPS detection skipped:", err);
+    });
+  };
+
+  if ("permissions" in navigator) {
+    navigator.permissions
+      .query({ name: "geolocation" as any })
+      .then((result) => {
+        if (result.state === "granted") {
+          tryDetect();
+        }
+      })
+      .catch(() => {});
+  }
 }
 
 /**
@@ -145,21 +180,62 @@ export async function detectCurrentGPSLocation(): Promise<DeliveryLocation> {
     navigator.geolocation.getCurrentPosition(
       async (position) => {
         const { latitude: lat, longitude: lng } = position.coords;
-        let area = "Current Location";
+        let area = `GPS Location (${lat.toFixed(3)}, ${lng.toFixed(3)})`;
         let city = "Coimbatore, TN";
-        let label = `Near ${lat.toFixed(4)}, ${lng.toFixed(4)}, Coimbatore`;
+        let label = `Near ${lat.toFixed(4)}, ${lng.toFixed(4)}, Coimbatore, TN`;
 
         try {
-          // Attempt reverse geocoding
-          const result = await reverseGeocode({ data: { lat, lng } });
-          if (result && result.address) {
-            const parts = result.address.split(",").map((s) => s.trim());
-            area = parts[0] || parts[1] || "Current Location";
-            city = parts.slice(2, 4).join(", ") || "Coimbatore, TN";
-            label = `${area}, ${city}`;
+          // Direct client reverse geocode attempt with Nominatim
+          const params = new URLSearchParams({
+            lat: String(lat),
+            lon: String(lng),
+            format: "json",
+            addressdetails: "1",
+            zoom: "18",
+          });
+          const res = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?${params.toString()}`,
+            {
+              headers: { "Accept-Language": "en" },
+            },
+          );
+
+          if (res.ok) {
+            const data = await res.json();
+            if (data && data.address) {
+              const a = data.address;
+              const locality =
+                a.suburb ||
+                a.neighbourhood ||
+                a.residential ||
+                a.village ||
+                a.road ||
+                a.town ||
+                a.city_district ||
+                "Live GPS Location";
+              const dist = a.city || a.town || a.county || a.state_district || "Coimbatore";
+              const st = a.state || "TN";
+
+              area = locality;
+              city = `${dist}, ${st}`;
+              label = `${locality}, ${city}`;
+            } else if (data && data.display_name) {
+              const parts = data.display_name.split(",").map((s: string) => s.trim());
+              area = parts[0] || "Live GPS Location";
+              city = parts.slice(1, 3).join(", ") || "Coimbatore, TN";
+              label = data.display_name;
+            }
+          } else {
+            // Server function fallback
+            const result = await reverseGeocode({ data: { lat, lng } });
+            if (result && result.area) {
+              area = result.area;
+              city = result.city || city;
+              label = result.address || label;
+            }
           }
-        } catch {
-          // Fallback location formatting
+        } catch (err) {
+          console.warn("Geolocation reverse geocode fallback:", err);
         }
 
         const newLoc: DeliveryLocation = {
@@ -173,28 +249,29 @@ export async function detectCurrentGPSLocation(): Promise<DeliveryLocation> {
         };
 
         setActiveDeliveryLocation(newLoc);
-        toast.success("Location set to Current GPS Position", {
-          description: label,
+        toast.success("Live Location Set", {
+          description: `${area}, ${city}`,
         });
         resolve(newLoc);
       },
       (error) => {
         let msg = "Could not fetch current GPS location.";
         if (error.code === error.PERMISSION_DENIED) {
-          msg = "Location access denied. Please allow location permissions in your browser.";
+          msg =
+            "Location access denied. Please allow location permissions in your browser settings.";
         } else if (error.code === error.POSITION_UNAVAILABLE) {
-          msg = "GPS signal unavailable. Please select a hub manually.";
+          msg = "GPS signal unavailable. Please select your area manually.";
         } else if (error.code === error.TIMEOUT) {
-          msg = "GPS request timed out. Please try again.";
+          msg = "GPS request timed out. Please try again or select a location hub.";
         }
         toast.error("Geolocation Error", { description: msg });
         reject(new Error(msg));
       },
       {
         enableHighAccuracy: true,
-        timeout: 10000,
-        maximumAge: 30000,
-      }
+        timeout: 12000,
+        maximumAge: 0,
+      },
     );
   });
 }

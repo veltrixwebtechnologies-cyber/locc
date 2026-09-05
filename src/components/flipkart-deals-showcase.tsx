@@ -19,55 +19,64 @@ const FLIPKART_CATEGORIES: FlipkartCategory[] = [
     id: "for-you",
     label: "For You",
     categoryParam: "all",
-    iconUrl: "https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=120&q=80",
+    iconUrl:
+      "https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=120&q=80",
   },
   {
     id: "grocery",
     label: "Grocery",
     categoryParam: "grocery",
-    iconUrl: "https://images.unsplash.com/photo-1578916171728-46686eac8d58?auto=format&fit=crop&w=120&q=80",
+    iconUrl:
+      "https://images.unsplash.com/photo-1578916171728-46686eac8d58?auto=format&fit=crop&w=120&q=80",
   },
   {
     id: "pharmacy",
     label: "Pharmacy",
     categoryParam: "pharmacy",
-    iconUrl: "https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?auto=format&fit=crop&w=120&q=80",
+    iconUrl:
+      "https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?auto=format&fit=crop&w=120&q=80",
   },
   {
     id: "bakery",
     label: "Fresh Bakery",
     categoryParam: "bakery",
-    iconUrl: "https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=120&q=80",
+    iconUrl:
+      "https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=120&q=80",
   },
   {
     id: "electronics",
     label: "Electronics",
     categoryParam: "electronics",
-    iconUrl: "https://images.unsplash.com/photo-1498049794561-7780e7231661?auto=format&fit=crop&w=120&q=80",
+    iconUrl:
+      "https://images.unsplash.com/photo-1498049794561-7780e7231661?auto=format&fit=crop&w=120&q=80",
   },
   {
     id: "home",
     label: "Home & Furniture",
     categoryParam: "home",
-    iconUrl: "https://images.unsplash.com/photo-1583947215259-38e31be8751f?auto=format&fit=crop&w=120&q=80",
+    iconUrl:
+      "https://images.unsplash.com/photo-1583947215259-38e31be8751f?auto=format&fit=crop&w=120&q=80",
   },
   {
     id: "beauty",
     label: "Beauty & Personal",
     categoryParam: "personal",
-    iconUrl: "https://images.unsplash.com/photo-1556228720-195a672e8a03?auto=format&fit=crop&w=120&q=80",
+    iconUrl:
+      "https://images.unsplash.com/photo-1556228720-195a672e8a03?auto=format&fit=crop&w=120&q=80",
   },
   {
     id: "toys",
     label: "Toys, Baby Care",
     categoryParam: "stationery",
-    iconUrl: "https://images.unsplash.com/photo-1515488042361-ee00e0ddd4e4?auto=format&fit=crop&w=120&q=80",
+    iconUrl:
+      "https://images.unsplash.com/photo-1515488042361-ee00e0ddd4e4?auto=format&fit=crop&w=120&q=80",
   },
   {
     id: "stationery",
     label: "Books & Tech",
     categoryParam: "stationery",
-    iconUrl: "https://images.unsplash.com/photo-1519682337058-a94d519337bc?auto=format&fit=crop&w=120&q=80",
+    iconUrl:
+      "https://images.unsplash.com/photo-1519682337058-a94d519337bc?auto=format&fit=crop&w=120&q=80",
   },
 ];
 
@@ -78,7 +87,7 @@ export function FlipkartCategoryStrip({ activeCategory }: { activeCategory?: str
       <div className="mx-auto flex max-w-7xl items-center gap-2 overflow-x-auto px-4 py-2.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:justify-between md:gap-4 md:px-8">
         {FLIPKART_CATEGORIES.map((cat) => {
           const isActive =
-            (!activeCategory || activeCategory === "all")
+            !activeCategory || activeCategory === "all"
               ? cat.id === "for-you"
               : cat.categoryParam === activeCategory.toLowerCase();
 
@@ -130,7 +139,8 @@ export function FlipkartBannerRow() {
       title: "24/7 Wellness & OTC Care",
       subtitle: "Medicines, healthcare & personal wellness",
       tag: "Flat 15% OFF",
-      image: "https://images.unsplash.com/photo-1587854692152-cbe660dbde88?auto=format&fit=crop&w=600&q=80",
+      image:
+        "https://images.unsplash.com/photo-1587854692152-cbe660dbde88?auto=format&fit=crop&w=600&q=80",
       category: "pharmacy",
     },
     {
@@ -138,7 +148,8 @@ export function FlipkartBannerRow() {
       title: "Fresh Wood-Fired Breads",
       subtitle: "Artisanal cakes, cookies & daily treats",
       tag: "Fresh at 6 AM",
-      image: "https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=600&q=80",
+      image:
+        "https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=600&q=80",
       category: "bakery",
     },
   ];
@@ -156,7 +167,9 @@ export function FlipkartBannerRow() {
               Fresh Daily Ration
             </h3>
             <p className="mt-0.5 text-base font-black text-[#945700]">Up to 30% OFF</p>
-            <p className="mt-1 text-[11px] font-bold text-slate-800">Since 1978 · Instant 20 min delivery</p>
+            <p className="mt-1 text-[11px] font-bold text-slate-800">
+              Since 1978 · Instant 20 min delivery
+            </p>
           </div>
 
           <Link
@@ -190,8 +203,12 @@ export function FlipkartBannerRow() {
             <span className="inline-block rounded-full bg-white/20 px-2.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wider text-teal-50 border border-white/30 backdrop-blur-md">
               {slides[activeSlide]?.shopName}
             </span>
-            <h3 className="mt-2 text-xl font-black text-white sm:text-2xl">{slides[activeSlide]?.title}</h3>
-            <p className="mt-1 text-xs font-medium text-teal-100">{slides[activeSlide]?.subtitle}</p>
+            <h3 className="mt-2 text-xl font-black text-white sm:text-2xl">
+              {slides[activeSlide]?.title}
+            </h3>
+            <p className="mt-1 text-xs font-medium text-teal-100">
+              {slides[activeSlide]?.subtitle}
+            </p>
             <span className="mt-3 inline-block rounded-lg bg-gold-gradient px-3 py-1 text-xs font-black text-slate-950 shadow-xs border border-white/40">
               {slides[activeSlide]?.tag}
             </span>
@@ -247,7 +264,9 @@ export function FlipkartBannerRow() {
             </span>
             <h3 className="mt-2 text-lg font-black text-white sm:text-xl">School & Art Supplies</h3>
             <p className="mt-0.5 text-sm font-black text-[#F3D053]">Starting ₹49</p>
-            <p className="mt-1 text-[11px] text-purple-100 font-medium">Classroom packs & craft kits</p>
+            <p className="mt-1 text-[11px] text-purple-100 font-medium">
+              Classroom packs & craft kits
+            </p>
           </div>
 
           <Link
@@ -284,40 +303,47 @@ export function FlipkartBestDealsShowcase({
   const scrollRef = useRef<HTMLDivElement>(null);
 
   // Fallback items with real local product IDs
-  const displayItems = products.length > 0 ? products.slice(0, 8) : [
-    {
-      id: "s1-p0",
-      name: "Sona Masoori Rice 5kg",
-      deal: "Special Deal: 20% Off",
-      imageUrl: "https://images.unsplash.com/photo-1586201375761-83865001e31c?auto=format&fit=crop&w=400&q=80",
-      selling_price: 420,
-      mrp: 525,
-    },
-    {
-      id: "s1-p2",
-      name: "Cold-pressed Coconut Oil",
-      deal: "Min. 15% Off",
-      imageUrl: "https://images.unsplash.com/photo-1590332763361-c73dc0e0dd8b?auto=format&fit=crop&w=400&q=80",
-      selling_price: 280,
-      mrp: 350,
-    },
-    {
-      id: "s3-p0",
-      name: "Artisan Sourdough Loaf",
-      deal: "Bakery Fresh",
-      imageUrl: "https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=400&q=80",
-      selling_price: 180,
-      mrp: 220,
-    },
-    {
-      id: "s4-p0",
-      name: "A4 Ruled Notebook (200 pgs)",
-      deal: "Best Seller",
-      imageUrl: "https://images.unsplash.com/photo-1531346878377-a5be20888e57?auto=format&fit=crop&w=400&q=80",
-      selling_price: 85,
-      mrp: 110,
-    },
-  ];
+  const displayItems =
+    products.length > 0
+      ? products.slice(0, 8)
+      : [
+          {
+            id: "s1-p0",
+            name: "Sona Masoori Rice 5kg",
+            deal: "Special Deal: 20% Off",
+            imageUrl:
+              "https://images.unsplash.com/photo-1586201375761-83865001e31c?auto=format&fit=crop&w=400&q=80",
+            selling_price: 420,
+            mrp: 525,
+          },
+          {
+            id: "s1-p2",
+            name: "Cold-pressed Coconut Oil",
+            deal: "Min. 15% Off",
+            imageUrl:
+              "https://images.unsplash.com/photo-1590332763361-c73dc0e0dd8b?auto=format&fit=crop&w=400&q=80",
+            selling_price: 280,
+            mrp: 350,
+          },
+          {
+            id: "s3-p0",
+            name: "Artisan Sourdough Loaf",
+            deal: "Bakery Fresh",
+            imageUrl:
+              "https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=400&q=80",
+            selling_price: 180,
+            mrp: 220,
+          },
+          {
+            id: "s4-p0",
+            name: "A4 Ruled Notebook (200 pgs)",
+            deal: "Best Seller",
+            imageUrl:
+              "https://images.unsplash.com/photo-1531346878377-a5be20888e57?auto=format&fit=crop&w=400&q=80",
+            selling_price: 85,
+            mrp: 110,
+          },
+        ];
 
   return (
     <section className="mx-auto max-w-7xl px-4 py-4 md:px-8">
@@ -349,16 +375,13 @@ export function FlipkartBestDealsShowcase({
         </div>
 
         {/* Product Cards Row */}
-        <div
-          ref={scrollRef}
-          className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-4"
-        >
+        <div ref={scrollRef} className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-4">
           {displayItems.map((item: any) => {
             const price = item.selling_price ?? item.price ?? 0;
             const mrp = item.mrp ?? (price ? Math.round(price * 1.25) : 0);
-            const dealTag = item.deal ?? (mrp && price
-              ? `${Math.round(((mrp - price) / mrp) * 100)}% OFF`
-              : "Best Deal");
+            const dealTag =
+              item.deal ??
+              (mrp && price ? `${Math.round(((mrp - price) / mrp) * 100)}% OFF` : "Best Deal");
 
             return (
               <m.div
@@ -390,18 +413,14 @@ export function FlipkartBestDealsShowcase({
                       {item.name}
                     </h3>
                     <div className="mt-1 flex items-baseline gap-2">
-                      <span className="text-sm font-black text-slate-900">
-                        ₹{price}
-                      </span>
+                      <span className="text-sm font-black text-slate-900">₹{price}</span>
                       {mrp > price && (
                         <span className="text-[11px] font-medium text-slate-400 line-through">
                           ₹{mrp}
                         </span>
                       )}
                     </div>
-                    <p className="mt-0.5 text-xs font-black text-purple-700">
-                      {dealTag}
-                    </p>
+                    <p className="mt-0.5 text-xs font-black text-purple-700">{dealTag}</p>
                   </div>
                 </Link>
               </m.div>

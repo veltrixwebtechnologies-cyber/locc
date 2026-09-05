@@ -49,7 +49,10 @@ function OrdersPage() {
                       Order #{o.code}
                     </span>
                     <span className="font-mono text-xs text-muted-foreground">
-                      {new Date(o.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                      {new Date(o.createdAt).toLocaleTimeString([], {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
                     </span>
                   </div>
                   <p className="mt-1 font-display text-lg leading-tight">{o.storeName}</p>
@@ -79,8 +82,8 @@ function OrdersPage() {
                         isDelivered
                           ? "bg-emerald-600/10 text-emerald-700"
                           : isCancelled
-                          ? "bg-rose-500/10 text-rose-700"
-                          : "bg-primary/10 text-primary"
+                            ? "bg-rose-500/10 text-rose-700"
+                            : "bg-primary/10 text-primary"
                       }`}
                     >
                       {orderStatusLabel[o.status]}

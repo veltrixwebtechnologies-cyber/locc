@@ -57,8 +57,7 @@ export function ProductCard({
 
   const sellingPrice = Number(product.discount_price ?? product.selling_price ?? 0);
   const mrp = Number(product.mrp ?? (sellingPrice ? Math.round(sellingPrice * 1.25) : 0));
-  const discountPercent =
-    mrp > sellingPrice ? Math.round(((mrp - sellingPrice) / mrp) * 100) : 0;
+  const discountPercent = mrp > sellingPrice ? Math.round(((mrp - sellingPrice) / mrp) * 100) : 0;
   const dealTag = `${discountPercent}% OFF`;
 
   return (
@@ -117,18 +116,12 @@ export function ProductCard({
               {product.name}
             </h3>
             <div className="mt-1 flex items-baseline gap-2">
-              <span className="text-sm font-black text-slate-900">
-                ₹{sellingPrice}
-              </span>
+              <span className="text-sm font-black text-slate-900">₹{sellingPrice}</span>
               {mrp > sellingPrice && (
-                <span className="text-[11px] font-medium text-slate-400 line-through">
-                  ₹{mrp}
-                </span>
+                <span className="text-[11px] font-medium text-slate-400 line-through">₹{mrp}</span>
               )}
             </div>
-            <p className="mt-0.5 text-xs font-black text-purple-700">
-              {dealTag}
-            </p>
+            <p className="mt-0.5 text-xs font-black text-purple-700">{dealTag}</p>
           </div>
         </div>
       </Link>

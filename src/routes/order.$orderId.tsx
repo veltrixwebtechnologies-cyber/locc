@@ -41,7 +41,11 @@ function DeliveryTimingHero({ order }: { order: Order }) {
               <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-500"></span>
             </span>
             <span className="font-mono text-xs font-semibold uppercase tracking-wider text-emerald-400">
-              {isDelivered ? "Order Completed" : isCancelled ? "Order Cancelled" : "Live Delivery Status"}
+              {isDelivered
+                ? "Order Completed"
+                : isCancelled
+                  ? "Order Cancelled"
+                  : "Live Delivery Status"}
             </span>
           </div>
 
@@ -49,14 +53,17 @@ function DeliveryTimingHero({ order }: { order: Order }) {
             {isDelivered
               ? "Delivered Successfully 🎉"
               : isCancelled
-              ? "Order Cancelled"
-              : `Arriving in ~${order.etaMin || 25} Mins`}
+                ? "Order Cancelled"
+                : `Arriving in ~${order.etaMin || 25} Mins`}
           </h2>
 
           {!isDelivered && !isCancelled && (
             <p className="mt-1 flex items-center gap-1.5 text-xs text-slate-300">
               <Clock className="h-3.5 w-3.5 text-emerald-400" />
-              <span>Expected Arrival by <strong className="text-white font-semibold">{expectedTimeStr}</strong></span>
+              <span>
+                Expected Arrival by{" "}
+                <strong className="text-white font-semibold">{expectedTimeStr}</strong>
+              </span>
             </p>
           )}
         </div>
@@ -64,7 +71,9 @@ function DeliveryTimingHero({ order }: { order: Order }) {
         <div className="flex flex-col items-end">
           <div className="rounded-xl bg-white/10 px-3 py-1.5 backdrop-blur-md border border-white/10 text-right">
             <p className="font-mono text-[10px] uppercase text-emerald-300">Distance</p>
-            <p className="font-mono text-sm font-bold text-white">{order.distanceKm.toFixed(1)} km</p>
+            <p className="font-mono text-sm font-bold text-white">
+              {order.distanceKm.toFixed(1)} km
+            </p>
           </div>
         </div>
       </div>
@@ -82,7 +91,13 @@ function DeliveryTimingHero({ order }: { order: Order }) {
   );
 }
 
-function DeliveryPartnerCard({ partner, orderStatus }: { partner?: Order["partner"]; orderStatus: OrderStatus }) {
+function DeliveryPartnerCard({
+  partner,
+  orderStatus,
+}: {
+  partner?: Order["partner"];
+  orderStatus: OrderStatus;
+}) {
   const [userRating, setUserRating] = useState<number | null>(partner?.userRating ?? null);
   const [hoverRating, setHoverRating] = useState<number | null>(null);
 
@@ -116,9 +131,15 @@ function DeliveryPartnerCard({ partner, orderStatus }: { partner?: Order["partne
         <div className="flex items-center gap-3">
           <div className="relative">
             <div className="grid h-12 w-12 place-items-center rounded-full bg-emerald-600 text-white font-display text-lg font-bold shadow-md">
-              {partner.name.split(" ").map((n) => n[0]).join("")}
+              {partner.name
+                .split(" ")
+                .map((n) => n[0])
+                .join("")}
             </div>
-            <div className="absolute -bottom-1 -right-1 grid h-5 w-5 place-items-center rounded-full bg-amber-400 text-slate-950 ring-2 ring-card" title="Verified Partner">
+            <div
+              className="absolute -bottom-1 -right-1 grid h-5 w-5 place-items-center rounded-full bg-amber-400 text-slate-950 ring-2 ring-card"
+              title="Verified Partner"
+            >
               <ShieldCheck className="h-3 w-3" />
             </div>
           </div>
@@ -129,11 +150,15 @@ function DeliveryPartnerCard({ partner, orderStatus }: { partner?: Order["partne
                 Verified Rider
               </span>
             </div>
-            <p className="text-xs text-muted-foreground">{partner.vehicle ?? "Hero Electric Scooter"}</p>
+            <p className="text-xs text-muted-foreground">
+              {partner.vehicle ?? "Hero Electric Scooter"}
+            </p>
             <div className="mt-1 flex items-center gap-1 font-mono text-xs">
               <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400 stroke-amber-400" />
               <span className="font-bold text-foreground">{ratingValue.toFixed(1)}</span>
-              <span className="text-muted-foreground">({partner.deliveriesCount ?? 340}+ orders)</span>
+              <span className="text-muted-foreground">
+                ({partner.deliveriesCount ?? 340}+ orders)
+              </span>
             </div>
           </div>
         </div>
@@ -198,7 +223,7 @@ function OrderPage() {
     (o) =>
       o.id === orderId ||
       o.code === orderId ||
-      (o.code && o.code.toLowerCase() === orderId.toLowerCase())
+      (o.code && o.code.toLowerCase() === orderId.toLowerCase()),
   );
 
   const store = order ? getStore(order.storeId) : undefined;
@@ -206,17 +231,16 @@ function OrderPage() {
   const status = order?.status;
 
   const destination = useMemo(() => {
-    if (order?.destination) return order.destination;
-    if (!store) return { lat: 9.97, lng: 76.26 };
-    return { lat: store.lat + 0.01, lng: store.lng + 0.008 };
-  }, [order?.destination, store]);
+    return order?.destination ?? null;
+  }, [order?.destination]);
 
   const courier = useMemo(() => {
-    if (order?.partner?.lat && order?.partner?.lng) {
+    if (order?.partner?.lat && order?.partner?.lng && destination) {
       return { lat: order.partner.lat, lng: order.partner.lng, label: order.partner.name };
     }
-    const storeLoc = order?.storeCoordinates ?? (store ? { lat: store.lat, lng: store.lng } : undefined);
-    if (!storeLoc || !status) return undefined;
+    const storeLoc =
+      order?.storeCoordinates ?? (store ? { lat: store.lat, lng: store.lng } : undefined);
+    if (!storeLoc || !status || !destination) return undefined;
     const steps = Math.max(1, orderStatusFlow.length - 1);
     const validIndex = Math.max(0, currentIndex);
     const t = Math.min(0.95, Math.max(0.05, validIndex / steps));

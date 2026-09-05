@@ -6,16 +6,7 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import {
-  MapPin,
-  LocateFixed,
-  Search,
-  X,
-  Check,
-  Loader2,
-  Navigation,
-  Sparkles,
-} from "lucide-react";
+import { MapPin, LocateFixed, Search, X, Check, Loader2, Navigation, Sparkles } from "lucide-react";
 import {
   useDeliveryLocation,
   detectCurrentGPSLocation,
@@ -78,21 +69,25 @@ export function LocationModal({ isOpen, onClose }: LocationModalProps) {
   };
 
   const handleSelectSearchResult = (result: any) => {
-    const parts = (result.address || result.label || "").split(",");
-    const area = parts[0]?.trim() || "Localshore Hub";
-    const city = parts.slice(1, 3).join(", ").trim() || "Coimbatore, TN";
+    const rawName = result.placeName || result.label || result.address || "";
+    const parts = rawName
+      .split(",")
+      .map((s: string) => s.trim())
+      .filter(Boolean);
+    const area = parts[0] || "Coimbatore";
+    const city = parts.slice(1, 3).join(", ") || "Coimbatore, TN";
 
     const newLoc: DeliveryLocation = {
       id: `custom-${Date.now()}`,
-      label: result.label || `${area}, ${city}`,
+      label: rawName || `${area}, ${city}`,
       area,
       city,
-      lat: result.lat,
-      lng: result.lng,
+      lat: Number(result.lat),
+      lng: Number(result.lng),
     };
 
     setLocation(newLoc);
-    toast.success(`Delivery location updated to ${area}`);
+    toast.success(`Delivery location set to ${area}`);
     onClose();
   };
 

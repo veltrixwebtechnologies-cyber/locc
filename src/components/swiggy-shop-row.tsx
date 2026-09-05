@@ -121,15 +121,15 @@ function SwiggyShopCard({
           />
         </div>
 
-        <Link
-          to="/store/$storeId"
-          params={{ storeId: store.id }}
-          className="block"
-        >
+        <Link to="/store/$storeId" params={{ storeId: store.id }} className="block">
           {/* ── Image area ── */}
           <div className="relative aspect-[16/10] w-full overflow-hidden bg-[#f0f0f5]">
             <img
-              src={imgError ? "https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=800&q=75" : store.imageUrl}
+              src={
+                imgError
+                  ? "https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=800&q=75"
+                  : store.imageUrl
+              }
               alt={store.name}
               loading="lazy"
               onError={() => setImgError(true)}
@@ -180,7 +180,9 @@ function SwiggyShopCard({
                 {store.rating.toFixed(1)}
               </span>
               <span>•</span>
-              <span>{store.etaMin}-{store.etaMin + 5} mins</span>
+              <span>
+                {store.etaMin}-{store.etaMin + 5} mins
+              </span>
             </div>
 
             {/* Subtitle — Cuisine/Category */}
@@ -193,13 +195,7 @@ function SwiggyShopCard({
 
             {/* Bank offer */}
             <div className="flex items-center gap-1.5">
-              <svg
-                width="14"
-                height="14"
-                viewBox="0 0 20 20"
-                fill="none"
-                className="shrink-0"
-              >
+              <svg width="14" height="14" viewBox="0 0 20 20" fill="none" className="shrink-0">
                 <rect
                   x="1"
                   y="3"
@@ -211,9 +207,7 @@ function SwiggyShopCard({
                 />
                 <path d="M1 8h18" stroke="#981495" strokeWidth="1.5" />
               </svg>
-              <p className="truncate text-[12px] font-semibold text-[#686b78]">
-                {offers.bank}
-              </p>
+              <p className="truncate text-[12px] font-semibold text-[#686b78]">{offers.bank}</p>
             </div>
           </div>
         </Link>
@@ -249,9 +243,7 @@ export function SwiggyShopRow({
     }
   };
 
-  const realIds = stores
-    .map((s) => s.id)
-    .filter((id) => !id.startsWith("mock-"));
+  const realIds = stores.map((s) => s.id).filter((id) => !id.startsWith("mock-"));
   const statusQ = useShopsStatus(realIds);
 
   const updateArrows = useCallback(() => {
@@ -436,16 +428,8 @@ export function SwiggyShopRow({
           <div className="mt-0.5 h-[3px] w-8 rounded-full bg-[#981495]" />
         </div>
         <div className="flex items-center gap-2">
-          <NavArrow
-            dir="left"
-            visible={canLeft}
-            onClick={() => scroll("left")}
-          />
-          <NavArrow
-            dir="right"
-            visible={canRight}
-            onClick={() => scroll("right")}
-          />
+          <NavArrow dir="left" visible={canLeft} onClick={() => scroll("left")} />
+          <NavArrow dir="right" visible={canRight} onClick={() => scroll("right")} />
         </div>
       </div>
 
@@ -459,11 +443,7 @@ export function SwiggyShopRow({
           const liveStatus = statusQ.data?.get(store.id);
           return (
             <div key={store.id} className="snap-start">
-              <SwiggyShopCard
-                store={store}
-                index={index}
-                liveIsOpen={liveStatus?.isOpen}
-              />
+              <SwiggyShopCard store={store} index={index} liveIsOpen={liveStatus?.isOpen} />
             </div>
           );
         })}
@@ -642,11 +622,7 @@ export function SwiggyQuickCategories() {
           </div>
           <div className="flex w-full items-center justify-between gap-4 md:gap-6">
             {ROW2.map((cat, i) => (
-              <CategoryCircle
-                key={cat.id}
-                cat={cat}
-                index={ROW1.length + i}
-              />
+              <CategoryCircle key={cat.id} cat={cat} index={ROW1.length + i} />
             ))}
           </div>
         </div>
@@ -666,7 +642,8 @@ function CategoryCircle({
   index: number;
 }) {
   const [hasError, setHasError] = useState(false);
-  const fallback = "https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=300&q=80";
+  const fallback =
+    "https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=300&q=80";
 
   return (
     <div className="shrink-0">

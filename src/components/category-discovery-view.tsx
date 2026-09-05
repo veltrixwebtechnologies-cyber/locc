@@ -28,6 +28,8 @@ import {
 } from "@/lib/shop-categories";
 import { ShopCategoryNavBar } from "@/components/shop-category-nav-bar";
 
+import { calculateHaversineDistanceKm } from "@/lib/map-service/providers";
+
 export function CategoryDiscoveryView({
   stores,
   activeCategory = "all",
@@ -40,7 +42,9 @@ export function CategoryDiscoveryView({
   const navigate = useNavigate();
   const [deliveryLoc] = useDeliveryLocation();
 
-  const [selectedSort, setSelectedSort] = useState<"popular" | "rating" | "distance" | "fast">("popular");
+  const [selectedSort, setSelectedSort] = useState<"popular" | "rating" | "distance" | "fast">(
+    "distance",
+  );
   const [filterOpenNow, setFilterOpenNow] = useState(false);
   const [filterTopRated, setFilterTopRated] = useState(false);
   const [showFilterMenu, setShowFilterMenu] = useState(false);
@@ -74,9 +78,25 @@ export function CategoryDiscoveryView({
     }
   };
 
-  // Filtered Shops List
+  // Filtered & Distance-Calculated Shops List
   const filteredStores = useMemo(() => {
-    let result = stores;
+    let result = stores.map((s, idx) => {
+      const storeLat = Number(s.lat) || deliveryLoc.lat + idx * 0.005;
+      const storeLng = Number(s.lng) || deliveryLoc.lng + idx * 0.005;
+      const computedDistanceKm = calculateHaversineDistanceKm(
+        deliveryLoc.lat,
+        deliveryLoc.lng,
+        storeLat,
+        storeLng,
+      );
+      const computedEta = Math.max(10, Math.round(computedDistanceKm * 5 + 10));
+
+      return {
+        ...s,
+        distanceKm: Number(computedDistanceKm.toFixed(1)),
+        etaMin: computedEta,
+      };
+    });
 
     // Filter by Shop Category using centralized matching engine
     if (activeCategory && activeCategory !== "all" && activeCategory !== "all-shops") {
@@ -91,12 +111,12 @@ export function CategoryDiscoveryView({
     }
 
     return [...result].sort((a, b) => {
-      if (selectedSort === "rating") return b.rating - a.rating;
       if (selectedSort === "distance") return a.distanceKm - b.distanceKm;
       if (selectedSort === "fast") return a.etaMin - b.etaMin;
-      return (b.rating ?? 4.5) - (a.rating ?? 4.5);
+      if (selectedSort === "rating") return b.rating - a.rating;
+      return a.distanceKm - b.distanceKm; // Default to nearest first
     });
-  }, [stores, activeCategory, filterOpenNow, filterTopRated, selectedSort]);
+  }, [stores, activeCategory, filterOpenNow, filterTopRated, selectedSort, deliveryLoc]);
 
   const handleRequestSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -123,7 +143,7 @@ export function CategoryDiscoveryView({
       {/* 2. DYNAMIC CATEGORY HEADER BANNER */}
       <div className="relative overflow-hidden rounded-3xl border border-purple-200/70 bg-gradient-to-r from-purple-950 via-purple-900 to-indigo-950 p-5 sm:p-7 text-white shadow-xl">
         <div className="absolute right-0 top-0 w-64 h-64 opacity-15 bg-radial from-[#F3D053] to-transparent pointer-events-none" />
-        
+
         <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-start gap-4">
             <div className="flex h-12 w-12 sm:h-14 sm:w-14 shrink-0 items-center justify-center rounded-2xl bg-white/10 text-[#F3D053] backdrop-blur-md border border-white/15 shadow-inner">
@@ -250,7 +270,8 @@ export function CategoryDiscoveryView({
         </div>
 
         <div className="text-xs font-extrabold text-slate-500">
-          Showing <span className="text-purple-900 font-extrabold">{filteredStores.length}</span> Local Shops
+          Showing <span className="text-purple-900 font-extrabold">{filteredStores.length}</span>{" "}
+          Local Shops
         </div>
       </div>
 
@@ -260,9 +281,13 @@ export function CategoryDiscoveryView({
           <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-purple-50 text-purple-700">
             <StoreIcon className="h-7 w-7" />
           </div>
-          <h3 className="font-extrabold text-slate-900 text-lg">No shops found in "{categoryConfig.name}"</h3>
+          <h3 className="font-extrabold text-slate-900 text-lg">
+            No shops found in "{categoryConfig.name}"
+          </h3>
           <p className="text-xs text-slate-500 max-w-sm mx-auto leading-relaxed">
-            We couldn't find any stores matching this specific category around {deliveryLoc.area || "your area"}. Try selecting another shop category or resetting your filters.
+            We couldn't find any stores matching this specific category around{" "}
+            {deliveryLoc.area || "your area"}. Try selecting another shop category or resetting your
+            filters.
           </p>
           <button
             type="button"
@@ -292,7 +317,10 @@ export function CategoryDiscoveryView({
                   alt={store.name}
                   loading="lazy"
                   onError={(e) => {
-                    (e.target as HTMLImageElement).src = getFallbackProductImage(store.name, store.category);
+                    (e.target as HTMLImageElement).src = getFallbackProductImage(
+                      store.name,
+                      store.category,
+                    );
                   }}
                   className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
                 />
@@ -306,10 +334,7 @@ export function CategoryDiscoveryView({
                 </div>
 
                 {/* Wishlist Icon */}
-                <div
-                  className="absolute top-3 right-3 z-10"
-                  onClick={(e) => e.stopPropagation()}
-                >
+                <div className="absolute top-3 right-3 z-10" onClick={(e) => e.stopPropagation()}>
                   <WishlistButton productId={store.id} productName={store.name} />
                 </div>
 
@@ -331,7 +356,7 @@ export function CategoryDiscoveryView({
                     <h3 className="font-extrabold text-slate-900 text-base line-clamp-1 group-hover:text-purple-700 transition-colors">
                       {store.name}
                     </h3>
-                    
+
                     {/* Rating Badge */}
                     <div className="flex items-center gap-1 bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-lg text-xs font-extrabold shrink-0 border border-emerald-200/60">
                       <Star className="h-3 w-3 fill-emerald-600 text-emerald-600" />
@@ -353,12 +378,15 @@ export function CategoryDiscoveryView({
                         : "bg-slate-100 text-slate-500"
                     }`}
                   >
-                    <span className={`w-1.5 h-1.5 rounded-full ${store.isOpen ? "bg-emerald-600 animate-pulse" : "bg-slate-400"}`} />
+                    <span
+                      className={`w-1.5 h-1.5 rounded-full ${store.isOpen ? "bg-emerald-600 animate-pulse" : "bg-slate-400"}`}
+                    />
                     {store.isOpen ? "Open Now" : "Closed"}
                   </span>
 
                   <span className="text-xs font-bold text-purple-700 group-hover:text-purple-900 flex items-center gap-1">
-                    Visit Shop <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
+                    Visit Shop{" "}
+                    <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
                   </span>
                 </div>
               </div>
@@ -378,7 +406,8 @@ export function CategoryDiscoveryView({
               Don't see your favorite neighborhood shop listed?
             </h4>
             <p className="text-xs sm:text-sm text-purple-200 mt-0.5 max-w-xl">
-              Submit a shop request! Our LocalShore ground operations team will onboard your trusted local store so you can order delivery.
+              Submit a shop request! Our LocalShore ground operations team will onboard your trusted
+              local store so you can order delivery.
             </p>
           </div>
         </div>
@@ -409,7 +438,9 @@ export function CategoryDiscoveryView({
             <MapPin className="h-5 w-5" />
           </div>
           <div>
-            <div className="font-extrabold text-slate-900 text-xs sm:text-sm">Hyperlocal Radius</div>
+            <div className="font-extrabold text-slate-900 text-xs sm:text-sm">
+              Hyperlocal Radius
+            </div>
             <div className="text-[11px] text-slate-500">Direct from nearby streets</div>
           </div>
         </div>
@@ -453,7 +484,9 @@ export function CategoryDiscoveryView({
               </div>
               <div>
                 <h3 className="font-extrabold text-slate-900 text-base">Request a Shop</h3>
-                <p className="text-xs text-slate-500">Can't find a store? We'll onboard them for you!</p>
+                <p className="text-xs text-slate-500">
+                  Can't find a store? We'll onboard them for you!
+                </p>
               </div>
             </div>
 
