@@ -2,6 +2,26 @@ import { useEffect, useState } from "react";
 import type { CartLine } from "./cart-store";
 import { supabase } from "@/integrations/supabase/client";
 
+const isUuid = (value: string) =>
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+const demoOrdersKey = (userId: string) => `localshore.demo-orders.${userId}.v1`;
+
+function loadDemoOrders(userId: string): Order[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = window.localStorage.getItem(demoOrdersKey(userId));
+    return raw ? (JSON.parse(raw) as Order[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveDemoOrder(userId: string, order: Order) {
+  if (typeof window === "undefined") return;
+  const existing = loadDemoOrders(userId);
+  window.localStorage.setItem(demoOrdersKey(userId), JSON.stringify([order, ...existing]));
+}
+
 export type OrderStatus =
   | "new"
   | "accepted"
@@ -188,6 +208,7 @@ async function loadOrders(): Promise<Order[]> {
   const { data: session } = await supabase.auth.getSession();
   const userId = session.session?.user.id;
   if (!userId) return [];
+  const demoOrders = loadDemoOrders(userId);
 
   // 1. Try query with delivery partner details and assignment location data
   const { data: fullData, error: fullError } = await (supabase as any)
@@ -197,7 +218,7 @@ async function loadOrders(): Promise<Order[]> {
     .order("placed_at", { ascending: false });
 
   if (!fullError && fullData) {
-    return fullData.map(fromRow);
+    return [...demoOrders, ...fullData.map(fromRow)];
   }
 
   // 2. Fallback query if delivery_partners join is blocked by RLS for customer role
@@ -209,7 +230,7 @@ async function loadOrders(): Promise<Order[]> {
       .order("placed_at", { ascending: false });
 
     if (simpleError) throw simpleError;
-    return (simpleData ?? []).map(fromRow);
+    return [...demoOrders, ...(simpleData ?? []).map(fromRow)];
   } catch (error) {
     console.error("[orders] history query failed", error);
     return [];
@@ -253,6 +274,22 @@ export const ordersStore = {
     if (!user) throw new Error("Sign in before placing an order");
     if (!order.address.trim()) throw new Error("Add a delivery address before placing the order.");
     if (!order.lines.length) throw new Error("Your cart is empty.");
+
+    // Curated storefront products are intentionally local demo catalog entries,
+    // not rows in approved_product_catalog. Keep their checkout flow usable while
+    // the real seller inventory integration is being connected.
+    if (order.lines.some((line) => !isUuid(line.productId))) {
+      const createdAt = Date.now();
+      const demoOrder: Order = {
+        ...order,
+        id: crypto.randomUUID(),
+        code: `LS-${String(createdAt).slice(-8)}`,
+        createdAt,
+        status: "new",
+      };
+      saveDemoOrder(user.id, demoOrder);
+      return demoOrder;
+    }
 
     const baseParams = {
       p_buyer_name: user.user_metadata?.display_name ?? user.email ?? "Customer",
