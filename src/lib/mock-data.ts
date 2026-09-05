@@ -52,8 +52,8 @@ export const APPROVED_STORE: Store = {
   isOpen: true,
   etaMin: 30,
   address: "Available from approved local vendors",
-  lat: 9.9816,
-  lng: 76.2999,
+  lat: 11.0028,
+  lng: 77.0865,
   imageUrl: catImg("photo-1542838132-92c53300491e"),
 };
 
