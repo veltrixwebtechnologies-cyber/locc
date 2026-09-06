@@ -174,6 +174,7 @@ export function DeliveryMap({
 
   // Initialize Leaflet Map once
   useEffect(() => {
+    mountedRef.current = true;
     let cancelled = false;
     (async () => {
       try {
