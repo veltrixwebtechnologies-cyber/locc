@@ -69,6 +69,7 @@ export function DeliveryMap({
   const LRef = useRef<any>(null);
   const markersRef = useRef<Record<string, any>>({});
   const polylineRef = useRef<any>(null);
+  const mountedRef = useRef(true);
 
   const [courier, setCourier] = useState<LatLng | undefined>(initialCourier);
   const [routeInfo, setRouteInfo] = useState<AdvancedRouteResult | null>(null);
@@ -114,19 +115,52 @@ export function DeliveryMap({
         (payload: any) => {
           const newRow = payload.new;
           if (newRow?.current_latitude && newRow?.current_longitude) {
-            setCourier({
+            const newPos = {
               lat: Number(newRow.current_latitude),
               lng: Number(newRow.current_longitude),
               heading: Number(newRow.current_heading || 0),
-            });
+            };
+            setCourier(newPos);
             setLastUpdated(new Date());
+            // Pan map to follow live partner position
+            if (mapRef.current) {
+              try {
+                mapRef.current.panTo([newPos.lat, newPos.lng], { animate: true, duration: 0.5 });
+              } catch {}
+            }
           }
         },
       )
       .subscribe();
 
+    // Fallback: poll Supabase every 30s in case the realtime WebSocket is
+    // throttled, reconnecting, or the message is missed.
+    const pollInterval = setInterval(async () => {
+      if (!mountedRef.current) return;
+      try {
+        const query = (supabase as any)
+          .from("delivery_assignments")
+          .select("current_latitude, current_longitude, current_heading")
+          .not("current_latitude", "is", null);
+        if (orderId) query.eq("order_id", orderId);
+        else if (assignmentId) query.eq("id", assignmentId);
+        const { data } = await query.limit(1).maybeSingle();
+        if (data?.current_latitude && data?.current_longitude && mountedRef.current) {
+          setCourier({
+            lat: Number(data.current_latitude),
+            lng: Number(data.current_longitude),
+            heading: Number(data.current_heading || 0),
+          });
+          setLastUpdated(new Date());
+        }
+      } catch {
+        // Ignore poll errors silently
+      }
+    }, 30_000);
+
     return () => {
       supabase.removeChannel(channel);
+      clearInterval(pollInterval);
     };
   }, [orderId, assignmentId]);
 
@@ -191,6 +225,7 @@ export function DeliveryMap({
 
     return () => {
       cancelled = true;
+      mountedRef.current = false;
       if (mapRef.current) {
         mapRef.current.remove();
         mapRef.current = null;
@@ -279,6 +314,7 @@ export function DeliveryMap({
         const duration = 400; // smooth 400ms transition
 
         const animate = (now: number) => {
+          if (!mountedRef.current || !mapRef.current) return;
           const t = Math.min(1, (now - startTime) / duration);
           const eased = 1 - Math.pow(1 - t, 3);
           m.setLatLng([

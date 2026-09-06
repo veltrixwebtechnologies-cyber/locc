@@ -144,6 +144,7 @@ function CheckoutPage() {
   const [couponQuote, setCouponQuote] = useState<CouponQuote | null>(null);
   const [isApplyingCoupon, setIsApplyingCoupon] = useState(false);
   const watchIdRef = useRef<number | null>(null);
+  const geocodeDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // New states for payment gateway flow
   const [paymentStep, setPaymentStep] = useState<"idle" | "authorizing">("idle");
@@ -225,29 +226,38 @@ function CheckoutPage() {
     setPinConfirmed(true);
     setAccuracyMeters(accuracy);
     setAddr(CURRENT_LOCATION_ID);
-    setCurrentAddress(`Finding address for ${coords.lat.toFixed(5)}, ${coords.lng.toFixed(5)}…`);
-    setManualAddress("");
-    try {
-      console.info("[geo] reverse geocode requested", coords);
-      const result = await reverseGeocodeFn({ data: coords });
-      console.info("[geo] geocoded address", result.address);
-      setCurrentAddress(result.address);
-      setManualAddress(result.address);
-      if (showAdd && !newLine.trim()) setNewLine(result.address);
-    } catch (error) {
-      console.warn("[geo] reverse geocode failed", error);
-      setCurrentAddress("Destination location unavailable.");
+
+    // Debounce reverse geocoding — during live tracking watchPosition can fire
+    // multiple times per second. Only geocode once the position has stabilized
+    // for 5 seconds to avoid hammering the server function.
+    if (geocodeDebounceRef.current) clearTimeout(geocodeDebounceRef.current);
+    geocodeDebounceRef.current = setTimeout(async () => {
+      setCurrentAddress(`Finding address for ${coords.lat.toFixed(5)}, ${coords.lng.toFixed(5)}…`);
       setManualAddress("");
-      setPinConfirmed(false);
-      setPinCoords(null);
-    }
+      try {
+        console.info("[geo] reverse geocode requested", coords);
+        const result = await reverseGeocodeFn({ data: coords });
+        console.info("[geo] geocoded address", result.address);
+        setCurrentAddress(result.address);
+        setManualAddress(result.address);
+        if (showAdd && !newLine.trim()) setNewLine(result.address);
+      } catch (error) {
+        console.warn("[geo] reverse geocode failed", error);
+        setCurrentAddress(`${coords.lat.toFixed(5)}, ${coords.lng.toFixed(5)}`);
+        setManualAddress("");
+      }
+      setLocStatus("ok");
+    }, 5000);
+
+    // Show approximate coords immediately while geocoding is debounced
+    setCurrentAddress(`${coords.lat.toFixed(5)}, ${coords.lng.toFixed(5)}`);
     setLocStatus("ok");
   };
 
   const geolocationOptions: PositionOptions = {
     enableHighAccuracy: true,
     timeout: 10000,
-    maximumAge: 0,
+    maximumAge: 5000, // Allow cached GPS fix up to 5s old to reduce hardware thrash
   };
 
   const stopLiveLocation = () => {
@@ -255,6 +265,10 @@ function CheckoutPage() {
       navigator.geolocation.clearWatch(watchIdRef.current);
       console.info("[geo] live tracking stopped", { watchId: watchIdRef.current });
       watchIdRef.current = null;
+    }
+    if (geocodeDebounceRef.current) {
+      clearTimeout(geocodeDebounceRef.current);
+      geocodeDebounceRef.current = null;
     }
     setIsTracking(false);
   };

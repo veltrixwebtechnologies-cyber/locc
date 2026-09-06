@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, startTransition } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import {
   Star,
@@ -64,18 +64,20 @@ export function CategoryDiscoveryView({
   const CategoryIcon = categoryConfig.icon;
 
   const handleCategorySelect = (category: ShopCategoryConfig) => {
-    if (onCategoryChange) {
-      onCategoryChange(category.id);
-    } else {
-      navigate({
-        search: (prev: Record<string, any>) => ({
-          ...prev,
-          category: category.id === "all" ? undefined : category.slug,
-        }),
-        resetScroll: false,
-      } as any);
-      scrollToShops();
-    }
+    startTransition(() => {
+      if (onCategoryChange) {
+        onCategoryChange(category.id);
+      } else {
+        navigate({
+          search: (prev: Record<string, any>) => ({
+            ...prev,
+            category: category.id === "all" ? undefined : category.slug,
+          }),
+          resetScroll: false,
+        } as any);
+        scrollToShops();
+      }
+    });
   };
 
   // Filtered & Distance-Calculated Shops List
@@ -212,7 +214,7 @@ export function CategoryDiscoveryView({
                   <input
                     type="checkbox"
                     checked={filterOpenNow}
-                    onChange={(e) => setFilterOpenNow(e.target.checked)}
+                    onChange={(e) => startTransition(() => setFilterOpenNow(e.target.checked))}
                     className="rounded border-slate-300 text-purple-700 focus:ring-purple-700"
                   />
                   <span>Open Now Only</span>
@@ -221,7 +223,7 @@ export function CategoryDiscoveryView({
                   <input
                     type="checkbox"
                     checked={filterTopRated}
-                    onChange={(e) => setFilterTopRated(e.target.checked)}
+                    onChange={(e) => startTransition(() => setFilterTopRated(e.target.checked))}
                     className="rounded border-slate-300 text-purple-700 focus:ring-purple-700"
                   />
                   <span>Top Rated (4.5★ +)</span>
@@ -232,7 +234,7 @@ export function CategoryDiscoveryView({
 
           {/* Quick Filter Badges */}
           <button
-            onClick={() => setFilterOpenNow(!filterOpenNow)}
+            onClick={() => startTransition(() => setFilterOpenNow(!filterOpenNow))}
             className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all border ${
               filterOpenNow
                 ? "bg-emerald-600 text-white border-emerald-600 shadow-xs"
@@ -243,7 +245,7 @@ export function CategoryDiscoveryView({
           </button>
 
           <button
-            onClick={() => setFilterTopRated(!filterTopRated)}
+            onClick={() => startTransition(() => setFilterTopRated(!filterTopRated))}
             className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all border ${
               filterTopRated
                 ? "bg-amber-500 text-white border-amber-500 shadow-xs"
@@ -258,7 +260,10 @@ export function CategoryDiscoveryView({
             <span className="text-slate-400 hidden xs:inline">Sort:</span>
             <select
               value={selectedSort}
-              onChange={(e) => setSelectedSort(e.target.value as any)}
+              onChange={(e) => {
+                const val = e.target.value as any;
+                startTransition(() => setSelectedSort(val));
+              }}
               className="bg-transparent font-bold text-slate-900 focus:outline-none cursor-pointer text-xs"
             >
               <option value="popular">Popularity</option>

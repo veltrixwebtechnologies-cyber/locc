@@ -1,7 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { Star, ChevronLeft, ChevronRight, Heart, MapPin } from "lucide-react";
 import { m, AnimatePresence } from "motion/react";
-import { useRef, useState, useCallback } from "react";
+import { useRef, useState, useCallback, startTransition } from "react";
 import type { Store } from "@/lib/mock-data";
 import { categoryLabel } from "@/lib/mock-data";
 import { useShopsStatus } from "@/lib/shop-availability";
@@ -237,10 +237,12 @@ export function SwiggyShopRow({
 
   const handleTabClick = (catId: string) => {
     const nextTab = activeFilterTab === catId ? "all" : catId;
-    setInternalTab(nextTab);
-    if (onSelectCategory) {
-      onSelectCategory(nextTab);
-    }
+    startTransition(() => {
+      setInternalTab(nextTab);
+      if (onSelectCategory) {
+        onSelectCategory(nextTab);
+      }
+    });
   };
 
   const realIds = stores.map((s) => s.id).filter((id) => !id.startsWith("mock-"));

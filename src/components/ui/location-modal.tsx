@@ -4,7 +4,7 @@
  * search localities using Nominatim geocoding, or select popular hubs in Coimbatore.
  */
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { MapPin, LocateFixed, Search, X, Check, Loader2, Navigation, Sparkles } from "lucide-react";
 import {
@@ -27,6 +27,15 @@ export function LocationModal({ isOpen, onClose }: LocationModalProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [isSearching, setIsSearching] = useState(false);
+  const [searchError, setSearchError] = useState("");
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Cancel any pending debounce when modal closes
+  useEffect(() => {
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, []);
 
   if (!isOpen) return null;
 
@@ -42,22 +51,54 @@ export function LocationModal({ isOpen, onClose }: LocationModalProps) {
     }
   };
 
-  const handleSearchChange = async (query: string) => {
-    setSearchQuery(query);
+  const runSearch = async (query: string) => {
     if (!query.trim() || query.length < 2) {
       setSearchResults([]);
+      setSearchError("");
       return;
     }
-
     setIsSearching(true);
+    setSearchError("");
     try {
-      const results = await geocodeSearch(`${query}, Coimbatore`);
-      setSearchResults(results || []);
+      // Append Coimbatore to bias results toward the service area
+      const results = await geocodeSearch(`${query}, Coimbatore, Tamil Nadu`);
+      if (results && results.length > 0) {
+        // Normalize: geocodeSearch returns { placeName, lat, lng, address }
+        // Add a `label` field so the modal can render it uniformly
+        setSearchResults(
+          results.map((r: any) => ({
+            ...r,
+            label: r.placeName || r.label || r.address || "Unknown place",
+          })),
+        );
+      } else {
+        setSearchResults([]);
+        setSearchError("No places found. Try a different area name.");
+      }
     } catch {
       setSearchResults([]);
+      setSearchError("Search unavailable. Select a preset area below.");
     } finally {
       setIsSearching(false);
     }
+  };
+
+  const handleSearchChange = (query: string) => {
+    setSearchQuery(query);
+    if (!query.trim()) {
+      setSearchResults([]);
+      setSearchError("");
+      setIsSearching(false);
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+      return;
+    }
+    // Debounce: wait 400ms after the user stops typing before hitting Nominatim
+    // Nominatim enforces a 1 req/s rate limit — rapid keystrokes would get throttled
+    setIsSearching(true);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      void runSearch(query);
+    }, 400);
   };
 
   const handleSelectPreset = (loc: DeliveryLocation) => {
@@ -69,7 +110,7 @@ export function LocationModal({ isOpen, onClose }: LocationModalProps) {
   };
 
   const handleSelectSearchResult = (result: any) => {
-    const rawName = result.placeName || result.label || result.address || "";
+    const rawName = result.label || result.placeName || result.address || "";
     const parts = rawName
       .split(",")
       .map((s: string) => s.trim())
@@ -167,14 +208,16 @@ export function LocationModal({ isOpen, onClose }: LocationModalProps) {
                 onChange={(e) => handleSearchChange(e.target.value)}
                 placeholder="Search area, landmark or street in Coimbatore..."
                 className="w-full bg-transparent text-xs sm:text-sm font-semibold text-slate-900 outline-none placeholder:text-slate-400"
+                autoComplete="off"
               />
-              {isSearching && <Loader2 className="h-4 w-4 text-slate-400 animate-spin shrink-0" />}
+              {isSearching && <Loader2 className="h-4 w-4 text-[#981495] animate-spin shrink-0" />}
               {searchQuery && !isSearching && (
                 <button
                   type="button"
                   onClick={() => {
                     setSearchQuery("");
                     setSearchResults([]);
+                    setSearchError("");
                   }}
                   className="text-slate-400 hover:text-slate-600"
                 >
@@ -183,20 +226,28 @@ export function LocationModal({ isOpen, onClose }: LocationModalProps) {
               )}
             </div>
 
-            {/* Dynamic Search Results */}
-            {searchResults.length > 0 && (
-              <div className="absolute left-0 right-0 top-full z-20 mt-1 max-h-48 overflow-y-auto rounded-2xl bg-white p-2 shadow-2xl border border-slate-100 divide-y divide-slate-100">
-                {searchResults.map((item, idx) => (
-                  <button
-                    key={idx}
-                    type="button"
-                    onClick={() => handleSelectSearchResult(item)}
-                    className="w-full text-left p-2.5 hover:bg-purple-50 rounded-xl transition-colors flex items-center gap-2.5 text-xs font-semibold text-slate-800"
-                  >
-                    <MapPin className="h-4 w-4 text-[#981495] shrink-0" />
-                    <span className="truncate">{item.label}</span>
-                  </button>
-                ))}
+            {/* Dynamic Search Results Dropdown */}
+            {searchQuery.length >= 2 && !isSearching && (
+              <div className="absolute left-0 right-0 top-full z-20 mt-1 rounded-2xl bg-white shadow-2xl border border-slate-100 overflow-hidden">
+                {searchResults.length > 0 ? (
+                  <div className="max-h-52 overflow-y-auto divide-y divide-slate-50 p-1">
+                    {searchResults.map((item, idx) => (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => handleSelectSearchResult(item)}
+                        className="w-full text-left px-3 py-2.5 hover:bg-purple-50 rounded-xl transition-colors flex items-start gap-2.5"
+                      >
+                        <MapPin className="h-4 w-4 text-[#981495] shrink-0 mt-0.5" />
+                        <span className="text-xs font-semibold text-slate-800 leading-snug">
+                          {item.label}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                ) : searchError ? (
+                  <div className="px-4 py-3 text-xs text-slate-500 font-medium">{searchError}</div>
+                ) : null}
               </div>
             )}
           </div>

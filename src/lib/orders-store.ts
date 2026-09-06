@@ -374,6 +374,30 @@ export function useOrders() {
   return useOrdersState().orders;
 }
 
+import { toast } from "sonner";
+
+function playCustomerOrderChimeSound() {
+  if (typeof window === "undefined") return;
+  try {
+    const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+    if (!AudioCtx) return;
+    const ctx = new AudioCtx();
+    const notes = [523.25, 659.25, 783.99, 1046.5];
+    notes.forEach((freq, idx) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(freq, ctx.currentTime + idx * 0.12);
+      gain.gain.setValueAtTime(0.35, ctx.currentTime + idx * 0.12);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + idx * 0.12 + 0.38);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(ctx.currentTime + idx * 0.12);
+      osc.stop(ctx.currentTime + idx * 0.12 + 0.38);
+    });
+  } catch {}
+}
+
 export function useOrdersState() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -394,7 +418,19 @@ export function useOrdersState() {
     refresh();
     const channel = supabase
       .channel("shoreline-orders")
-      .on("postgres_changes", { event: "*", schema: "public", table: "orders" }, refresh)
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "orders" }, (payload: any) => {
+        const newStatus = payload.new?.status as OrderStatus | undefined;
+        const oldStatus = payload.old?.status as OrderStatus | undefined;
+        if (newStatus && newStatus !== oldStatus && orderStatusLabel[newStatus]) {
+          playCustomerOrderChimeSound();
+          toast.info(`📦 Order Status: ${orderStatusLabel[newStatus]}`, {
+            id: `order-status-${payload.new?.id}`,
+            duration: 8000,
+          });
+        }
+        refresh();
+      })
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "orders" }, refresh)
       .on("postgres_changes", { event: "*", schema: "public", table: "order_items" }, refresh)
       .on(
         "postgres_changes",

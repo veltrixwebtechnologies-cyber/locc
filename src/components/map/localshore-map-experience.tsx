@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, useEffect } from "react";
+import { useState, useMemo, useRef, useEffect, startTransition } from "react";
 import {
   MapPin,
   Locate,
@@ -41,11 +41,11 @@ interface Props {
   onCategoryChange?: (c: string) => void;
 }
 
-// Default center: Pappampatti Pirivu, Coimbatore localshore market
+// Default center: Kovilmedu, Coimbatore localshore market
 const DEFAULT_LOCATION: MapLocation = {
-  lat: 11.0028,
-  lng: 77.0865,
-  label: "Pappampatti Pirivu, Coimbatore",
+  lat: 11.0285,
+  lng: 76.9258,
+  label: "Kovilmedu, Coimbatore",
 };
 
 export function LocalShoreMapExperience({
@@ -55,8 +55,23 @@ export function LocalShoreMapExperience({
   onCategoryChange,
 }: Props) {
   const mapRef = useRef<InteractiveMapViewRef>(null);
+  const [deliveryLoc] = useDeliveryLocation();
   const [view, setView] = useState<"map" | "list">("map");
-  const [userLocation, setUserLocation] = useState<MapLocation>(DEFAULT_LOCATION);
+  const [userLocation, setUserLocation] = useState<MapLocation>(() => ({
+    lat: deliveryLoc?.lat ?? DEFAULT_LOCATION.lat,
+    lng: deliveryLoc?.lng ?? DEFAULT_LOCATION.lng,
+    label: deliveryLoc?.area || deliveryLoc?.label || DEFAULT_LOCATION.label,
+  }));
+
+  useEffect(() => {
+    if (deliveryLoc && deliveryLoc.lat && deliveryLoc.lng) {
+      setUserLocation({
+        lat: deliveryLoc.lat,
+        lng: deliveryLoc.lng,
+        label: deliveryLoc.area || deliveryLoc.label || DEFAULT_LOCATION.label,
+      });
+    }
+  }, [deliveryLoc]);
   const [locationSearchQuery, setLocationSearchQuery] = useState("");
   const [locationSuggestions, setLocationSuggestions] = useState<any[]>([]);
   const [isSearchingLocation, setIsSearchingLocation] = useState(false);
@@ -254,8 +269,10 @@ export function LocalShoreMapExperience({
               type="button"
               onClick={() => {
                 const newCat = f.id === "all" ? undefined : (f.id as any);
-                setFilters((prev) => ({ ...prev, category: newCat }));
-                onCategoryChange?.(f.id);
+                startTransition(() => {
+                  setFilters((prev) => ({ ...prev, category: newCat }));
+                  onCategoryChange?.(f.id);
+                });
               }}
               className={`shrink-0 rounded-full px-4 py-2 text-xs md:text-sm font-bold transition-all ${
                 isActive

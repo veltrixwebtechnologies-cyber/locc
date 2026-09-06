@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, startTransition } from "react";
 import { Search } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { AwningCard } from "@/components/awning-card";
@@ -482,15 +482,19 @@ function Home() {
           initialQuery={query}
           initialCategory={cat}
           onQueryChange={(q) => {
-            navigate({
-              search: (prev) => ({ ...prev, q: q || undefined }),
-              resetScroll: false,
+            startTransition(() => {
+              navigate({
+                search: (prev) => ({ ...prev, q: q || undefined }),
+                resetScroll: false,
+              });
             });
           }}
           onCategoryChange={(c) => {
-            navigate({
-              search: (prev) => ({ ...prev, category: c === "all" ? undefined : c }),
-              resetScroll: false,
+            startTransition(() => {
+              navigate({
+                search: (prev) => ({ ...prev, category: c === "all" ? undefined : c }),
+                resetScroll: false,
+              });
             });
           }}
         />
@@ -534,14 +538,16 @@ function Home() {
           stores={stores}
           activeCategory={activeFilter || "all"}
           onCategoryChange={(catId) => {
-            navigate({
-              search: (prev) => ({
-                category: catId === "all" ? undefined : catId,
-                q: prev.q,
-              }),
-              resetScroll: false,
+            startTransition(() => {
+              navigate({
+                search: (prev) => ({
+                  category: catId === "all" ? undefined : catId,
+                  q: prev.q,
+                }),
+                resetScroll: false,
+              });
+              scrollToShops();
             });
-            scrollToShops();
           }}
         />
 

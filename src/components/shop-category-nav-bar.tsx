@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, startTransition } from "react";
 import { Link, useNavigate, useSearch } from "@tanstack/react-router";
 import {
   ALL_SHOP_CATEGORIES,
@@ -31,20 +31,22 @@ export function ShopCategoryNavBar({
   }, [activeCategorySlug]);
 
   const handleCategorySelect = (category: ShopCategoryConfig) => {
-    if (onSelectCategory) {
-      onSelectCategory(category);
-    } else {
-      // Update router search param
-      const newCategoryParam = category.id === "all" ? undefined : category.slug;
-      navigate({
-        search: ((prev: any) => ({
-          ...prev,
-          category: newCategoryParam,
-        })) as any,
-        resetScroll: false,
-      });
-    }
     setIsDrawerOpen(false);
+    startTransition(() => {
+      if (onSelectCategory) {
+        onSelectCategory(category);
+      } else {
+        // Update router search param
+        const newCategoryParam = category.id === "all" ? undefined : category.slug;
+        navigate({
+          search: ((prev: any) => ({
+            ...prev,
+            category: newCategoryParam,
+          })) as any,
+          resetScroll: false,
+        });
+      }
+    });
   };
 
   // Filter categories inside drawer search

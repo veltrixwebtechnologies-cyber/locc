@@ -108,6 +108,18 @@
     color: var(--color-foreground);
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
+    touch-action: manipulation;
+  }
+  button, a, input, select, textarea, [role="button"] {
+    touch-action: manipulation;
+  }
+  .cv-auto {
+    content-visibility: auto;
+    contain-intrinsic-size: 1px 280px;
+  }
+  .gpu-layer {
+    transform: translateZ(0);
+    will-change: transform;
   }
   h1,
   h2,

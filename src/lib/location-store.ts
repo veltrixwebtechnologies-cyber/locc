@@ -20,6 +20,14 @@ export interface DeliveryLocation {
 
 export const PRESET_LOCATIONS: DeliveryLocation[] = [
   {
+    id: "kovilmedu",
+    label: "Kovilmedu, Coimbatore, TN",
+    area: "Kovilmedu",
+    city: "Coimbatore, TN",
+    lat: 11.0285,
+    lng: 76.9258,
+  },
+  {
     id: "pappampatti",
     label: "Pappampatti Pirivu, Coimbatore, TN",
     area: "Pappampatti Pirivu",
@@ -78,6 +86,7 @@ export const PRESET_LOCATIONS: DeliveryLocation[] = [
 ];
 
 const STORAGE_KEY = "localshore_active_delivery_location";
+const CONFIRMED_KEY = "localshore_location_confirmed"; // set only when user explicitly picks
 const LISTENERS = new Set<() => void>();
 
 function getInitialLocation(): DeliveryLocation {
@@ -96,6 +105,16 @@ function getInitialLocation(): DeliveryLocation {
   return PRESET_LOCATIONS[0];
 }
 
+/** Returns true only when the user has explicitly chosen a delivery location */
+export function hasUserChosenLocation(): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    return localStorage.getItem(CONFIRMED_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
 let activeLocation: DeliveryLocation = getInitialLocation();
 
 function notifyListeners() {
@@ -110,6 +129,7 @@ export function setActiveDeliveryLocation(loc: DeliveryLocation) {
   activeLocation = { ...loc };
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(activeLocation));
+    localStorage.setItem(CONFIRMED_KEY, "1"); // mark as explicitly chosen
   } catch {
     // Ignore storage errors
   }

@@ -24,7 +24,7 @@ import { Fragment, type ReactNode, useEffect, useState, useRef } from "react";
 import { useWishlist, useWishlistProducts } from "@/lib/merchandising";
 import { AnimatePresence, m } from "motion/react";
 import { SwiggyInstantSearchDropdown } from "@/components/ui/swiggy-instant-search-dropdown";
-import { useDeliveryLocation, initAutoGPSLocation } from "@/lib/location-store";
+import { useDeliveryLocation, initAutoGPSLocation, hasUserChosenLocation } from "@/lib/location-store";
 import { LocationModal } from "@/components/ui/location-modal";
 
 export function AppShell({ children }: { children: ReactNode }) {
@@ -44,6 +44,10 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     initAutoGPSLocation();
+    // Auto-open location picker on first visit (no explicit location chosen yet)
+    if (!hasUserChosenLocation()) {
+      setIsLocationModalOpen(true);
+    }
   }, []);
 
   useEffect(() => {
@@ -115,7 +119,9 @@ export function AppShell({ children }: { children: ReactNode }) {
             className="flex items-center gap-1 rounded-full border border-purple-200/60 bg-purple-50/80 px-2 py-1 text-[10px] font-bold text-purple-800 hover:bg-purple-100 transition cursor-pointer"
           >
             <MapPin className="h-3 w-3 text-purple-600 shrink-0" />
-            <span className="truncate max-w-[70px] sm:max-w-[100px]">{deliveryLocation.area}</span>
+            <span className="truncate max-w-[70px] sm:max-w-[100px]">
+              {hasUserChosenLocation() ? deliveryLocation.area : "Select location"}
+            </span>
           </button>
 
           <Link
@@ -191,7 +197,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                 Deliver to
               </span>
               <span className="flex items-center gap-1 text-xs font-bold text-foreground">
-                {deliveryLocation.area}
+                {hasUserChosenLocation() ? deliveryLocation.area : "Select location"}
                 <svg
                   className="h-3 w-3 text-muted-foreground"
                   viewBox="0 0 24 24"
@@ -331,10 +337,12 @@ export function AppShell({ children }: { children: ReactNode }) {
               <span>
                 Delivering to{" "}
                 <strong className="font-semibold text-foreground underline decoration-dotted">
-                  {deliveryLocation.area}, {deliveryLocation.city}
+                  {hasUserChosenLocation()
+                    ? `${deliveryLocation.area}, ${deliveryLocation.city}`
+                    : "Select your location"}
                 </strong>
                 <span className="ml-1.5 text-[10px] text-purple-600 font-bold">
-                  (Change Location)
+                  ({hasUserChosenLocation() ? "Change Location" : "Set Location"})
                 </span>
               </span>
             </button>
