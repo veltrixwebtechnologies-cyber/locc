@@ -367,8 +367,10 @@ function StorePage() {
           <Link
             to="/"
             search={{ category: "all-shops", q: undefined }}
-            onClick={scrollToShops}
-            className="absolute top-4 left-4 z-20 inline-flex items-center gap-1.5 rounded-full bg-white/90 hover:bg-white text-slate-900 backdrop-blur-md px-3.5 py-1.5 text-xs font-bold transition-all shadow-md border border-amber-300/60 cursor-pointer"
+            onClick={() => {
+              scrollToShops();
+            }}
+            className="absolute top-4 left-4 z-40 pointer-events-auto inline-flex items-center gap-1.5 rounded-full bg-white/95 hover:bg-white text-slate-900 backdrop-blur-md px-3.5 py-1.5 text-xs font-bold transition-all shadow-md border border-amber-300/80 cursor-pointer"
           >
             <ArrowLeft className="h-3.5 w-3.5" />
             <span>All shops</span>
