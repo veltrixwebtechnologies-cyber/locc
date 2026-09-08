@@ -119,36 +119,26 @@ export function AppShell({ children }: { children: ReactNode }) {
         <div className="flex items-center gap-2">
           <button
             type="button"
-            onClick={() => {
-              if (gpsState.status === "denied") {
-                detectCurrentGPSLocation({ silent: false }).catch(() => {});
-              } else {
-                setIsLocationModalOpen(true);
-              }
-            }}
-            className={`flex items-center gap-1 rounded-full border px-2 py-1 text-[10px] font-bold transition cursor-pointer ${
+            onClick={() => setIsLocationModalOpen(true)}
+            className={`flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-bold transition cursor-pointer shrink-0 max-w-[140px] sm:max-w-[180px] ${
               gpsState.status === "detecting"
                 ? "border-amber-300/60 bg-amber-50/80 text-amber-800"
                 : gpsState.status === "denied" || gpsState.status === "unavailable"
-                  ? "border-red-200/60 bg-red-50/80 text-red-800 hover:bg-red-100"
+                  ? "border-purple-200/60 bg-purple-50/80 text-purple-800 hover:bg-purple-100"
                   : "border-purple-200/60 bg-purple-50/80 text-purple-800 hover:bg-purple-100"
             }`}
           >
             {gpsState.status === "detecting" ? (
               <span className="h-3 w-3 shrink-0 animate-spin rounded-full border-2 border-amber-500 border-t-transparent" />
             ) : (
-              <MapPin className={`h-3 w-3 shrink-0 ${
-                gpsState.status === "denied" || gpsState.status === "unavailable" ? "text-red-500" : "text-purple-600"
-              }`} />
+              <MapPin className="h-3.5 w-3.5 shrink-0 text-purple-600 fill-purple-600/20" />
             )}
-            <span className="truncate max-w-[70px] sm:max-w-[100px]">
+            <span className="truncate text-left">
               {gpsState.status === "detecting"
                 ? "Detecting..."
-                : gpsState.status === "denied"
-                  ? "Enable GPS"
-                  : hasLocation
-                    ? deliveryLocation!.area
-                    : "Select location"}
+                : hasLocation
+                  ? (deliveryLocation!.area || deliveryLocation!.label.split(",")[0])
+                  : "Select location"}
             </span>
           </button>
 
@@ -225,41 +215,27 @@ export function AppShell({ children }: { children: ReactNode }) {
           {/* Location Selector (Deliver to -> Location -> Chevron) */}
           <button
             type="button"
-            onClick={() => {
-              if (gpsState.status === "denied") {
-                detectCurrentGPSLocation({ silent: false }).catch(() => {});
-              } else {
-                setIsLocationModalOpen(true);
-              }
-            }}
+            onClick={() => setIsLocationModalOpen(true)}
             className="flex shrink-0 items-center gap-2 text-left cursor-pointer hover:opacity-85 transition group min-w-0"
           >
             <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-purple-50 text-primary">
               {gpsState.status === "detecting" ? (
                 <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
               ) : (
-                <MapPin className={`h-4 w-4 ${
-                  gpsState.status === "denied" || gpsState.status === "unavailable" ? "text-red-500" : "text-primary fill-primary/10"
-                }`} />
+                <MapPin className="h-4 w-4 text-primary fill-primary/10" />
               )}
             </div>
 
             <div className="flex flex-col min-w-0">
               <span className="text-[10px] font-medium text-muted-foreground leading-none mb-0.5">
-                {gpsState.status === "detecting"
-                  ? "Detecting location..."
-                  : gpsState.status === "denied"
-                    ? "Location unavailable"
-                    : "Deliver to"}
+                {gpsState.status === "detecting" ? "Detecting location..." : "Deliver to"}
               </span>
               <span className="flex items-center gap-1 text-xs font-bold text-foreground leading-none truncate">
                 {gpsState.status === "detecting"
                   ? "Please wait..."
-                  : gpsState.status === "denied"
-                    ? "Enable location"
-                    : hasLocation
-                      ? deliveryLocation!.area || deliveryLocation!.label.split(",")[0]
-                      : "Avarampalayam"}
+                  : hasLocation
+                    ? deliveryLocation!.area || deliveryLocation!.label.split(",")[0]
+                    : "Select location"}
                 <svg
                   className="h-3.5 w-3.5 shrink-0 text-muted-foreground group-hover:text-primary transition-colors"
                   viewBox="0 0 24 24"

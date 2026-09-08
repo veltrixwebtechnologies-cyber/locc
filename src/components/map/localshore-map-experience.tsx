@@ -71,6 +71,7 @@ export function LocalShoreMapExperience({
         lng: deliveryLoc.lng,
         label: deliveryLoc.area || deliveryLoc.label || DEFAULT_LOCATION.label,
       });
+      mapRef.current?.flyToLocation(deliveryLoc.lat, deliveryLoc.lng, 13.5);
     }
   }, [deliveryLoc]);
   const [locationSearchQuery, setLocationSearchQuery] = useState("");

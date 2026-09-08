@@ -243,7 +243,7 @@ export function HeroSection() {
               >
                 <MapPin className="h-4 w-4 text-[#981495] shrink-0" />
                 <span className="text-xs sm:text-sm font-bold text-slate-900 w-full sm:w-[170px] truncate">
-                  {deliveryLocation?.area}
+                  {deliveryLocation?.area || deliveryLocation?.label?.split(",")?.[0] || "Select location"}
                 </span>
                 <ChevronDown className="h-3.5 w-3.5 text-slate-400 shrink-0 group-hover:text-[#981495] transition-colors" />
               </button>
