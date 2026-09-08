@@ -47,6 +47,7 @@ import { SearchShopRecommendations } from "@/components/search-shop-recommendati
 import { calculateDynamicETA } from "@/lib/ml-eta-engine";
 import { useMLTracker } from "@/hooks/use-ml-tracker";
 import { ComplementaryShopsWidget } from "@/components/complementary-shops-widget";
+import { scrollToShops } from "@/lib/scroll-utils";
 
 const isUuid = (value: string) =>
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
@@ -328,8 +329,9 @@ function StorePage() {
         <nav aria-label="Breadcrumb" className="mb-4 flex items-center gap-2 text-xs font-semibold text-slate-500">
           <Link
             to="/"
-            search={{ category: undefined, q: undefined }}
-            className="flex items-center gap-1 hover:text-[#981495] transition-colors"
+            search={{ category: "all-shops", q: undefined }}
+            onClick={scrollToShops}
+            className="flex items-center gap-1 hover:text-[#981495] transition-colors cursor-pointer"
           >
             <span className="text-slate-400">🏠</span>
             <span>Shops</span>
@@ -364,8 +366,9 @@ function StorePage() {
           {/* All Shops Top-Left Pill */}
           <Link
             to="/"
-            search={{ category: undefined, q: undefined }}
-            className="absolute top-4 left-4 z-20 inline-flex items-center gap-1.5 rounded-full bg-white/90 hover:bg-white text-slate-900 backdrop-blur-md px-3.5 py-1.5 text-xs font-bold transition-all shadow-md border border-amber-300/60"
+            search={{ category: "all-shops", q: undefined }}
+            onClick={scrollToShops}
+            className="absolute top-4 left-4 z-20 inline-flex items-center gap-1.5 rounded-full bg-white/90 hover:bg-white text-slate-900 backdrop-blur-md px-3.5 py-1.5 text-xs font-bold transition-all shadow-md border border-amber-300/60 cursor-pointer"
           >
             <ArrowLeft className="h-3.5 w-3.5" />
             <span>All shops</span>
