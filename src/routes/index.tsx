@@ -553,6 +553,9 @@ function Home() {
         <EcosystemMerchandisingStrips />
       </div>
 
+      {/* App Download Promo Banner */}
+      <AppDownloadBanner />
+
       {/* All shops grid — shown below the Swiggy row as secondary listing */}
       <div className="mt-6 flex items-center justify-between px-5 pt-2 md:mt-8 md:px-8">
         <h2 className="font-display text-base font-bold text-foreground md:text-xl">
