@@ -33,7 +33,6 @@ import { useDeliveryLocation } from "@/lib/location-store";
 import { LocationModal } from "@/components/ui/location-modal";
 import { type SearchResultItem } from "@/lib/search-service";
 import { useLiveSearchResults } from "@/hooks/use-live-search-results";
-import { AppDownloadBanner } from "@/components/app-download-banner";
 
 interface SwiggyFeatureCard {
   id: string;
@@ -533,9 +532,6 @@ export function HeroSection() {
           </div>
         </div>
       </div>
-
-      {/* RedBus-Style App Download Banner */}
-      <AppDownloadBanner />
 
       <LocationModal isOpen={isLocationModalOpen} onClose={() => setIsLocationModalOpen(false)} />
     </section>
