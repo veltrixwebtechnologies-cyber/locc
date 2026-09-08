@@ -11,6 +11,7 @@ import { DeliveryMap } from "@/components/delivery-map";
 import { DeliveryAnimation } from "@/components/delivery-animation";
 import { reverseGeocode } from "@/lib/geocoding.functions";
 import { isValidCoordinate, haversineDistanceKm } from "@/lib/geo";
+import { AVAILABLE_COUPONS, calculateBillBreakdown, evaluateCoupon } from "@/lib/coupons";
 import {
   Crosshair,
   Plus,
@@ -25,6 +26,7 @@ import {
   CreditCard,
   Smartphone,
   Banknote,
+  Tag,
 } from "lucide-react";
 import { toast } from "sonner";
 import { AnimatePresence, m } from "motion/react";
@@ -556,12 +558,25 @@ function CheckoutPage() {
     return () => clearInterval(timer);
   }, [showOrderSuccess, placedOrder, navigate]);
 
-  const deliveryFee =
+  const rawDeliveryFee =
     totals.subtotal > 0 ? (store ? Math.round(20 + computedDistanceKm * 6) : 25) : 0;
-  const total = totals.subtotal + deliveryFee;
-  const displayDeliveryFee = couponQuote?.shipping_fee ?? deliveryFee;
-  const discountAmount = couponQuote?.discount_amount ?? 0;
-  const displayTotal = couponQuote?.total ?? total;
+
+  const billBreakdown = calculateBillBreakdown({
+    subtotal: totals.subtotal,
+    rawDeliveryFee,
+    couponQuote: couponQuote
+      ? {
+          code: couponQuote.code,
+          discountType: couponQuote.discount_type,
+          discountAmount: couponQuote.discount_amount,
+          shippingFee: couponQuote.shipping_fee,
+        }
+      : null,
+  });
+
+  const displayDeliveryFee = billBreakdown.deliveryFee;
+  const discountAmount = billBreakdown.discountAmount;
+  const displayTotal = billBreakdown.total;
 
   if ((!store || cart.lines.length === 0) && !showOrderSuccess) {
     return (
@@ -593,46 +608,48 @@ function CheckoutPage() {
     isValidCoordinate(pinCoords.lat, pinCoords.lng) &&
     pinConfirmed;
 
-  const applyCoupon = async () => {
-    const code = couponCode.trim().toUpperCase();
+  const applyCoupon = async (codeToApply?: string) => {
+    const code = (codeToApply || couponCode).trim().toUpperCase();
     if (!code) {
       toast.error("Enter a coupon code.");
       return;
     }
-    if (cart.lines.some((line) => !isProductUuid(line.productId))) {
-      toast.error("Coupons are available for approved marketplace products.");
-      return;
-    }
 
     setIsApplyingCoupon(true);
-    const { data, error } = await (supabase as any).rpc("quote_coupon", {
-      p_code: code,
-      p_items: cart.lines.map((line) => ({ product_id: line.productId, qty: line.qty })),
-    });
-    setIsApplyingCoupon(false);
-
-    if (error) {
-      console.error("[checkout] quote_coupon failed", {
-        code: error.code,
-        message: error.message,
-        details: error.details,
-        hint: error.hint,
+    try {
+      const quote = await evaluateCoupon({
+        code,
+        subtotal: totals.subtotal,
+        rawDeliveryFee,
+        items: cart.lines.map((line) => ({ product_id: line.productId, qty: line.qty })),
       });
+
+      const updatedBreakdown = calculateBillBreakdown({
+        subtotal: totals.subtotal,
+        rawDeliveryFee,
+        couponQuote: quote,
+      });
+
+      setCouponCode(quote.code);
+      setCouponQuote({
+        coupon_id: quote.code,
+        code: quote.code,
+        discount_type: quote.discountType,
+        discount_amount: quote.discountAmount,
+        subtotal: totals.subtotal,
+        shipping_fee: updatedBreakdown.deliveryFee,
+        total: updatedBreakdown.total,
+      });
+
+      toast.success(
+        quote.description || `Coupon ${quote.code} applied! You saved ₹${quote.discountAmount}`,
+      );
+    } catch (error: any) {
       setCouponQuote(null);
       toast.error(error.message || "This coupon could not be applied.");
-      return;
+    } finally {
+      setIsApplyingCoupon(false);
     }
-
-    const quote = data as CouponQuote;
-    setCouponCode(quote.code);
-    setCouponQuote({
-      ...quote,
-      discount_amount: Number(quote.discount_amount),
-      subtotal: Number(quote.subtotal),
-      shipping_fee: Number(quote.shipping_fee),
-      total: Number(quote.total),
-    });
-    toast.success(`Coupon ${quote.code} applied.`);
   };
 
   const openPaymentConfirmation = () => {
@@ -889,39 +906,53 @@ function CheckoutPage() {
         </p>
       </section>
 
-      {/* Coupon */}
-      <section className="mx-5 mt-4 rounded-xl bg-card p-4 ring-1 ring-black/[0.04]">
-        <div className="flex items-center gap-2">
-          <TicketPercent className="h-4 w-4 text-primary" />
-          <h2 className="font-display text-base">Apply coupon</h2>
+      {/* Coupon & Promotions */}
+      <section className="mx-5 mt-4 rounded-xl bg-card p-4 ring-1 ring-black/[0.04] space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <TicketPercent className="h-4 w-4 text-primary" />
+            <h2 className="font-display text-base">Apply coupon &amp; offers</h2>
+          </div>
+          {couponQuote && (
+            <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+              Coupon Active 🎉
+            </span>
+          )}
         </div>
+
         {couponQuote ? (
-          <div className="mt-3 flex items-center justify-between rounded-lg border border-primary/30 bg-primary/5 px-3 py-2.5">
+          <div className="flex items-center justify-between rounded-xl border border-emerald-300 bg-emerald-50/70 p-3">
             <div>
-              <p className="text-sm font-semibold">{couponQuote.code}</p>
-              <p className="text-xs text-primary">You save ₹{discountAmount}</p>
+              <p className="text-sm font-bold text-emerald-950 flex items-center gap-1.5">
+                <span>{couponQuote.code}</span>
+                <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+              </p>
+              <p className="text-xs text-emerald-700 font-medium">
+                You saved ₹{discountAmount} on this order!
+              </p>
             </div>
             <button
               type="button"
               onClick={() => {
                 setCouponQuote(null);
                 setCouponCode("");
+                toast.info("Coupon removed.");
               }}
-              className="rounded-md p-1.5 text-muted-foreground hover:bg-background hover:text-foreground"
+              className="rounded-lg border border-rose-200 bg-white px-2.5 py-1 text-xs font-semibold text-rose-600 hover:bg-rose-50 transition-colors"
               aria-label="Remove coupon"
             >
-              <X className="h-4 w-4" />
+              Remove
             </button>
           </div>
         ) : (
-          <div className="mt-3 flex gap-2">
+          <div className="flex gap-2">
             <input
               value={couponCode}
               onChange={(event) => setCouponCode(event.target.value.toUpperCase())}
               onKeyDown={(event) => {
                 if (event.key === "Enter") void applyCoupon();
               }}
-              placeholder="Enter coupon code"
+              placeholder="Enter code (e.g. LOCALSHORE50)"
               className="min-w-0 flex-1 rounded-lg border border-input bg-background px-3 py-2.5 text-sm uppercase"
               aria-label="Coupon code"
             />
@@ -929,32 +960,93 @@ function CheckoutPage() {
               type="button"
               onClick={() => void applyCoupon()}
               disabled={isApplyingCoupon || !couponCode.trim()}
-              className="rounded-lg border border-primary px-4 py-2.5 text-sm font-semibold text-primary disabled:cursor-not-allowed disabled:opacity-50"
+              className="rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50 transition-colors"
             >
               {isApplyingCoupon ? "Applying…" : "Apply"}
             </button>
           </div>
         )}
+
+        {/* Available Coupons List */}
+        <div className="pt-2 border-t border-border">
+          <p className="text-xs font-bold text-foreground mb-2 flex items-center gap-1.5">
+            <Tag className="h-3.5 w-3.5 text-primary" />
+            Available Offers for You:
+          </p>
+          <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+            {AVAILABLE_COUPONS.map((c) => {
+              const isEligible = totals.subtotal >= c.minOrder;
+              const isApplied = couponQuote?.code === c.code;
+
+              return (
+                <div
+                  key={c.code}
+                  className={`flex items-center justify-between p-2.5 rounded-xl border text-xs transition-all ${
+                    isApplied
+                      ? "border-emerald-500 bg-emerald-50/50"
+                      : isEligible
+                        ? "border-border bg-card hover:border-primary/40"
+                        : "border-border/50 bg-muted/30 opacity-70"
+                  }`}
+                >
+                  <div className="flex-1 min-w-0 pr-2">
+                    <div className="flex items-center gap-1.5">
+                      <span className="font-mono font-bold text-primary">{c.code}</span>
+                      {c.badge && (
+                        <span className="text-[9px] font-extrabold uppercase tracking-widest bg-amber-100 text-amber-800 px-1.5 py-0.2 rounded">
+                          {c.badge}
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-[11px] text-muted-foreground truncate">{c.description}</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => void applyCoupon(c.code)}
+                    disabled={isApplyingCoupon || isApplied}
+                    className={`shrink-0 rounded-lg px-3 py-1 text-xs font-bold transition-all ${
+                      isApplied
+                        ? "bg-emerald-600 text-white cursor-default"
+                        : isEligible
+                          ? "border border-primary text-primary hover:bg-primary hover:text-primary-foreground"
+                          : "border border-muted text-muted-foreground cursor-not-allowed"
+                    }`}
+                  >
+                    {isApplied ? "Applied ✓" : "Apply"}
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        </div>
       </section>
 
       {/* Summary */}
-      <section className="mx-5 mt-4 rounded-xl bg-card p-4 ring-1 ring-black/[0.04] font-mono text-sm">
-        <div className="mb-2 flex items-center justify-between text-xs text-muted-foreground">
-          <span>{store?.name}</span>
+      <section className="mx-5 mt-4 rounded-xl bg-card p-4 ring-1 ring-black/[0.04] font-mono text-sm space-y-1.5">
+        <div className="mb-2 flex items-center justify-between text-xs text-muted-foreground font-sans">
+          <span className="font-bold text-foreground">{store?.name}</span>
           <span>
             {computedDistanceKm.toFixed(1)} km · ~{computedEtaMin} min
           </span>
         </div>
-        <Row label={`Items (${totals.itemCount})`} value={`₹${totals.subtotal}`} />
+        <Row label={`Item subtotal (${totals.itemCount})`} value={`₹${totals.subtotal}`} />
+        <Row label="Govt. Taxes & GST (5% incl.)" value={`₹${billBreakdown.gstAmount}`} />
         <Row
           label="Delivery fee"
           value={displayDeliveryFee === 0 ? "FREE" : `₹${displayDeliveryFee}`}
         />
-        {couponQuote && discountAmount > 0 && couponQuote.discount_type !== "free_shipping" && (
-          <Row label={`Coupon (${couponQuote.code})`} value={`−₹${discountAmount}`} />
+        <Row
+          label="Platform & packaging fee"
+          value={billBreakdown.platformFee === 0 ? "FREE" : `₹${billBreakdown.platformFee}`}
+        />
+        {couponQuote && discountAmount > 0 && (
+          <div className="flex items-center justify-between text-xs text-emerald-600 font-bold py-0.5">
+            <span>Coupon savings ({couponQuote.code})</span>
+            <span>−₹{discountAmount}</span>
+          </div>
         )}
         <div className="my-2 h-px bg-[color-mix(in_oklab,var(--teal)_20%,transparent)]" />
-        <Row label="Total" value={`₹${displayTotal}`} bold />
+        <Row label="Total Payable" value={`₹${displayTotal}`} bold />
       </section>
 
       <div className="sticky bottom-16 z-30 mt-5 px-5">

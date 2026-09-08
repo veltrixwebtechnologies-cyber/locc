@@ -443,11 +443,20 @@ function OrderPage() {
             </li>
           ))}
         </ul>
-        <div className="mt-3 space-y-1 border-t hairline pt-3 font-mono text-xs">
-          <Row label="Subtotal" value={`₹${order.subtotal}`} />
-          <Row label="Delivery" value={`₹${order.deliveryFee}`} />
-          <Row label="Total" value={`₹${order.total}`} bold />
-          <Row label="Paid via" value={order.paymentMethod} />
+        <div className="mt-3 space-y-1.5 border-t hairline pt-3 font-mono text-xs">
+          <Row label="Item subtotal" value={`₹${order.subtotal}`} />
+          <Row label="Govt. Taxes & GST (5% incl.)" value={`₹${Math.round(order.subtotal * 0.05)}`} />
+          <Row label="Delivery fee" value={order.deliveryFee === 0 ? "FREE" : `₹${order.deliveryFee}`} />
+          <Row label="Platform & packaging fee" value={order.subtotal > 500 ? "FREE" : "₹5"} />
+          {order.discountAmount && order.discountAmount > 0 ? (
+            <div className="flex items-center justify-between text-xs text-emerald-600 font-bold py-0.5">
+              <span>Coupon savings ({order.couponCode || "DISCOUNT"})</span>
+              <span>−₹{order.discountAmount}</span>
+            </div>
+          ) : null}
+          <div className="my-1 border-t border-border" />
+          <Row label="Total Amount" value={`₹${order.total}`} bold />
+          <Row label="Payment mode" value={order.paymentMethod} />
         </div>
         <p className="mt-3 text-xs text-muted-foreground">Delivering to {order.address}</p>
 

@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useMemo } from "react";
+import { useEffect, useState } from "react";
 import { AppShell } from "@/components/app-shell";
 import { cartStore, useCart, cartTotals } from "@/lib/cart-store";
 import { QtyStepper } from "@/components/qty-stepper";
@@ -7,6 +7,7 @@ import { getStore, APPROVED_STORE } from "@/lib/mock-data";
 import { useAuth } from "@/lib/auth-store";
 import { useDeliveryLocation } from "@/lib/location-store";
 import { isValidCoordinate, haversineDistanceKm } from "@/lib/geo";
+import { AVAILABLE_COUPONS, calculateBillBreakdown } from "@/lib/coupons";
 import {
   ArrowRight,
   Check,
@@ -20,6 +21,7 @@ import {
   Sparkles,
   Star,
   Tag,
+  TicketPercent,
   Trash2,
   Truck,
   Zap,
@@ -95,7 +97,7 @@ function CartPage() {
       ? Math.max(10, Math.round(computedDistanceKm * 5 + 10))
       : (store?.etaMin ?? 25);
 
-  const deliveryFee =
+  const rawDeliveryFee =
     totals.subtotal > 0 ? (store ? Math.round(20 + computedDistanceKm * 6) : 25) : 0;
   const freeDeliveryTarget = 500;
   const freeDeliveryRemaining = Math.max(0, freeDeliveryTarget - totals.subtotal);
@@ -103,9 +105,15 @@ function CartPage() {
     100,
     Math.round((totals.subtotal / freeDeliveryTarget) * 100),
   );
-  const isFreeDelivery = freeDeliveryRemaining === 0;
-  const effectiveDelivery = isFreeDelivery ? 0 : deliveryFee;
-  const total = totals.subtotal + effectiveDelivery;
+
+  const billBreakdown = calculateBillBreakdown({
+    subtotal: totals.subtotal,
+    rawDeliveryFee,
+  });
+
+  const isFreeDelivery = billBreakdown.isFreeDelivery;
+  const effectiveDelivery = billBreakdown.deliveryFee;
+  const total = billBreakdown.total;
 
   // Filter out suggestions that are already in cart
   const cartIds = new Set(cart.lines.map((l) => l.productId));
@@ -297,7 +305,7 @@ function CartPage() {
                 </div>
               </div>
 
-              {/* ── MOBILE ONLY: Quick Price Summary right after Cart ── */}
+              {/* ── MOBILE ONLY: Detailed Bill Breakdown ── */}
               <div className="block md:hidden rounded-2xl border border-border bg-card p-4 shadow-sm space-y-3">
                 <div className="flex items-center justify-between">
                   <p className="text-sm font-bold text-foreground">Bill Details</p>
@@ -317,6 +325,10 @@ function CartPage() {
                     <span className="font-semibold text-foreground">₹{totals.subtotal}</span>
                   </div>
                   <div className="flex justify-between text-muted-foreground">
+                    <span>Govt. Taxes &amp; GST (5% incl.)</span>
+                    <span className="font-semibold text-foreground">₹{billBreakdown.gstAmount}</span>
+                  </div>
+                  <div className="flex justify-between text-muted-foreground">
                     <span>Delivery fee</span>
                     <span
                       className={
@@ -325,11 +337,17 @@ function CartPage() {
                           : "font-semibold text-foreground"
                       }
                     >
-                      {isFreeDelivery ? "FREE" : `₹${deliveryFee}`}
+                      {isFreeDelivery ? "FREE" : `₹${billBreakdown.deliveryFee}`}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-muted-foreground">
+                    <span>Platform &amp; Packaging Fee</span>
+                    <span className="font-semibold text-foreground">
+                      {billBreakdown.platformFee === 0 ? "FREE" : `₹${billBreakdown.platformFee}`}
                     </span>
                   </div>
                   <div className="border-t border-border pt-2 flex justify-between text-sm font-bold text-foreground">
-                    <span>To Pay</span>
+                    <span>Total Amount</span>
                     <span>₹{total}</span>
                   </div>
                 </div>
@@ -493,35 +511,40 @@ function CartPage() {
               )}
 
               {/* Price details */}
-              <div className="rounded-2xl border border-border bg-card p-4 shadow-sm">
+              <div className="rounded-2xl border border-border bg-card p-4 shadow-sm space-y-3">
                 <div className="flex items-center justify-between">
                   <p className="text-sm font-bold text-foreground">Price Details</p>
-                  <button className="text-[11px] font-semibold text-primary hover:underline">
-                    View savings
-                  </button>
+                  <span className="text-[11px] font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                    Offers Available
+                  </span>
                 </div>
-                <div className="mt-3 space-y-2.5">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Item subtotal</span>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between text-muted-foreground">
+                    <span>Item subtotal</span>
                     <span className="font-medium text-foreground">₹{totals.subtotal}</span>
                   </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="flex items-center gap-1 text-muted-foreground">
-                      Delivery fee
-                      <span className="flex h-3.5 w-3.5 cursor-help items-center justify-center rounded-full border border-slate-300 text-[8px] font-bold text-slate-400">
-                        i
-                      </span>
-                    </span>
+                  <div className="flex justify-between text-muted-foreground text-xs">
+                    <span>Govt. Taxes &amp; GST (5% incl.)</span>
+                    <span className="font-medium text-foreground">₹{billBreakdown.gstAmount}</span>
+                  </div>
+                  <div className="flex justify-between text-muted-foreground text-xs">
+                    <span>Delivery Fee</span>
                     <span
-                      className={`font-medium ${isFreeDelivery ? "text-emerald-600" : "text-foreground"}`}
+                      className={`font-medium ${isFreeDelivery ? "text-emerald-600 font-bold" : "text-foreground"}`}
                     >
-                      {isFreeDelivery ? "FREE" : `₹${deliveryFee}`}
+                      {isFreeDelivery ? "FREE" : `₹${billBreakdown.deliveryFee}`}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-muted-foreground text-xs">
+                    <span>Platform &amp; Packaging Fee</span>
+                    <span className="font-medium text-foreground">
+                      {billBreakdown.platformFee === 0 ? "FREE" : `₹${billBreakdown.platformFee}`}
                     </span>
                   </div>
                   <div className="my-1 border-t border-border" />
-                  <div className="flex justify-between">
-                    <span className="font-bold text-foreground">Total</span>
-                    <span className="font-bold text-lg text-foreground">₹{total}</span>
+                  <div className="flex justify-between items-baseline">
+                    <span className="font-bold text-foreground">Total Payable</span>
+                    <span className="font-bold text-xl text-foreground">₹{total}</span>
                   </div>
                 </div>
 
