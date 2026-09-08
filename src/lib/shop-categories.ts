@@ -787,6 +787,177 @@ export function getCategoryByIdOrSlug(idOrSlug?: string | null): ShopCategoryCon
   return keywordMatch || ALL_SHOP_CATEGORIES[0];
 }
 
+import type { StoreCategory } from "@/lib/mock-data";
+
+/**
+ * Normalizes any category string into a valid StoreCategory
+ */
+export function toStoreCategory(value?: string | null): StoreCategory {
+  if (!value) return "grocery";
+  const catLower = value.toLowerCase().trim();
+
+  // Direct match to any category id or slug
+  const direct = ALL_SHOP_CATEGORIES.find(
+    (c) => c.id.toLowerCase() === catLower || c.slug.toLowerCase() === catLower,
+  );
+  if (direct && direct.id !== "all" && direct.id !== "favorites") {
+    return direct.id as StoreCategory;
+  }
+
+  // Specific keyword mapping rules
+  if (catLower.includes("palamuthir") || catLower.includes("fruit") || catLower.includes("veggie"))
+    return "fruits_veg";
+  if (
+    catLower.includes("flour") ||
+    catLower.includes("mill") ||
+    catLower.includes("maavu") ||
+    catLower.includes("batter")
+  )
+    return "flour_mill";
+  if (
+    catLower.includes("meat") ||
+    catLower.includes("fish") ||
+    catLower.includes("chicken") ||
+    catLower.includes("mutton")
+  )
+    return "meat_fish";
+  if (
+    catLower.includes("kammal") ||
+    catLower.includes("chain") ||
+    catLower.includes("jewel") ||
+    catLower.includes("gold") ||
+    catLower.includes("silver") ||
+    catLower.includes("accessory")
+  )
+    return "jewellery";
+  if (
+    catLower.includes("boutique") ||
+    catLower.includes("silk") ||
+    catLower.includes("saree") ||
+    catLower.includes("stitching")
+  )
+    return "boutiques";
+  if (
+    catLower.includes("showroom") ||
+    catLower.includes("appliance") ||
+    catLower.includes("electro") ||
+    catLower.includes("tv")
+  )
+    return "electronics";
+  if (
+    catLower.includes("mobile") ||
+    catLower.includes("phone") ||
+    catLower.includes("smartphone")
+  )
+    return "mobile";
+  if (catLower.includes("fast_fashion") || catLower.includes("zudio")) return "fast_fashion";
+  if (catLower.includes("individual_fashion")) return "individual_fashion";
+  if (
+    catLower.includes("fashion") ||
+    catLower.includes("cloth") ||
+    catLower.includes("garment") ||
+    catLower.includes("shirt") ||
+    catLower.includes("wear") ||
+    catLower.includes("dress") ||
+    catLower.includes("readymade") ||
+    catLower.includes("dhoti")
+  )
+    return "fashion";
+  if (
+    catLower.includes("shoe") ||
+    catLower.includes("footwear") ||
+    catLower.includes("slipper")
+  )
+    return "footwear";
+  if (
+    catLower.includes("kitchen") ||
+    catLower.includes("vessel") ||
+    catLower.includes("cooker") ||
+    catLower.includes("mixer")
+  )
+    return "home_kitchen";
+  if (
+    catLower.includes("decor") ||
+    catLower.includes("interior") ||
+    catLower.includes("furniture") ||
+    catLower.includes("curtain")
+  )
+    return "furniture";
+  if (
+    catLower.includes("pharm") ||
+    catLower.includes("med") ||
+    catLower.includes("health") ||
+    catLower.includes("wellness") ||
+    catLower.includes("care")
+  )
+    return "pharmacy";
+  if (
+    catLower.includes("station") ||
+    catLower.includes("book") ||
+    catLower.includes("office") ||
+    catLower.includes("paper")
+  )
+    return "books_stationery";
+  if (
+    catLower.includes("bake") ||
+    catLower.includes("cake") ||
+    catLower.includes("bread") ||
+    catLower.includes("pastry")
+  )
+    return "bakery";
+  if (catLower.includes("sweet") || catLower.includes("mithai") || catLower.includes("halwa"))
+    return "sweet_shops";
+  if (
+    catLower.includes("restaurant") ||
+    catLower.includes("hotel") ||
+    catLower.includes("biryani") ||
+    catLower.includes("food") ||
+    catLower.includes("tiffin") ||
+    catLower.includes("dining") ||
+    catLower.includes("meals")
+  )
+    return "restaurants";
+  if (catLower.includes("cafe") || catLower.includes("coffee") || catLower.includes("tea"))
+    return "cafes";
+  if (
+    catLower.includes("supermarket") ||
+    catLower.includes("mart") ||
+    catLower.includes("departmental")
+  )
+    return "supermarkets";
+  if (catLower.includes("beauty") || catLower.includes("cosmetic")) return "beauty";
+  if (
+    catLower.includes("hardware") ||
+    catLower.includes("tool") ||
+    catLower.includes("electric")
+  )
+    return "hardware";
+  if (
+    catLower.includes("sport") ||
+    catLower.includes("gym") ||
+    catLower.includes("fitness")
+  )
+    return "sports";
+  if (catLower.includes("toy") || catLower.includes("baby")) return "toys";
+  if (catLower.includes("gift")) return "gifts";
+  if (catLower.includes("flower") || catLower.includes("florist")) return "flowers";
+  if (catLower.includes("pet")) return "pet_shops";
+  if (
+    catLower.includes("pooja") ||
+    catLower.includes("puja") ||
+    catLower.includes("incense") ||
+    catLower.includes("agarbatti")
+  )
+    return "pooja";
+  if (catLower.includes("auto") || catLower.includes("bike") || catLower.includes("helmet"))
+    return "auto";
+  if (catLower.includes("repair") || catLower.includes("service")) return "repair";
+
+  // Fallback lookup by getCategoryByIdOrSlug
+  const cat = getCategoryByIdOrSlug(catLower);
+  return (cat && cat.id !== "all" ? cat.id : "grocery") as StoreCategory;
+}
+
 /**
  * Robust Shop Category Matching Engine
  * Checks if a store's primary or legacy category matches the target selected category.
@@ -816,6 +987,12 @@ export function isStoreInCategory(
 
   // Direct ID or slug match
   if (storeCatLower === targetId || storeCatLower === targetCategory.slug) {
+    return true;
+  }
+
+  // Check normalized category match
+  const normCat = toStoreCategory(storeCatLower);
+  if (normCat === targetId) {
     return true;
   }
 
@@ -884,8 +1061,12 @@ export function isStoreInCategory(
         storeCatLower === "fashion" ||
         storeCatLower === "individual_fashion" ||
         storeCatLower === "fast_fashion" ||
+        storeCatLower === "boutiques" ||
         storeCatLower.includes("fashion") ||
-        storeCatLower.includes("cloth")
+        storeCatLower.includes("cloth") ||
+        storeCatLower.includes("garment") ||
+        storeCatLower.includes("boutique") ||
+        storeCatLower.includes("shirt")
       );
     case "boutiques":
       return (
@@ -905,6 +1086,7 @@ export function isStoreInCategory(
     case "electronics":
       return (
         storeCatLower === "showrooms" ||
+        storeCatLower === "electronics" ||
         storeCatLower.includes("electro") ||
         storeCatLower.includes("tv")
       );
@@ -958,3 +1140,4 @@ export function isStoreInCategory(
       return targetCategory.keywords.some((k) => storeCatLower.includes(k));
   }
 }
+

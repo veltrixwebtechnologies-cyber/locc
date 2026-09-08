@@ -259,7 +259,7 @@ export function LocationModal({ isOpen, onClose }: LocationModalProps) {
             </h3>
             <div className="max-h-56 overflow-y-auto pr-1 space-y-1.5">
               {PRESET_LOCATIONS.map((preset) => {
-                const isSelected = activeLocation.area === preset.area;
+                const isSelected = activeLocation?.area === preset.area;
                 return (
                   <button
                     key={preset.id}

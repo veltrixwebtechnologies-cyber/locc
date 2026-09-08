@@ -5,15 +5,70 @@ export function getFallbackProductImage(name?: string | null, category?: string 
   const c = (category || "").toLowerCase();
 
   if (
+    n.includes("kitchen") ||
+    n.includes("vessel") ||
+    n.includes("cooker") ||
+    n.includes("mixer") ||
+    n.includes("utensil") ||
+    n.includes("stove") ||
+    c.includes("kitchen")
+  ) {
+    return "https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?auto=format&fit=crop&w=800&q=80";
+  }
+
+  if (
+    n.includes("tv") ||
+    n.includes("electr") ||
+    n.includes("fridge") ||
+    n.includes("appliance") ||
+    n.includes("showroom") ||
+    c.includes("showroom")
+  ) {
+    return "https://images.unsplash.com/photo-1593359677879-a4bb92f829d1?auto=format&fit=crop&w=800&q=80";
+  }
+
+  if (
+    n.includes("saree") ||
+    n.includes("silk") ||
+    n.includes("kurti") ||
+    n.includes("boutique") ||
+    c.includes("boutique")
+  ) {
+    return "https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&w=800&q=80";
+  }
+
+  if (
+    n.includes("shirt") ||
+    n.includes("dhoti") ||
+    n.includes("readymade") ||
+    n.includes("pant") ||
+    n.includes("fashion") ||
+    c.includes("fashion")
+  ) {
+    return "https://images.unsplash.com/photo-1489987707025-afc232f7ea0f?auto=format&fit=crop&w=800&q=80";
+  }
+
+  if (
+    n.includes("mutton") ||
+    n.includes("chicken") ||
+    n.includes("fish") ||
+    n.includes("meat") ||
+    c.includes("meat")
+  ) {
+    return "https://images.unsplash.com/photo-1607623814075-e51df1bdc82f?auto=format&fit=crop&w=800&q=80";
+  }
+
+  if (
     n.includes("tiramisu") ||
     n.includes("cake") ||
     n.includes("bread") ||
     n.includes("pastry") ||
     n.includes("bakery") ||
     n.includes("cookie") ||
+    n.includes("puff") ||
     c.includes("bakery")
   ) {
-    return "https://images.unsplash.com/photo-1571877227200-a0d98ea607e9?auto=format&fit=crop&w=600&q=80";
+    return "https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=800&q=80";
   }
 
   if (
@@ -22,7 +77,7 @@ export function getFallbackProductImage(name?: string | null, category?: string 
     n.includes("ghee") ||
     n.includes("butter")
   ) {
-    return "https://images.unsplash.com/photo-1610832958506-aa56368176cf?auto=format&fit=crop&w=600&q=80";
+    return "https://images.unsplash.com/photo-1610832958506-aa56368176cf?auto=format&fit=crop&w=800&q=80";
   }
 
   if (
@@ -31,9 +86,11 @@ export function getFallbackProductImage(name?: string | null, category?: string 
     n.includes("grain") ||
     n.includes("flour") ||
     n.includes("atta") ||
-    n.includes("basmati")
+    n.includes("basmati") ||
+    n.includes("batter") ||
+    c.includes("flour_mill")
   ) {
-    return "https://images.unsplash.com/photo-1586201375761-83865001e31c?auto=format&fit=crop&w=600&q=80";
+    return "https://images.unsplash.com/photo-1586201375761-83865001e31c?auto=format&fit=crop&w=800&q=80";
   }
 
   if (
@@ -43,11 +100,11 @@ export function getFallbackProductImage(name?: string | null, category?: string 
     n.includes("toor") ||
     n.includes("moong")
   ) {
-    return "https://images.unsplash.com/photo-1585996847058-2997e01b3b3a?auto=format&fit=crop&w=600&q=80";
+    return "https://images.unsplash.com/photo-1585996847058-2997e01b3b3a?auto=format&fit=crop&w=800&q=80";
   }
 
   if (n.includes("egg") || n.includes("eggs")) {
-    return "https://images.unsplash.com/photo-1516467508483-a7212febe31a?auto=format&fit=crop&w=600&q=80";
+    return "https://images.unsplash.com/photo-1516467508483-a7212febe31a?auto=format&fit=crop&w=800&q=80";
   }
 
   if (
@@ -58,7 +115,7 @@ export function getFallbackProductImage(name?: string | null, category?: string 
     n.includes("paneer") ||
     n.includes("cheese")
   ) {
-    return "https://images.unsplash.com/photo-1563636619-e9143da7973b?auto=format&fit=crop&w=600&q=80";
+    return "https://images.unsplash.com/photo-1563636619-e9143da7973b?auto=format&fit=crop&w=800&q=80";
   }
 
   if (
@@ -69,7 +126,7 @@ export function getFallbackProductImage(name?: string | null, category?: string 
     n.includes("syrup") ||
     c.includes("pharmacy")
   ) {
-    return "https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?auto=format&fit=crop&w=600&q=80";
+    return "https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?auto=format&fit=crop&w=800&q=80";
   }
 
   if (
@@ -77,14 +134,12 @@ export function getFallbackProductImage(name?: string | null, category?: string 
     n.includes("pen") ||
     n.includes("notebook") ||
     n.includes("stationery") ||
-    n.includes("sudhan") ||
-    n.includes("sss") ||
     c.includes("stationery")
   ) {
-    return "https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&w=600&q=80";
+    return "https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&w=800&q=80";
   }
 
-  return "https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=600&q=80";
+  return "https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=800&q=80";
 }
 
 export function isValidImageUrl(url?: string | null): boolean {

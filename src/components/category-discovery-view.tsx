@@ -41,6 +41,8 @@ export function CategoryDiscoveryView({
 }) {
   const navigate = useNavigate();
   const [deliveryLoc] = useDeliveryLocation();
+  const locLat = deliveryLoc?.lat ?? 11.0285;
+  const locLng = deliveryLoc?.lng ?? 76.9258;
 
   const [selectedSort, setSelectedSort] = useState<"popular" | "rating" | "distance" | "fast">(
     "distance",
@@ -83,11 +85,11 @@ export function CategoryDiscoveryView({
   // Filtered & Distance-Calculated Shops List
   const filteredStores = useMemo(() => {
     let result = stores.map((s, idx) => {
-      const storeLat = Number(s.lat) || deliveryLoc.lat + idx * 0.005;
-      const storeLng = Number(s.lng) || deliveryLoc.lng + idx * 0.005;
+      const storeLat = Number(s.lat) || locLat + idx * 0.005;
+      const storeLng = Number(s.lng) || locLng + idx * 0.005;
       const computedDistanceKm = calculateHaversineDistanceKm(
-        deliveryLoc.lat,
-        deliveryLoc.lng,
+        locLat,
+        locLng,
         storeLat,
         storeLng,
       );
@@ -164,7 +166,7 @@ export function CategoryDiscoveryView({
               <p className="text-xs sm:text-sm text-purple-200 leading-relaxed max-w-2xl">
                 {categoryConfig.subheading} around{" "}
                 <span className="font-bold text-[#F3D053] underline underline-offset-2">
-                  {deliveryLoc.area || deliveryLoc.city || "your location"}
+                  {deliveryLoc?.area || deliveryLoc?.city || "your location"}
                 </span>
               </p>
             </div>
@@ -291,7 +293,7 @@ export function CategoryDiscoveryView({
           </h3>
           <p className="text-xs text-slate-500 max-w-sm mx-auto leading-relaxed">
             We couldn't find any stores matching this specific category around{" "}
-            {deliveryLoc.area || "your area"}. Try selecting another shop category or resetting your
+            {deliveryLoc?.area || "your area"}. Try selecting another shop category or resetting your
             filters.
           </p>
           <button

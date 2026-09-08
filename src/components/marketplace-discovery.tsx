@@ -139,7 +139,7 @@ function DiscoveryProductCard({
   image?: string | null;
   to: "/product/$productId" | "/";
   params?: { productId: string };
-  search?: { category: string; q?: undefined };
+  search?: { category?: string; q?: string; sq?: string };
   className?: string;
 }) {
   const [imageUrl, setImageUrl] = useState(image ?? "");

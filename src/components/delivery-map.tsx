@@ -102,6 +102,23 @@ export function DeliveryMap({
   useEffect(() => {
     if (!orderId && !assignmentId) return;
 
+    const handleLocationPayload = (newRow: any) => {
+      if (newRow?.current_latitude && newRow?.current_longitude) {
+        const newPos = {
+          lat: Number(newRow.current_latitude),
+          lng: Number(newRow.current_longitude),
+          heading: Number(newRow.current_heading || 0),
+        };
+        setCourier(newPos);
+        setLastUpdated(new Date());
+        if (mapRef.current) {
+          try {
+            mapRef.current.panTo([newPos.lat, newPos.lng], { animate: true, duration: 0.5 });
+          } catch {}
+        }
+      }
+    };
+
     const channel = supabase
       .channel(`delivery-map-${orderId || assignmentId}`)
       .on(
@@ -112,39 +129,31 @@ export function DeliveryMap({
           table: "delivery_assignments",
           filter: orderId ? `order_id=eq.${orderId}` : `id=eq.${assignmentId}`,
         },
-        (payload: any) => {
-          const newRow = payload.new;
-          if (newRow?.current_latitude && newRow?.current_longitude) {
-            const newPos = {
-              lat: Number(newRow.current_latitude),
-              lng: Number(newRow.current_longitude),
-              heading: Number(newRow.current_heading || 0),
-            };
-            setCourier(newPos);
-            setLastUpdated(new Date());
-            // Pan map to follow live partner position
-            if (mapRef.current) {
-              try {
-                mapRef.current.panTo([newPos.lat, newPos.lng], { animate: true, duration: 0.5 });
-              } catch {}
-            }
-          }
+        (payload: any) => handleLocationPayload(payload.new),
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "delivery_partners",
         },
+        (payload: any) => handleLocationPayload(payload.new),
       )
       .subscribe();
 
-    // Fallback: poll Supabase every 30s in case the realtime WebSocket is
-    // throttled, reconnecting, or the message is missed.
+    // Fallback: poll Supabase every 10s in case realtime WebSocket is throttled or missed
     const pollInterval = setInterval(async () => {
       if (!mountedRef.current) return;
       try {
         const query = (supabase as any)
           .from("delivery_assignments")
-          .select("current_latitude, current_longitude, current_heading")
+          .select("current_latitude, current_longitude, current_heading, partner_id")
           .not("current_latitude", "is", null);
         if (orderId) query.eq("order_id", orderId);
         else if (assignmentId) query.eq("id", assignmentId);
         const { data } = await query.limit(1).maybeSingle();
+
         if (data?.current_latitude && data?.current_longitude && mountedRef.current) {
           setCourier({
             lat: Number(data.current_latitude),
@@ -152,11 +161,26 @@ export function DeliveryMap({
             heading: Number(data.current_heading || 0),
           });
           setLastUpdated(new Date());
+        } else if (data?.partner_id) {
+          // Check partner table fallback if assignment row latitude isn't set yet
+          const { data: partnerData } = await (supabase as any)
+            .from("delivery_partners")
+            .select("current_latitude, current_longitude")
+            .eq("id", data.partner_id)
+            .maybeSingle();
+          if (partnerData?.current_latitude && partnerData?.current_longitude && mountedRef.current) {
+            setCourier({
+              lat: Number(partnerData.current_latitude),
+              lng: Number(partnerData.current_longitude),
+              heading: 0,
+            });
+            setLastUpdated(new Date());
+          }
         }
       } catch {
         // Ignore poll errors silently
       }
-    }, 30_000);
+    }, 10_000);
 
     return () => {
       supabase.removeChannel(channel);
@@ -363,7 +387,7 @@ export function DeliveryMap({
 
   return (
     <div
-      className={`relative overflow-hidden rounded-2xl ring-1 ring-black/10 shadow-md ${className ?? ""}`}
+      className={`relative overflow-hidden rounded-2xl ring-1 ring-black/10 shadow-md isolate z-0 ${className ?? ""}`}
       style={{ height }}
     >
       <div ref={mapContainerRef} className="h-full w-full bg-slate-100" />

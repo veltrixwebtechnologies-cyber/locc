@@ -45,6 +45,7 @@ import {
 
 import { AppShell } from "@/components/app-shell";
 import { useAuth } from "@/lib/auth-store";
+import { cartStore } from "@/lib/cart-store";
 import { useAddresses, addressesStore, type Address } from "@/lib/addresses-store";
 import { useOrders } from "@/lib/orders-store";
 import { useWishlistProducts } from "@/lib/merchandising";
@@ -190,6 +191,7 @@ function ProfilePage() {
                   type="button"
                   onClick={async () => {
                     await supabase.auth.signOut();
+                    cartStore.clear();
                     toast.success("Signed out successfully");
                     navigate({ to: "/", search: { category: undefined, q: undefined } });
                   }}

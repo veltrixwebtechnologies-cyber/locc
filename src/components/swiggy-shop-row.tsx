@@ -7,6 +7,7 @@ import { categoryLabel } from "@/lib/mock-data";
 import { useShopsStatus } from "@/lib/shop-availability";
 import { WishlistButton } from "@/components/wishlist-button";
 import { scrollToShops } from "@/lib/scroll-utils";
+import { getFallbackProductImage, resolveImageUrl } from "@/lib/image-utils";
 
 /* ─── offer config per store category ─────────────────────────────────── */
 const CATEGORY_OFFERS: Record<string, { primary: string; bank: string; overlayTag: string }> = {
@@ -103,7 +104,7 @@ function SwiggyShopCard({
 
   return (
     <div className="group shrink-0 w-[260px] sm:w-[273px] transition-all duration-200">
-      <div className="relative overflow-hidden rounded-[24px] bg-white shadow-xs transition-shadow duration-300 hover:shadow-[0_8px_32px_-8px_rgba(0,0,0,0.18)]">
+      <div className="relative overflow-hidden rounded-[24px] bg-white transition-all duration-300 gold-metallic-border gold-glow-sm hover:shadow-[0_8px_32px_-8px_rgba(212,175,55,0.4)]">
         {/* Wishlist Button in Top Right */}
         <div className="absolute right-3 top-3 z-20">
           <WishlistButton
@@ -127,8 +128,8 @@ function SwiggyShopCard({
             <img
               src={
                 imgError
-                  ? "https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=800&q=75"
-                  : store.imageUrl
+                  ? getFallbackProductImage(store.name, store.category)
+                  : resolveImageUrl(store.imageUrl, store.name, store.category)
               }
               alt={store.name}
               loading="lazy"

@@ -34,13 +34,23 @@ import { m } from "motion/react";
 import { SkeletonCard } from "@/components/motion/presets";
 import { productsByStore, stores, Store } from "@/lib/mock-data";
 import { ProductThumb } from "@/components/product-thumb";
+import { useDeliveryLocation } from "@/lib/location-store";
+import { isValidCoordinate, haversineDistanceKm } from "@/lib/geo";
+import { SearchShopRecommendations } from "@/components/search-shop-recommendations";
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
-export const Route = createFileRoute("/product/$productId")({ component: ProductPage });
+export const Route = createFileRoute("/product/$productId")({
+  validateSearch: (search: Record<string, unknown>): { sq?: string } => ({
+    sq: (search.sq as string) || (search.q as string) || undefined,
+  }),
+  component: ProductPage,
+});
 
 function ProductPage() {
   const { productId } = Route.useParams();
+  const searchParams = Route.useSearch();
+  const sq = searchParams.sq || "";
   const auth = useAuth();
   const queryClient = useQueryClient();
   const cart = useCart();
@@ -535,6 +545,7 @@ function ProductPage() {
                     <Link
                       to="/store/$storeId"
                       params={{ storeId: item.seller_id }}
+                      search={{ sq, category: undefined }}
                       className="inline-flex items-center gap-1 text-xs font-bold text-primary hover:underline"
                     >
                       <StoreIcon className="h-3.5 w-3.5" /> Visit store
@@ -613,7 +624,7 @@ function ProductPage() {
 
           {/* Section 3: Suggested Shops Horizontal Strip */}
           <section className="mt-10">
-            <SuggestedShopsStrip category={item.category} />
+            <SuggestedShopsStrip category={item.category} searchQuery={sq} currentShopId={item.seller_id} />
           </section>
 
           {/* Customer Reviews Section */}
@@ -948,8 +959,25 @@ function BlinkitProductCard({ product }: { product: MerchandisingProduct }) {
 /* -------------------------------------------------------------------------- */
 /* Suggested Shops Horizontal Strip Component                                 */
 /* -------------------------------------------------------------------------- */
-function SuggestedShopsStrip({ category }: { category?: string | null }) {
+function SuggestedShopsStrip({
+  category,
+  searchQuery,
+  currentShopId,
+}: {
+  category?: string | null;
+  searchQuery?: string;
+  currentShopId?: string;
+}) {
   const containerRef = useRef<HTMLDivElement>(null);
+
+  if (searchQuery && searchQuery.trim()) {
+    return (
+      <SearchShopRecommendations
+        searchQuery={searchQuery}
+        currentShopId={currentShopId}
+      />
+    );
+  }
 
   const scroll = (direction: "left" | "right") => {
     if (containerRef.current) {
@@ -1002,6 +1030,24 @@ function SuggestedShopsStrip({ category }: { category?: string | null }) {
 }
 
 function ShopCardItem({ store }: { store: Store }) {
+  const [deliveryLoc] = useDeliveryLocation();
+  const dKm =
+    typeof store.lat === "number" &&
+    typeof store.lng === "number" &&
+    isValidCoordinate(store.lat, store.lng) &&
+    deliveryLoc &&
+    typeof deliveryLoc.lat === "number" &&
+    typeof deliveryLoc.lng === "number" &&
+    isValidCoordinate(deliveryLoc.lat, deliveryLoc.lng)
+      ? Math.max(
+          0.1,
+          Math.round(
+            haversineDistanceKm(store.lat, store.lng, deliveryLoc.lat, deliveryLoc.lng) * 10,
+          ) / 10,
+        )
+      : (store.distanceKm ?? 1.2);
+  const eta = Math.max(10, Math.round(dKm * 5 + 10));
+
   return (
     <div className="group flex w-64 shrink-0 flex-col overflow-hidden rounded-2xl border border-[#ead9a8] bg-card p-3.5 shadow-xs transition-all hover:border-emerald-500/60 hover:shadow-md">
       <div className="relative aspect-[16/9] w-full overflow-hidden rounded-xl bg-muted">
@@ -1028,15 +1074,16 @@ function ShopCardItem({ store }: { store: Store }) {
             <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
             {store.rating.toFixed(1)}
           </span>
-          <span>{store.distanceKm.toFixed(1)} km</span>
+          <span>{dKm.toFixed(1)} km</span>
           <span className="font-semibold text-emerald-700 dark:text-emerald-400">
-            ⚡ {store.etaMin} mins
+            ⚡ ~{eta} mins
           </span>
         </div>
 
         <Link
           to="/store/$storeId"
           params={{ storeId: store.id }}
+          search={{ sq: undefined, category: undefined }}
           className="mt-2 w-full rounded-xl border border-primary/40 bg-primary/5 hover:bg-primary hover:text-primary-foreground py-2 text-center text-xs font-bold text-primary transition-all block"
         >
           Visit shop

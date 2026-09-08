@@ -5,6 +5,8 @@ import { cartStore, useCart, cartTotals } from "@/lib/cart-store";
 import { QtyStepper } from "@/components/qty-stepper";
 import { getStore, APPROVED_STORE } from "@/lib/mock-data";
 import { useAuth } from "@/lib/auth-store";
+import { useDeliveryLocation } from "@/lib/location-store";
+import { isValidCoordinate, haversineDistanceKm } from "@/lib/geo";
 import {
   ArrowRight,
   Check,
@@ -48,6 +50,10 @@ function CartPage() {
   const navigate = useNavigate();
   const isSignedIn = !!(auth.phone || auth.email);
 
+  const [deliveryLoc] = useDeliveryLocation();
+  const locLat = deliveryLoc?.lat ?? 11.0285;
+  const locLng = deliveryLoc?.lng ?? 76.9258;
+
   const knownStore =
     cart.storeId === APPROVED_STORE.id
       ? APPROVED_STORE
@@ -60,8 +66,37 @@ function CartPage() {
       ? { ...APPROVED_STORE, id: cart.storeId, name: cart.storeName ?? "Local Shore shop" }
       : null);
 
+  const computedDistanceKm =
+    store &&
+    typeof store.lat === "number" &&
+    typeof store.lng === "number" &&
+    isValidCoordinate(store.lat, store.lng) &&
+    deliveryLoc &&
+    typeof deliveryLoc.lat === "number" &&
+    typeof deliveryLoc.lng === "number" &&
+    isValidCoordinate(deliveryLoc.lat, deliveryLoc.lng)
+      ? Math.max(
+          0.1,
+          Math.round(
+            haversineDistanceKm(store.lat, store.lng, locLat, locLng) * 10,
+          ) / 10,
+        )
+      : (store?.distanceKm ?? 1.2);
+
+  const computedEtaMin =
+    store &&
+    typeof store.lat === "number" &&
+    typeof store.lng === "number" &&
+    isValidCoordinate(store.lat, store.lng) &&
+    deliveryLoc &&
+    typeof deliveryLoc.lat === "number" &&
+    typeof deliveryLoc.lng === "number" &&
+    isValidCoordinate(deliveryLoc.lat, deliveryLoc.lng)
+      ? Math.max(10, Math.round(computedDistanceKm * 5 + 10))
+      : (store?.etaMin ?? 25);
+
   const deliveryFee =
-    totals.subtotal > 0 ? (store ? Math.round(20 + store.distanceKm * 6) : 25) : 0;
+    totals.subtotal > 0 ? (store ? Math.round(20 + computedDistanceKm * 6) : 25) : 0;
   const freeDeliveryTarget = 500;
   const freeDeliveryRemaining = Math.max(0, freeDeliveryTarget - totals.subtotal);
   const freeDeliveryProgress = Math.min(
@@ -121,11 +156,11 @@ function CartPage() {
         <div className="mx-auto flex max-w-6xl items-center gap-8 overflow-x-auto px-5 py-2.5 text-[11px] font-semibold text-muted-foreground md:px-8 [scrollbar-width:none]">
           <span className="inline-flex shrink-0 items-center gap-1.5">
             <MapPin className="h-3.5 w-3.5 text-primary" />
-            Delivering to Pappampatti Pirivu, Coimbatore
+            Delivering to {deliveryLoc?.area || deliveryLoc?.label || "Select your location"}
           </span>
           <span className="inline-flex shrink-0 items-center gap-1.5">
             <Zap className="h-3.5 w-3.5 text-primary" />
-            20–40 min delivery
+            ~{computedEtaMin} min delivery
           </span>
           <span className="inline-flex shrink-0 items-center gap-1.5">
             <ShieldCheck className="h-3.5 w-3.5 text-primary" />
@@ -175,7 +210,7 @@ function CartPage() {
                       <p className="text-[11px] font-medium text-muted-foreground">Ordering from</p>
                       <p className="truncate font-bold text-foreground">{store.name}</p>
                       <p className="text-xs text-muted-foreground">
-                        {store.distanceKm.toFixed(1)} km · est. {store.etaMin} min
+                        {computedDistanceKm.toFixed(1)} km · est. {computedEtaMin} min
                       </p>
                     </div>
                     <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-emerald-50 border border-emerald-200 px-2.5 py-1 text-[11px] font-semibold text-emerald-700">

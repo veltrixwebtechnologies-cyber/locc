@@ -10,7 +10,7 @@ import { addressesStore, useAddresses } from "@/lib/addresses-store";
 import { DeliveryMap } from "@/components/delivery-map";
 import { DeliveryAnimation } from "@/components/delivery-animation";
 import { reverseGeocode } from "@/lib/geocoding.functions";
-import { isValidCoordinate } from "@/lib/geo";
+import { isValidCoordinate, haversineDistanceKm } from "@/lib/geo";
 import {
   Crosshair,
   Plus,
@@ -146,6 +146,30 @@ function CheckoutPage() {
   const watchIdRef = useRef<number | null>(null);
   const geocodeDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  const computedDistanceKm =
+    store &&
+    typeof store.lat === "number" &&
+    typeof store.lng === "number" &&
+    isValidCoordinate(store.lat, store.lng) &&
+    pinCoords &&
+    isValidCoordinate(pinCoords.lat, pinCoords.lng)
+      ? Math.max(
+          0.1,
+          Math.round(haversineDistanceKm(store.lat, store.lng, pinCoords.lat, pinCoords.lng) * 10) /
+            10,
+        )
+      : (store?.distanceKm ?? 1.2);
+
+  const computedEtaMin =
+    store &&
+    typeof store.lat === "number" &&
+    typeof store.lng === "number" &&
+    isValidCoordinate(store.lat, store.lng) &&
+    pinCoords &&
+    isValidCoordinate(pinCoords.lat, pinCoords.lng)
+      ? Math.max(10, Math.round(computedDistanceKm * 5 + 10))
+      : (store?.etaMin ?? 25);
+
   // New states for payment gateway flow
   const [paymentStep, setPaymentStep] = useState<"idle" | "authorizing">("idle");
   const [placedOrder, setPlacedOrder] = useState<Order | null>(null);
@@ -255,9 +279,9 @@ function CheckoutPage() {
   };
 
   const geolocationOptions: PositionOptions = {
-    enableHighAccuracy: true,
-    timeout: 10000,
-    maximumAge: 5000, // Allow cached GPS fix up to 5s old to reduce hardware thrash
+    enableHighAccuracy: false,
+    timeout: 15000,
+    maximumAge: 10000, // Accept cached position up to 10s old – reduces hardware thrash & improves reliability on desktop/WiFi
   };
 
   const stopLiveLocation = () => {
@@ -328,13 +352,28 @@ function CheckoutPage() {
     setLocStatus("loading");
     setLocError("");
     setCurrentAddress("");
+
+    const onSuccess = (pos: GeolocationPosition) => {
+      const coords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+      void applyCoords(coords, pos.coords.accuracy);
+    };
+
+    // Two-pass: try high accuracy first, fall back to low accuracy on timeout
     navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        const coords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-        void applyCoords(coords, pos.coords.accuracy);
+      onSuccess,
+      (err) => {
+        if (err.code === err.TIMEOUT) {
+          console.info("[geo] high-accuracy timed out, falling back to low accuracy");
+          navigator.geolocation.getCurrentPosition(
+            onSuccess,
+            (fallbackErr) => handleGeolocationError(fallbackErr, inIframe),
+            geolocationOptions, // low accuracy, 15s timeout
+          );
+        } else {
+          handleGeolocationError(err, inIframe);
+        }
       },
-      (err) => handleGeolocationError(err, inIframe),
-      geolocationOptions,
+      { enableHighAccuracy: true, timeout: 8000, maximumAge: 10000 },
     );
   };
 
@@ -346,13 +385,26 @@ function CheckoutPage() {
     setLocError("");
     setCurrentAddress("");
 
+    // Two-pass initial fix: try high accuracy first, fall back on timeout
+    const onInitialFix = (pos: GeolocationPosition) => {
+      const coords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+      void applyCoords(coords, pos.coords.accuracy);
+    };
     navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        const coords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-        void applyCoords(coords, pos.coords.accuracy);
+      onInitialFix,
+      (err) => {
+        if (err.code === err.TIMEOUT) {
+          console.info("[geo] live: high-accuracy timed out, falling back to low accuracy");
+          navigator.geolocation.getCurrentPosition(
+            onInitialFix,
+            (fallbackErr) => handleGeolocationError(fallbackErr, inIframe),
+            geolocationOptions,
+          );
+        } else {
+          handleGeolocationError(err, inIframe);
+        }
       },
-      (err) => handleGeolocationError(err, inIframe),
-      geolocationOptions,
+      { enableHighAccuracy: true, timeout: 8000, maximumAge: 10000 },
     );
 
     const watchId = navigator.geolocation.watchPosition(
@@ -505,7 +557,7 @@ function CheckoutPage() {
   }, [showOrderSuccess, placedOrder, navigate]);
 
   const deliveryFee =
-    totals.subtotal > 0 ? (store ? Math.round(20 + store.distanceKm * 6) : 25) : 0;
+    totals.subtotal > 0 ? (store ? Math.round(20 + computedDistanceKm * 6) : 25) : 0;
   const total = totals.subtotal + deliveryFee;
   const displayDeliveryFee = couponQuote?.shipping_fee ?? deliveryFee;
   const discountAmount = couponQuote?.discount_amount ?? 0;
@@ -618,8 +670,8 @@ function CheckoutPage() {
         paymentMethod: pay === "upi" ? "UPI" : pay === "card" ? "Card" : "Cash on delivery",
         couponCode: couponQuote?.code,
         discountAmount,
-        etaMin: store.etaMin,
-        distanceKm: store.distanceKm,
+        etaMin: computedEtaMin,
+        distanceKm: computedDistanceKm,
       });
 
       cartStore.clear();
@@ -890,7 +942,7 @@ function CheckoutPage() {
         <div className="mb-2 flex items-center justify-between text-xs text-muted-foreground">
           <span>{store?.name}</span>
           <span>
-            {store?.distanceKm?.toFixed(1) ?? "0"} km · ~{store?.etaMin ?? 25} min
+            {computedDistanceKm.toFixed(1)} km · ~{computedEtaMin} min
           </span>
         </div>
         <Row label={`Items (${totals.itemCount})`} value={`₹${totals.subtotal}`} />
@@ -1008,7 +1060,7 @@ function CheckoutPage() {
                 <div className="flex justify-between pt-2 text-[11px]">
                   <span className="text-muted-foreground">Estimated Delivery</span>
                   <span className="font-semibold text-emerald-600">
-                    ~{placedOrder?.etaMin || store?.etaMin || 25} mins
+                    ~{placedOrder?.etaMin || computedEtaMin} mins
                   </span>
                 </div>
               </div>

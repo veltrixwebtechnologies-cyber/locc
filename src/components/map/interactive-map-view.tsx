@@ -369,27 +369,40 @@ export const InteractiveMapView = forwardRef<InteractiveMapViewRef, Props>(
     };
 
     const handleUseCurrentLocation = () => {
-      if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(
-          (pos) => {
-            const loc = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-            onUserLocationChange?.(loc);
-            if (mapRef.current) {
-              mapRef.current.flyTo({ center: [loc.lng, loc.lat], zoom: 14 });
-            }
-          },
-          () => {
-            if (mapRef.current) {
-              mapRef.current.flyTo({ center: [userLocation.lng, userLocation.lat], zoom: 14 });
-            }
-          },
-        );
-      }
+      if (!navigator.geolocation) return;
+      const onSuccess = (pos: GeolocationPosition) => {
+        const loc = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+        onUserLocationChange?.(loc);
+        if (mapRef.current) {
+          mapRef.current.flyTo({ center: [loc.lng, loc.lat], zoom: 14 });
+        }
+      };
+      const onFallback = () => {
+        if (mapRef.current) {
+          mapRef.current.flyTo({ center: [userLocation.lng, userLocation.lat], zoom: 14 });
+        }
+      };
+      navigator.geolocation.getCurrentPosition(
+        onSuccess,
+        (err) => {
+          if (err.code === err.TIMEOUT) {
+            // Retry with low accuracy (WiFi/IP geolocation)
+            navigator.geolocation.getCurrentPosition(onSuccess, onFallback, {
+              enableHighAccuracy: false,
+              maximumAge: 300_000,
+              timeout: 10_000,
+            });
+          } else {
+            onFallback();
+          }
+        },
+        { enableHighAccuracy: true, maximumAge: 30_000, timeout: 8_000 },
+      );
     };
 
     return (
       <div
-        className={`relative overflow-hidden rounded-2xl border border-border bg-card shadow-lg ${className}`}
+        className={`relative overflow-hidden rounded-2xl border border-border bg-card shadow-lg isolate z-0 ${className}`}
       >
         {/* Map Container */}
         <div ref={containerRef} className="h-full w-full" />

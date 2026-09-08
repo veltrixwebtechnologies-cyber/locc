@@ -33,6 +33,7 @@ import { useDeliveryLocation } from "@/lib/location-store";
 import { LocationModal } from "@/components/ui/location-modal";
 import { type SearchResultItem } from "@/lib/search-service";
 import { useLiveSearchResults } from "@/hooks/use-live-search-results";
+import { AppDownloadBanner } from "@/components/app-download-banner";
 
 interface SwiggyFeatureCard {
   id: string;
@@ -211,18 +212,20 @@ export function HeroSection() {
               title="Click to replay animation"
               className="flex lg:col-span-5 justify-center lg:justify-end items-center relative my-2 sm:my-4 lg:my-0 w-full cursor-pointer group"
             >
-              <div className="relative w-full max-w-[320px] sm:max-w-sm lg:max-w-none lg:w-96 aspect-[16/9] lg:h-72 mx-auto overflow-hidden rounded-2xl lg:rounded-3xl shadow-xl border-2 border-white/30">
-                <video
-                  ref={videoRef}
-                  src="/assets/delivery-rider-loop.mp4"
-                  poster="/assets/delivery-rider-final.png"
-                  preload="auto"
-                  autoPlay
-                  muted
-                  playsInline
-                  {...({ fetchPriority: "high" } as Record<string, string>)}
-                  className="w-full h-full object-cover pointer-events-none"
-                />
+              <div className="relative w-full max-w-[320px] sm:max-w-sm lg:max-w-none lg:w-96 aspect-[16/9] lg:h-72 mx-auto rounded-2xl lg:rounded-3xl p-[3.5px] bg-gradient-to-r from-[#F3D053] via-amber-300 to-[#F3D053] shadow-[0_0_30px_rgba(243,208,83,0.55)] border border-amber-200/80 transition-transform duration-300 group-hover:scale-[1.02]">
+                <div className="relative w-full h-full overflow-hidden rounded-[13px] lg:rounded-[21px]">
+                  <video
+                    ref={videoRef}
+                    src="/assets/delivery-rider-loop.mp4"
+                    poster="/assets/delivery-rider-final.png"
+                    preload="auto"
+                    autoPlay
+                    muted
+                    playsInline
+                    {...({ fetchPriority: "high" } as Record<string, string>)}
+                    className="w-full h-full object-cover pointer-events-none"
+                  />
+                </div>
               </div>
             </div>
           </div>
@@ -241,7 +244,7 @@ export function HeroSection() {
               >
                 <MapPin className="h-4 w-4 text-[#981495] shrink-0" />
                 <span className="text-xs sm:text-sm font-bold text-slate-900 w-full sm:w-[170px] truncate">
-                  {deliveryLocation.area}
+                  {deliveryLocation?.area}
                 </span>
                 <ChevronDown className="h-3.5 w-3.5 text-slate-400 shrink-0 group-hover:text-[#981495] transition-colors" />
               </button>
@@ -530,6 +533,10 @@ export function HeroSection() {
           </div>
         </div>
       </div>
+
+      {/* RedBus-Style App Download Banner */}
+      <AppDownloadBanner />
+
       <LocationModal isOpen={isLocationModalOpen} onClose={() => setIsLocationModalOpen(false)} />
     </section>
   );

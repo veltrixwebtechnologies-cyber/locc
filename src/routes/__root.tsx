@@ -103,7 +103,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { rel: "preload", href: "/assets/delivery-rider-loop.mp4", as: "video", type: "video/mp4" },
       {
         rel: "stylesheet",
-        href: "https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:ital,wght@0,400..800;1,400..800&display=swap",
+        href: "https://fonts.googleapis.com/css2?family=Caveat:wght@400..700&family=Outfit:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:ital,wght@0,400..800;1,400..800&family=Poppins:wght@600;700;800;900&family=Urbanist:ital,wght@0,400..900;1,400..900&display=swap",
       },
       { rel: "stylesheet", href: appCss },
       { rel: "icon", href: "/favicon.svg", type: "image/svg+xml" },

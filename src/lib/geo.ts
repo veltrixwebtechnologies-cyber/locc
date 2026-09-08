@@ -68,6 +68,8 @@ export function haversineDistanceKm(
   return (2 * EARTH_RADIUS_M * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))) / 1000;
 }
 
+export const calculateDistanceKm = haversineDistanceKm;
+
 export function haversineDistanceMeters(
   lat1: number,
   lon1: number,

@@ -20,6 +20,8 @@ export interface SearchResultItem {
   categoryName?: string;
   metadata?: Record<string, unknown>;
   matchScore: number;
+  mlScore?: number;
+  explainabilityTags?: string[];
 }
 
 const DEFAULT_DISH_IMG =

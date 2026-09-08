@@ -116,6 +116,7 @@ export interface Order {
   };
   etaMin: number;
   distanceKm: number;
+  cancellationReason?: string;
 }
 
 function fromRow(row: any): Order {
@@ -224,6 +225,7 @@ function fromRow(row: any): Order {
     partner: partnerWithLive,
     etaMin: realEtaMin,
     distanceKm: realDistanceKm,
+    cancellationReason: row.cancellation_reason ?? undefined,
   };
 }
 
@@ -233,32 +235,51 @@ async function loadOrders(): Promise<Order[]> {
   if (!userId) return [];
   const demoOrders = loadDemoOrders(userId);
 
-  // 1. Try query with delivery partner details and assignment location data
-  const { data: fullData, error: fullError } = await (supabase as any)
-    .from("orders")
-    .select(
-      "*, order_items(*), seller:sellers(business_name, lat, lng, wizard_data), assigned_partner:delivery_partners(full_name, rating, current_latitude, current_longitude), delivery_assignments(id, status, current_latitude, current_longitude, current_heading, estimated_delivery_eta)",
-    )
-    .eq("user_id", userId)
-    .order("placed_at", { ascending: false });
-
-  if (!fullError && fullData) {
-    return [...demoOrders, ...fullData.map(fromRow)];
-  }
-
-  // 2. Fallback query if delivery_partners join is blocked by RLS for customer role
   try {
-    const { data: simpleData, error: simpleError } = await (supabase as any)
+    const { data: ordersData, error } = await (supabase as any)
       .from("orders")
-      .select("*, order_items(*), seller:sellers(business_name, lat, lng, wizard_data)")
+      .select("*, order_items(*)")
       .eq("user_id", userId)
       .order("placed_at", { ascending: false });
 
-    if (simpleError) throw simpleError;
-    return [...demoOrders, ...(simpleData ?? []).map(fromRow)];
+    if (error) {
+      console.warn("[orders] orders query notice:", error.message);
+      return demoOrders;
+    }
+
+    if (!ordersData || ordersData.length === 0) {
+      return demoOrders;
+    }
+
+    // Fetch active delivery assignments for live partner tracking
+    const orderIds = ordersData.map((o: any) => o.id);
+    let assignmentsMap: Record<string, any> = {};
+    try {
+      const { data: assignments } = await (supabase as any)
+        .from("delivery_assignments")
+        .select("id, order_id, status, current_latitude, current_longitude, current_heading, estimated_delivery_eta")
+        .in("order_id", orderIds);
+      if (assignments) {
+        assignments.forEach((a: any) => {
+          if (a.order_id) assignmentsMap[a.order_id] = a;
+        });
+      }
+    } catch {
+      // Ignore assignment lookup errors
+    }
+
+    const processedOrders = ordersData.map((row: any) => {
+      const rowWithAssignment = {
+        ...row,
+        delivery_assignments: assignmentsMap[row.id] ? [assignmentsMap[row.id]] : [],
+      };
+      return fromRow(rowWithAssignment);
+    });
+
+    return [...demoOrders, ...processedOrders];
   } catch (error) {
-    console.error("[orders] history query failed", error);
-    return [];
+    console.error("[orders] loadOrders failed", error);
+    return demoOrders;
   }
 }
 
@@ -368,6 +389,58 @@ export const ordersStore = {
 
 export async function advanceDemoOrder(orderId: string) {
   throw new Error("Order status is managed by the seller and delivery partner.");
+}
+
+export async function cancelOrder(orderId: string, reason: string): Promise<boolean> {
+  const { data: session } = await supabase.auth.getSession();
+  const userId = session.session?.user.id;
+
+  // 1. Update local storage demo order if present
+  if (userId) {
+    const demoOrders = loadDemoOrders(userId);
+    const demoIndex = demoOrders.findIndex(
+      (o) =>
+        o.id === orderId ||
+        o.code === orderId ||
+        (o.code && o.code.toLowerCase() === orderId.toLowerCase()),
+    );
+    if (demoIndex !== -1) {
+      demoOrders[demoIndex].status = "cancelled";
+      demoOrders[demoIndex].cancellationReason = reason;
+      if (typeof window !== "undefined") {
+        window.localStorage.setItem(demoOrdersKey(userId), JSON.stringify(demoOrders));
+        window.dispatchEvent(new Event("storage"));
+      }
+    }
+  }
+
+  // 2. Update real Supabase order if UUID
+  if (isUuid(orderId)) {
+    try {
+      const { error } = await (supabase as any)
+        .from("orders")
+        .update({
+          status: "cancelled",
+          cancellation_reason: reason,
+          cancelled_at: new Date().toISOString(),
+        })
+        .eq("id", orderId);
+
+      if (error) {
+        console.warn("Supabase order cancellation update error:", error);
+      }
+
+      // Also cancel active delivery assignment if any
+      await (supabase as any)
+        .from("delivery_assignments")
+        .update({ status: "cancelled" })
+        .eq("order_id", orderId);
+    } catch (err) {
+      console.warn("Cancel order database update error:", err);
+    }
+  }
+
+  return true;
 }
 
 export function useOrders() {

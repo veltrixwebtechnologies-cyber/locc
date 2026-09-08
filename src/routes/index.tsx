@@ -38,120 +38,14 @@ import { scrollToShops } from "@/lib/scroll-utils";
 import { EcosystemMerchandisingStrips } from "@/components/ecosystem-merchandising-strips";
 import { isTestEntity } from "@/lib/map-service/store-engine";
 import { useDeliveryLocation } from "@/lib/location-store";
+import { getCategoryByIdOrSlug, toStoreCategory } from "@/lib/shop-categories";
 import { calculateHaversineDistanceKm } from "@/lib/map-service/providers";
+import { rankShopsWithML } from "@/lib/ml-shop-ranker";
+import { AppDownloadBanner } from "@/components/app-download-banner";
 
 const getCategoryDisplayName = (catName?: string | null): string => {
-  if (!catName) return "";
-  const lower = catName.toLowerCase();
-  if (categoryLabel[lower as StoreCategory]) return categoryLabel[lower as StoreCategory];
-  if (lower === "flour_mill") return "Flour & Masala Mill (மாவு & மசாலா ஆலை)";
-  if (lower === "palamuthir") return "Palamuthir Nilayam";
-  if (lower === "meat_fish") return "Meat, Fish & Chicken";
-  if (lower === "fashion_accessories") return "Chain & Kammal Gifts";
-  if (lower === "boutiques") return "Designer Boutiques";
-  if (lower === "showrooms") return "Showrooms";
-  if (lower === "fast_fashion") return "Fast Fashion (Branded)";
-  if (lower === "individual_fashion") return "Individual Fashion";
-  if (lower === "kitchen_appliances") return "Kitchen Utensils & Appliances";
-  if (lower === "home_decor") return "Home Interior Decor";
-  if (lower === "grocery" || lower === "fresh" || lower === "ready") return "Daily Grocery";
-  if (
-    lower === "pharmacy" ||
-    lower === "wellness" ||
-    lower === "personal" ||
-    lower === "care" ||
-    lower.includes("pharm")
-  )
-    return "Pharmacy & Care";
-  if (lower === "bakery" || lower === "snacks" || lower.includes("bake")) return "Fresh Bakery";
-  if (lower === "stationery" || lower === "electronics" || lower === "tech") return "Books & Tech";
-  return catName.replace(/_/g, " ").replace(/-/g, " ");
-};
-
-const toStoreCategory = (value?: string | null): StoreCategory => {
-  const category = (value ?? "").toLowerCase();
-  if (category.includes("palamuthir") || category.includes("fruit") || category.includes("veggie"))
-    return "palamuthir";
-  if (
-    category.includes("flour") ||
-    category.includes("mill") ||
-    category.includes("maavu") ||
-    category.includes("batter")
-  )
-    return "flour_mill";
-  if (
-    category.includes("meat") ||
-    category.includes("fish") ||
-    category.includes("chicken") ||
-    category.includes("mutton")
-  )
-    return "meat_fish";
-  if (
-    category.includes("kammal") ||
-    category.includes("chain") ||
-    category.includes("accessory") ||
-    category.includes("gift") ||
-    category.includes("earring")
-  )
-    return "fashion_accessories";
-  if (
-    category.includes("boutique") ||
-    category.includes("silk") ||
-    category.includes("saree") ||
-    category.includes("stitching")
-  )
-    return "boutiques";
-  if (category.includes("showroom") || category.includes("appliance")) return "showrooms";
-  if (category.includes("fast_fashion") || category.includes("brand") || category.includes("zudio"))
-    return "fast_fashion";
-  if (
-    category.includes("individual_fashion") ||
-    category.includes("cloth") ||
-    category.includes("garment") ||
-    category.includes("dhoti")
-  )
-    return "individual_fashion";
-  if (
-    category.includes("kitchen") ||
-    category.includes("vessel") ||
-    category.includes("cooker") ||
-    category.includes("mixer")
-  )
-    return "kitchen_appliances";
-  if (
-    category.includes("decor") ||
-    category.includes("interior") ||
-    category.includes("curtain") ||
-    category.includes("brass")
-  )
-    return "home_decor";
-  if (
-    category.includes("pharm") ||
-    category.includes("pharam") ||
-    category.includes("wellness") ||
-    category.includes("care") ||
-    category.includes("med") ||
-    category.includes("health")
-  ) {
-    return "pharmacy";
-  }
-  if (
-    category.includes("station") ||
-    category.includes("book") ||
-    category.includes("office") ||
-    category.includes("paper")
-  ) {
-    return "stationery";
-  }
-  if (
-    category.includes("bake") ||
-    category.includes("cake") ||
-    category.includes("bread") ||
-    category.includes("pastry")
-  ) {
-    return "bakery";
-  }
-  return "grocery";
+  if (!catName || catName === "all") return "";
+  return getCategoryByIdOrSlug(catName).name;
 };
 
 export const Route = createFileRoute("/")({
@@ -166,6 +60,8 @@ function Home() {
   const search = Route.useSearch();
   const navigate = Route.useNavigate();
   const [deliveryLoc] = useDeliveryLocation();
+  const locLat = deliveryLoc?.lat ?? 11.0285;
+  const locLng = deliveryLoc?.lng ?? 76.9258;
   const [query, setQuery] = useState(search.q ?? "");
   const [cat, setCat] = useState<string>(search.category ?? "all");
   const approvedProducts = useQuery({
@@ -260,34 +156,9 @@ function Home() {
     }
   }, [search.category, search.q]);
 
-  const activeFilter: StoreCategory | undefined = useMemo(() => {
+  const activeFilter = useMemo(() => {
     if (!cat || cat === "all") return undefined;
-    const catLower = cat.toLowerCase();
-    if (
-      catLower === "grocery" ||
-      catLower === "pharmacy" ||
-      catLower === "stationery" ||
-      catLower === "bakery"
-    ) {
-      return catLower as StoreCategory;
-    }
-    if (catLower === "tech" || catLower === "electronics" || catLower === "home") {
-      return "stationery";
-    }
-    if (
-      catLower === "wellness" ||
-      catLower === "personal" ||
-      catLower === "care" ||
-      catLower === "meds"
-    ) {
-      return "pharmacy";
-    }
-    if (catLower === "snacks" || catLower === "bakes") {
-      return "bakery";
-    }
-    const found = deliveryCategories.find((c) => c.id.toLowerCase() === catLower)?.filter;
-    if (found) return found;
-    return toStoreCategory(catLower);
+    return cat;
   }, [cat]);
 
   const filtered = useMemo(() => {
@@ -297,9 +168,9 @@ function Home() {
     const liveVendorStores = (approvedVendors.data ?? [])
       .filter((vendor: any) => liveSellerIds.has(vendor.id))
       .map((vendor: any, index: number) => {
-        const vLat = Number(vendor.lat) || deliveryLoc.lat + index * 0.005;
-        const vLng = Number(vendor.lng) || deliveryLoc.lng + index * 0.005;
-        const dKm = calculateHaversineDistanceKm(deliveryLoc.lat, deliveryLoc.lng, vLat, vLng);
+        const vLat = Number(vendor.lat) || locLat + index * 0.005;
+        const vLng = Number(vendor.lng) || locLng + index * 0.005;
+        const dKm = calculateHaversineDistanceKm(locLat, locLng, vLat, vLng);
         return {
           ...APPROVED_STORE,
           id: vendor.id,
@@ -315,9 +186,9 @@ function Home() {
         };
       });
     const baseStores = stores.map((s, idx) => {
-      const sLat = Number(s.lat) || deliveryLoc.lat + idx * 0.006;
-      const sLng = Number(s.lng) || deliveryLoc.lng + idx * 0.006;
-      const dKm = calculateHaversineDistanceKm(deliveryLoc.lat, deliveryLoc.lng, sLat, sLng);
+      const sLat = Number(s.lat) || locLat + idx * 0.006;
+      const sLng = Number(s.lng) || locLng + idx * 0.006;
+      const dKm = calculateHaversineDistanceKm(locLat, locLng, sLat, sLng);
       return {
         ...s,
         distanceKm: Number(dKm.toFixed(1)),
@@ -326,25 +197,47 @@ function Home() {
     });
     const allStores =
       liveVendorStores.length > 0 ? [...liveVendorStores, ...baseStores] : baseStores;
-    return allStores
-      .filter((s) => {
-        if (activeFilter && s.category !== activeFilter) return false;
-        if (
-          normalizedQuery &&
-          !s.name.toLowerCase().includes(normalizedQuery) &&
-          !s.tagline.toLowerCase().includes(normalizedQuery) &&
-          !liveProducts.some(
-            (product: any) =>
-              product.seller_id === s.id &&
-              (product.name?.toLowerCase().includes(normalizedQuery) ||
-                product.category?.toLowerCase().includes(normalizedQuery)),
-          )
-        ) {
-          return false;
-        }
-        return true;
-      })
-      .sort((a, b) => a.distanceKm - b.distanceKm);
+    const filteredList = allStores.filter((s) => {
+      if (activeFilter && s.category !== activeFilter) return false;
+      if (
+        normalizedQuery &&
+        !s.name.toLowerCase().includes(normalizedQuery) &&
+        !s.tagline.toLowerCase().includes(normalizedQuery) &&
+        !liveProducts.some(
+          (product: any) =>
+            product.seller_id === s.id &&
+            (product.name?.toLowerCase().includes(normalizedQuery) ||
+              product.category?.toLowerCase().includes(normalizedQuery)),
+        )
+      ) {
+        return false;
+      }
+      return true;
+    });
+
+    const mlRanked = rankShopsWithML(
+      filteredList.map((s) => ({
+        id: s.id,
+        name: s.name,
+        category: s.category,
+        lat: s.lat,
+        lng: s.lng,
+        rating: s.rating,
+        is_open: true,
+      })),
+      locLat,
+      locLng,
+      query
+    );
+
+    const mlScoreById = new Map(mlRanked.map((r) => [r.id, r.total_ml_score]));
+
+    return filteredList.sort((a, b) => {
+      const scoreA = mlScoreById.get(a.id) ?? 50;
+      const scoreB = mlScoreById.get(b.id) ?? 50;
+      if (scoreB !== scoreA) return scoreB - scoreA;
+      return a.distanceKm - b.distanceKm;
+    });
   }, [activeFilter, query, approvedProducts.data, approvedVendors.data, deliveryLoc]);
 
   const homepageProducts = useMemo<MerchandisingProduct[]>(() => {
@@ -475,6 +368,9 @@ function Home() {
 
       {/* 2. Swiggy Featured Merchant Ad Banner */}
       <SwiggyFeaturedBanner />
+
+      {/* RedBus-Style App Download & Offer Banner */}
+      <AppDownloadBanner />
 
       {/* Shops section — full-width split view matching reference design */}
       <div id="shops-section" className="scroll-mt-24 px-5 pt-6 md:px-8">

@@ -15,17 +15,32 @@ export function useLiveSearchResults(query: string) {
   }, [trimmedQuery]);
 
   const search = useQuery({
-    queryKey: ["marketplace-search", debouncedQuery, deliveryLocation.lat, deliveryLocation.lng],
+    queryKey: ["marketplace-search", debouncedQuery, deliveryLocation?.lat, deliveryLocation?.lng],
     staleTime: 1000 * 60 * 5,
     gcTime: 1000 * 60 * 10,
     retry: 1,
     refetchOnWindowFocus: false,
     enabled: debouncedQuery.length > 0,
     queryFn: async () => {
+      // 1. Try ML Search RPC first
+      const { data: mlData, error: mlError } = await (supabase as any).rpc("search_marketplace_catalog_ml", {
+        p_query: debouncedQuery,
+        p_lat: deliveryLocation?.lat ?? null,
+        p_lng: deliveryLocation?.lng ?? null,
+        p_limit: 24,
+        p_offset: 0,
+        p_scope: "all",
+      });
+
+      if (!mlError && mlData && mlData.length > 0) {
+        return mlData as any[];
+      }
+
+      // 2. Fallback to basic search RPC
       const { data, error } = await (supabase as any).rpc("search_marketplace_catalog", {
         p_query: debouncedQuery,
-        p_lat: deliveryLocation.lat ?? null,
-        p_lng: deliveryLocation.lng ?? null,
+        p_lat: deliveryLocation?.lat ?? null,
+        p_lng: deliveryLocation?.lng ?? null,
         p_limit: 24,
         p_offset: 0,
         p_scope: "all",
@@ -64,6 +79,8 @@ export function useLiveSearchResults(query: string) {
     categoryName: row.category_name ?? undefined,
     metadata: row.metadata ?? undefined,
     matchScore: Number(row.match_score ?? 0),
+    mlScore: row.ml_score != null ? Number(row.ml_score) : undefined,
+    explainabilityTags: Array.isArray(row.explainability_tags) ? row.explainability_tags : undefined,
   }));
 
   const fallbackResults = search.isError ? getInstantSearchResults(trimmedQuery) : [];

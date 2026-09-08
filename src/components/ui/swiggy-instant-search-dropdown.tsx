@@ -48,7 +48,16 @@ export function SwiggyInstantSearchDropdown({
 
   const handleResultClick = (item: SearchResultItem) => {
     if (onSelectResult) onSelectResult();
-    void navigate({ to: item.url as any });
+    const targetUrl = item.url || "";
+    if (targetUrl.startsWith("/store/")) {
+      const storeId = item.storeId || targetUrl.replace("/store/", "");
+      void navigate({ to: "/store/$storeId", params: { storeId }, search: { sq: query, category: undefined } });
+    } else if (targetUrl.startsWith("/product/")) {
+      const productId = item.id.replace(/^prod-/, "") || targetUrl.replace("/product/", "");
+      void navigate({ to: "/product/$productId", params: { productId }, search: { sq: query } });
+    } else {
+      void navigate({ to: item.url as any });
+    }
   };
 
   if (!query.trim()) {

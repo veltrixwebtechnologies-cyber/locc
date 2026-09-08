@@ -24,7 +24,7 @@ import { Fragment, type ReactNode, useEffect, useState, useRef } from "react";
 import { useWishlist, useWishlistProducts } from "@/lib/merchandising";
 import { AnimatePresence, m } from "motion/react";
 import { SwiggyInstantSearchDropdown } from "@/components/ui/swiggy-instant-search-dropdown";
-import { useDeliveryLocation, initAutoGPSLocation, hasUserChosenLocation } from "@/lib/location-store";
+import { useDeliveryLocation, initAutoGPSLocation, hasUserChosenLocation, useGPSStatus, detectCurrentGPSLocation } from "@/lib/location-store";
 import { LocationModal } from "@/components/ui/location-modal";
 
 export function AppShell({ children }: { children: ReactNode }) {
@@ -35,14 +35,18 @@ export function AppShell({ children }: { children: ReactNode }) {
   const wishlist = useWishlist();
   const wishlistProducts = useWishlistProducts();
   const [deliveryLocation] = useDeliveryLocation();
+  const gpsState = useGPSStatus();
   const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [headerQuery, setHeaderQuery] = useState("");
   const [searchFocused, setSearchFocused] = useState(false);
-  const { itemCount } = cartTotals(cart.lines);
+  const [mounted, setMounted] = useState(false);
+  const { itemCount, subtotal } = cartTotals(cart.lines);
   const isSignedIn = Boolean(auth.id);
+  const hasLocation = mounted && deliveryLocation !== null;
 
   useEffect(() => {
+    setMounted(true);
     initAutoGPSLocation();
     // Auto-open location picker on first visit (no explicit location chosen yet)
     if (!hasUserChosenLocation()) {
@@ -96,7 +100,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   ];
 
   return (
-    <div className="min-h-screen bg-background pb-[calc(4.5rem+env(safe-area-inset-bottom,0px))] md:pb-0 overflow-x-hidden">
+    <div className="min-h-screen bg-background pb-[calc(4.5rem+env(safe-area-inset-bottom,0px))] md:pb-0">
       {/* Mobile top nav header */}
       <header className="sticky top-0 z-50 flex items-center justify-between border-b hairline bg-background/95 px-3.5 py-2.5 backdrop-blur md:hidden">
         <Link
@@ -115,12 +119,36 @@ export function AppShell({ children }: { children: ReactNode }) {
         <div className="flex items-center gap-2">
           <button
             type="button"
-            onClick={() => setIsLocationModalOpen(true)}
-            className="flex items-center gap-1 rounded-full border border-purple-200/60 bg-purple-50/80 px-2 py-1 text-[10px] font-bold text-purple-800 hover:bg-purple-100 transition cursor-pointer"
+            onClick={() => {
+              if (gpsState.status === "denied") {
+                detectCurrentGPSLocation({ silent: false }).catch(() => {});
+              } else {
+                setIsLocationModalOpen(true);
+              }
+            }}
+            className={`flex items-center gap-1 rounded-full border px-2 py-1 text-[10px] font-bold transition cursor-pointer ${
+              gpsState.status === "detecting"
+                ? "border-amber-300/60 bg-amber-50/80 text-amber-800"
+                : gpsState.status === "denied" || gpsState.status === "unavailable"
+                  ? "border-red-200/60 bg-red-50/80 text-red-800 hover:bg-red-100"
+                  : "border-purple-200/60 bg-purple-50/80 text-purple-800 hover:bg-purple-100"
+            }`}
           >
-            <MapPin className="h-3 w-3 text-purple-600 shrink-0" />
+            {gpsState.status === "detecting" ? (
+              <span className="h-3 w-3 shrink-0 animate-spin rounded-full border-2 border-amber-500 border-t-transparent" />
+            ) : (
+              <MapPin className={`h-3 w-3 shrink-0 ${
+                gpsState.status === "denied" || gpsState.status === "unavailable" ? "text-red-500" : "text-purple-600"
+              }`} />
+            )}
             <span className="truncate max-w-[70px] sm:max-w-[100px]">
-              {hasUserChosenLocation() ? deliveryLocation.area : "Select location"}
+              {gpsState.status === "detecting"
+                ? "Detecting..."
+                : gpsState.status === "denied"
+                  ? "Enable GPS"
+                  : hasLocation
+                    ? deliveryLocation!.area
+                    : "Select location"}
             </span>
           </button>
 
@@ -167,39 +195,73 @@ export function AppShell({ children }: { children: ReactNode }) {
 
       {/* Desktop top nav */}
       <header
-        className={`sticky top-0 z-50 hidden border-b hairline bg-background/90 backdrop-blur transition-shadow duration-300 md:block ${
+        className={`sticky top-0 z-50 hidden border-b hairline bg-background/95 backdrop-blur transition-shadow duration-300 md:block ${
           scrolled ? "shadow-[0_8px_28px_-22px_rgba(42,27,74,0.55)]" : "shadow-none"
         }`}
       >
-        <div className="flex h-[72px] w-full items-center gap-4 lg:gap-5 px-4 md:px-6 lg:px-8">
+        {/* Full-width container with edge-to-edge padding */}
+        <div className="flex h-[72px] w-full items-center gap-4 lg:gap-6 px-4 md:px-6 lg:px-10 xl:px-12">
+          {/* Logo (Far-left content boundary) */}
           <Link
             to="/"
             search={{ category: undefined, q: undefined }}
-            className="flex shrink-0 items-center gap-2"
+            className="flex shrink-0 items-center gap-2.5"
           >
             <m.span
-              whileHover={{ scale: 1.07, rotate: -2 }}
-              whileTap={{ scale: 0.96 }}
-              className="grid h-8 w-8 place-items-center rounded-lg bg-primary text-primary-foreground font-display text-sm font-bold"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              className="grid h-9 w-9 place-items-center rounded-xl bg-primary text-primary-foreground font-display text-sm font-black shadow-xs"
             >
               LS
             </m.span>
-            <span className="font-display text-lg font-bold text-foreground">LocalShore</span>
+            <span className="font-display text-xl font-bold tracking-tight text-foreground">
+              LocalShore
+            </span>
           </Link>
+
+          {/* Vertical Divider (Equal top/bottom spacing) */}
+          <div className="h-6 w-px bg-border/80 shrink-0 mx-1" />
+
+          {/* Location Selector (Deliver to -> Location -> Chevron) */}
           <button
             type="button"
-            onClick={() => setIsLocationModalOpen(true)}
-            className="hidden min-w-0 shrink-0 items-center gap-2 border-l hairline pl-4 text-left xl:flex cursor-pointer hover:opacity-80 transition"
+            onClick={() => {
+              if (gpsState.status === "denied") {
+                detectCurrentGPSLocation({ silent: false }).catch(() => {});
+              } else {
+                setIsLocationModalOpen(true);
+              }
+            }}
+            className="flex shrink-0 items-center gap-2 text-left cursor-pointer hover:opacity-85 transition group min-w-0"
           >
-            <MapPin className="h-4 w-4 shrink-0 text-primary" />
-            <span>
-              <span className="block text-[10px] font-medium text-muted-foreground">
-                Deliver to
+            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-purple-50 text-primary">
+              {gpsState.status === "detecting" ? (
+                <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+              ) : (
+                <MapPin className={`h-4 w-4 ${
+                  gpsState.status === "denied" || gpsState.status === "unavailable" ? "text-red-500" : "text-primary fill-primary/10"
+                }`} />
+              )}
+            </div>
+
+            <div className="flex flex-col min-w-0">
+              <span className="text-[10px] font-medium text-muted-foreground leading-none mb-0.5">
+                {gpsState.status === "detecting"
+                  ? "Detecting location..."
+                  : gpsState.status === "denied"
+                    ? "Location unavailable"
+                    : "Deliver to"}
               </span>
-              <span className="flex items-center gap-1 text-xs font-bold text-foreground">
-                {hasUserChosenLocation() ? deliveryLocation.area : "Select location"}
+              <span className="flex items-center gap-1 text-xs font-bold text-foreground leading-none truncate">
+                {gpsState.status === "detecting"
+                  ? "Please wait..."
+                  : gpsState.status === "denied"
+                    ? "Enable location"
+                    : hasLocation
+                      ? deliveryLocation!.area || deliveryLocation!.label.split(",")[0]
+                      : "Avarampalayam"}
                 <svg
-                  className="h-3 w-3 text-muted-foreground"
+                  className="h-3.5 w-3.5 shrink-0 text-muted-foreground group-hover:text-primary transition-colors"
                   viewBox="0 0 24 24"
                   fill="none"
                   stroke="currentColor"
@@ -208,12 +270,14 @@ export function AppShell({ children }: { children: ReactNode }) {
                   <path d="M6 9l6 6 6-6" />
                 </svg>
               </span>
-            </span>
+            </div>
           </button>
+
+          {/* Main Search Bar */}
           <m.form
-            animate={{ scale: searchFocused ? 1.015 : 1 }}
+            animate={{ scale: searchFocused ? 1.01 : 1 }}
             transition={{ type: "spring", stiffness: 420, damping: 34 }}
-            className="relative flex min-w-[180px] flex-1 items-center gap-2 rounded-lg border hairline bg-muted/70 px-3 py-2.5 transition-colors focus-within:border-primary/40 focus-within:bg-background"
+            className="relative flex min-w-[200px] flex-1 items-center gap-2.5 rounded-full border hairline bg-slate-50/90 px-4 py-2.5 transition-colors focus-within:border-primary/50 focus-within:bg-background focus-within:ring-2 focus-within:ring-primary/10 shadow-2xs"
             onSubmit={(event) => {
               event.preventDefault();
               setSearchFocused(false);
@@ -247,7 +311,9 @@ export function AppShell({ children }: { children: ReactNode }) {
               )}
             </AnimatePresence>
           </m.form>
-          <nav className="flex shrink-0 items-center gap-1">
+
+          {/* Navigation Links */}
+          <nav className="flex shrink-0 items-center gap-1 lg:gap-1.5">
             {tabs.map((t) => {
               const active = t.match(pathname);
               const Icon = t.icon;
@@ -266,7 +332,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                     data-cart-target={t.to === "/cart" ? "" : undefined}
                     className={`relative inline-flex items-center gap-1.5 lg:gap-2 rounded-lg px-2.5 lg:px-3 py-2 text-xs lg:text-sm font-medium transition-colors ${
                       active
-                        ? "bg-primary text-primary-foreground"
+                        ? "bg-primary text-primary-foreground font-bold shadow-xs"
                         : "text-foreground hover:bg-muted"
                     }`}
                   >
@@ -288,7 +354,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                           initial={{ scale: 0.5, opacity: 0 }}
                           animate={{ scale: 1, opacity: 1 }}
                           exit={{ scale: 0.5, opacity: 0 }}
-                          className="ml-0.5 min-w-[18px] rounded-full bg-[var(--marigold)] px-1.5 text-center font-mono text-[10px] leading-[18px] text-ink"
+                          className="ml-0.5 min-w-[18px] rounded-full bg-[var(--marigold)] px-1.5 text-center font-mono text-[10px] leading-[18px] text-ink font-bold"
                         >
                           {badgeCount}
                         </m.span>
@@ -312,7 +378,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               <Link
                 to="/auth"
                 search={{ redirect: pathname }}
-                className="ml-1 lg:ml-2 inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-xs lg:text-sm font-semibold text-primary-foreground hover:bg-[#700b6e]"
+                className="ml-1 lg:ml-2 inline-flex items-center gap-1.5 rounded-lg bg-primary px-3.5 py-2 text-xs lg:text-sm font-bold text-primary-foreground hover:bg-[#700b6e] transition-colors"
               >
                 <LogIn className="h-4 w-4" /> Sign in
               </Link>
@@ -320,68 +386,16 @@ export function AppShell({ children }: { children: ReactNode }) {
           </nav>
         </div>
       </header>
-
+      {/* Category Mega Menu */}
       <div className="relative z-40 hidden md:block overflow-visible">
         <CategoryMegaMenu />
       </div>
 
-      <div className="hidden border-b border-purple-200/70 bg-purple-50/50 md:block">
-        <div className="flex h-9 w-full items-center justify-between gap-6 px-4 md:px-6 text-[11px] text-foreground/75 lg:px-8">
-          <div className="flex items-center gap-4">
-            <button
-              type="button"
-              onClick={() => setIsLocationModalOpen(true)}
-              className="flex items-center gap-1.5 hover:text-primary transition cursor-pointer text-left"
-            >
-              <MapPin className="h-3.5 w-3.5 text-primary" />
-              <span>
-                Delivering to{" "}
-                <strong className="font-semibold text-foreground underline decoration-dotted">
-                  {hasUserChosenLocation()
-                    ? `${deliveryLocation.area}, ${deliveryLocation.city}`
-                    : "Select your location"}
-                </strong>
-                <span className="ml-1.5 text-[10px] text-purple-600 font-bold">
-                  ({hasUserChosenLocation() ? "Change Location" : "Set Location"})
-                </span>
-              </span>
-            </button>
-          </div>
-          <div className="flex items-center gap-4 lg:gap-5">
-            <Link
-              to="/best-shops"
-              className="inline-flex items-center gap-1.5 hover:text-primary font-semibold text-amber-800"
-            >
-              🏆 Best Shops
-            </Link>
-            <Link
-              to="/brands"
-              className="inline-flex items-center gap-1.5 hover:text-primary font-semibold text-purple-800"
-            >
-              🛍️ Brands
-            </Link>
-            <Link
-              to="/explore"
-              className="inline-flex items-center gap-1.5 hover:text-primary font-semibold text-teal-800"
-            >
-              ✈️ Explore
-            </Link>
-            <Link
-              to="/customer-care"
-              className="inline-flex items-center gap-1.5 hover:text-primary"
-            >
-              <Headphones className="h-3.5 w-3.5 text-primary" />
-              Customer Care
-            </Link>
-          </div>
-        </div>
-      </div>
-
-      <div className="sticky top-0 z-30 md:top-16">
+      <div className="md:hidden">
         <MobileCategoryStrip />
       </div>
 
-      <main className="mx-auto w-full max-w-7xl px-3 sm:px-4 md:px-6 lg:px-8">{children}</main>
+      <main className="mx-auto w-full max-w-[1600px] xl:max-w-[1800px] px-3 sm:px-4 md:px-6 lg:px-10 xl:px-12">{children}</main>
 
       <ShopperFooter />
 
@@ -452,30 +466,82 @@ export function AppShell({ children }: { children: ReactNode }) {
           })}
         </div>
       </nav>
+      {/* Floating Bottom Cart Bar (Optimized for Mobile & Desktop) */}
+      <AnimatePresence>
+        {itemCount > 0 &&
+          !pathname.startsWith("/cart") &&
+          !pathname.startsWith("/checkout") && (
+            <m.div
+              initial={{ y: 80, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: 80, opacity: 0 }}
+              transition={{ type: "spring", stiffness: 380, damping: 26 }}
+              className="fixed bottom-[calc(4rem+env(safe-area-inset-bottom,0px))] md:bottom-6 left-3 right-3 sm:left-4 sm:right-4 md:left-auto md:right-8 z-[95] md:w-88 pointer-events-auto"
+            >
+              <div className="flex items-center justify-between gap-3 rounded-2xl bg-gradient-to-r from-[#4c1074] via-[#6b1fa0] to-[#125c52] p-3 text-white shadow-[0_12px_36px_rgba(0,0,0,0.4)] ring-1 ring-white/20 backdrop-blur-xl">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="relative grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-white/20 text-white shadow-inner">
+                    <ShoppingBag className="h-5 w-5" />
+                    <span className="absolute -right-1 -top-1 grid h-4 min-w-[16px] place-items-center rounded-full bg-[var(--marigold)] px-1 font-mono text-[9px] font-extrabold text-ink shadow-xs">
+                      {itemCount}
+                    </span>
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-xs font-bold text-white leading-tight truncate">
+                      {itemCount} {itemCount === 1 ? "item" : "items"}{" "}
+                      {cart.storeName ? `· ${cart.storeName}` : ""}
+                    </p>
+                    <p className="font-mono text-sm font-extrabold text-[#ffe566] tracking-wide">
+                      ₹{subtotal}
+                    </p>
+                  </div>
+                </div>
+
+                <Link
+                  to="/cart"
+                  className="inline-flex shrink-0 items-center gap-1.5 rounded-xl bg-[var(--marigold)] px-4 py-2.5 text-xs font-extrabold text-ink shadow-md hover:brightness-105 active:scale-95 transition-all"
+                >
+                  View Cart
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
+              </div>
+            </m.div>
+          )}
+      </AnimatePresence>
+
       <LocationModal isOpen={isLocationModalOpen} onClose={() => setIsLocationModalOpen(false)} />
     </div>
   );
 }
 
-const footerLinks = [
-  [
-    ["Rewards & Loyalty", "/rewards"],
-    ["Gift Cards", "/gift-cards"],
-    ["LocalShore News", "/news"],
-    ["Cities We Deliver", "/cities"],
-  ],
-  [
-    ["Brand Marketplace", "/brands"],
-    ["Best Shops & Sellers", "/best-shops"],
-    ["International Travel", "/explore"],
-    ["Sell on LocalShore", "/help?topic=sell"],
-  ],
-  [
-    ["Customer Care Center", "/customer-care"],
-    ["Help Center", "/help"],
-    ["Privacy Policy", "/help?topic=privacy"],
-    ["Terms of Service", "/help?topic=terms"],
-  ],
+const footerColumns = [
+  {
+    title: "Life at LocalShoree",
+    links: [
+      ["Explore With LocalShoree", "/explore"],
+      ["LocalShoree News", "/news"],
+      ["Neighborhood Stories", "/news"],
+      ["Snackables & Quick Picks", "/best-shops"],
+    ],
+  },
+  {
+    title: "Partner With Us",
+    links: [
+      ["Sell on LocalShore", "/help?topic=sell"],
+      ["Brand Marketplace", "/brands"],
+      ["Best Shops & Sellers", "/best-shops"],
+      ["Cities We Deliver", "/cities"],
+    ],
+  },
+  {
+    title: "Help & Support",
+    links: [
+      ["Customer Care Center", "/customer-care"],
+      ["Rewards & Loyalty", "/rewards"],
+      ["Gift Cards", "/gift-cards"],
+      ["Privacy & Terms", "/help?topic=privacy"],
+    ],
+  },
 ];
 
 const footerCategories = [
@@ -488,31 +554,38 @@ function ShopperFooter() {
   return (
     <footer className="mt-16 border-t border-border bg-background px-5 pb-7 pt-9 md:px-8 lg:px-10">
       <div className="mx-auto max-w-7xl">
-        <div className="grid gap-8 md:grid-cols-[1fr_2fr]">
-          <section>
+        <div className="grid gap-8 md:grid-cols-[1fr_2.2fr]">
+          <section className="space-y-3">
             <div className="flex items-center gap-2">
-              <span className="grid h-9 w-9 place-items-center rounded-xl bg-marigold font-display font-bold text-marigold-foreground">
+              <span className="grid h-9 w-9 place-items-center rounded-xl bg-purple-900 font-display font-black text-white text-xs shadow-xs">
                 LS
               </span>
-              <span className="font-display text-xl font-bold text-foreground">Local Shore</span>
+              <span className="font-display text-xl font-extrabold text-slate-900 tracking-tight">
+                Local Shore
+              </span>
             </div>
-            <p className="mt-3 max-w-sm text-sm leading-6 text-muted-foreground">
-              Everyday essentials from trusted neighborhood sellers.
+            <p className="max-w-sm text-xs leading-relaxed text-slate-600 font-medium">
+              Everyday essentials & specialty products from verified neighborhood local sellers.
             </p>
           </section>
           <section>
-            <div className="grid grid-cols-1 gap-7 text-sm text-muted-foreground sm:grid-cols-3">
-              {footerLinks.map((column, columnIndex) => (
-                <div key={columnIndex} className="space-y-3">
-                  {column.map(([label, href]) => (
-                    <a
-                      key={label}
-                      href={href}
-                      className="block transition-colors hover:text-primary"
-                    >
-                      {label}
-                    </a>
-                  ))}
+            <div className="grid grid-cols-1 gap-7 text-sm text-slate-600 sm:grid-cols-3">
+              {footerColumns.map((col) => (
+                <div key={col.title} className="space-y-2.5">
+                  <h4 className="font-display text-sm font-extrabold text-slate-900 tracking-tight">
+                    {col.title}
+                  </h4>
+                  <div className="space-y-1.5">
+                    {col.links.map(([label, href]) => (
+                      <Link
+                        key={label}
+                        to={href as any}
+                        className="block text-xs font-semibold text-slate-600 transition-colors hover:text-purple-900"
+                      >
+                        {label}
+                      </Link>
+                    ))}
+                  </div>
                 </div>
               ))}
             </div>

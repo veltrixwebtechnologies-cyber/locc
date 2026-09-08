@@ -9,38 +9,9 @@ import {
 } from "@/lib/mock-data";
 import { calculateHaversineDistanceKm } from "./providers";
 import type { MapMarkerItem, MapFilterOptions, MapLocation } from "./types";
-import { isStoreInCategory } from "@/lib/shop-categories";
+import { isStoreInCategory, toStoreCategory } from "@/lib/shop-categories";
 
-export function toStoreCategory(value?: string | null): StoreCategory {
-  const category = (value ?? "").toLowerCase();
-  if (category.includes("palamuthir") || category.includes("fruit") || category.includes("veggie"))
-    return "palamuthir";
-  if (category.includes("flour") || category.includes("mill") || category.includes("maavu"))
-    return "flour_mill";
-  if (category.includes("meat") || category.includes("fish") || category.includes("chicken"))
-    return "meat_fish";
-  if (
-    category.includes("kammal") ||
-    category.includes("chain") ||
-    category.includes("accessory") ||
-    category.includes("earring")
-  )
-    return "fashion_accessories";
-  if (category.includes("boutique") || category.includes("silk") || category.includes("saree"))
-    return "boutiques";
-  if (category.includes("showroom") || category.includes("appliance")) return "showrooms";
-  if (category.includes("fast_fashion") || category.includes("brand")) return "fast_fashion";
-  if (category.includes("individual_fashion") || category.includes("cloth"))
-    return "individual_fashion";
-  if (category.includes("kitchen") || category.includes("vessel") || category.includes("cooker"))
-    return "kitchen_appliances";
-  if (category.includes("decor") || category.includes("interior")) return "home_decor";
-  if (category.includes("pharm") || category.includes("health") || category.includes("med"))
-    return "pharmacy";
-  if (category.includes("station") || category.includes("book")) return "stationery";
-  if (category.includes("bake") || category.includes("cake")) return "bakery";
-  return "grocery";
-}
+export { toStoreCategory };
 
 // Helper to generate realistic timestamp text for price freshness
 export function getPriceFreshnessText(index: number): string {
@@ -64,7 +35,7 @@ export function getPriceFreshnessText(index: number): string {
  */
 // Fallback price calculator per store category if explicit prices are missing or 0
 export function getCategoryFallbackPrice(cat: StoreCategory, index: number): number {
-  const defaults: Record<StoreCategory, number[]> = {
+  const defaults: Partial<Record<StoreCategory, number[]>> = {
     flour_mill: [45, 58, 75, 85],
     palamuthir: [50, 120, 180, 190],
     meat_fish: [260, 440, 580, 390],
