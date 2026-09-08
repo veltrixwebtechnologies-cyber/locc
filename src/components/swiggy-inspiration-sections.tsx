@@ -111,12 +111,21 @@ export function SwiggyTopDealsStrip() {
     },
   ];
 
+  // Slow continuous motion hook (0.55 speed, pause on hover/touch)
+  const { scrollRef, pauseHandlers } = useSlowAutoScroll<HTMLDivElement>(0.55);
+
+  // Triple items array for infinite seamless looping
+  const tripleDeals = useMemo(() => [...deals, ...deals, ...deals], [deals]);
+
   return (
-    <div className="w-full overflow-hidden py-3">
-      <div className="flex gap-3 overflow-x-auto px-5 md:px-8 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
-        {deals.map((deal) => (
+    <div className="w-full overflow-hidden py-3" {...pauseHandlers}>
+      <div
+        ref={scrollRef}
+        className="flex gap-3 overflow-x-auto px-5 md:px-8 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
+      >
+        {tripleDeals.map((deal, index) => (
           <Link
-            key={deal.id}
+            key={`${deal.id}-${index}`}
             to="/"
             search={{ category: deal.category, q: undefined }}
             className="relative shrink-0 w-[240px] sm:w-[280px] h-[100px] sm:h-[110px] rounded-2xl overflow-hidden shadow-xs transition-transform duration-300 hover:scale-[1.02] cursor-pointer group"
