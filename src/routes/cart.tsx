@@ -496,11 +496,11 @@ function CartPage() {
               </div>
 
               {/* Savings callout */}
-              {deliveryFee > 0 && (
+              {effectiveDelivery > 0 && (
                 <div className="flex items-center justify-between gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-3">
                   <div>
                     <p className="text-xs font-bold text-amber-800">
-                      Yay! You're saving ₹{Math.round(deliveryFee * 0.3)} on delivery 🎉
+                      Yay! You're saving ₹{Math.round(effectiveDelivery * 0.3)} on delivery 🎉
                     </p>
                     <p className="text-[11px] text-amber-600">
                       Add more items to get FREE delivery!
