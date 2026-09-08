@@ -22,31 +22,37 @@ export function useLiveSearchResults(query: string) {
     refetchOnWindowFocus: false,
     enabled: debouncedQuery.length > 0,
     queryFn: async () => {
-      // 1. Try ML Search RPC first
-      const { data: mlData, error: mlError } = await (supabase as any).rpc("search_marketplace_catalog_ml", {
-        p_query: debouncedQuery,
-        p_lat: deliveryLocation?.lat ?? null,
-        p_lng: deliveryLocation?.lng ?? null,
-        p_limit: 24,
-        p_offset: 0,
-        p_scope: "all",
-      });
+      try {
+        // 1. Try ML Search RPC first
+        const { data: mlData, error: mlError } = await (supabase as any).rpc("search_marketplace_catalog_ml", {
+          p_query: debouncedQuery,
+          p_lat: deliveryLocation?.lat ?? null,
+          p_lng: deliveryLocation?.lng ?? null,
+          p_limit: 24,
+          p_offset: 0,
+          p_scope: "all",
+        });
 
-      if (!mlError && mlData && mlData.length > 0) {
-        return mlData as any[];
+        if (!mlError && mlData && mlData.length > 0) {
+          return mlData as any[];
+        }
+
+        // 2. Fallback to basic search RPC
+        const { data, error } = await (supabase as any).rpc("search_marketplace_catalog", {
+          p_query: debouncedQuery,
+          p_lat: deliveryLocation?.lat ?? null,
+          p_lng: deliveryLocation?.lng ?? null,
+          p_limit: 24,
+          p_offset: 0,
+          p_scope: "all",
+        });
+        if (!error && data && data.length > 0) {
+          return (data ?? []) as any[];
+        }
+        return [];
+      } catch {
+        return [];
       }
-
-      // 2. Fallback to basic search RPC
-      const { data, error } = await (supabase as any).rpc("search_marketplace_catalog", {
-        p_query: debouncedQuery,
-        p_lat: deliveryLocation?.lat ?? null,
-        p_lng: deliveryLocation?.lng ?? null,
-        p_limit: 24,
-        p_offset: 0,
-        p_scope: "all",
-      });
-      if (error) throw error;
-      return (data ?? []) as any[];
     },
   });
 
