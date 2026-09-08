@@ -12,6 +12,7 @@ import {
   Clock3,
   ShieldCheck,
   Headphones,
+  Gift,
 } from "lucide-react";
 import { useCart, cartTotals } from "@/lib/cart-store";
 import { useAuth } from "@/lib/auth-store";
@@ -42,6 +43,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const [searchFocused, setSearchFocused] = useState(false);
   const [mounted, setMounted] = useState(false);
   const { itemCount, subtotal } = cartTotals(cart.lines);
+  const savedCount = wishlistProducts.data?.length ?? wishlist.data?.length ?? 0;
   const isSignedIn = Boolean(auth.id);
   const hasLocation = mounted && deliveryLocation !== null;
 
@@ -81,8 +83,20 @@ export function AppShell({ children }: { children: ReactNode }) {
     {
       to: "/explore",
       label: "Explore",
-      icon: Heart,
+      icon: Search,
       match: (p) => p.startsWith("/explore"),
+    },
+    {
+      to: "/cart",
+      label: "Cart",
+      icon: ShoppingBag,
+      match: (p) => p.startsWith("/cart"),
+    },
+    {
+      to: "/wishlist",
+      label: "Saved",
+      icon: Heart,
+      match: (p) => p.startsWith("/wishlist"),
     },
     {
       to: "/orders",
@@ -93,7 +107,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     {
       to: "/rewards",
       label: "Rewards",
-      icon: ShoppingBag,
+      icon: Gift,
       match: (p) => p.startsWith("/rewards"),
     },
     { to: "/profile", label: "Profile", icon: User, match: (p) => p.startsWith("/profile") },
@@ -149,6 +163,19 @@ export function AppShell({ children }: { children: ReactNode }) {
             aria-label="Search products"
           >
             <Search className="h-4 w-4" />
+          </Link>
+
+          <Link
+            to="/wishlist"
+            className="relative grid h-8 w-8 place-items-center rounded-lg border hairline bg-muted/60 text-foreground hover:bg-muted"
+            aria-label="View Saved Items"
+          >
+            <Heart className="h-4 w-4" />
+            {savedCount > 0 && (
+              <span className="absolute -right-1 -top-1 grid h-4 min-w-[16px] place-items-center rounded-full bg-rose-500 px-1 font-mono text-[9px] font-bold text-white">
+                {savedCount}
+              </span>
+            )}
           </Link>
 
           <Link
