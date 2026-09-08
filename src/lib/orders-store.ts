@@ -6,6 +6,35 @@ import { isValidCoordinate, normalizeCoordinate, haversineDistanceKm } from "@/l
 const isUuid = (value: string) =>
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
 const demoOrdersKey = (userId: string) => `localshore.demo-orders.${userId}.v1`;
+const ORDERS_CACHE_KEY = "localshore.orders_cache.v2";
+
+let memoryOrdersCache: Order[] | null = null;
+
+function getInitialCachedOrders(): Order[] {
+  if (memoryOrdersCache) return memoryOrdersCache;
+  if (typeof window !== "undefined") {
+    try {
+      const raw = localStorage.getItem(ORDERS_CACHE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) {
+          memoryOrdersCache = parsed;
+          return parsed;
+        }
+      }
+    } catch {}
+  }
+  return [];
+}
+
+function updateOrdersCache(rows: Order[]) {
+  memoryOrdersCache = rows;
+  if (typeof window !== "undefined") {
+    try {
+      localStorage.setItem(ORDERS_CACHE_KEY, JSON.stringify(rows));
+    } catch {}
+  }
+}
 
 function loadDemoOrders(userId: string): Order[] {
   if (typeof window === "undefined") return [];
@@ -20,7 +49,9 @@ function loadDemoOrders(userId: string): Order[] {
 function saveDemoOrder(userId: string, order: Order) {
   if (typeof window === "undefined") return;
   const existing = loadDemoOrders(userId);
-  window.localStorage.setItem(demoOrdersKey(userId), JSON.stringify([order, ...existing]));
+  const updated = [order, ...existing];
+  window.localStorage.setItem(demoOrdersKey(userId), JSON.stringify(updated));
+  updateOrdersCache([order, ...getInitialCachedOrders()]);
 }
 
 export type OrderStatus =
@@ -232,7 +263,10 @@ function fromRow(row: any): Order {
 async function loadOrders(): Promise<Order[]> {
   const { data: session } = await supabase.auth.getSession();
   const userId = session.session?.user.id;
-  if (!userId) return [];
+  if (!userId) {
+    const cached = getInitialCachedOrders();
+    return cached.length > 0 ? cached : [];
+  }
   const demoOrders = loadDemoOrders(userId);
 
   try {
@@ -244,10 +278,13 @@ async function loadOrders(): Promise<Order[]> {
 
     if (error) {
       console.warn("[orders] orders query notice:", error.message);
-      return demoOrders;
+      const res = [...demoOrders];
+      updateOrdersCache(res);
+      return res;
     }
 
     if (!ordersData || ordersData.length === 0) {
+      updateOrdersCache(demoOrders);
       return demoOrders;
     }
 
@@ -276,10 +313,13 @@ async function loadOrders(): Promise<Order[]> {
       return fromRow(rowWithAssignment);
     });
 
-    return [...demoOrders, ...processedOrders];
+    const res = [...demoOrders, ...processedOrders];
+    updateOrdersCache(res);
+    return res;
   } catch (error) {
     console.error("[orders] loadOrders failed", error);
-    return demoOrders;
+    const cached = getInitialCachedOrders();
+    return cached.length > 0 ? cached : demoOrders;
   }
 }
 
@@ -371,7 +411,7 @@ export const ordersStore = {
       throw new Error(orderErrorMessage(error));
     }
     if (!created?.id) throw new Error("The order was not created. Try again.");
-    return {
+    const newOrder: Order = {
       ...order,
       id: created.id,
       code: created.order_number,
@@ -383,7 +423,11 @@ export const ordersStore = {
       total: Number(created.total),
       couponCode: created.coupon_code ?? undefined,
       discountAmount: Number(created.discount_amount ?? 0),
+      etaMin: 25,
+      distanceKm: 2.4,
     };
+    updateOrdersCache([newOrder, ...getInitialCachedOrders()]);
+    return newOrder;
   },
 };
 
@@ -440,6 +484,15 @@ export async function cancelOrder(orderId: string, reason: string): Promise<bool
     }
   }
 
+  // Also update cached order if present
+  const currentCached = getInitialCachedOrders();
+  const cachedIdx = currentCached.findIndex((o) => o.id === orderId || o.code === orderId);
+  if (cachedIdx !== -1) {
+    currentCached[cachedIdx].status = "cancelled";
+    currentCached[cachedIdx].cancellationReason = reason;
+    updateOrdersCache([...currentCached]);
+  }
+
   return true;
 }
 
@@ -472,8 +525,9 @@ function playCustomerOrderChimeSound() {
 }
 
 export function useOrdersState() {
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [orders, setOrders] = useState<Order[]>(() => getInitialCachedOrders());
+  const [isLoading, setIsLoading] = useState<boolean>(() => getInitialCachedOrders().length === 0);
+
   useEffect(() => {
     let active = true;
     const refresh = () =>
@@ -488,6 +542,7 @@ export function useOrdersState() {
           console.error("[orders] refresh failed", error);
           if (active) setIsLoading(false);
         });
+
     refresh();
     const channel = supabase
       .channel("shoreline-orders")
@@ -511,6 +566,7 @@ export function useOrdersState() {
         refresh,
       )
       .subscribe();
+
     const refreshWhenVisible = () => {
       if (document.visibilityState === "visible") refresh();
     };
@@ -525,5 +581,6 @@ export function useOrdersState() {
       void supabase.removeChannel(channel);
     };
   }, []);
+
   return { orders, isLoading };
 }
