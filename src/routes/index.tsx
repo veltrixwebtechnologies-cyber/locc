@@ -157,7 +157,7 @@ function Home() {
   }, [search.category, search.q]);
 
   const activeFilter = useMemo(() => {
-    if (!cat || cat === "all") return undefined;
+    if (!cat || cat === "all" || cat === "all-shops") return undefined;
     return cat;
   }, [cat]);
 
@@ -399,21 +399,38 @@ function Home() {
       {/* Swiggy-style quick category icon strip - Placed right after Map View */}
       <SwiggyQuickCategories />
 
+      <SwiggyShopRow
+        stores={filtered}
+        activeCategory={activeFilter || "all"}
+        onSelectCategory={(catId) => {
+          startTransition(() => {
+            navigate({
+              search: (prev) => ({
+                category: catId === "all" || catId === "all-shops" ? undefined : catId,
+                q: prev.q,
+              }),
+              resetScroll: false,
+            });
+            scrollToShops();
+          });
+        }}
+      />
+
       <div className="px-5 md:px-8">
         {/* Active category filter bar */}
-        {((cat && cat !== "all") || query) && (
+        {((cat && cat !== "all" && cat !== "all-shops") || query) && (
           <div className="mx-5 mb-4 flex items-center justify-between rounded-xl border border-primary/20 bg-primary/5 px-4 py-2.5 md:mx-8">
             <div className="flex items-center gap-2 text-xs font-semibold text-foreground md:text-sm">
               <span className="h-2 w-2 rounded-full bg-primary" />
               <span>
-                {cat && cat !== "all" ? (
+                {cat && cat !== "all" && cat !== "all-shops" ? (
                   <>
                     Filtering by: <strong className="text-primary">{displayCategoryName}</strong>
                   </>
                 ) : null}
                 {query ? (
                   <>
-                    {cat && cat !== "all" ? " · " : ""}Matching:{" "}
+                    {cat && cat !== "all" && cat !== "all-shops" ? " · " : ""}Matching:{" "}
                     <strong className="text-primary">"{query}"</strong>
                   </>
                 ) : null}
@@ -437,7 +454,7 @@ function Home() {
             startTransition(() => {
               navigate({
                 search: (prev) => ({
-                  category: catId === "all" ? undefined : catId,
+                  category: catId === "all" || catId === "all-shops" ? undefined : catId,
                   q: prev.q,
                 }),
                 resetScroll: false,

@@ -336,8 +336,10 @@ export function LocalShoreMapExperience({
                 const priceMax = item.maxPrice ?? item.minPrice;
 
                 return (
-                  <div
+                  <Link
                     key={item.id}
+                    to="/store/$storeId"
+                    params={{ storeId: item.shopId }}
                     onMouseEnter={() => setHoveredMarkerId(item.id)}
                     onMouseLeave={() => setHoveredMarkerId(null)}
                     onClick={() => {
@@ -367,6 +369,7 @@ export function LocalShoreMapExperience({
                       <button
                         type="button"
                         onClick={(e) => {
+                          e.preventDefault();
                           e.stopPropagation();
                           toast.success(`Saved ${item.shopName} to Wishlist`);
                         }}
@@ -423,18 +426,13 @@ export function LocalShoreMapExperience({
                           </span>
                           <span className="text-[10px] text-slate-400 ml-1">total</span>
                         </div>
-                        <Link
-                          to="/store/$storeId"
-                          params={{ storeId: item.shopId }}
-                          onClick={(e) => e.stopPropagation()}
-                          className="inline-flex items-center gap-1 rounded-full bg-purple-50 px-3.5 py-1.5 text-[11px] font-bold text-[#981495] hover:bg-[#981495] hover:text-white transition-all shadow-2xs"
-                        >
+                        <span className="inline-flex items-center gap-1 rounded-full bg-purple-50 px-3.5 py-1.5 text-[11px] font-bold text-[#981495] group-hover:bg-[#981495] group-hover:text-white transition-all shadow-2xs">
                           View Shop
                           <ArrowRight className="h-3.5 w-3.5" />
-                        </Link>
+                        </span>
                       </div>
                     </div>
-                  </div>
+                  </Link>
                 );
               })}
             </div>

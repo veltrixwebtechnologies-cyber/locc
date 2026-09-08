@@ -652,7 +652,7 @@ function CategoryCircle({
     <div className="shrink-0">
       <Link
         to="/"
-        search={{ category: cat.id, q: undefined }}
+        search={{ category: cat.id === "all" || cat.id === "all-shops" ? undefined : cat.id, q: undefined }}
         resetScroll={false}
         onClick={scrollToShops}
         className="group flex flex-col items-center gap-1.5"
