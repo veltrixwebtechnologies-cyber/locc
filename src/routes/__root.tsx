@@ -15,6 +15,7 @@ import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { pageVariants } from "@/components/motion/presets";
 import { Toaster } from "@/components/ui/sonner";
+import { PageLoadingScreen } from "@/components/ui/lottie-loading";
 
 function NotFoundComponent() {
   return (
@@ -70,6 +71,17 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   );
 }
 
+function PendingComponent() {
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-background px-4">
+      <PageLoadingScreen
+        message="Loading LocalShore..."
+        subtext="Sourcing from nearby neighborhood stores"
+      />
+    </div>
+  );
+}
+
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
   head: () => ({
     meta: [
@@ -111,6 +123,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
   }),
   shellComponent: RootShell,
   component: RootComponent,
+  pendingComponent: PendingComponent,
   notFoundComponent: NotFoundComponent,
   errorComponent: ErrorComponent,
 });

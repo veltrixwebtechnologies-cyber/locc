@@ -1,4 +1,4 @@
-import { useState, useMemo, startTransition } from "react";
+import { useState, useMemo, startTransition, useEffect } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import {
   Star,
@@ -6,7 +6,6 @@ import {
   Filter,
   ChevronDown,
   Clock,
-  Search,
   CheckCircle2,
   Tag,
   ShieldCheck,
@@ -15,20 +14,31 @@ import {
   Sparkles,
   ArrowRight,
   Store as StoreIcon,
+  Layers,
+  Package,
 } from "lucide-react";
 import type { Store } from "@/lib/mock-data";
 import { WishlistButton } from "@/components/wishlist-button";
 import { scrollToShops } from "@/lib/scroll-utils";
 import { getFallbackProductImage, resolveImageUrl } from "@/lib/image-utils";
 import { useDeliveryLocation } from "@/lib/location-store";
+import { SmartLottieLoader } from "@/components/ui/smart-lottie-loader";
 import {
   getCategoryByIdOrSlug,
   isStoreInCategory,
   ShopCategoryConfig,
 } from "@/lib/shop-categories";
 import { ShopCategoryNavBar } from "@/components/shop-category-nav-bar";
-
 import { calculateHaversineDistanceKm } from "@/lib/map-service/providers";
+import {
+  getSubcategoriesForCategory,
+  getProductTypesForSubcategory,
+  getActiveAttributeFilters,
+  filterStoreByState,
+  INITIAL_FILTER_STATE,
+  type ActiveFilterState,
+} from "@/lib/dynamic-filter-engine";
+import { DynamicFilterBar } from "@/components/dynamic-filter-bar";
 
 export function CategoryDiscoveryView({
   stores,
@@ -44,6 +54,11 @@ export function CategoryDiscoveryView({
   const locLat = deliveryLoc?.lat ?? 11.0285;
   const locLng = deliveryLoc?.lng ?? 76.9258;
 
+  // Active filter state
+  const [activeSubcategoryId, setActiveSubcategoryId] = useState<string>("all");
+  const [activeProductTypeId, setActiveProductTypeId] = useState<string>("all");
+  const [activeFilterState, setActiveFilterState] = useState<ActiveFilterState>(INITIAL_FILTER_STATE);
+
   const [selectedSort, setSelectedSort] = useState<"popular" | "rating" | "distance" | "fast">(
     "distance",
   );
@@ -58,12 +73,57 @@ export function CategoryDiscoveryView({
   const [requestDetails, setRequestDetails] = useState("");
   const [requestSubmitted, setRequestSubmitted] = useState(false);
 
+  // Shop discovery loading state
+  const [isDiscoveringShops, setIsDiscoveringShops] = useState(false);
+
   // Current category config
   const categoryConfig = useMemo(() => {
     return getCategoryByIdOrSlug(activeCategory);
   }, [activeCategory]);
 
   const CategoryIcon = categoryConfig.icon;
+
+  // Reset subcategory & product type when main category changes
+  useEffect(() => {
+    setActiveSubcategoryId("all");
+    setActiveProductTypeId("all");
+    setActiveFilterState(INITIAL_FILTER_STATE);
+  }, [activeCategory]);
+
+  useEffect(() => {
+    setIsDiscoveringShops(true);
+    const timer = setTimeout(() => {
+      setIsDiscoveringShops(false);
+    }, 350);
+    return () => clearTimeout(timer);
+  }, [
+    activeCategory,
+    activeSubcategoryId,
+    activeProductTypeId,
+    activeFilterState,
+    deliveryLoc?.area,
+    selectedSort,
+    filterOpenNow,
+    filterTopRated,
+  ]);
+
+  // Subcategories & Product types available
+  const subcategories = useMemo(() => {
+    return getSubcategoriesForCategory(categoryConfig.id);
+  }, [categoryConfig.id]);
+
+  const productTypes = useMemo(() => {
+    return getProductTypesForSubcategory(categoryConfig.id, activeSubcategoryId);
+  }, [categoryConfig.id, activeSubcategoryId]);
+
+  // Dynamic Attribute Filters available for current Category + Subcategory + ProductType
+  const dynamicAttributeFilters = useMemo(() => {
+    return getActiveAttributeFilters(
+      categoryConfig.id,
+      activeSubcategoryId,
+      activeProductTypeId
+    );
+  }, [categoryConfig.id, activeSubcategoryId, activeProductTypeId]);
 
   const handleCategorySelect = (category: ShopCategoryConfig) => {
     startTransition(() => {
@@ -74,11 +134,25 @@ export function CategoryDiscoveryView({
           search: (prev: Record<string, any>) => ({
             ...prev,
             category: category.id === "all" ? undefined : category.slug,
+            subcategory: undefined,
           }),
           resetScroll: false,
         } as any);
         scrollToShops();
       }
+    });
+  };
+
+  const handleSubcategorySelect = (subId: string) => {
+    startTransition(() => {
+      setActiveSubcategoryId(subId);
+      setActiveProductTypeId("all");
+    });
+  };
+
+  const handleProductTypeSelect = (pTypeId: string) => {
+    startTransition(() => {
+      setActiveProductTypeId(pTypeId);
     });
   };
 
@@ -107,20 +181,35 @@ export function CategoryDiscoveryView({
       result = result.filter((s) => isStoreInCategory(s.category, activeCategory, s.rating));
     }
 
-    if (filterOpenNow) {
-      result = result.filter((s) => s.isOpen);
-    }
-    if (filterTopRated) {
-      result = result.filter((s) => s.rating >= 4.5);
-    }
+    // Filter by Dynamic State
+    const evalState: ActiveFilterState = {
+      ...activeFilterState,
+      categoryId: activeCategory,
+      subcategoryId: activeSubcategoryId,
+      productTypeId: activeProductTypeId,
+      openNowOnly: filterOpenNow,
+      minRating: filterTopRated ? 4.5 : undefined,
+    };
+
+    result = result.filter((s) => filterStoreByState(s, evalState));
 
     return [...result].sort((a, b) => {
       if (selectedSort === "distance") return a.distanceKm - b.distanceKm;
       if (selectedSort === "fast") return a.etaMin - b.etaMin;
       if (selectedSort === "rating") return b.rating - a.rating;
-      return a.distanceKm - b.distanceKm; // Default to nearest first
+      return a.distanceKm - b.distanceKm;
     });
-  }, [stores, activeCategory, filterOpenNow, filterTopRated, selectedSort, deliveryLoc]);
+  }, [
+    stores,
+    activeCategory,
+    activeSubcategoryId,
+    activeProductTypeId,
+    activeFilterState,
+    filterOpenNow,
+    filterTopRated,
+    selectedSort,
+    deliveryLoc,
+  ]);
 
   const handleRequestSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -137,10 +226,12 @@ export function CategoryDiscoveryView({
 
   return (
     <div className="mx-auto max-w-7xl px-3 sm:px-6 lg:px-8 py-4 sm:py-6 space-y-5 sm:space-y-6">
-      {/* 1. TOP HORIZONTAL CATEGORY PILL NAVIGATION BAR */}
+      {/* 1. TOP HORIZONTAL CATEGORY & SUBCATEGORY NAVIGATION BAR */}
       <ShopCategoryNavBar
         activeCategorySlug={activeCategory}
+        activeSubcategoryId={activeSubcategoryId}
         onSelectCategory={handleCategorySelect}
+        onSelectSubcategory={handleSubcategorySelect}
         className="-mx-3 sm:-mx-6 lg:-mx-8 rounded-2xl shadow-xs border-purple-100"
       />
 
@@ -155,10 +246,15 @@ export function CategoryDiscoveryView({
             </div>
 
             <div className="space-y-1">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <span className="inline-flex items-center gap-1 rounded-full bg-[#F3D053]/20 px-2.5 py-0.5 text-[10px] font-bold text-[#F3D053] uppercase tracking-wider backdrop-blur-xs border border-[#F3D053]/30">
                   <Sparkles className="h-3 w-3" /> Hyperlocal Shop Category
                 </span>
+                {activeSubcategoryId !== "all" && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-purple-500/30 px-2.5 py-0.5 text-[10px] font-bold text-white uppercase tracking-wider border border-purple-400/30">
+                    <Layers className="h-3 w-3 text-purple-300" /> Subcategory Active
+                  </span>
+                )}
               </div>
               <h1 className="font-display text-xl sm:text-2xl lg:text-3xl font-extrabold text-white tracking-tight">
                 {categoryConfig.heading}
@@ -188,52 +284,72 @@ export function CategoryDiscoveryView({
         </div>
       </div>
 
-      {/* 3. FILTER & SORT CONTROLS ROW */}
-      <div className="flex flex-wrap items-center justify-between gap-3 py-1 border-b border-slate-100 pb-3">
-        <div className="flex flex-wrap items-center gap-2.5">
-          {/* Filter Menu Toggle */}
-          <div className="relative">
-            <button
-              type="button"
-              onClick={() => setShowFilterMenu(!showFilterMenu)}
-              className={`flex items-center gap-1.5 sm:gap-2 px-4 py-2 rounded-xl text-xs font-bold border transition-colors ${
-                filterOpenNow || filterTopRated
-                  ? "border-purple-700 bg-purple-50 text-purple-900"
-                  : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
-              }`}
-            >
-              <Filter className="h-3.5 w-3.5 text-purple-700" />
-              <span>Filter</span>
-              <ChevronDown className="h-3.5 w-3.5 text-slate-400" />
-            </button>
-
-            {showFilterMenu && (
-              <div className="absolute left-0 mt-2 w-56 rounded-2xl bg-white border border-slate-200 shadow-2xl z-40 p-3 space-y-2">
-                <div className="text-[11px] font-extrabold uppercase text-slate-400 tracking-wider mb-1">
-                  Filter Options
-                </div>
-                <label className="flex items-center gap-2.5 text-xs font-bold text-slate-700 cursor-pointer p-1.5 hover:bg-purple-50 rounded-lg">
-                  <input
-                    type="checkbox"
-                    checked={filterOpenNow}
-                    onChange={(e) => startTransition(() => setFilterOpenNow(e.target.checked))}
-                    className="rounded border-slate-300 text-purple-700 focus:ring-purple-700"
-                  />
-                  <span>Open Now Only</span>
-                </label>
-                <label className="flex items-center gap-2.5 text-xs font-bold text-slate-700 cursor-pointer p-1.5 hover:bg-purple-50 rounded-lg">
-                  <input
-                    type="checkbox"
-                    checked={filterTopRated}
-                    onChange={(e) => startTransition(() => setFilterTopRated(e.target.checked))}
-                    className="rounded border-slate-300 text-purple-700 focus:ring-purple-700"
-                  />
-                  <span>Top Rated (4.5★ +)</span>
-                </label>
-              </div>
+      {/* 3. PRODUCT TYPES HORIZONTAL STRIP (3rd Tier Navigation) */}
+      {productTypes.length > 0 && activeCategory !== "all" && (
+        <div className="bg-white rounded-2xl border border-purple-100 p-3 shadow-2xs space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-black uppercase text-purple-900/70 flex items-center gap-1.5 tracking-wider">
+              <Package className="h-3.5 w-3.5 text-purple-700" />
+              Select Product Type
+            </span>
+            {activeProductTypeId !== "all" && (
+              <button
+                type="button"
+                onClick={() => handleProductTypeSelect("all")}
+                className="text-[11px] font-bold text-purple-700 hover:underline"
+              >
+                Clear product type
+              </button>
             )}
           </div>
 
+          <div className="flex items-center gap-2 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden py-1">
+            <button
+              type="button"
+              onClick={() => handleProductTypeSelect("all")}
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-extrabold whitespace-nowrap transition-all border ${
+                activeProductTypeId === "all"
+                  ? "bg-purple-900 text-white border-purple-900 shadow-xs"
+                  : "bg-slate-50 text-slate-700 border-slate-200 hover:bg-purple-50 hover:border-purple-300"
+              }`}
+            >
+              All Product Types
+            </button>
+
+            {productTypes.map((pt) => {
+              const isSelected = activeProductTypeId === pt.id || activeProductTypeId === pt.slug;
+              return (
+                <button
+                  key={pt.id}
+                  type="button"
+                  onClick={() => handleProductTypeSelect(pt.id)}
+                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all border ${
+                    isSelected
+                      ? "bg-purple-900 text-white border-purple-900 shadow-xs"
+                      : "bg-slate-50 text-slate-700 border-slate-200 hover:bg-purple-50 hover:border-purple-300"
+                  }`}
+                >
+                  {pt.name}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* 4. DYNAMIC ATTRIBUTE FILTER BAR (4th Tier Dynamic Attribute Filters) */}
+      {dynamicAttributeFilters.length > 0 && (
+        <DynamicFilterBar
+          filters={dynamicAttributeFilters}
+          activeState={activeFilterState}
+          onChange={(newState) => startTransition(() => setActiveFilterState(newState))}
+          className="bg-white rounded-2xl border border-slate-200/80 p-2 shadow-2xs"
+        />
+      )}
+
+      {/* 5. FILTER & SORT CONTROLS ROW */}
+      <div className="flex flex-wrap items-center justify-between gap-3 py-1 border-b border-slate-100 pb-3">
+        <div className="flex flex-wrap items-center gap-2.5">
           {/* Quick Filter Badges */}
           <button
             onClick={() => startTransition(() => setFilterOpenNow(!filterOpenNow))}
@@ -254,7 +370,7 @@ export function CategoryDiscoveryView({
                 : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
             }`}
           >
-            ⭐ Highly Rated
+            ⭐ Highly Rated (4.5★+)
           </button>
 
           {/* Sort Selector */}
@@ -282,8 +398,15 @@ export function CategoryDiscoveryView({
         </div>
       </div>
 
-      {/* 4. SHOP GRID CARDS */}
-      {filteredStores.length === 0 ? (
+      {/* 6. SHOP GRID CARDS */}
+      {isDiscoveringShops ? (
+        <div className="py-12 flex justify-center items-center rounded-3xl bg-white border border-purple-100 shadow-xs">
+          <SmartLottieLoader
+            message={`Finding verified shops near ${deliveryLoc?.area || deliveryLoc?.city || "you"}...`}
+            size="md"
+          />
+        </div>
+      ) : filteredStores.length === 0 ? (
         <div className="rounded-3xl border border-dashed border-purple-200 bg-white p-8 sm:p-12 text-center space-y-3">
           <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-purple-50 text-purple-700">
             <StoreIcon className="h-7 w-7" />
@@ -292,15 +415,17 @@ export function CategoryDiscoveryView({
             No shops found in "{categoryConfig.name}"
           </h3>
           <p className="text-xs text-slate-500 max-w-sm mx-auto leading-relaxed">
-            We couldn't find any stores matching this specific category around{" "}
-            {deliveryLoc?.area || "your area"}. Try selecting another shop category or resetting your
-            filters.
+            We couldn't find any stores matching this specific category and dynamic filters around{" "}
+            {deliveryLoc?.area || "your area"}. Try resetting your filters.
           </p>
           <button
             type="button"
             onClick={() => {
               setFilterOpenNow(false);
               setFilterTopRated(false);
+              setActiveSubcategoryId("all");
+              setActiveProductTypeId("all");
+              setActiveFilterState(INITIAL_FILTER_STATE);
               handleCategorySelect(getCategoryByIdOrSlug("all"));
             }}
             className="inline-flex items-center gap-1 text-xs font-bold text-purple-700 hover:text-purple-900 hover:underline pt-2"
@@ -310,7 +435,7 @@ export function CategoryDiscoveryView({
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
-          {filteredStores.map((store, index) => (
+          {filteredStores.map((store) => (
             <Link
               key={store.id}
               to="/store/$storeId"
@@ -332,20 +457,17 @@ export function CategoryDiscoveryView({
                   className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
                 />
 
-                {/* Gradient overlay for readability */}
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/20" />
 
-                {/* Top Badge: Category Tag */}
+                {/* Top Badge */}
                 <div className="absolute top-3 left-3 bg-slate-900/80 text-white text-[10px] font-bold px-2.5 py-1 rounded-full backdrop-blur-md border border-white/20">
                   {store.category.replace("_", " ").toUpperCase()}
                 </div>
 
-                {/* Wishlist Icon */}
                 <div className="absolute top-3 right-3 z-10" onClick={(e) => e.stopPropagation()}>
                   <WishlistButton productId={store.id} productName={store.name} />
                 </div>
 
-                {/* Bottom Overlay on Image: Delivery ETA & Distance */}
                 <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between text-white text-xs font-bold">
                   <span className="flex items-center gap-1 bg-black/60 px-2.5 py-1 rounded-lg backdrop-blur-xs">
                     <Clock className="h-3 w-3 text-amber-300" /> {store.etaMin} mins
@@ -356,7 +478,7 @@ export function CategoryDiscoveryView({
                 </div>
               </div>
 
-              {/* Shop Card Content */}
+              {/* Shop Content */}
               <div className="p-4 flex-1 flex flex-col justify-between space-y-3">
                 <div>
                   <div className="flex items-start justify-between gap-2">
@@ -364,7 +486,6 @@ export function CategoryDiscoveryView({
                       {store.name}
                     </h3>
 
-                    {/* Rating Badge */}
                     <div className="flex items-center gap-1 bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-lg text-xs font-extrabold shrink-0 border border-emerald-200/60">
                       <Star className="h-3 w-3 fill-emerald-600 text-emerald-600" />
                       <span>{store.rating.toFixed(1)}</span>
@@ -376,7 +497,6 @@ export function CategoryDiscoveryView({
                   </p>
                 </div>
 
-                {/* Bottom Meta Row (Status & View Store Button) */}
                 <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
                   <span
                     className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full font-bold text-[11px] ${
@@ -402,7 +522,7 @@ export function CategoryDiscoveryView({
         </div>
       )}
 
-      {/* 5. REQUEST A SHOP BANNER */}
+      {/* 7. REQUEST A SHOP BANNER */}
       <div className="rounded-3xl bg-gradient-to-r from-purple-900 via-indigo-900 to-purple-950 p-5 sm:p-7 text-white flex flex-col sm:flex-row items-start sm:items-center justify-between gap-5 shadow-lg relative overflow-hidden">
         <div className="flex items-center gap-4">
           <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white/10 text-amber-300 border border-white/15 backdrop-blur-sm">
@@ -413,7 +533,7 @@ export function CategoryDiscoveryView({
               Don't see your favorite neighborhood shop listed?
             </h4>
             <p className="text-xs sm:text-sm text-purple-200 mt-0.5 max-w-xl">
-              Submit a shop request! Our LocalShore ground operations team will onboard your trusted
+              Submit a shop request! Our LocalShoree ground operations team will onboard your trusted
               local store so you can order delivery.
             </p>
           </div>
@@ -428,7 +548,7 @@ export function CategoryDiscoveryView({
         </button>
       </div>
 
-      {/* 6. TRUST & VERIFICATION STRIP */}
+      {/* TRUST & VERIFICATION STRIP */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 pt-2">
         <div className="flex items-center gap-3 rounded-2xl bg-white border border-slate-100 p-4 shadow-2xs">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-purple-50 text-purple-700">
@@ -473,7 +593,7 @@ export function CategoryDiscoveryView({
         </div>
       </div>
 
-      {/* 7. REQUEST SHOP MODAL */}
+      {/* REQUEST SHOP MODAL */}
       {isRequestModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
           <div className="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl space-y-4 relative animate-in zoom-in-95 duration-200">

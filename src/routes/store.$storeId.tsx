@@ -15,12 +15,6 @@ import {
   ShoppingBag,
   Sparkles,
   ShieldCheck,
-  Tag,
-  CheckCircle2,
-  Tv,
-  Shirt,
-  Home as HomeIcon,
-  Gift,
   Package,
 } from "lucide-react";
 import {
@@ -53,6 +47,8 @@ const isUuid = (value: string) =>
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
 
 import { toStoreCategory } from "@/lib/shop-categories";
+import { isTestEntity } from "@/lib/map-service/store-engine";
+import { LottieLoading } from "@/components/ui/lottie-loading";
 
 export const Route = createFileRoute("/store/$storeId")({
   validateSearch: (search: Record<string, unknown>): { sq?: string; category?: string } => ({
@@ -85,17 +81,8 @@ export const Route = createFileRoute("/store/$storeId")({
   ),
 });
 
-function getCategoryIcon(catName: string) {
-  const name = catName.toLowerCase();
-  if (name.includes("electr") || name.includes("tv") || name.includes("tech"))
-    return <Tv className="h-4 w-4 text-indigo-600" />;
-  if (name.includes("textil") || name.includes("cloth") || name.includes("saree") || name.includes("fashion"))
-    return <Shirt className="h-4 w-4 text-purple-600" />;
-  if (name.includes("appliance") || name.includes("home") || name.includes("kitchen"))
-    return <HomeIcon className="h-4 w-4 text-emerald-600" />;
-  if (name.includes("gift") || name.includes("sweet") || name.includes("bake"))
-    return <Gift className="h-4 w-4 text-amber-600" />;
-  return <Package className="h-4 w-4 text-slate-500" />;
+function getCategoryIcon(_catName: string) {
+  return <Package className="h-4 w-4 text-slate-400" />;
 }
 
 function StorePage() {
@@ -126,8 +113,9 @@ function StorePage() {
         error = fallback.error;
       }
       if (error) throw error;
+      const validRows = (data ?? []).filter((p: any) => !isTestEntity(p.name));
       const products = await Promise.all(
-        (data ?? []).map(async (p: any) => {
+        validRows.map(async (p: any) => {
           const rawImage = p.image_url ?? "";
           let imageUrl = rawImage;
           if (rawImage && !/^(https?:|data:)/i.test(rawImage)) {
@@ -140,11 +128,11 @@ function StorePage() {
             id: p.id,
             storeId: p.seller_id ?? APPROVED_STORE.id,
             name: p.name,
-            unit: p.category ?? "",
+            unit: p.unit || p.category || "1 unit",
             price: Number(p.selling_price),
             imageUrl,
             category: p.category ?? "Other",
-            stock: Number(p.stock),
+            stock: Number(p.stock ?? 20),
           };
         }),
       );
@@ -214,21 +202,25 @@ function StorePage() {
   });
 
   const store = approved.data?.store ?? loaded.store;
+  const liveProds = approved.data?.products ?? [];
   const products = (
-    loaded.store.id === APPROVED_STORE.id || isUuid(loaded.store.id)
-      ? (approved.data?.products ?? [])
-      : loaded.products
+    liveProds.length > 0
+      ? liveProds
+      : (loaded.products && loaded.products.length > 0
+          ? loaded.products
+          : (productsByStore[store.id] ?? productsByStore["s_roja_mart"] ?? []))
   ) as Product[];
 
   const navigate = useNavigate();
   const searchParams = Route.useSearch();
   const sq = searchParams.sq || "";
   const [query, setQuery] = useState(sq);
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<string>(searchParams.category || "all");
   const [minPrice, setMinPrice] = useState<string>("");
   const [maxPrice, setMaxPrice] = useState<string>("");
   const [sortBy, setSortBy] = useState<"popular" | "newest" | "price-asc" | "price-desc">("popular");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [showFilters, setShowFilters] = useState(false);
 
   useEffect(() => {
     if (sq && sq !== query) {
@@ -275,28 +267,39 @@ function StorePage() {
 
   const computedEtaMin = dynamicEta.minMins;
 
-  // Category counts breakdown
-  const categoryCounts = useMemo(() => {
-    const counts = new Map<string, number>();
+  // Categories extracted from available products
+  const productCategories = useMemo(() => {
+    const counts: Record<string, number> = {};
     products.forEach((p) => {
-      counts.set(p.category, (counts.get(p.category) || 0) + 1);
+      const cat = p.category || "Other";
+      counts[cat] = (counts[cat] || 0) + 1;
     });
-    return Array.from(counts.entries()).map(([name, count]) => ({ name, count }));
+    const catList = Object.entries(counts).map(([name, count]) => ({
+      id: name,
+      name,
+      count,
+    }));
+    return [
+      { id: "all", name: "All Products", count: products.length },
+      ...catList,
+    ];
   }, [products]);
 
   // Filtered & Sorted products list
   const filteredProducts = useMemo(() => {
     let list = [...products];
 
+    if (selectedCategory && selectedCategory !== "all") {
+      list = list.filter(
+        (p) => (p.category || "Other").toLowerCase() === selectedCategory.toLowerCase(),
+      );
+    }
+
     if (query.trim()) {
       const q = query.toLowerCase();
       list = list.filter(
         (p) => p.name.toLowerCase().includes(q) || p.category.toLowerCase().includes(q),
       );
-    }
-
-    if (selectedCategory) {
-      list = list.filter((p) => p.category === selectedCategory);
     }
 
     if (minPrice !== "") {
@@ -318,7 +321,7 @@ function StorePage() {
     }
 
     return list;
-  }, [products, query, selectedCategory, minPrice, maxPrice, sortBy]);
+  }, [products, selectedCategory, query, minPrice, maxPrice, sortBy]);
 
   const qtyOf = (id: string) => cart.lines.find((l) => l.productId === id)?.qty ?? 0;
 
@@ -440,257 +443,243 @@ function StorePage() {
           </div>
         </div>
 
-        {/* ── FULL-WIDTH SEARCH BAR IN STORE ── */}
-        <div className="relative z-10 rounded-2xl bg-white border-2 border-amber-300/70 p-2.5 shadow-sm shadow-amber-500/5 mb-6 flex items-center gap-3">
-          <div className="flex-1 flex items-center gap-2.5 px-3 py-1">
-            <Search className="h-5 w-5 text-slate-400 shrink-0" />
-            <input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder={`Search in ${store.name}...`}
-              className="w-full bg-transparent text-sm sm:text-base font-medium text-slate-900 outline-none placeholder:text-slate-400"
-            />
-            {query && (
-              <button
-                type="button"
-                onClick={() => setQuery("")}
-                className="text-xs font-bold text-slate-400 hover:text-slate-600 px-2"
-              >
-                Clear
-              </button>
-            )}
+        {/* ── FULL-WIDTH SEARCH + CATEGORIES + COMPACT FILTER TOOLBAR ── */}
+        <div className="mb-4 space-y-2.5">
+          {/* Search bar + Filter Toggle */}
+          <div className="relative z-10 rounded-2xl bg-white border-2 border-amber-300/70 p-2.5 shadow-sm shadow-amber-500/5 flex items-center gap-3">
+            <div className="flex-1 flex items-center gap-2.5 px-3 py-1">
+              <Search className="h-5 w-5 text-slate-400 shrink-0" />
+              <input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder={`Search products in ${store.name}...`}
+                className="w-full bg-transparent text-sm sm:text-base font-medium text-slate-900 outline-none placeholder:text-slate-400"
+              />
+              {query && (
+                <button
+                  type="button"
+                  onClick={() => setQuery("")}
+                  className="text-xs font-bold text-slate-400 hover:text-slate-600 px-2"
+                >
+                  Clear
+                </button>
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowFilters((f) => !f)}
+              className={`relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-all cursor-pointer border ${
+                showFilters || minPrice || maxPrice || sortBy !== "popular"
+                  ? "bg-[#981495] text-white border-[#981495]"
+                  : "bg-purple-50 text-[#981495] hover:bg-[#981495] hover:text-white border-purple-200/60"
+              }`}
+              title="Toggle filters"
+            >
+              <SlidersHorizontal className="h-4 w-4" />
+              {(minPrice || maxPrice || sortBy !== "popular") && (
+                <span className="absolute -top-1 -right-1 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-amber-400 text-[9px] font-black text-slate-900 ring-2 ring-white">
+                  !
+                </span>
+              )}
+            </button>
           </div>
 
-          <button
-            type="button"
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-purple-50 text-[#981495] hover:bg-[#981495] hover:text-white transition-all cursor-pointer border border-purple-200/60"
-            title="Filter bar"
-          >
-            <SlidersHorizontal className="h-4 w-4" />
-          </button>
-        </div>
-
-        {/* ── MAIN STORE BODY: 2-COLUMN LAYOUT (SIDEBAR + PRODUCT GRID) ── */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-          {/* ── LEFT SIDEBAR FILTERS (Matching Reference Image) ── */}
-          <aside className="lg:col-span-3 space-y-4 sticky top-20">
-            <div className="rounded-3xl border-2 border-amber-300/70 bg-white p-5 shadow-sm shadow-amber-500/5">
-              {/* Category Filter Section */}
-              <div className="pb-4 border-b border-slate-100">
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="font-bold text-sm text-slate-900 flex items-center gap-2">
-                    <span className="text-purple-600">📂</span>
-                    <span>Categories</span>
-                  </h3>
-                  {selectedCategory && (
-                    <button
-                      type="button"
-                      onClick={() => setSelectedCategory(null)}
-                      className="text-[11px] font-bold text-[#981495] hover:underline"
-                    >
-                      Reset
-                    </button>
-                  )}
-                </div>
-
-                <div className="space-y-1">
+          {/* Horizontal Scrollable Category Chips for fast mobile browsing */}
+          {productCategories.length > 1 && (
+            <div className="flex items-center gap-2 overflow-x-auto pb-1 pt-1 no-scrollbar">
+              {productCategories.map((cat) => {
+                const active =
+                  selectedCategory.toLowerCase() === cat.id.toLowerCase() ||
+                  (cat.id === "all" && selectedCategory === "all");
+                return (
                   <button
+                    key={cat.id}
                     type="button"
-                    onClick={() => setSelectedCategory(null)}
-                    className={`w-full flex items-center justify-between rounded-xl px-3 py-2 text-xs font-bold transition-all ${
-                      selectedCategory === null
-                        ? "bg-purple-900 text-white shadow-xs"
-                        : "text-slate-700 hover:bg-slate-50"
+                    onClick={() => setSelectedCategory(cat.id)}
+                    className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-bold transition-all cursor-pointer border ${
+                      active
+                        ? "bg-[#981495] text-white border-[#981495] shadow-xs"
+                        : "bg-white text-slate-700 hover:bg-purple-50 border-slate-200/80 hover:border-purple-200"
                     }`}
                   >
-                    <span>All Products</span>
+                    <span>{cat.name}</span>
                     <span
-                      className={`rounded-full px-2 py-0.5 text-[10px] font-black ${
-                        selectedCategory === null ? "bg-white/20 text-white" : "bg-slate-100 text-slate-600"
+                      className={`rounded-full px-1.5 py-0.2 text-[10px] font-extrabold ${
+                        active ? "bg-white/20 text-white" : "bg-purple-100 text-[#981495]"
                       }`}
                     >
-                      {products.length}
+                      {cat.count}
                     </span>
                   </button>
-
-                  {categoryCounts.map(({ name, count }) => {
-                    const isSelected = selectedCategory === name;
-                    return (
-                      <button
-                        key={name}
-                        type="button"
-                        onClick={() => setSelectedCategory(isSelected ? null : name)}
-                        className={`w-full flex items-center justify-between rounded-xl px-3 py-2 text-xs font-semibold transition-all ${
-                          isSelected
-                            ? "bg-purple-900 text-white font-bold shadow-xs"
-                            : "text-slate-700 hover:bg-slate-50"
-                        }`}
-                      >
-                        <span className="flex items-center gap-2 truncate">
-                          {getCategoryIcon(name)}
-                          <span className="truncate">{name}</span>
-                        </span>
-                        <span
-                          className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
-                            isSelected ? "bg-white/20 text-white" : "bg-purple-50 text-[#981495]"
-                          }`}
-                        >
-                          {count}
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Price Range Filter Section */}
-              <div className="py-4 border-b border-slate-100">
-                <h3 className="font-bold text-sm text-slate-900 flex items-center gap-2 mb-3">
-                  <span className="text-amber-500">₹</span>
-                  <span>Price Range</span>
-                </h3>
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <label className="text-[10px] font-bold text-slate-400 block mb-1">Min</label>
-                    <input
-                      type="number"
-                      placeholder="Min ₹"
-                      value={minPrice}
-                      onChange={(e) => setMinPrice(e.target.value)}
-                      className="w-full rounded-xl border border-amber-300/70 px-3 py-1.5 text-xs font-bold text-slate-900 outline-none focus:border-[#981495] bg-slate-50/50"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-[10px] font-bold text-slate-400 block mb-1">Max</label>
-                    <input
-                      type="number"
-                      placeholder="Max ₹"
-                      value={maxPrice}
-                      onChange={(e) => setMaxPrice(e.target.value)}
-                      className="w-full rounded-xl border border-amber-300/70 px-3 py-1.5 text-xs font-bold text-slate-900 outline-none focus:border-[#981495] bg-slate-50/50"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Sort By Section */}
-              <div className="pt-4">
-                <h3 className="font-bold text-sm text-slate-900 flex items-center gap-2 mb-3">
-                  <span className="text-indigo-600">🔀</span>
-                  <span>Sort By</span>
-                </h3>
-                <div className="flex flex-wrap gap-1.5">
-                  {[
-                    { id: "popular", label: "Popular" },
-                    { id: "newest", label: "Newest" },
-                    { id: "price-asc", label: "Price: Low to High" },
-                    { id: "price-desc", label: "Price: High to Low" },
-                  ].map((opt) => {
-                    const active = sortBy === opt.id;
-                    return (
-                      <button
-                        key={opt.id}
-                        type="button"
-                        onClick={() => setSortBy(opt.id as any)}
-                        className={`rounded-full px-3 py-1.5 text-xs font-bold transition-all ${
-                          active
-                            ? "bg-[#981495] text-white shadow-xs"
-                            : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                        }`}
-                      >
-                        {opt.label}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
+                );
+              })}
             </div>
-          </aside>
+          )}
 
-          {/* ── MAIN PRODUCT DISPLAY PANEL ── */}
-          <main className="lg:col-span-9">
-            {/* Header Toolbar */}
-            <div className="flex flex-wrap items-center justify-between gap-3 pb-4 mb-4 border-b border-slate-200/80">
-              <div>
-                <h2 className="font-display text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">
-                  {selectedCategory
-                    ? `${selectedCategory}`
-                    : query.trim()
-                      ? `Products matching "${query.trim()}"`
-                      : "All Products"}
-                </h2>
-                <p className="text-xs text-slate-500 font-medium mt-0.5">
-                  Discover the best deals from <strong className="text-slate-900">{store.name}</strong>
-                </p>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <span className="text-xs font-bold text-slate-500">
-                  {filteredProducts.length} items
-                </span>
-
-                {/* View Mode Toggle (Grid / List) */}
-                <div className="flex items-center rounded-xl bg-slate-100 p-1 border border-slate-200">
-                  <button
-                    type="button"
-                    onClick={() => setViewMode("grid")}
-                    className={`p-1.5 rounded-lg text-xs font-bold transition-all ${
-                      viewMode === "grid"
-                        ? "bg-white text-purple-900 shadow-xs"
-                        : "text-slate-500 hover:text-slate-900"
-                    }`}
-                  >
-                    <Grid className="h-4 w-4" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setViewMode("list")}
-                    className={`p-1.5 rounded-lg text-xs font-bold transition-all ${
-                      viewMode === "list"
-                        ? "bg-white text-purple-900 shadow-xs"
-                        : "text-slate-500 hover:text-slate-900"
-                    }`}
-                  >
-                    <List className="h-4 w-4" />
-                  </button>
+          {/* Collapsible compact inline filters */}
+          {showFilters && (
+            <div className="rounded-2xl bg-white border-2 border-amber-300/70 p-4 shadow-md shadow-purple-950/5 flex flex-wrap items-end gap-4">
+              {/* Price Range */}
+              <div className="flex items-end gap-2">
+                <div>
+                  <label className="text-[10px] font-bold text-slate-400 block mb-1">Min ₹</label>
+                  <input
+                    type="number"
+                    placeholder="Min"
+                    value={minPrice}
+                    onChange={(e) => setMinPrice(e.target.value)}
+                    className="w-24 rounded-xl border border-amber-300/70 px-3 py-1.5 text-xs font-bold text-slate-900 outline-none focus:border-[#981495] bg-slate-50/50"
+                  />
+                </div>
+                <span className="text-slate-400 font-bold text-sm mb-1.5">–</span>
+                <div>
+                  <label className="text-[10px] font-bold text-slate-400 block mb-1">Max ₹</label>
+                  <input
+                    type="number"
+                    placeholder="Max"
+                    value={maxPrice}
+                    onChange={(e) => setMaxPrice(e.target.value)}
+                    className="w-24 rounded-xl border border-amber-300/70 px-3 py-1.5 text-xs font-bold text-slate-900 outline-none focus:border-[#981495] bg-slate-50/50"
+                  />
                 </div>
               </div>
-            </div>
 
-            {/* Product List Empty State */}
-            {filteredProducts.length === 0 ? (
-              <div className="rounded-3xl border-2 border-dashed border-amber-300/80 bg-white p-12 text-center">
-                <div className="mx-auto text-4xl mb-3">🔍</div>
-                <p className="font-bold text-slate-900 text-base">No products found</p>
-                <p className="mt-1 text-xs text-slate-500">
-                  Try clearing your search or category filters.
-                </p>
+              {/* Sort By */}
+              <div className="flex flex-wrap gap-1.5">
+                {[
+                  { id: "popular", label: "Popular" },
+                  { id: "newest", label: "Newest" },
+                  { id: "price-asc", label: "↑ Price" },
+                  { id: "price-desc", label: "↓ Price" },
+                ].map((opt) => {
+                  const active = sortBy === opt.id;
+                  return (
+                    <button
+                      key={opt.id}
+                      type="button"
+                      onClick={() => setSortBy(opt.id as any)}
+                      className={`rounded-full px-3 py-1.5 text-xs font-bold transition-all ${
+                        active
+                          ? "bg-[#981495] text-white shadow-xs"
+                          : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Reset filters */}
+              {(minPrice || maxPrice || sortBy !== "popular" || selectedCategory !== "all") && (
                 <button
                   type="button"
                   onClick={() => {
-                    setQuery("");
-                    setSelectedCategory(null);
                     setMinPrice("");
                     setMaxPrice("");
+                    setSortBy("popular");
+                    setSelectedCategory("all");
                   }}
-                  className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-[#981495] px-4 py-2 text-xs font-bold text-white shadow-md hover:bg-purple-800"
+                  className="text-xs font-bold text-[#981495] hover:underline ml-auto"
                 >
-                  Reset all filters
+                  Reset filters
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* ── FULL-WIDTH PRODUCT SECTION ── */}
+        <div>
+          {/* Header Toolbar */}
+          <div className="flex flex-wrap items-center justify-between gap-3 pb-4 mb-4 border-b border-slate-200/80">
+            <div>
+              <h2 className="font-display text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">
+                {query.trim()
+                  ? `Products matching "${query.trim()}"`
+                  : "All Products"}
+              </h2>
+              <p className="text-xs text-slate-500 font-medium mt-0.5">
+                Discover the best deals from <strong className="text-slate-900">{store.name}</strong>
+              </p>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <span className="text-xs font-bold text-slate-500">
+                {filteredProducts.length} item{filteredProducts.length !== 1 ? "s" : ""}
+              </span>
+
+              {/* View Mode Toggle */}
+              <div className="flex items-center rounded-xl bg-slate-100 p-1 border border-slate-200">
+                <button
+                  type="button"
+                  onClick={() => setViewMode("grid")}
+                  className={`p-1.5 rounded-lg text-xs font-bold transition-all ${
+                    viewMode === "grid"
+                      ? "bg-white text-purple-900 shadow-xs"
+                      : "text-slate-500 hover:text-slate-900"
+                  }`}
+                >
+                  <Grid className="h-4 w-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setViewMode("list")}
+                  className={`p-1.5 rounded-lg text-xs font-bold transition-all ${
+                    viewMode === "list"
+                      ? "bg-white text-purple-900 shadow-xs"
+                      : "text-slate-500 hover:text-slate-900"
+                  }`}
+                >
+                  <List className="h-4 w-4" />
                 </button>
               </div>
-            ) : (
-              /* Product Cards Grid (Matching Reference Image with Light Golden Border) */
-              <div
-                className={
-                  viewMode === "grid"
-                    ? "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-3 gap-4.5"
-                    : "space-y-4"
-                }
+            </div>
+          </div>
+
+          {/* Product List Loading / Empty State */}
+          {approved.isLoading ? (
+            <div className="rounded-3xl border border-purple-100 bg-white p-12 text-center flex justify-center">
+              <LottieLoading
+                message={`Loading catalog for ${store.name}...`}
+                subtext="Fetching live inventory & neighborhood prices"
+                size="md"
+              />
+            </div>
+          ) : filteredProducts.length === 0 ? (
+            <div className="rounded-3xl border-2 border-dashed border-amber-300/80 bg-white p-12 text-center">
+              <div className="mx-auto text-4xl mb-3">🔍</div>
+              <p className="font-bold text-slate-900 text-base">No products found</p>
+              <p className="mt-1 text-xs text-slate-500">
+                Try clearing your search or price filters.
+              </p>
+              <button
+                type="button"
+                onClick={() => {
+                  setQuery("");
+                  setMinPrice("");
+                  setMaxPrice("");
+                  setSortBy("popular");
+                }}
+                className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-[#981495] px-4 py-2 text-xs font-bold text-white shadow-md hover:bg-purple-800"
               >
+                Reset all filters
+              </button>
+            </div>
+          ) : (
+            /* Product Cards Grid — full width, more columns available now */
+            <div
+              className={
+                viewMode === "grid"
+                  ? "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-4"
+                  : "space-y-4"
+              }
+            >
                 {filteredProducts.map((p) => {
                   const q = qtyOf(p.id);
                   const mrp = Math.round(p.price * 1.25);
                   const discountPct = Math.round(((mrp - p.price) / mrp) * 100);
+                  const unit = p.unit || "1 unit";
 
                   return (
                     <m.div
@@ -699,42 +688,71 @@ function StorePage() {
                       initial={{ opacity: 0, y: 10 }}
                       whileInView={{ opacity: 1, y: 0 }}
                       viewport={{ once: true, amount: 0.15 }}
-                      className="group relative flex flex-col justify-between overflow-hidden rounded-3xl bg-white gold-metallic-border gold-glow-sm hover:shadow-xl hover:shadow-amber-500/20 transition-all duration-300 p-3.5"
+                      className="group relative flex flex-col justify-between overflow-hidden rounded-2xl border border-slate-200/90 bg-white p-3 shadow-xs hover:border-purple-300 hover:shadow-md transition-all duration-200"
                     >
-                      {/* Product Image Aspect Box with Badges */}
-                      <div className="aspect-[4/3] w-full relative overflow-hidden rounded-2xl bg-slate-50 p-2 flex items-center justify-center border border-amber-200/50">
-                        {/* Discount Badge top-left */}
-                        <div className="absolute top-2.5 left-2.5 z-10 rounded-full bg-[#f5a623] text-slate-950 text-[10px] font-black px-2.5 py-0.5 shadow-sm border border-amber-300">
-                          {discountPct}% OFF
-                        </div>
+                      <div>
+                        {/* Top Image Frame with floating badges */}
+                        <div className="relative aspect-square w-full overflow-hidden rounded-xl bg-slate-50/90 border border-slate-100 p-2 flex items-center justify-center">
+                          {/* Wishlist Button top-right */}
+                          <div className="absolute right-2 top-2 z-10">
+                            <WishlistButton
+                              productId={p.id}
+                              productName={p.name}
+                              item={{
+                                productId: p.id,
+                                name: p.name,
+                                shopName: store.name,
+                                category: p.category,
+                                price: p.price,
+                                imageUrl: p.imageUrl,
+                                sellerId: p.storeId,
+                              }}
+                            />
+                          </div>
 
-                        {/* Wishlist Button top-right */}
-                        <div className="absolute right-2.5 top-2.5 z-10">
-                          <WishlistButton
-                            productId={p.id}
-                            productName={p.name}
-                            item={{
-                              productId: p.id,
-                              name: p.name,
-                              shopName: store.name,
-                              category: p.category,
-                              price: p.price,
-                              imageUrl: p.imageUrl,
-                              sellerId: p.storeId,
-                            }}
+                          {/* Unit weight tag bottom-left inside image frame */}
+                          <div className="absolute bottom-2 left-2 z-10 rounded-md bg-slate-900/80 backdrop-blur-xs px-2 py-0.5 text-[10px] font-bold text-white shadow-xs">
+                            {unit}
+                          </div>
+
+                          <ProductThumb
+                            src={p.imageUrl}
+                            alt={p.name}
+                            category={store.category}
+                            size="lg"
                           />
+
+                          {/* ADD Button positioned at bottom-right corner of image frame (Matching Image 2 position!) */}
+                          <div className="absolute right-2 bottom-2 z-20">
+                            {q === 0 ? (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  void recordProductEvent(p.id, "add_to_cart");
+                                  flyProductToCart(p.id);
+                                  cartStore.add(p.storeId, store.name, p);
+                                }}
+                                className="rounded-lg bg-white border border-emerald-600 text-emerald-700 hover:bg-emerald-600 hover:text-white px-3.5 py-1 text-xs font-black uppercase tracking-wider shadow-sm transition-all active:scale-95 cursor-pointer flex items-center gap-1"
+                              >
+                                <span>ADD</span>
+                              </button>
+                            ) : (
+                              <QtyStepper
+                                qty={q}
+                                max={p.stock}
+                                onAdd={() => {
+                                  void recordProductEvent(p.id, "add_to_cart");
+                                  flyProductToCart(p.id);
+                                  cartStore.add(p.storeId, store.name, p);
+                                }}
+                                onChange={(n) => cartStore.setQty(p.id, n)}
+                                addClassName="rounded-lg bg-emerald-700 text-white px-2 py-0.5 text-xs font-bold shadow-sm"
+                              />
+                            )}
+                          </div>
                         </div>
 
-                        <ProductThumb
-                          src={p.imageUrl}
-                          alt={p.name}
-                          category={store.category}
-                          size="lg"
-                        />
-                      </div>
-
-                      {/* Product Metadata & Title */}
-                      <div className="mt-3 flex flex-col justify-between flex-1">
+                        {/* Product details section */}
                         <Link
                           to="/product/$productId"
                           params={{ productId: p.id }}
@@ -742,77 +760,56 @@ function StorePage() {
                             void recordProductEvent(p.id, "view");
                             void recordRecentProductView(p.id);
                           }}
-                          className="group/link block"
+                          className="mt-2.5 block space-y-1"
                         >
-                          <h3 className="line-clamp-2 text-sm font-extrabold text-slate-900 group-hover/link:text-[#981495] transition-colors leading-snug">
-                            {p.name}
-                          </h3>
-
-                          {/* Category Tag */}
-                          <div className="mt-1 flex items-center gap-1 text-[11px] font-semibold text-slate-500">
-                            {getCategoryIcon(p.category)}
-                            <span className="truncate">{p.category}</span>
-                          </div>
-
-                          {/* Price & Rating Row */}
-                          <div className="mt-2.5 flex items-baseline gap-2">
+                          {/* Price line with strikethrough MRP */}
+                          <div className="flex items-baseline gap-2">
                             <span className="text-base font-black text-slate-900">
                               ₹{p.price.toLocaleString("en-IN")}
                             </span>
-                            <span className="text-xs font-bold text-slate-400 line-through">
-                              ₹{mrp.toLocaleString("en-IN")}
-                            </span>
-                            <span className="rounded-full bg-emerald-100/80 px-2 py-0.5 text-[10px] font-extrabold text-emerald-700">
-                              {discountPct}% OFF
-                            </span>
+                            {mrp > p.price && (
+                              <span className="text-xs font-semibold text-slate-400 line-through">
+                                ₹{mrp.toLocaleString("en-IN")}
+                              </span>
+                            )}
                           </div>
 
-                          <div className="mt-1 flex items-center gap-1 text-[11px] font-bold text-slate-600">
-                            <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
-                            <span>4.7</span>
-                            <span className="text-slate-400 font-normal">
-                              ({Math.floor(p.price % 30 + 12)} reviews)
+                          {discountPct > 0 && (
+                            <p className="text-[11px] font-extrabold text-blue-600 uppercase tracking-tight">
+                              {discountPct}% OFF ON MRP
+                            </p>
+                          )}
+
+                          {/* Title */}
+                          <h3 className="line-clamp-2 text-xs sm:text-sm font-bold text-slate-800 leading-snug group-hover:text-[#981495] transition-colors">
+                            {p.name}
+                          </h3>
+
+                          {/* Rating & ETA */}
+                          <div className="flex items-center gap-2 pt-0.5 text-[11px] font-bold text-slate-600">
+                            <span className="flex items-center gap-0.5 text-amber-600">
+                              <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
+                              4.8
+                            </span>
+                            <span className="text-slate-300">•</span>
+                            <span className="text-slate-500">⏱ {computedEtaMin} mins</span>
+                          </div>
+
+                          {/* Category pill with arrow */}
+                          <div className="pt-1">
+                            <span className="inline-flex items-center gap-1 rounded-md bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-600 group-hover:bg-purple-50 group-hover:text-[#981495] transition-colors">
+                              <span>All {p.category || "Item"}</span>
+                              <span className="text-[8px]">▶</span>
                             </span>
                           </div>
                         </Link>
-                      </div>
-
-                      {/* Add to Cart Button Footer (Matching Inspiration Purple Button) */}
-                      <div className="mt-3 pt-2.5 border-t border-slate-100">
-                        {q === 0 ? (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              void recordProductEvent(p.id, "add_to_cart");
-                              flyProductToCart(p.id);
-                              cartStore.add(p.storeId, store.name, p);
-                            }}
-                            className="w-full rounded-2xl bg-[#981495] hover:bg-[#7e107b] text-white py-2.5 px-4 text-xs font-extrabold flex items-center justify-center gap-1.5 shadow-md shadow-purple-900/15 active:scale-95 transition-all cursor-pointer"
-                          >
-                            <ShoppingBag className="h-3.5 w-3.5" />
-                            <span>Add to Cart</span>
-                          </button>
-                        ) : (
-                          <QtyStepper
-                            qty={q}
-                            max={p.stock}
-                            onAdd={() => {
-                              void recordProductEvent(p.id, "add_to_cart");
-                              flyProductToCart(p.id);
-                              cartStore.add(p.storeId, store.name, p);
-                            }}
-                            onChange={(n) => cartStore.setQty(p.id, n)}
-                            addClassName="w-full rounded-2xl bg-purple-50 py-1.5 text-xs font-extrabold text-[#981495] border border-purple-200 transition hover:bg-[#981495] hover:text-white"
-                          />
-                        )}
                       </div>
                     </m.div>
                   );
                 })}
               </div>
             )}
-          </main>
-        </div>
+          </div>
 
         {/* ── STORE TRUST & ASSURANCE BANNER ── */}
         <div className="mt-12 rounded-3xl bg-gradient-to-r from-purple-900 via-indigo-900 to-[#310938] text-white p-6 sm:p-8 shadow-xl border-2 border-amber-300/80">

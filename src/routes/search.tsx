@@ -8,6 +8,7 @@ import { AppShell } from "@/components/app-shell";
 import { Badge } from "@/components/ui/badge";
 import { useMLTracker } from "@/hooks/use-ml-tracker";
 import { parseQueryIntent } from "@/lib/ml-shop-ranker";
+import { LottieLoading } from "@/components/ui/lottie-loading";
 
 export const Route = createFileRoute("/search")({
   component: SwiggySearchPage,
@@ -36,7 +37,14 @@ function SwiggySearchPage() {
   }, [q]);
 
   const filteredResults = results.filter((item) => {
-    const tabMatches = activeTab === "All" || item.type.toLowerCase() === activeTab.toLowerCase();
+    let tabMatches = activeTab === "All";
+    if (activeTab === "Product") {
+      tabMatches = item.type === "Product" || item.type === "Dish";
+    } else if (activeTab === "Shop") {
+      tabMatches = item.type === "Shop" || item.type === "Restaurant";
+    } else {
+      tabMatches = item.type.toLowerCase() === activeTab.toLowerCase();
+    }
     return tabMatches && (!openOnly || item.isOpen === true);
   });
 
@@ -55,10 +63,10 @@ function SwiggySearchPage() {
 
   const handleResultClick = (item: SearchResultItem) => {
     const targetUrl = item.url || "";
-    if (targetUrl.startsWith("/store/")) {
+    if (targetUrl.startsWith("/store/") || item.type === "Shop" || item.type === "Restaurant") {
       const storeId = item.storeId || targetUrl.replace("/store/", "");
       void navigate({ to: "/store/$storeId", params: { storeId }, search: { sq: query, category: undefined } });
-    } else if (targetUrl.startsWith("/product/")) {
+    } else if (targetUrl.startsWith("/product/") || item.type === "Product" || item.type === "Dish") {
       const productId = item.id.replace(/^prod-/, "") || targetUrl.replace("/product/", "");
       void navigate({ to: "/product/$productId", params: { productId }, search: { sq: query } });
     } else {
@@ -143,8 +151,14 @@ function SwiggySearchPage() {
             </div>
           </div>
         ) : isLoading ? (
-          <div className="text-center py-16 text-muted-foreground">
-            Searching nearby shops and products...
+          <div className="py-12 flex justify-center">
+            <LottieLoading
+              show={isLoading}
+              delayMs={250}
+              message={`Searching for "${query}"...`}
+              subtext="Filtering verified neighborhood shops & product catalogs"
+              size="md"
+            />
           </div>
         ) : filteredResults.length === 0 ? (
           <div className="text-center py-16">
@@ -192,7 +206,7 @@ function SwiggySearchPage() {
             )}
 
             <div className="px-2 py-1 text-xs font-bold uppercase tracking-wider text-muted-foreground flex justify-between">
-              <span>ML-Ranked Marketplace ({filteredResults.length})</span>
+              <span>Marketplace Results ({filteredResults.length})</span>
             </div>
 
             <div className="bg-card border hairline rounded-2xl overflow-hidden divide-y divide-border/40 shadow-sm">
@@ -210,7 +224,9 @@ function SwiggySearchPage() {
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
                       onError={(e) => {
                         (e.target as HTMLImageElement).src =
-                          "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=150&q=75";
+                          item.type === "Shop" || item.type === "Restaurant"
+                            ? "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=150&q=75"
+                            : "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=150&q=75";
                       }}
                     />
                   </div>
@@ -218,9 +234,20 @@ function SwiggySearchPage() {
                   {/* Title & Subtitle */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between gap-2">
-                      <h4 className="text-base font-medium text-foreground truncate group-hover:text-primary transition-colors">
-                        <HighlightText text={item.title} query={query} />
-                      </h4>
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span
+                          className={`text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md border shrink-0 ${
+                            item.type === "Shop" || item.type === "Restaurant"
+                              ? "bg-purple-950/40 text-purple-300 border-purple-500/30"
+                              : "bg-amber-950/40 text-amber-300 border-amber-500/30"
+                          }`}
+                        >
+                          {item.type}
+                        </span>
+                        <h4 className="text-base font-medium text-foreground truncate group-hover:text-primary transition-colors">
+                          <HighlightText text={item.title} query={query} />
+                        </h4>
+                      </div>
                       {item.mlScore && (
                         <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 shrink-0">
                           {item.mlScore}% Match

@@ -1,4 +1,5 @@
-import { stores, productsByStore, categoryLabel, Store, Product } from "./mock-data";
+import { stores, productsByStore, categoryLabel } from "./mock-data";
+import { CATEGORY_TAXONOMIES } from "./category-taxonomy";
 
 export interface SearchResultItem {
   id: string;
@@ -58,6 +59,14 @@ function normalizeForSearch(value: string): string {
     .trim();
 }
 
+function stemWord(word: string): string {
+  if (!word || word.length <= 3) return word;
+  if (word.endsWith("ies")) return word.slice(0, -3) + "y";
+  if (word.endsWith("es") && !word.endsWith("ees") && !word.endsWith("ses")) return word.slice(0, -2);
+  if (word.endsWith("s") && !word.endsWith("ss") && !word.endsWith("us")) return word.slice(0, -1);
+  return word;
+}
+
 function collapseRepeatedLetters(value: string): string {
   return value.replace(/([a-z0-9])\1{1,}/g, "$1");
 }
@@ -67,7 +76,14 @@ function compactForSearch(value: string): string {
 }
 
 function tokenizeForSearch(value: string): string[] {
-  return normalizeForSearch(value).split(/\s+/).filter(Boolean).map(collapseRepeatedLetters);
+  return normalizeForSearch(value)
+    .split(/\s+/)
+    .filter(Boolean)
+    .map(collapseRepeatedLetters);
+}
+
+function stemTokens(tokens: string[]): string[] {
+  return tokens.map(stemWord);
 }
 
 function levenshteinDistance(a: string, b: string): number {
@@ -94,14 +110,19 @@ function levenshteinDistance(a: string, b: string): number {
 
 function tokenSimilarityScore(queryToken: string, candidateToken: string): number {
   if (!queryToken || !candidateToken) return 0;
-  if (queryToken === candidateToken) return 1;
-  if (candidateToken.startsWith(queryToken) || queryToken.startsWith(candidateToken)) return 0.9;
-  if (candidateToken.includes(queryToken) || queryToken.includes(candidateToken)) return 0.75;
+  const qStem = stemWord(queryToken);
+  const cStem = stemWord(candidateToken);
 
-  const distance = levenshteinDistance(queryToken, candidateToken);
-  const maxLen = Math.max(queryToken.length, candidateToken.length);
+  if (queryToken === candidateToken || qStem === cStem) return 1;
+  if (candidateToken.startsWith(queryToken) || queryToken.startsWith(candidateToken)) return 0.95;
+  if (cStem.startsWith(qStem) || qStem.startsWith(cStem)) return 0.9;
+  if (candidateToken.includes(queryToken) || queryToken.includes(candidateToken)) return 0.8;
+  if (cStem.includes(qStem) || qStem.includes(cStem)) return 0.75;
+
+  const distance = levenshteinDistance(qStem, cStem);
+  const maxLen = Math.max(qStem.length, cStem.length);
   const allowedDistance = maxLen <= 4 ? 1 : 2;
-  if (distance <= allowedDistance) return 0.6;
+  if (distance <= allowedDistance) return 0.65;
   return 0;
 }
 
@@ -110,6 +131,7 @@ function scoreTextMatch(query: string, values: string[]): number {
   if (!normalizedQuery) return 0;
   const compactQuery = compactForSearch(query);
   const queryTokens = tokenizeForSearch(query);
+  const queryStems = stemTokens(queryTokens);
   let bestScore = 0;
 
   for (const rawValue of values) {
@@ -118,14 +140,24 @@ function scoreTextMatch(query: string, values: string[]): number {
     const normalizedValue = normalizeForSearch(rawValue);
     const compactValue = compactForSearch(rawValue);
     const valueTokens = tokenizeForSearch(rawValue);
+    const valueStems = stemTokens(valueTokens);
     let score = 0;
 
     if (normalizedValue === normalizedQuery) {
       score = Math.max(score, 120);
     } else if (normalizedValue.startsWith(normalizedQuery)) {
-      score = Math.max(score, 100);
+      score = Math.max(score, 105);
     } else if (normalizedValue.includes(normalizedQuery)) {
-      score = Math.max(score, 60);
+      score = Math.max(score, 75);
+    }
+
+    // Stemmed exact or partial matches
+    const queryStemStr = queryStems.join(" ");
+    const valueStemStr = valueStems.join(" ");
+    if (valueStemStr === queryStemStr) {
+      score = Math.max(score, 115);
+    } else if (valueStemStr.includes(queryStemStr)) {
+      score = Math.max(score, 85);
     }
 
     if (compactValue === compactQuery) {
@@ -136,7 +168,7 @@ function scoreTextMatch(query: string, values: string[]): number {
 
     for (const qToken of queryTokens) {
       for (const cToken of valueTokens) {
-        score = Math.max(score, tokenSimilarityScore(qToken, cToken) * 55);
+        score = Math.max(score, tokenSimilarityScore(qToken, cToken) * 60);
       }
     }
 
@@ -162,6 +194,44 @@ export function searchCatalogItems(
 
   const results: SearchResultItem[] = [];
 
+  // 1. Search Category Taxonomy Subcategories & Product Types
+  for (const tax of Object.values(CATEGORY_TAXONOMIES)) {
+    for (const sub of tax.subcategories) {
+      // Subcategory check
+      const subScore = scoreTextMatch(q, [sub.name, sub.slug, tax.categoryName]);
+      if (subScore >= 60) {
+        results.push({
+          id: `cat-sub-${sub.id}`,
+          title: sub.name,
+          subtitle: `${tax.categoryName} • Category`,
+          type: "Category",
+          imageUrl: DEFAULT_SHOP_IMG,
+          url: `/?category=${tax.categorySlug}&subcategory=${sub.id}`,
+          categoryName: tax.categoryName,
+          matchScore: subScore + 10,
+        });
+      }
+
+      // Product Type check
+      for (const pt of sub.productTypes) {
+        const ptScore = scoreTextMatch(q, [pt.name, pt.slug, sub.name, tax.categoryName]);
+        if (ptScore >= 60) {
+          results.push({
+            id: `cat-pt-${pt.id}`,
+            title: pt.name,
+            subtitle: `${tax.categoryName} → ${sub.name}`,
+            type: "Category",
+            imageUrl: DEFAULT_SHOP_IMG,
+            url: `/?category=${tax.categorySlug}&subcategory=${sub.id}&product_type=${pt.id}`,
+            categoryName: tax.categoryName,
+            matchScore: ptScore + 15,
+          });
+        }
+      }
+    }
+  }
+
+  // 2. Search Shops & Restaurants
   for (const store of storesInput) {
     const categoryText =
       (store.category ? categoryLabel[store.category as keyof typeof categoryLabel] : "") ||
@@ -193,6 +263,7 @@ export function searchCatalogItems(
     }
   }
 
+  // 3. Search Products & Dishes
   for (const prod of productsInput) {
     const categoryText = prod.category || "Product";
     const score = scoreTextMatch(q, [
@@ -237,7 +308,15 @@ export function searchCatalogItems(
     }
   }
 
-  return results.sort((a, b) => b.matchScore - a.matchScore || a.title.length - b.title.length);
+  // Deduplicate by ID
+  const map = new Map<string, SearchResultItem>();
+  for (const r of results) {
+    if (!map.has(r.id)) map.set(r.id, r);
+  }
+
+  return Array.from(map.values()).sort(
+    (a, b) => b.matchScore - a.matchScore || a.title.length - b.title.length
+  );
 }
 
 export function getInstantSearchResults(query: string): SearchResultItem[] {

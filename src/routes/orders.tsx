@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { AppShell } from "@/components/app-shell";
 import { useOrdersState, orderStatusLabel } from "@/lib/orders-store";
 import { Clock, Star } from "lucide-react";
+import { LottieLoading } from "@/components/ui/lottie-loading";
 
 export const Route = createFileRoute("/orders")({
   component: OrdersPage,
@@ -9,20 +10,27 @@ export const Route = createFileRoute("/orders")({
 
 function OrdersSkeleton() {
   return (
-    <div className="mx-5 mt-4 space-y-3 pb-6 animate-pulse">
-      {[1, 2, 3].map((i) => (
-        <div key={i} className="rounded-xl bg-card p-4 ring-1 ring-black/[0.05] shadow-sm">
-          <div className="flex items-center justify-between">
-            <div className="h-3 w-20 rounded bg-slate-200 dark:bg-slate-800" />
-            <div className="h-3 w-16 rounded bg-slate-200 dark:bg-slate-800" />
+    <div className="mx-5 mt-4 space-y-4 pb-6">
+      <LottieLoading
+        message="Fetching your order history..."
+        subtext="Checking live status & delivery updates"
+        size="sm"
+      />
+      <div className="space-y-3 animate-pulse">
+        {[1, 2, 3].map((i) => (
+          <div key={i} className="rounded-xl bg-card p-4 ring-1 ring-black/[0.05] shadow-sm">
+            <div className="flex items-center justify-between">
+              <div className="h-3 w-20 rounded bg-slate-200 dark:bg-slate-800" />
+              <div className="h-3 w-16 rounded bg-slate-200 dark:bg-slate-800" />
+            </div>
+            <div className="mt-3 h-5 w-44 rounded bg-slate-200 dark:bg-slate-800" />
+            <div className="mt-4 flex items-center justify-between border-t hairline pt-2">
+              <div className="h-3 w-28 rounded bg-slate-200 dark:bg-slate-800" />
+              <div className="h-4 w-20 rounded-full bg-slate-200 dark:bg-slate-800" />
+            </div>
           </div>
-          <div className="mt-3 h-5 w-44 rounded bg-slate-200 dark:bg-slate-800" />
-          <div className="mt-4 flex items-center justify-between border-t hairline pt-2">
-            <div className="h-3 w-28 rounded bg-slate-200 dark:bg-slate-800" />
-            <div className="h-4 w-20 rounded-full bg-slate-200 dark:bg-slate-800" />
-          </div>
-        </div>
-      ))}
+        ))}
+      </div>
     </div>
   );
 }

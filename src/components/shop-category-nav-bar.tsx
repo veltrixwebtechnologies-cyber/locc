@@ -1,5 +1,5 @@
 import { useState, useMemo, startTransition } from "react";
-import { Link, useNavigate, useSearch } from "@tanstack/react-router";
+import { useNavigate } from "@tanstack/react-router";
 import {
   ALL_SHOP_CATEGORIES,
   DESKTOP_PRIORITY_CATEGORIES,
@@ -7,18 +7,23 @@ import {
   getCategoryByIdOrSlug,
   type ShopCategoryConfig,
 } from "@/lib/shop-categories";
-import { ChevronDown, Search, X, Sparkles, Check, Store } from "lucide-react";
+import { getSubcategoriesForCategory } from "@/lib/dynamic-filter-engine";
+import { ChevronDown, Search, X, Sparkles, Check, Store, Layers } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 interface ShopCategoryNavBarProps {
   activeCategorySlug?: string;
+  activeSubcategoryId?: string;
   onSelectCategory?: (category: ShopCategoryConfig) => void;
+  onSelectSubcategory?: (subcategoryId: string) => void;
   className?: string;
 }
 
 export function ShopCategoryNavBar({
   activeCategorySlug,
+  activeSubcategoryId = "all",
   onSelectCategory,
+  onSelectSubcategory,
   className = "",
 }: ShopCategoryNavBarProps) {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
@@ -30,18 +35,39 @@ export function ShopCategoryNavBar({
     return getCategoryByIdOrSlug(activeCategorySlug);
   }, [activeCategorySlug]);
 
+  // Retrieve 2nd-level subcategories for active category
+  const subcategories = useMemo(() => {
+    return getSubcategoriesForCategory(currentCategory.id);
+  }, [currentCategory.id]);
+
   const handleCategorySelect = (category: ShopCategoryConfig) => {
     setIsDrawerOpen(false);
     startTransition(() => {
       if (onSelectCategory) {
         onSelectCategory(category);
       } else {
-        // Update router search param
         const newCategoryParam = category.id === "all" ? undefined : category.slug;
         navigate({
           search: ((prev: any) => ({
             ...prev,
             category: newCategoryParam,
+            subcategory: undefined,
+          })) as any,
+          resetScroll: false,
+        });
+      }
+    });
+  };
+
+  const handleSubcategorySelect = (subId: string) => {
+    startTransition(() => {
+      if (onSelectSubcategory) {
+        onSelectSubcategory(subId);
+      } else {
+        navigate({
+          search: ((prev: any) => ({
+            ...prev,
+            subcategory: subId === "all" ? undefined : subId,
           })) as any,
           resetScroll: false,
         });
@@ -121,12 +147,12 @@ export function ShopCategoryNavBar({
 
   return (
     <div
-      className={`w-full bg-white/95 backdrop-blur-md border-b border-purple-100/80 sticky top-[64px] z-30 py-2.5 transition-all ${className}`}
+      className={`w-full bg-white/95 backdrop-blur-md border-b border-purple-100/80 sticky top-[64px] z-30 transition-all ${className}`}
     >
-      <div className="mx-auto max-w-7xl px-3 sm:px-6 flex items-center gap-2">
-        {/* Scrollable Container */}
+      {/* 1st Level Shop Category Navigation Bar */}
+      <div className="mx-auto max-w-7xl px-3 sm:px-6 flex items-center gap-2 py-2">
         <div className="flex-1 overflow-x-auto scrollbar-none [scrollbar-width:none] [&::-webkit-scrollbar]:hidden flex items-center gap-2 py-0.5 px-0.5">
-          {/* Desktop Visibility (Top 10 Priority) */}
+          {/* Desktop Visibility */}
           <div className="hidden lg:flex items-center gap-2">
             {DESKTOP_PRIORITY_CATEGORIES.map((cat) => {
               const Icon = cat.icon;
@@ -136,7 +162,7 @@ export function ShopCategoryNavBar({
                 <button
                   key={cat.id}
                   onClick={() => handleCategorySelect(cat)}
-                  className={`group inline-flex items-center gap-2 rounded-full px-4 py-2 text-xs font-semibold whitespace-nowrap transition-all duration-200 shrink-0 ${
+                  className={`group inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-xs font-semibold whitespace-nowrap transition-all duration-200 shrink-0 ${
                     isSelected
                       ? "bg-purple-900 text-white shadow-md shadow-purple-900/20 ring-2 ring-purple-900/30 scale-[1.02]"
                       : "bg-white text-slate-700 border border-slate-200 hover:border-purple-300 hover:bg-purple-50/50 hover:text-purple-900"
@@ -153,7 +179,7 @@ export function ShopCategoryNavBar({
             })}
           </div>
 
-          {/* Mobile & Tablet Visibility (Top 7 Priority) */}
+          {/* Mobile Visibility */}
           <div className="flex lg:hidden items-center gap-2">
             {MOBILE_PRIORITY_CATEGORIES.map((cat) => {
               const Icon = cat.icon;
@@ -178,21 +204,21 @@ export function ShopCategoryNavBar({
             })}
           </div>
 
-          {/* If selected category is NOT in the main visible bar, show it as an active pill! */}
+          {/* Active fallback pill */}
           {!DESKTOP_PRIORITY_CATEGORIES.some((c) => c.id === currentCategory.id) && (
             <button
               onClick={() => handleCategorySelect(currentCategory)}
-              className="inline-flex items-center gap-2 rounded-full px-4 py-2 text-xs font-semibold whitespace-nowrap bg-purple-900 text-white shadow-md shadow-purple-900/20 ring-2 ring-purple-900/30 shrink-0"
+              className="inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-xs font-semibold whitespace-nowrap bg-purple-900 text-white shadow-md shrink-0"
             >
               <currentCategory.icon className="h-3.5 w-3.5 text-[#F3D053]" />
               <span>{currentCategory.name}</span>
             </button>
           )}
 
-          {/* More Categories Pill Button */}
+          {/* More Pill */}
           <button
             onClick={() => setIsDrawerOpen(true)}
-            className="inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-xs font-bold whitespace-nowrap transition-all duration-200 bg-purple-100/80 text-purple-900 hover:bg-purple-200 border border-purple-200/60 shrink-0 shadow-xs"
+            className="inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-bold whitespace-nowrap bg-purple-100/80 text-purple-900 hover:bg-purple-200 border border-purple-200/60 shrink-0 shadow-xs"
           >
             <Sparkles className="h-3.5 w-3.5 text-purple-700" />
             <span>More</span>
@@ -201,10 +227,52 @@ export function ShopCategoryNavBar({
         </div>
       </div>
 
-      {/* Complete Category Drawer / Modal */}
+      {/* 2nd-LEVEL SUBCATEGORY FILTER STRIP */}
+      {subcategories.length > 0 && currentCategory.id !== "all" && (
+        <div className="bg-purple-50/60 border-t border-purple-100/70 py-1.5 px-3 sm:px-6">
+          <div className="mx-auto max-w-7xl flex items-center gap-2 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            <span className="text-[11px] font-black uppercase text-purple-900/60 shrink-0 flex items-center gap-1">
+              <Layers className="h-3 w-3 text-purple-700" />
+              Subcategory:
+            </span>
+
+            {/* All Subcategories Pill */}
+            <button
+              type="button"
+              onClick={() => handleSubcategorySelect("all")}
+              className={`px-3 py-1 rounded-lg text-xs font-bold whitespace-nowrap transition-all ${
+                activeSubcategoryId === "all"
+                  ? "bg-purple-900 text-white shadow-2xs"
+                  : "bg-white text-slate-700 hover:bg-purple-100 border border-purple-200/60"
+              }`}
+            >
+              All {currentCategory.name}
+            </button>
+
+            {subcategories.map((sub) => {
+              const isSelected = activeSubcategoryId === sub.id || activeSubcategoryId === sub.slug;
+              return (
+                <button
+                  key={sub.id}
+                  type="button"
+                  onClick={() => handleSubcategorySelect(sub.id)}
+                  className={`px-3 py-1 rounded-lg text-xs font-bold whitespace-nowrap transition-all ${
+                    isSelected
+                      ? "bg-purple-900 text-white shadow-2xs"
+                      : "bg-white text-slate-700 hover:bg-purple-100 border border-purple-200/60"
+                  }`}
+                >
+                  {sub.name}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Category Drawer Modal */}
       <Dialog open={isDrawerOpen} onOpenChange={setIsDrawerOpen}>
         <DialogContent className="max-w-4xl max-h-[85vh] overflow-hidden flex flex-col p-0 rounded-3xl border-purple-100">
-          {/* Header */}
           <div className="bg-gradient-to-r from-purple-900 via-indigo-900 to-purple-950 p-6 text-white shrink-0 relative">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2.5">
@@ -222,7 +290,6 @@ export function ShopCategoryNavBar({
               </div>
             </div>
 
-            {/* Instant Search Bar */}
             <div className="mt-4 relative">
               <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
               <input
@@ -243,7 +310,6 @@ export function ShopCategoryNavBar({
             </div>
           </div>
 
-          {/* Content Area */}
           <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-slate-50/50">
             {searchQuery ? (
               <div>
@@ -254,9 +320,6 @@ export function ShopCategoryNavBar({
                   <div className="py-12 text-center text-slate-500">
                     <p className="text-sm font-medium">
                       No shop categories found matching "{searchQuery}"
-                    </p>
-                    <p className="text-xs text-slate-400 mt-1">
-                      Try searching for bakery, grocery, medical, or clothing.
                     </p>
                   </div>
                 ) : (

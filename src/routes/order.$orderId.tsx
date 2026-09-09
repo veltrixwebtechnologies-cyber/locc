@@ -16,6 +16,7 @@ import { toast } from "sonner";
 import { m } from "motion/react";
 import { OrderSupport } from "@/components/order-support";
 import { DeliveryAnimation } from "@/components/delivery-animation";
+import { LottieLoading } from "@/components/ui/lottie-loading";
 
 export const Route = createFileRoute("/order/$orderId")({
   component: OrderPage,
@@ -261,9 +262,12 @@ function OrderPage() {
   if (isLoading) {
     return (
       <AppShell>
-        <div className="mx-5 mt-8 rounded-xl border hairline bg-card p-6 text-center">
-          <p className="font-display text-lg">Loading your order…</p>
-          <p className="mt-1 text-sm text-muted-foreground">Syncing the latest order status.</p>
+        <div className="mx-auto max-w-xl py-16 px-4 flex justify-center">
+          <LottieLoading
+            message="Loading your order details..."
+            subtext="Syncing live order tracking & delivery location"
+            size="lg"
+          />
         </div>
       </AppShell>
     );

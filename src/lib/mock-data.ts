@@ -1779,6 +1779,27 @@ const seedProducts = (storeId: string, cat: StoreCategory): Product[] => {
         category: "Menswear",
         imageUrl: img("photo-1489987707025-afc232f7ea0f"),
       },
+      {
+        name: "Men Formal White Full Sleeve Linen Shirt",
+        unit: "1 pc",
+        price: 799,
+        category: "Shirts",
+        imageUrl: img("photo-1489987707025-afc232f7ea0f"),
+      },
+      {
+        name: "Men Regular Fit Denim Jeans",
+        unit: "1 pc",
+        price: 999,
+        category: "Jeans",
+        imageUrl: img("photo-1541099649105-f69ad21f3246"),
+      },
+      {
+        name: "Printed Cotton Round Neck T-Shirt",
+        unit: "1 pc",
+        price: 349,
+        category: "T-Shirts",
+        imageUrl: img("photo-1521572267360-ee0c2909d518"),
+      },
     ],
     kitchen_appliances: [
       {
@@ -2014,18 +2035,46 @@ const seedProducts = (storeId: string, cat: StoreCategory): Product[] => {
     ],
     fashion: [
       {
-        name: "Men Pure Cotton Shirt",
+        name: "Men Pure Cotton Casual Shirt",
         unit: "1 pc",
         price: 699,
-        category: "Clothing",
+        category: "Shirts",
         imageUrl: img("photo-1489987707025-afc232f7ea0f"),
       },
       {
-        name: "Traditional White Dhoti & Shirt",
+        name: "Men Slim Fit Formal Linen Shirt",
+        unit: "1 pc",
+        price: 999,
+        category: "Shirts",
+        imageUrl: img("photo-1489987707025-afc232f7ea0f"),
+      },
+      {
+        name: "Traditional White Ramraj Dhoti & Shirt Set",
         unit: "1 set",
         price: 899,
-        category: "Clothing",
+        category: "Dhotis & Shirts",
         imageUrl: img("photo-1441986300917-64674bd600d8"),
+      },
+      {
+        name: "Men Round Neck Cotton T-Shirt",
+        unit: "1 pc",
+        price: 399,
+        category: "T-Shirts",
+        imageUrl: img("photo-1521572267360-ee0c2909d518"),
+      },
+      {
+        name: "Men Slim Fit Stretchable Denim Jeans",
+        unit: "1 pc",
+        price: 1199,
+        category: "Jeans",
+        imageUrl: img("photo-1541099649105-f69ad21f3246"),
+      },
+      {
+        name: "Women Cotton Floral Printed Kurti",
+        unit: "1 pc",
+        price: 549,
+        category: "Kurtis",
+        imageUrl: img("photo-1583391733956-6c78276477e2"),
       },
     ],
     footwear: [

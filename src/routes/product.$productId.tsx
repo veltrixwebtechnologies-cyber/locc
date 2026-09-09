@@ -37,6 +37,7 @@ import { ProductThumb } from "@/components/product-thumb";
 import { useDeliveryLocation } from "@/lib/location-store";
 import { isValidCoordinate, haversineDistanceKm } from "@/lib/geo";
 import { SearchShopRecommendations } from "@/components/search-shop-recommendations";
+import { LottieLoading } from "@/components/ui/lottie-loading";
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -273,14 +274,45 @@ function ProductPage() {
   if (product.isLoading) {
     return (
       <AppShell>
-        <div className="mx-auto max-w-7xl px-4 py-6 md:px-8">
-          <div className="grid gap-8 md:grid-cols-2">
-            <SkeletonCard className="h-[420px] rounded-2xl" />
+        <div className="mx-auto max-w-7xl px-4 py-6 md:px-8 min-h-[65vh]">
+          {/* Breadcrumb Skeleton */}
+          <div className="mb-6 flex items-center gap-2">
+            <div className="premium-skeleton h-3.5 w-14 rounded" />
+            <span className="text-slate-300">/</span>
+            <div className="premium-skeleton h-3.5 w-24 rounded" />
+            <span className="text-slate-300">/</span>
+            <div className="premium-skeleton h-3.5 w-36 rounded" />
+          </div>
+
+          <div className="grid gap-8 lg:grid-cols-[minmax(0,1.15fr)_minmax(340px,0.85fr)] items-start">
+            {/* Gallery Image Skeleton with Lottie Loading */}
             <div className="space-y-4">
+              <div className="relative flex min-h-[320px] sm:min-h-[380px] md:min-h-[420px] items-center justify-center rounded-2xl border border-purple-100/80 bg-gradient-to-br from-purple-50/50 via-white to-purple-50/30 p-6 shadow-sm overflow-hidden">
+                <LottieLoading
+                  message="Loading product details..."
+                  subtext="Fetching live pricing & store inventory"
+                  size="lg"
+                />
+              </div>
+              <div className="flex gap-3">
+                <div className="premium-skeleton h-16 w-16 rounded-xl shrink-0" />
+                <div className="premium-skeleton h-16 w-16 rounded-xl shrink-0" />
+                <div className="premium-skeleton h-16 w-16 rounded-xl shrink-0" />
+              </div>
+            </div>
+
+            {/* Product Meta & Pricing Card Skeleton */}
+            <div className="space-y-5 rounded-2xl border border-purple-100/80 bg-card p-6 shadow-sm">
+              <div className="premium-skeleton h-5 w-32 rounded-full" />
+              <div className="premium-skeleton h-8 w-4/5 rounded-lg" />
               <div className="premium-skeleton h-4 w-1/3 rounded" />
-              <div className="premium-skeleton h-10 w-4/5 rounded-lg" />
-              <div className="premium-skeleton h-6 w-1/4 rounded" />
-              <div className="premium-skeleton h-12 w-2/5 rounded-xl" />
+              <div className="premium-skeleton h-9 w-1/4 rounded-lg mt-4" />
+              <div className="premium-skeleton h-12 w-full rounded-xl mt-6" />
+              <div className="space-y-2.5 pt-5 border-t border-slate-100">
+                <div className="premium-skeleton h-4 w-full rounded" />
+                <div className="premium-skeleton h-4 w-5/6 rounded" />
+                <div className="premium-skeleton h-4 w-2/3 rounded" />
+              </div>
             </div>
           </div>
         </div>

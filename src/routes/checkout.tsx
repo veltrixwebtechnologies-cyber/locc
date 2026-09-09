@@ -12,6 +12,7 @@ import { DeliveryAnimation } from "@/components/delivery-animation";
 import { reverseGeocode } from "@/lib/geocoding.functions";
 import { isValidCoordinate, haversineDistanceKm } from "@/lib/geo";
 import { AVAILABLE_COUPONS, calculateBillBreakdown, evaluateCoupon } from "@/lib/coupons";
+import { SmartLottieLoader } from "@/components/ui/smart-lottie-loader";
 import {
   Crosshair,
   Plus,
@@ -719,6 +720,16 @@ function CheckoutPage() {
 
   return (
     <AppShell>
+      {/* Order Placement Lottie Loader */}
+      <SmartLottieLoader
+        show={isPlacing}
+        delayMs={0}
+        mode="fullscreen"
+        size="xl"
+        message={`Placing your order with ${store?.name || "LocalShore"}...`}
+        subtext="Verifying item availability & assigning nearest delivery partner"
+      />
+
       <div className="px-5 pt-6">
         <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
           Checkout
