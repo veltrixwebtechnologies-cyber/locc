@@ -137,6 +137,7 @@ function CheckoutPage() {
   );
   const [pay, setPay] = useState<"upi" | "card" | "cod">("upi");
   const [showAdd, setShowAdd] = useState(false);
+  const [showMap, setShowMap] = useState(false);
   const [newLabel, setNewLabel] = useState("");
   const [newLine, setNewLine] = useState("");
   const [manualAddress, setManualAddress] = useState("");
@@ -777,35 +778,48 @@ function CheckoutPage() {
       <section className="mx-3 sm:mx-5 mt-4 rounded-2xl bg-card p-3.5 sm:p-4 ring-1 ring-black/[0.04]">
         <div className="flex items-center justify-between">
           <h2 className="font-display text-sm sm:text-base font-bold">Delivery location</h2>
-          <button
-            onClick={toggleLiveLocation}
-            disabled={locStatus === "loading" && !isTracking}
-            className="inline-flex items-center gap-1.5 rounded-full border hairline px-2.5 py-1 text-[11px] font-medium hover:border-primary/40 disabled:opacity-60"
-          >
-            <Crosshair
-              className={`h-3 w-3 ${locStatus === "loading" || isTracking ? "animate-spin" : ""}`}
-            />
-            {isTracking ? "Stop live" : locStatus === "loading" ? "Locating…" : "Live location"}
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={toggleLiveLocation}
+              disabled={locStatus === "loading" && !isTracking}
+              className="inline-flex items-center gap-1.5 rounded-full border hairline px-2.5 py-1 text-[11px] font-medium hover:border-primary/40 disabled:opacity-60"
+            >
+              <Crosshair
+                className={`h-3 w-3 ${locStatus === "loading" || isTracking ? "animate-spin" : ""}`}
+              />
+              {isTracking ? "Stop live" : locStatus === "loading" ? "Locating…" : "Live location"}
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowMap((prev) => !prev)}
+              className="inline-flex items-center gap-1.5 rounded-full bg-purple-50 hover:bg-purple-100 text-[#981495] border border-purple-200/80 px-2.5 py-1 text-[11px] font-bold transition-all cursor-pointer"
+            >
+              <span>{showMap ? "Hide map" : "🗺️ Show map"}</span>
+            </button>
+          </div>
         </div>
         <p className="mt-1 text-[11px] text-muted-foreground">
-          Use your location, or tap/drag the marigold pin when the map is available.
+          {showMap
+            ? "Tap or drag the pin on the map below to pinpoint your exact doorstep."
+            : "Select an address below or tap 'Show map' to pin your exact location."}
         </p>
-        <div className="mt-3">
-          <DeliveryMap
-            store={store ? { lat: store.lat, lng: store.lng, label: store.name } : undefined}
-            destination={pinCoords}
-            accuracyMeters={accuracyMeters}
-            interactive
-            onDestinationChange={updatePin}
-            height={200}
-          />
-        </div>
-        <p className="mt-2 font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
-          Pin ·{" "}
-          {pinCoords ? `${pinCoords.lat.toFixed(4)}, ${pinCoords.lng.toFixed(4)}` : "unavailable"}
-          {typeof accuracyMeters === "number" ? ` · accuracy ±${Math.round(accuracyMeters)} m` : ""}
-        </p>
+        {showMap && (
+          <div className="mt-3">
+            <DeliveryMap
+              store={store ? { lat: store.lat, lng: store.lng, label: store.name } : undefined}
+              destination={pinCoords}
+              accuracyMeters={accuracyMeters}
+              interactive
+              onDestinationChange={updatePin}
+              height={200}
+            />
+            <p className="mt-2 font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+              Pin ·{" "}
+              {pinCoords ? `${pinCoords.lat.toFixed(4)}, ${pinCoords.lng.toFixed(4)}` : "unavailable"}
+              {typeof accuracyMeters === "number" ? ` · accuracy ±${Math.round(accuracyMeters)} m` : ""}
+            </p>
+          </div>
+        )}
         {!pinConfirmed && (
           <p className="mt-1 text-[11px] text-amber-700">
             Previous pin is invalid until you confirm the delivery location again.
