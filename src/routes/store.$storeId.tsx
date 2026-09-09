@@ -41,6 +41,7 @@ import { SearchShopRecommendations } from "@/components/search-shop-recommendati
 import { calculateDynamicETA } from "@/lib/ml-eta-engine";
 import { useMLTracker } from "@/hooks/use-ml-tracker";
 import { ComplementaryShopsWidget } from "@/components/complementary-shops-widget";
+import { NearbySimilarShopsWidget } from "@/components/nearby-similar-shops-widget";
 import { scrollToShops } from "@/lib/scroll-utils";
 
 const isUuid = (value: string) =>
@@ -911,6 +912,14 @@ function StorePage() {
           </div>
         </div>
         )}
+
+        <NearbySimilarShopsWidget
+          currentCategory={store.category}
+          currentStoreId={store.id}
+          searchQuery={query || sq}
+          title="Shops & Products Near Your Home"
+          subtitle={`Verified local merchants near your address with matching products in ${store.category}`}
+        />
 
         <ComplementaryShopsWidget
           currentCategory={store.category}

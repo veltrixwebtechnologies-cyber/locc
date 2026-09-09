@@ -37,6 +37,7 @@ import { ProductThumb } from "@/components/product-thumb";
 import { useDeliveryLocation } from "@/lib/location-store";
 import { isValidCoordinate, haversineDistanceKm } from "@/lib/geo";
 import { SearchShopRecommendations } from "@/components/search-shop-recommendations";
+import { NearbySimilarShopsWidget } from "@/components/nearby-similar-shops-widget";
 import { LottieLoading } from "@/components/ui/lottie-loading";
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -727,6 +728,18 @@ function ProductPage() {
                 </p>
               )}
             </div>
+          </section>
+
+          {/* Section 4: Nearby Shops Selling Similar Products Near User Home */}
+          <section className="mt-12">
+            <NearbySimilarShopsWidget
+              currentCategory={item.category}
+              currentProductId={item.id}
+              currentStoreId={item.seller_id}
+              searchQuery={sq || item.name}
+              title="Shops Near Your Home Selling Similar Items"
+              subtitle={`Nearby local merchants in your neighborhood carrying ${item.category || "similar items"}`}
+            />
           </section>
         </main>
       </div>
