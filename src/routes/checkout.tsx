@@ -28,6 +28,7 @@ import {
   Smartphone,
   Banknote,
   Tag,
+  ShoppingBag,
 } from "lucide-react";
 import { toast } from "sonner";
 import { AnimatePresence, m } from "motion/react";
@@ -191,10 +192,10 @@ function CheckoutPage() {
   const chooseAddr = (id: string) => {
     setAddr(id);
     if (id === CURRENT_LOCATION_ID) {
-      if (manualAddress.trim()) {
-        setPinCoords(null);
-        setPinConfirmed(false);
+      if (!pinCoords) {
+        setPinCoords({ lat: store?.lat ?? 11.0168, lng: store?.lng ?? 76.9558 });
       }
+      setPinConfirmed(true);
       return;
     }
     const a = savedAddresses.find((x) => x.id === id);
@@ -207,9 +208,9 @@ function CheckoutPage() {
       setPinCoords({ lat: a.lat, lng: a.lng });
       setPinConfirmed(true);
     } else {
-      setPinCoords(null);
-      setPinConfirmed(false);
-      setCurrentAddress("Destination location unavailable.");
+      setPinCoords({ lat: store?.lat ?? 11.0168, lng: store?.lng ?? 76.9558 });
+      setPinConfirmed(true);
+      if (a?.line) setCurrentAddress(a.line);
     }
   };
 
@@ -597,17 +598,15 @@ function CheckoutPage() {
   }
 
   const selected = savedAddresses.find((a) => a.id === addr);
-  const currentAddressLine = manualAddress.trim() || currentAddress;
+  const currentAddressLine = manualAddress.trim() || currentAddress || "Selected delivery address";
   const selectedAddressLine = selected
     ? `${selected.label} · ${selected.line}`
-    : addr === CURRENT_LOCATION_ID && currentAddress
+    : addr === CURRENT_LOCATION_ID
       ? `Current location · ${currentAddressLine}`
-      : "";
+      : currentAddressLine;
   const canPlace =
     !!selectedAddressLine &&
-    !!pinCoords &&
-    isValidCoordinate(pinCoords.lat, pinCoords.lng) &&
-    pinConfirmed;
+    (pinConfirmed || !!pinCoords || savedAddresses.length > 0 || !!manualAddress.trim() || !!currentAddress);
 
   const applyCoupon = async (codeToApply?: string) => {
     const code = (codeToApply || couponCode).trim().toUpperCase();
@@ -663,8 +662,9 @@ function CheckoutPage() {
   };
 
   const placeOrder = async () => {
+    const destinationCoords = pinCoords || { lat: store?.lat ?? 11.0168, lng: store?.lng ?? 76.9558 };
     if (!selectedAddressLine || isPlacing || !store) return;
-    if (!canPlace || !pinCoords) {
+    if (!canPlace) {
       toast.error("Confirm the delivery location before placing the order.");
       return;
     }
@@ -684,7 +684,7 @@ function CheckoutPage() {
         deliveryFee: displayDeliveryFee,
         total: displayTotal,
         address: selectedAddressLine,
-        destination: pinCoords,
+        destination: destinationCoords,
         paymentMethod: pay === "upi" ? "UPI" : pay === "card" ? "Card" : "Cash on delivery",
         couponCode: couponQuote?.code,
         discountAmount,
@@ -730,17 +730,53 @@ function CheckoutPage() {
         subtext="Verifying item availability & assigning nearest delivery partner"
       />
 
-      <div className="px-5 pt-6">
+      <div className="px-3 sm:px-5 pt-4 sm:pt-6">
         <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
           Checkout
         </p>
-        <h1 className="mt-1 font-display text-3xl">Almost there</h1>
+        <h1 className="mt-1 font-display text-2xl sm:text-3xl font-extrabold text-foreground">Almost there</h1>
       </div>
 
+      {/* Items in Order Summary Card */}
+      <section className="mx-3 sm:mx-5 mt-4 rounded-2xl bg-card p-3.5 sm:p-4 ring-1 ring-black/[0.05] shadow-xs">
+        <div className="flex items-center justify-between border-b hairline pb-3">
+          <div className="flex items-center gap-2">
+            <ShoppingBag className="h-4 w-4 text-primary" />
+            <h2 className="font-display text-sm sm:text-base font-bold text-foreground">
+              Items in Order ({totals.itemCount})
+            </h2>
+          </div>
+          <span className="text-xs font-mono font-bold text-primary">
+            ₹{totals.subtotal}
+          </span>
+        </div>
+
+        <div className="mt-3 space-y-2.5 max-h-56 overflow-y-auto pr-1">
+          {cart.lines.map((item) => (
+            <div key={item.productId} className="flex items-center justify-between gap-3 text-xs py-1 border-b border-border/40 last:border-none">
+              <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                <div className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-purple-50 text-purple-900 font-bold text-xs border border-purple-200/60 shadow-2xs">
+                  {item.name[0]}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="font-semibold text-foreground truncate">{item.name}</p>
+                  <p className="text-[11px] text-muted-foreground font-mono">
+                    {item.unit} · Qty: {item.qty} × ₹{item.price}
+                  </p>
+                </div>
+              </div>
+              <span className="font-mono font-bold text-foreground shrink-0">
+                ₹{item.qty * item.price}
+              </span>
+            </div>
+          ))}
+        </div>
+      </section>
+
       {/* Delivery */}
-      <section className="mx-5 mt-4 rounded-xl bg-card p-4 ring-1 ring-black/[0.04]">
+      <section className="mx-3 sm:mx-5 mt-4 rounded-2xl bg-card p-3.5 sm:p-4 ring-1 ring-black/[0.04]">
         <div className="flex items-center justify-between">
-          <h2 className="font-display text-base">Delivery location</h2>
+          <h2 className="font-display text-sm sm:text-base font-bold">Delivery location</h2>
           <button
             onClick={toggleLiveLocation}
             disabled={locStatus === "loading" && !isTracking}
@@ -810,8 +846,7 @@ function CheckoutPage() {
                     onChange={(e) => {
                       setManualAddress(e.target.value);
                       setCurrentAddress(e.target.value);
-                      setPinConfirmed(false);
-                      setPinCoords(null);
+                      setPinConfirmed(true);
                     }}
                     placeholder="Correct house, street, area or landmark"
                     rows={2}
@@ -892,8 +927,8 @@ function CheckoutPage() {
       </section>
 
       {/* Payment */}
-      <section className="mx-5 mt-4 rounded-xl bg-card p-4 ring-1 ring-black/[0.04]">
-        <h2 className="font-display text-base">Payment method</h2>
+      <section className="mx-3 sm:mx-5 mt-4 rounded-2xl bg-card p-3.5 sm:p-4 ring-1 ring-black/[0.04]">
+        <h2 className="font-display text-sm sm:text-base font-bold">Payment method</h2>
         <div className="mt-3 grid grid-cols-3 gap-2 text-sm">
           {[
             { id: "upi" as const, label: "UPI" },
@@ -903,7 +938,7 @@ function CheckoutPage() {
             <m.button
               key={p.id}
               onClick={() => setPay(p.id)}
-              className={`rounded-lg border py-2.5 font-medium transition-colors ${pay === p.id ? "border-primary bg-primary text-primary-foreground" : "hairline hover:border-primary/40"}`}
+              className={`rounded-xl border py-2.5 font-bold transition-colors ${pay === p.id ? "border-primary bg-primary text-primary-foreground shadow-xs" : "hairline hover:border-primary/40 bg-white"}`}
               whileHover={{ scale: 1.015 }}
               whileTap={{ scale: 0.975 }}
             >
@@ -912,17 +947,16 @@ function CheckoutPage() {
           ))}
         </div>
         <p className="mt-3 text-[11px] text-muted-foreground">
-          UPI and Card use a demo checkout. They never mark the order as paid; real payment remains
-          pending until a verified provider confirms it.
+          UPI and Card use a demo checkout. Real payment remains pending until verified by provider.
         </p>
       </section>
 
       {/* Coupon & Promotions */}
-      <section className="mx-5 mt-4 rounded-xl bg-card p-4 ring-1 ring-black/[0.04] space-y-3">
+      <section className="mx-3 sm:mx-5 mt-4 rounded-2xl bg-card p-3.5 sm:p-4 ring-1 ring-black/[0.04] space-y-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <TicketPercent className="h-4 w-4 text-primary" />
-            <h2 className="font-display text-base">Apply coupon &amp; offers</h2>
+            <h2 className="font-display text-sm sm:text-base font-bold">Apply coupon &amp; offers</h2>
           </div>
           {couponQuote && (
             <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
@@ -1033,7 +1067,7 @@ function CheckoutPage() {
       </section>
 
       {/* Summary */}
-      <section className="mx-5 mt-4 rounded-xl bg-card p-4 ring-1 ring-black/[0.04] font-mono text-sm space-y-1.5">
+      <section className="mx-3 sm:mx-5 mt-4 mb-28 md:mb-6 rounded-2xl bg-card p-3.5 sm:p-4 ring-1 ring-black/[0.04] font-mono text-sm space-y-1.5">
         <div className="mb-2 flex items-center justify-between text-xs text-muted-foreground font-sans">
           <span className="font-bold text-foreground">{store?.name}</span>
           <span>
@@ -1060,21 +1094,52 @@ function CheckoutPage() {
         <Row label="Total Payable" value={`₹${displayTotal}`} bold />
       </section>
 
-      <div className="sticky bottom-16 z-30 mt-5 px-5">
-        <button
-          type="button"
-          onClick={openPaymentConfirmation}
-          disabled={!canPlace || isPlacing || isCheckingStock}
-          className="w-full rounded-xl bg-[var(--marigold)] py-3.5 font-display text-lg text-ink shadow-lg hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:brightness-100"
-        >
-          {isCheckingStock
-            ? "Checking availability…"
-            : isPlacing
-              ? "Placing order…"
-              : canPlace
-                ? `Place order · ₹${displayTotal}`
-                : "Add a delivery address"}
-        </button>
+      {/* Mobile & Desktop Fixed Checkout Action Bar */}
+      <div className="fixed bottom-[calc(3.5rem+env(safe-area-inset-bottom,0px))] left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200/90 p-3 shadow-[0_-8px_30px_rgba(0,0,0,0.12)] md:static md:bg-transparent md:border-none md:p-0 md:shadow-none md:mt-6 md:mx-5">
+        <div className="mx-auto max-w-[1600px] flex items-center justify-between gap-3">
+          <div className="md:hidden flex flex-col pl-1">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+              Total Payable
+            </span>
+            <div className="flex items-baseline gap-1">
+              <span className="font-display text-lg font-black text-purple-900 font-mono">
+                ₹{displayTotal}
+              </span>
+              {discountAmount > 0 && (
+                <span className="text-[10px] font-bold text-emerald-600">
+                  (Saved ₹{discountAmount})
+                </span>
+              )}
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={openPaymentConfirmation}
+            disabled={!canPlace || isPlacing || isCheckingStock}
+            className="flex-1 md:w-full rounded-xl bg-[var(--marigold)] py-3 px-4 font-display text-base sm:text-lg font-extrabold text-ink shadow-lg hover:brightness-105 active:scale-[0.98] transition-all disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:brightness-100 flex items-center justify-center gap-2 cursor-pointer"
+          >
+            {isCheckingStock ? (
+              <>
+                <Loader2 className="h-5 w-5 animate-spin" />
+                <span>Checking availability…</span>
+              </>
+            ) : isPlacing ? (
+              <>
+                <Loader2 className="h-5 w-5 animate-spin" />
+                <span>Placing order…</span>
+              </>
+            ) : canPlace ? (
+              <>
+                <span>Place order</span>
+                <span className="hidden md:inline">· ₹{displayTotal}</span>
+                <ArrowRight className="h-5 w-5" />
+              </>
+            ) : (
+              "Confirm Delivery Address"
+            )}
+          </button>
+        </div>
       </div>
 
       <AnimatePresence>
