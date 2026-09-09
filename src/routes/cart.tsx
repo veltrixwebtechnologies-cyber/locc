@@ -204,7 +204,7 @@ function CartPage() {
             </Link>
           </m.div>
         ) : (
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-[1fr_340px] pb-28 md:pb-0">
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-[1fr_340px] pb-44 md:pb-0">
             {/* ── LEFT COLUMN ─────────────────────────────────── */}
             <div className="space-y-4">
               {/* Store info card */}
@@ -597,7 +597,7 @@ function CartPage() {
 
         {/* ── STICKY BOTTOM BAR FOR MOBILE ───────────────────────── */}
         {cart.lines.length > 0 && (
-          <div className="fixed bottom-0 inset-x-0 z-40 border-t border-border bg-card/95 p-3.5 shadow-[0_-4px_25px_rgba(0,0,0,0.12)] backdrop-blur-md md:hidden">
+          <div className="fixed bottom-[calc(3.5rem+env(safe-area-inset-bottom,0px))] inset-x-0 z-50 border-t border-border bg-card/95 p-3.5 shadow-[0_-4px_25px_rgba(0,0,0,0.12)] backdrop-blur-md md:hidden">
             <div className="flex items-center justify-between gap-3 max-w-md mx-auto">
               <div className="flex flex-col">
                 <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">

@@ -23,6 +23,7 @@ class MLTracker {
   private queue: MLEventPayload[] = [];
   private isProcessing = false;
   private sessionId: string;
+  private static isTableDisabled = false;
 
   constructor() {
     this.sessionId = this.getOrCreateSessionId();
@@ -39,7 +40,7 @@ class MLTracker {
   }
 
   public track(payload: MLEventPayload): void {
-    if (typeof window === 'undefined') return;
+    if (typeof window === 'undefined' || MLTracker.isTableDisabled) return;
 
     this.queue.push({
       ...payload,
@@ -58,7 +59,7 @@ class MLTracker {
   }
 
   private async flush(): Promise<void> {
-    if (this.queue.length === 0 || this.isProcessing) return;
+    if (MLTracker.isTableDisabled || this.queue.length === 0 || this.isProcessing) return;
     this.isProcessing = true;
 
     const eventsToFlush = [...this.queue];
@@ -81,13 +82,23 @@ class MLTracker {
         metadata: evt.metadata || {},
       }));
 
-      await (supabase as any).from('ml_user_events').insert(records);
-    } catch (err) {
-      // Non-blocking fallback on telemetry errors
-      console.debug('[MLTracker] Telemetry batch flush ignored:', err);
+      const { error } = await (supabase as any).from('ml_user_events').insert(records);
+      if (error) {
+        if (
+          error.code === 'PGRST301' ||
+          error.code === '42P01' ||
+          (error as any).status === 404 ||
+          error.message?.includes('404') ||
+          error.message?.includes('does not exist')
+        ) {
+          MLTracker.isTableDisabled = true;
+        }
+      }
+    } catch (err: any) {
+      MLTracker.isTableDisabled = true;
     } finally {
       this.isProcessing = false;
-      if (this.queue.length > 0) {
+      if (!MLTracker.isTableDisabled && this.queue.length > 0) {
         setTimeout(() => this.flush(), 2000);
       }
     }

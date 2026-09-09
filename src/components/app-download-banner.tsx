@@ -76,17 +76,20 @@ export const AppDownloadBanner: React.FC<AppDownloadBannerProps> = ({
     // Fetch latest from Supabase fallback
     (async () => {
       try {
-        const { data } = await (supabase as any)
+        const { data, error } = await (supabase as any)
           .from("banners")
           .select("*")
-          .eq("id", "app-download-banner-global-config")
+          .eq("placement", "promo")
+          .limit(1)
           .maybeSingle();
 
-        if (data && data.image_url) {
-          const parsed = JSON.parse(data.image_url);
-          const merged = { ...DEFAULT_APP_BANNER_CONFIG, ...parsed, is_active: data.is_active ?? true };
-          setConfig(merged);
-          localStorage.setItem(APP_BANNER_CONFIG_KEY, JSON.stringify(merged));
+        if (!error && data && data.image_url) {
+          try {
+            const parsed = JSON.parse(data.image_url);
+            const merged = { ...DEFAULT_APP_BANNER_CONFIG, ...parsed, is_active: data.is_active ?? true };
+            setConfig(merged);
+            localStorage.setItem(APP_BANNER_CONFIG_KEY, JSON.stringify(merged));
+          } catch {}
         }
       } catch (e) {
         // Fallback to local storage config
