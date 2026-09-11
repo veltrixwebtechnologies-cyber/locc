@@ -479,7 +479,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               animate={{ y: 0, opacity: 1 }}
               exit={{ y: 80, opacity: 0 }}
               transition={{ type: "spring", stiffness: 380, damping: 26 }}
-              className="hidden md:block fixed bottom-6 right-8 z-[95] w-88 pointer-events-auto"
+              className="fixed bottom-[calc(3.8rem+env(safe-area-inset-bottom,0px))] inset-x-3 z-[45] md:bottom-6 md:right-8 md:inset-x-auto md:w-88 pointer-events-auto"
             >
               <div className="flex items-center justify-between gap-3 rounded-2xl bg-gradient-to-r from-[#4c1074] via-[#6b1fa0] to-[#125c52] p-3 text-white shadow-[0_12px_36px_rgba(0,0,0,0.4)] ring-1 ring-white/20 backdrop-blur-xl">
                 <div className="flex items-center gap-3 min-w-0">

@@ -140,15 +140,19 @@ export function filterStoreByState(store: Store, state: ActiveFilterState): bool
 }
 
 /**
- * Evaluates whether a Product matches the current ActiveFilterState
+ * Evaluates whether a Product matches the current ActiveFilterState (with option to exclude a target attribute key)
  */
-export function filterProductByState(product: Product & Record<string, any>, state: ActiveFilterState): boolean {
+export function filterProductByState(
+  product: Product & Record<string, any>,
+  state: ActiveFilterState,
+  excludeAttributeKey?: string
+): boolean {
   // Category check
   if (state.categoryId && state.categoryId !== "all") {
     const catLower = state.categoryId.toLowerCase();
     const prodCatLower = (product.category || "").toLowerCase();
-    if (!prodCatLower.includes(catLower)) {
-      // Allow general match fallback
+    if (!prodCatLower.includes(catLower) && state.categoryId !== "all-shops") {
+      // Allow fallback match
     }
   }
 
@@ -160,26 +164,66 @@ export function filterProductByState(product: Product & Record<string, any>, sta
     }
   }
 
-  // Dynamic Attribute Filters evaluation
+  // Selected Brands
+  if (state.selectedBrands && state.selectedBrands.length > 0 && excludeAttributeKey !== "brand") {
+    const brandVal = (product.brand || product.brand_name || "").toLowerCase();
+    const matchesBrand = state.selectedBrands.some((b) => brandVal.includes(b.toLowerCase()));
+    if (!matchesBrand) return false;
+  }
+
+  // Dynamic Attribute Filters evaluation (OR within key, AND across keys)
   for (const [filterId, selectedValues] of Object.entries(state.selectedAttributes)) {
     if (!selectedValues || selectedValues.length === 0) continue;
+    if (filterId === excludeAttributeKey) continue; // Exclude target attribute key for context-aware counting
 
     const val = product[filterId] || product.attributes?.[filterId];
     if (val == null) {
-      // Also check if any selected option value is in product name or description
-      const matchesSearchInName = selectedValues.some((v) =>
-        product.name.toLowerCase().includes(v.toLowerCase())
-      );
-      if (!matchesSearchInName) return false;
+      return false;
     } else if (Array.isArray(val)) {
-      const match = selectedValues.some((sv) => val.includes(sv));
+      const match = selectedValues.some((sv) => val.map((v) => String(v).toLowerCase()).includes(sv.toLowerCase()));
       if (!match) return false;
     } else {
       const valStr = String(val).toLowerCase();
-      const match = selectedValues.some((sv) => valStr === sv.toLowerCase() || valStr.includes(sv.toLowerCase()));
+      const match = selectedValues.some((sv) => valStr === sv.toLowerCase() || valStr.split(",").map((s) => s.trim().toLowerCase()).includes(sv.toLowerCase()));
       if (!match) return false;
     }
   }
 
   return true;
 }
+
+/**
+ * Calculates context-aware facet counts for all options of a dynamic attribute filter.
+ * Context-aware rule: when counting options for key K, apply all active filters EXCEPT key K itself.
+ */
+export function calculateContextAwareFacets(
+  products: Array<Product & Record<string, any>>,
+  filterDef: DynamicAttributeFilter,
+  state: ActiveFilterState
+): DynamicAttributeFilter {
+  const optionsWithCounts = filterDef.options.map((opt) => {
+    const count = products.filter((prod) => {
+      // Check if product satisfies all OTHER active filters
+      if (!filterProductByState(prod, state, filterDef.id)) return false;
+
+      // Check if product matches this specific option value
+      const val = prod[filterDef.id] || prod.attributes?.[filterDef.id];
+      if (val == null) {
+        return false;
+      } else if (Array.isArray(val)) {
+        return val.some((v) => String(v).toLowerCase() === opt.value.toLowerCase());
+      } else {
+        const valStr = String(val).toLowerCase();
+        return valStr === opt.value.toLowerCase() || valStr.split(",").map((s) => s.trim().toLowerCase()).includes(opt.value.toLowerCase());
+      }
+    }).length;
+
+    return { ...opt, count };
+  });
+
+  return {
+    ...filterDef,
+    options: optionsWithCounts,
+  };
+}
+

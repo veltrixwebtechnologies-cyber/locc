@@ -42,6 +42,32 @@ import {
   type LucideIcon,
 } from "lucide-react";
 
+export const CATEGORY_PHOTOS: Record<string, string> = {
+  all: "https://images.unsplash.com/photo-1534723452862-4c874018d66d?auto=format&fit=crop&w=160&q=80",
+  favorites: "https://images.unsplash.com/photo-1582510003544-4d00b7f74220?auto=format&fit=crop&w=160&q=80",
+  grocery: "https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=160&q=80",
+  supermarkets: "https://images.unsplash.com/photo-1578916171728-46686eac8d58?auto=format&fit=crop&w=160&q=80",
+  bakery: "https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=160&q=80",
+  sweet_shops: "https://images.unsplash.com/photo-1582293041079-7814c2f12063?auto=format&fit=crop&w=160&q=80",
+  restaurants: "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=160&q=80",
+  cafes: "https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?auto=format&fit=crop&w=160&q=80",
+  pharmacy: "https://images.unsplash.com/photo-1587854692152-cbe660dbde88?auto=format&fit=crop&w=160&q=80",
+  fruits_veg: "https://images.unsplash.com/photo-1610832958506-aa56368176cf?auto=format&fit=crop&w=160&q=80",
+  meat_fish: "https://images.unsplash.com/photo-1607623814075-e51df1bdc82f?auto=format&fit=crop&w=160&q=80",
+  fashion: "https://images.unsplash.com/photo-1445205170230-053b83016050?auto=format&fit=crop&w=160&q=80",
+  boutiques: "https://images.unsplash.com/photo-1558769132-cb1aea458c5e?auto=format&fit=crop&w=160&q=80",
+  footwear: "https://images.unsplash.com/photo-1549298916-b41d501d3772?auto=format&fit=crop&w=160&q=80",
+  jewellery: "https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?auto=format&fit=crop&w=160&q=80",
+  electronics: "https://images.unsplash.com/photo-1498049794561-7780e7231661?auto=format&fit=crop&w=160&q=80",
+  mobile: "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?auto=format&fit=crop&w=160&q=80",
+  home_kitchen: "https://images.unsplash.com/photo-1556911220-e15b29be8c8f?auto=format&fit=crop&w=160&q=80",
+  furniture: "https://images.unsplash.com/photo-1555041469-a586c61ea9bc?auto=format&fit=crop&w=160&q=80",
+  beauty: "https://images.unsplash.com/photo-1596462502278-27bfdc403348?auto=format&fit=crop&w=160&q=80",
+  books_stationery: "https://images.unsplash.com/photo-1519682337058-a94d519337bc?auto=format&fit=crop&w=160&q=80",
+  sports: "https://images.unsplash.com/photo-1517649763962-0c623266010b?auto=format&fit=crop&w=160&q=80",
+  toys: "https://images.unsplash.com/photo-1515488042361-ee00e0ddd4e4?auto=format&fit=crop&w=160&q=80",
+};
+
 export interface ShopCategoryConfig {
   id: string;
   name: string;
@@ -736,32 +762,37 @@ export const ALL_SHOP_CATEGORIES: ShopCategoryConfig[] = [
 ];
 
 /**
- * Desktop Priority Categories (10 main pills + More ▾)
+ * Desktop Priority Categories (11 exact header secondary navigation items)
  */
 export const DESKTOP_PRIORITY_CATEGORIES: ShopCategoryConfig[] = [
   ALL_SHOP_CATEGORIES.find((c) => c.id === "all")!,
-  ALL_SHOP_CATEGORIES.find((c) => c.id === "grocery")!,
+  ALL_SHOP_CATEGORIES.find((c) => c.id === "fruits_veg")!,
+  ALL_SHOP_CATEGORIES.find((c) => c.id === "meat_fish")!,
   ALL_SHOP_CATEGORIES.find((c) => c.id === "bakery")!,
-  ALL_SHOP_CATEGORIES.find((c) => c.id === "pharmacy")!,
-  ALL_SHOP_CATEGORIES.find((c) => c.id === "restaurants")!,
   ALL_SHOP_CATEGORIES.find((c) => c.id === "fashion")!,
-  ALL_SHOP_CATEGORIES.find((c) => c.id === "electronics")!,
-  ALL_SHOP_CATEGORIES.find((c) => c.id === "books_stationery")!,
   ALL_SHOP_CATEGORIES.find((c) => c.id === "beauty")!,
-  ALL_SHOP_CATEGORIES.find((c) => c.id === "hardware")!,
+  ALL_SHOP_CATEGORIES.find((c) => c.id === "electronics")!,
+  ALL_SHOP_CATEGORIES.find((c) => c.id === "home_kitchen")!,
+  ALL_SHOP_CATEGORIES.find((c) => c.id === "pharmacy")!,
+  ALL_SHOP_CATEGORIES.find((c) => c.id === "toys")!,
+  ALL_SHOP_CATEGORIES.find((c) => c.id === "favorites")!,
 ];
 
 /**
- * Mobile Priority Categories (7 main pills + More ▾)
+ * Mobile Priority Categories (Exact 11 header secondary navigation items)
  */
 export const MOBILE_PRIORITY_CATEGORIES: ShopCategoryConfig[] = [
   ALL_SHOP_CATEGORIES.find((c) => c.id === "all")!,
-  ALL_SHOP_CATEGORIES.find((c) => c.id === "grocery")!,
+  ALL_SHOP_CATEGORIES.find((c) => c.id === "fruits_veg")!,
+  ALL_SHOP_CATEGORIES.find((c) => c.id === "meat_fish")!,
   ALL_SHOP_CATEGORIES.find((c) => c.id === "bakery")!,
-  ALL_SHOP_CATEGORIES.find((c) => c.id === "pharmacy")!,
-  ALL_SHOP_CATEGORIES.find((c) => c.id === "restaurants")!,
   ALL_SHOP_CATEGORIES.find((c) => c.id === "fashion")!,
+  ALL_SHOP_CATEGORIES.find((c) => c.id === "beauty")!,
   ALL_SHOP_CATEGORIES.find((c) => c.id === "electronics")!,
+  ALL_SHOP_CATEGORIES.find((c) => c.id === "home_kitchen")!,
+  ALL_SHOP_CATEGORIES.find((c) => c.id === "pharmacy")!,
+  ALL_SHOP_CATEGORIES.find((c) => c.id === "toys")!,
+  ALL_SHOP_CATEGORIES.find((c) => c.id === "favorites")!,
 ];
 
 /**

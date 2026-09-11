@@ -49,16 +49,30 @@ const getCategoryDisplayName = (catName?: string | null): string => {
 };
 
 export const Route = createFileRoute("/")({
-  validateSearch: (s: Record<string, unknown>) => ({
-    category: typeof s.category === "string" ? s.category : undefined,
-    q: typeof s.q === "string" ? s.q : undefined,
-  }),
+  validateSearch: (s: Record<string, unknown>) => s,
   component: Home,
 });
 
 function Home() {
-  const search = Route.useSearch();
+  const search = Route.useSearch() as Record<string, any>;
   const navigate = Route.useNavigate();
+
+  useEffect(() => {
+    if (
+      search.subcategory ||
+      search.sub_category ||
+      search.productType ||
+      search.product_type ||
+      (search.category && search.category !== "all" && search.category !== "all-shops")
+    ) {
+      void navigate({
+        to: "/search",
+        search: search,
+        replace: true,
+      });
+    }
+  }, [search, navigate]);
+
   const [deliveryLoc] = useDeliveryLocation();
   const locLat = deliveryLoc?.lat ?? 11.0285;
   const locLng = deliveryLoc?.lng ?? 76.9258;

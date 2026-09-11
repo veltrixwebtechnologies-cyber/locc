@@ -54,6 +54,23 @@ function saveDemoOrder(userId: string, order: Order) {
   updateOrdersCache([order, ...getInitialCachedOrders()]);
 }
 
+export function addPlacedOrderToCache(order: Order) {
+  const current = getInitialCachedOrders();
+  const existingIdx = current.findIndex((o) => o.id === order.id || o.code === order.code);
+  const updated = existingIdx !== -1
+    ? current.map((o, idx) => (idx === existingIdx ? order : o))
+    : [order, ...current];
+  updateOrdersCache(updated);
+
+  supabase.auth.getSession().then(({ data }) => {
+    const userId = data.session?.user?.id;
+    if (userId) {
+      saveDemoOrder(userId, order);
+    }
+  });
+}
+
+
 export type OrderStatus =
   | "new"
   | "accepted"

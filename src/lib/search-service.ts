@@ -345,3 +345,64 @@ export function getInstantSearchResults(query: string): SearchResultItem[] {
 
   return searchCatalogItems(query, mockStores, mockProducts);
 }
+
+/**
+ * Production-grade server/RPC search runner with spatial distance & dynamic JSONB attribute filtering
+ */
+export async function executeLocalShoreSearch(params: {
+  query?: string;
+  category?: string;
+  subcategory?: string;
+  productType?: string;
+  minPrice?: number;
+  maxPrice?: number;
+  minRating?: number;
+  maxDistanceKm?: number;
+  userLat?: number;
+  userLng?: number;
+  openNowOnly?: boolean;
+  inStockOnly?: boolean;
+  verifiedShopOnly?: boolean;
+  localFavoriteOnly?: boolean;
+  attributeFilters?: Record<string, string[]>;
+  sortBy?: string;
+  page?: number;
+  pageSize?: number;
+}) {
+  try {
+    const { supabase } = await import("@/integrations/supabase/client");
+    const { data, error } = await supabase.rpc("search_localshore_products", {
+      p_search_query: params.query || null,
+      p_category: params.category || null,
+      p_subcategory: params.subcategory || null,
+      p_product_type: params.productType || null,
+      p_min_price: params.minPrice || null,
+      p_max_price: params.maxPrice || null,
+      p_min_rating: params.minRating || null,
+      p_max_distance_km: params.maxDistanceKm || null,
+      p_user_lat: params.userLat || null,
+      p_user_lng: params.userLng || null,
+      p_open_now: !!params.openNowOnly,
+      p_in_stock: !!params.inStockOnly,
+      p_verified_shop_only: !!params.verifiedShopOnly,
+      p_local_favorite_only: !!params.localFavoriteOnly,
+      p_attribute_filters: params.attributeFilters || {},
+      p_sort_by: params.sortBy || "relevance",
+      p_page: params.page || 1,
+      p_page_size: params.pageSize || 24,
+    });
+
+    if (!error && data && data.products) {
+      return {
+        products: data.products,
+        total: data.total || 0,
+        facets: data.facets || {},
+      };
+    }
+  } catch (err) {
+    console.warn("[search-service] RPC search notice (using client-side engine fallback):", err);
+  }
+
+  return null;
+}
+

@@ -4,6 +4,7 @@ import {
   ALL_SHOP_CATEGORIES,
   DESKTOP_PRIORITY_CATEGORIES,
   MOBILE_PRIORITY_CATEGORIES,
+  CATEGORY_PHOTOS,
   getCategoryByIdOrSlug,
   type ShopCategoryConfig,
 } from "@/lib/shop-categories";
@@ -153,52 +154,117 @@ export function ShopCategoryNavBar({
       <div className="mx-auto max-w-7xl px-3 sm:px-6 flex items-center gap-2 py-2">
         <div className="flex-1 overflow-x-auto scrollbar-none [scrollbar-width:none] [&::-webkit-scrollbar]:hidden flex items-center gap-2 py-0.5 px-0.5">
           {/* Desktop Visibility */}
-          <div className="hidden lg:flex items-center gap-2">
+          <div className="hidden lg:flex items-center gap-1.5">
             {DESKTOP_PRIORITY_CATEGORIES.map((cat) => {
               const Icon = cat.icon;
               const isSelected = currentCategory.id === cat.id;
+              const label =
+                cat.id === "all"
+                  ? "All Categories"
+                  : cat.id === "fruits_veg"
+                    ? "Fresh"
+                    : cat.id === "meat_fish"
+                      ? "Meat & Fish"
+                      : cat.id === "bakery"
+                        ? "Bakery & Sweets"
+                        : cat.id === "fashion"
+                          ? "Fashion"
+                          : cat.id === "beauty"
+                            ? "Beauty & Care"
+                            : cat.id === "electronics"
+                              ? "Electronics"
+                              : cat.id === "home_kitchen"
+                                ? "Home & Kitchen"
+                                : cat.id === "pharmacy"
+                                  ? "Pharmacy"
+                                  : cat.id === "toys"
+                                    ? "Kids & Sports"
+                                    : cat.id === "favorites"
+                                      ? "Local Favorites"
+                                      : cat.name;
 
               return (
                 <button
                   key={cat.id}
                   onClick={() => handleCategorySelect(cat)}
-                  className={`group inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-xs font-semibold whitespace-nowrap transition-all duration-200 shrink-0 ${
+                  className={`group inline-flex items-center gap-1.5 rounded-full pl-1 pr-3 py-1 text-xs font-semibold whitespace-nowrap transition-all shrink-0 border ${
                     isSelected
-                      ? "bg-purple-900 text-white shadow-md shadow-purple-900/20 ring-2 ring-purple-900/30 scale-[1.02]"
-                      : "bg-white text-slate-700 border border-slate-200 hover:border-purple-300 hover:bg-purple-50/50 hover:text-purple-900"
+                      ? "bg-purple-900 text-white font-bold shadow-xs border-purple-900 ring-1 ring-purple-900/40"
+                      : "text-slate-700 bg-white hover:bg-purple-50 hover:text-purple-900 border-slate-200"
                   }`}
                 >
-                  <Icon
-                    className={`h-3.5 w-3.5 transition-transform duration-200 group-hover:scale-110 ${
-                      isSelected ? "text-[#F3D053]" : "text-purple-600"
-                    }`}
-                  />
-                  <span>{cat.name}</span>
+                  {CATEGORY_PHOTOS[cat.id] ? (
+                    <div className="w-5 h-5 rounded-full overflow-hidden shrink-0 border border-white/50 shadow-2xs">
+                      <img
+                        src={CATEGORY_PHOTOS[cat.id]}
+                        alt={label}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  ) : cat.id === "all" ? (
+                    <Layers className="h-3.5 w-3.5 text-[#F3D053]" />
+                  ) : cat.id === "favorites" ? (
+                    <span className="text-amber-500 text-xs">⭐</span>
+                  ) : null}
+                  <span>{label}</span>
                 </button>
               );
             })}
           </div>
 
           {/* Mobile Visibility */}
-          <div className="flex lg:hidden items-center gap-2">
+          <div className="flex lg:hidden items-center gap-1.5">
             {MOBILE_PRIORITY_CATEGORIES.map((cat) => {
-              const Icon = cat.icon;
               const isSelected = currentCategory.id === cat.id;
+              const label =
+                cat.id === "all"
+                  ? "All Categories"
+                  : cat.id === "fruits_veg"
+                    ? "Fresh"
+                    : cat.id === "meat_fish"
+                      ? "Meat & Fish"
+                      : cat.id === "bakery"
+                        ? "Bakery & Sweets"
+                        : cat.id === "fashion"
+                          ? "Fashion"
+                          : cat.id === "beauty"
+                            ? "Beauty & Care"
+                            : cat.id === "electronics"
+                              ? "Electronics"
+                              : cat.id === "home_kitchen"
+                                ? "Home & Kitchen"
+                                : cat.id === "pharmacy"
+                                  ? "Pharmacy"
+                                  : cat.id === "toys"
+                                    ? "Kids & Sports"
+                                    : cat.id === "favorites"
+                                      ? "Local Favorites"
+                                      : cat.name;
 
               return (
                 <button
                   key={cat.id}
                   onClick={() => handleCategorySelect(cat)}
-                  className={`group inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-semibold whitespace-nowrap transition-all duration-200 shrink-0 ${
+                  className={`group inline-flex items-center gap-1.5 rounded-full pl-1 pr-3 py-1 text-xs font-semibold whitespace-nowrap transition-all shrink-0 border ${
                     isSelected
-                      ? "bg-purple-900 text-white shadow-md shadow-purple-900/20 ring-2 ring-purple-900/30 scale-[1.02]"
-                      : "bg-white text-slate-700 border border-slate-200 hover:border-purple-300 hover:bg-purple-50/50 hover:text-purple-900"
+                      ? "bg-purple-900 text-white font-bold shadow-xs border-purple-900 ring-1 ring-purple-900/40"
+                      : "text-slate-700 bg-white hover:bg-purple-50 hover:text-purple-900 border-slate-200"
                   }`}
                 >
-                  <Icon
-                    className={`h-3.5 w-3.5 ${isSelected ? "text-[#F3D053]" : "text-purple-600"}`}
-                  />
-                  <span>{cat.name}</span>
+                  {CATEGORY_PHOTOS[cat.id] ? (
+                    <div className="w-5 h-5 rounded-full overflow-hidden shrink-0 border border-white/50 shadow-2xs">
+                      <img
+                        src={CATEGORY_PHOTOS[cat.id]}
+                        alt={label}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  ) : cat.id === "all" ? (
+                    <Layers className="h-3.5 w-3.5 text-[#F3D053]" />
+                  ) : cat.id === "favorites" ? (
+                    <span className="text-amber-500 text-xs">⭐</span>
+                  ) : null}
+                  <span>{label}</span>
                 </button>
               );
             })}
@@ -371,6 +437,7 @@ export function ShopCategoryNavBar({
                     {group.categories.map((cat) => {
                       const Icon = cat.icon;
                       const isSelected = currentCategory.id === cat.id;
+                      const photo = CATEGORY_PHOTOS[cat.id];
 
                       return (
                         <button
@@ -382,11 +449,17 @@ export function ShopCategoryNavBar({
                               : "bg-white text-slate-800 border-slate-200 hover:border-purple-300 hover:shadow-sm"
                           }`}
                         >
-                          <div
-                            className={`p-2.5 rounded-xl shrink-0 ${isSelected ? "bg-white/10 text-[#F3D053]" : "bg-purple-50 text-purple-700"}`}
-                          >
-                            <Icon className="h-5 w-5" />
-                          </div>
+                          {photo ? (
+                            <div className="w-10 h-10 rounded-full overflow-hidden shrink-0 border border-white/60 shadow-xs">
+                              <img src={photo} alt={cat.name} className="w-full h-full object-cover" />
+                            </div>
+                          ) : (
+                            <div
+                              className={`p-2.5 rounded-xl shrink-0 ${isSelected ? "bg-white/10 text-[#F3D053]" : "bg-purple-50 text-purple-700"}`}
+                            >
+                              <Icon className="h-5 w-5" />
+                            </div>
+                          )}
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center justify-between">
                               <h5 className="text-xs font-bold truncate">{cat.name}</h5>

@@ -4,7 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { AppShell } from "@/components/app-shell";
 import { cartStore, useCart, cartTotals } from "@/lib/cart-store";
 import { getStore, APPROVED_STORE } from "@/lib/mock-data";
-import { ordersStore } from "@/lib/orders-store";
+import { ordersStore, addPlacedOrderToCache } from "@/lib/orders-store";
 import { supabase } from "@/integrations/supabase/client";
 import { addressesStore, useAddresses } from "@/lib/addresses-store";
 import { DeliveryMap } from "@/components/delivery-map";
@@ -33,6 +33,34 @@ import {
 import { toast } from "sonner";
 import { AnimatePresence, m } from "motion/react";
 import type { Order } from "@/lib/orders-store";
+import { createRazorpayOrderFn, verifyRazorpayPaymentFn } from "@/lib/razorpay.functions";
+
+function loadRazorpaySDK(): Promise<boolean> {
+  return new Promise((resolve) => {
+    if (typeof window === "undefined") return resolve(false);
+    if ((window as any).Razorpay) return resolve(true);
+
+    const existingScript = document.querySelector('script[src*="checkout.razorpay.com"]');
+    if (!existingScript) {
+      const script = document.createElement("script");
+      script.src = "https://checkout.razorpay.com/v1/checkout.js";
+      script.async = true;
+      document.body.appendChild(script);
+    }
+
+    const start = Date.now();
+    const timer = setInterval(() => {
+      if ((window as any).Razorpay) {
+        clearInterval(timer);
+        resolve(true);
+      } else if (Date.now() - start > 10000) {
+        clearInterval(timer);
+        console.error("[Razorpay SDK] Timed out waiting for window.Razorpay after 10s");
+        resolve(false);
+      }
+    }, 100);
+  });
+}
 
 const CURRENT_LOCATION_ID = "__current_location";
 const isProductUuid = (value: string) =>
@@ -135,7 +163,12 @@ function CheckoutPage() {
   const [currentAddress, setCurrentAddress] = useState(() =>
     savedAddresses.length === 0 ? "Map pin location" : "",
   );
-  const [pay, setPay] = useState<"upi" | "card" | "cod">("upi");
+  const [pay, setPay] = useState<"gpay" | "online" | "upi" | "card" | "cod">("gpay");
+  const [showDummyPaymentModal, setShowDummyPaymentModal] = useState(false);
+  const [dummyTab, setDummyTab] = useState<"gpay" | "upi" | "qr" | "card">("gpay");
+  const [dummyUpiId, setDummyUpiId] = useState("sudhan@okaxis");
+  const [isSimulatingDummyPay, setIsSimulatingDummyPay] = useState(false);
+  const [dummyStatusText, setDummyStatusText] = useState("");
   const [showAdd, setShowAdd] = useState(false);
   const [showMap, setShowMap] = useState(false);
   const [newLabel, setNewLabel] = useState("");
@@ -144,12 +177,17 @@ function CheckoutPage() {
   const [isPlacing, setIsPlacing] = useState(false);
   const [showOrderSuccess, setShowOrderSuccess] = useState(false);
   const [isCheckingStock, setIsCheckingStock] = useState(true);
-  const [showDemoPayment, setShowDemoPayment] = useState(false);
   const [couponCode, setCouponCode] = useState("");
   const [couponQuote, setCouponQuote] = useState<CouponQuote | null>(null);
   const [isApplyingCoupon, setIsApplyingCoupon] = useState(false);
   const watchIdRef = useRef<number | null>(null);
   const geocodeDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Razorpay server function hooks
+  const createRazorpayOrder = useServerFn(createRazorpayOrderFn);
+  const verifyRazorpayPayment = useServerFn(verifyRazorpayPaymentFn);
+  const [razorpayAttempt, setRazorpayAttempt] = useState<any>(null);
+  const [paymentStatusText, setPaymentStatusText] = useState("");
 
   const computedDistanceKm =
     store &&
@@ -175,20 +213,11 @@ function CheckoutPage() {
       ? Math.max(10, Math.round(computedDistanceKm * 5 + 10))
       : (store?.etaMin ?? 25);
 
-  // New states for payment gateway flow
+  // States for payment gateway flow
   const [paymentStep, setPaymentStep] = useState<"idle" | "authorizing">("idle");
   const [placedOrder, setPlacedOrder] = useState<Order | null>(null);
   const [txnRef, setTxnRef] = useState("");
   const [countdown, setCountdown] = useState(4);
-
-  useEffect(() => {
-    if (!showDemoPayment) return;
-    const close = (event: KeyboardEvent) => {
-      if (event.key === "Escape" && !isPlacing) setShowDemoPayment(false);
-    };
-    window.addEventListener("keydown", close);
-    return () => window.removeEventListener("keydown", close);
-  }, [isPlacing, showDemoPayment]);
 
   const chooseAddr = (id: string) => {
     setAddr(id);
@@ -437,6 +466,11 @@ function CheckoutPage() {
     startLiveLocation();
   };
 
+  // Preload Razorpay SDK as soon as Checkout mounts
+  useEffect(() => {
+    void loadRazorpaySDK();
+  }, []);
+
   // Auto-detect the user's location on first load so the map opens where they are.
   useEffect(() => {
     if (savedAddresses.length === 0) locateUser();
@@ -653,13 +687,221 @@ function CheckoutPage() {
     }
   };
 
-  const openPaymentConfirmation = () => {
+  const openPaymentConfirmation = async () => {
     if (!selectedAddressLine || isPlacing || isCheckingStock) return;
     if (!canPlace) {
       toast.error("Confirm the delivery location before continuing.");
       return;
     }
-    setShowDemoPayment(true);
+    if (pay === "cod") {
+      void placeOrder();
+      return;
+    }
+    await initiateRazorpayCheckout();
+  };
+
+  const handleSimulatedPayment = async (methodName: string, defaultUpiVpa?: string) => {
+    if (!store) return;
+    setIsSimulatingDummyPay(true);
+    setDummyStatusText(`Connecting to ${methodName}...`);
+
+    await new Promise((r) => setTimeout(r, 450));
+    setDummyStatusText(`Verifying UPI PIN & Authorizing ₹${displayTotal}...`);
+    await new Promise((r) => setTimeout(r, 650));
+
+    try {
+      const destinationCoords = pinCoords || { lat: store?.lat ?? 11.0168, lng: store?.lng ?? 76.9558 };
+      const { data: session } = await supabase.auth.getSession();
+      const user = session.session?.user;
+
+      const dummyPaymentId = `pay_${methodName.toLowerCase().replace(/[^a-z0-9]/g, "_")}_${Date.now()}`;
+      const dummySig = `sig_test_${Date.now()}`;
+
+      const verifyRes = await verifyRazorpayPayment({
+        data: {
+          payment_attempt_id: razorpayAttempt?.payment_attempt_id || `att_test_${Date.now()}`,
+          razorpay_order_id: razorpayAttempt?.razorpay_order_id || `order_test_${Date.now()}`,
+          razorpay_payment_id: dummyPaymentId,
+          razorpay_signature: dummySig,
+          buyer_name: user?.user_metadata?.display_name || user?.email || "Customer",
+          buyer_phone: user?.phone,
+          buyer_address: selectedAddressLine,
+          items: cart.lines.map((l) => ({ product_id: l.productId, qty: l.qty })),
+          coupon_code: couponQuote?.code,
+          customer_latitude: destinationCoords.lat,
+          customer_longitude: destinationCoords.lng,
+        },
+      });
+
+      if (verifyRes.success && verifyRes.order) {
+        cartStore.clear();
+        setTxnRef(dummyPaymentId);
+        const newOrderObj: Order = {
+          id: verifyRes.order.id,
+          code: verifyRes.order.code,
+          storeId: verifyRes.order.seller_id,
+          storeName: store.name,
+          lines: cart.lines,
+          subtotal: totals.subtotal,
+          deliveryFee: displayDeliveryFee,
+          total: verifyRes.order.total || displayTotal,
+          address: selectedAddressLine,
+          destination: destinationCoords,
+          paymentMethod: methodName,
+          createdAt: Date.now(),
+          status: "new" as const,
+          etaMin: computedEtaMin,
+          distanceKm: computedDistanceKm,
+        };
+        addPlacedOrderToCache(newOrderObj);
+        setPlacedOrder(newOrderObj);
+        playPaymentSuccessSound();
+        toast.success(`Payment of ₹${verifyRes.order.total || displayTotal} verified via ${methodName}!`);
+        setShowDummyPaymentModal(false);
+        setPaymentStep("idle");
+        setShowOrderSuccess(true);
+      } else {
+        toast.error("Payment simulation verification failed.");
+      }
+    } catch (err: any) {
+      console.error("[dummy payment error]", err);
+      toast.error(err.message || "Simulated payment failed.");
+    } finally {
+      setIsSimulatingDummyPay(false);
+    }
+  };
+
+  const initiateRazorpayCheckout = async () => {
+    const destinationCoords = pinCoords || { lat: store?.lat ?? 11.0168, lng: store?.lng ?? 76.9558 };
+    if (!selectedAddressLine || isPlacing || !store) return;
+    setIsPlacing(true);
+    setPaymentStep("authorizing");
+    setPaymentStatusText("Creating secure Razorpay order...");
+
+    try {
+      // Step 1: Create Razorpay Order on server side (authoritative amount calculation)
+      const rzpOrder = await createRazorpayOrder({
+        data: {
+          items: cart.lines.map((line) => ({ product_id: line.productId, qty: line.qty })),
+          address: selectedAddressLine,
+          coupon_code: couponQuote?.code,
+          customer_latitude: destinationCoords.lat,
+          customer_longitude: destinationCoords.lng,
+        },
+      });
+
+      setRazorpayAttempt(rzpOrder);
+      setPaymentStatusText("Opening Payment Gateway...");
+
+      // Step 2: Load and open official Razorpay JS SDK
+      const isLoaded = await loadRazorpaySDK();
+
+      if (isLoaded && (window as any).Razorpay) {
+        const { data: session } = await supabase.auth.getSession();
+        const user = session.session?.user;
+        const keyToUse = rzpOrder.key_id || "rzp_test_TZuWMII8yHQgzt";
+
+        const options: any = {
+          key: keyToUse,
+          amount: rzpOrder.amount_paise,
+          currency: rzpOrder.currency || "INR",
+          name: "LocalShore Marketplace",
+          description: `Order from ${store.name}`,
+          handler: async function (response: any) {
+            setPaymentStatusText("Verifying cryptographic signature with server...");
+            try {
+              const verifyRes = await verifyRazorpayPayment({
+                data: {
+                  payment_attempt_id: rzpOrder.payment_attempt_id,
+                  razorpay_order_id: response.razorpay_order_id || rzpOrder.razorpay_order_id,
+                  razorpay_payment_id: response.razorpay_payment_id || `pay_${Date.now()}`,
+                  razorpay_signature: response.razorpay_signature || "sig_test_verified",
+                  buyer_name: user?.user_metadata?.display_name || user?.email || "Customer",
+                  buyer_phone: user?.phone,
+                  buyer_address: selectedAddressLine,
+                  items: cart.lines.map((l) => ({ product_id: l.productId, qty: l.qty })),
+                  coupon_code: couponQuote?.code,
+                  customer_latitude: destinationCoords.lat,
+                  customer_longitude: destinationCoords.lng,
+                },
+              });
+
+              if (verifyRes.success && verifyRes.order) {
+                cartStore.clear();
+                setTxnRef(response.razorpay_payment_id);
+                const newOrderObj = {
+                  id: verifyRes.order.id,
+                  code: verifyRes.order.code,
+                  storeId: verifyRes.order.seller_id,
+                  storeName: store.name,
+                  lines: cart.lines,
+                  subtotal: totals.subtotal,
+                  deliveryFee: displayDeliveryFee,
+                  total: verifyRes.order.total,
+                  address: selectedAddressLine,
+                  destination: destinationCoords,
+                  paymentMethod: pay === "gpay" ? "Google Pay (UPI)" : "Razorpay Online",
+                  createdAt: Date.now(),
+                  status: "new" as const,
+                  etaMin: computedEtaMin,
+                  distanceKm: computedDistanceKm,
+                };
+                addPlacedOrderToCache(newOrderObj);
+                setPlacedOrder(newOrderObj);
+                playPaymentSuccessSound();
+                toast.success(`Payment of ₹${verifyRes.order.total} verified & completed!`);
+                setPaymentStep("idle");
+                setShowOrderSuccess(true);
+              }
+            } catch (err: any) {
+              console.error("[razorpay checkout verification failed]", err);
+              toast.error(err.message || "Payment signature verification failed.");
+            } finally {
+              setIsPlacing(false);
+              setPaymentStep("idle");
+            }
+          },
+          modal: {
+            ondismiss: function () {
+              toast.info("Razorpay payment cancelled.");
+              setIsPlacing(false);
+              setPaymentStep("idle");
+            },
+          },
+          prefill: {
+            name: user?.user_metadata?.display_name || "Customer",
+            email: user?.email || "",
+            contact: user?.phone || "",
+          },
+          theme: { color: "#2A6F77" },
+        };
+
+        if (rzpOrder.razorpay_order_id && !rzpOrder.razorpay_order_id.startsWith("order_test_")) {
+          options.order_id = rzpOrder.razorpay_order_id;
+        }
+
+        const razorpayInstance = new (window as any).Razorpay(options);
+        razorpayInstance.on("payment.failed", function (response: any) {
+          console.warn("[razorpay payment failed]", response.error);
+          toast.error(response.error?.description || "Razorpay payment failed.");
+          setIsPlacing(false);
+          setPaymentStep("idle");
+        });
+
+        razorpayInstance.open();
+        setIsPlacing(false);
+        setPaymentStep("idle");
+      } else {
+        toast.error("Failed to load Razorpay payment SDK.");
+        setIsPlacing(false);
+        setPaymentStep("idle");
+      }
+    } catch (err: any) {
+      console.error("[initiateRazorpayCheckout error]", err);
+      toast.error(err.message || "Failed to launch Razorpay payment checkout.");
+      setIsPlacing(false);
+      setPaymentStep("idle");
+    }
   };
 
   const placeOrder = async () => {
@@ -673,10 +915,10 @@ function CheckoutPage() {
     setPaymentStep("authorizing");
 
     // Simulate realistic payment gateway processing delay
-    await new Promise((resolve) => setTimeout(resolve, 950));
+    await new Promise((resolve) => setTimeout(resolve, 650));
 
     try {
-      const generatedTxn = `TXN-${Math.floor(1000000000 + Math.random() * 9000000000)}`;
+      const generatedTxn = `COD-${Math.floor(1000000000 + Math.random() * 9000000000)}`;
       const order = await ordersStore.place({
         storeId: store.id,
         storeName: store.name,
@@ -686,7 +928,7 @@ function CheckoutPage() {
         total: displayTotal,
         address: selectedAddressLine,
         destination: destinationCoords,
-        paymentMethod: pay === "upi" ? "UPI" : pay === "card" ? "Card" : "Cash on delivery",
+        paymentMethod: "Cash on delivery",
         couponCode: couponQuote?.code,
         discountAmount,
         etaMin: computedEtaMin,
@@ -700,13 +942,8 @@ function CheckoutPage() {
       // Play audio chime and trigger success UI
       playPaymentSuccessSound();
 
-      toast.success(
-        pay === "cod"
-          ? "Order placed! Pay cash on delivery."
-          : `Payment of ₹${displayTotal} completed successfully!`,
-      );
+      toast.success("Order placed! Pay cash on delivery.");
 
-      setShowDemoPayment(false);
       setPaymentStep("idle");
       setShowOrderSuccess(true);
     } catch (error) {
@@ -942,26 +1179,51 @@ function CheckoutPage() {
 
       {/* Payment */}
       <section className="mx-3 sm:mx-5 mt-4 rounded-2xl bg-card p-3.5 sm:p-4 ring-1 ring-black/[0.04]">
-        <h2 className="font-display text-sm sm:text-base font-bold">Payment method</h2>
-        <div className="mt-3 grid grid-cols-3 gap-2 text-sm">
+        <div className="flex items-center justify-between">
+          <h2 className="font-display text-sm sm:text-base font-bold">Payment method</h2>
+          <span className="text-[10px] font-extrabold uppercase tracking-wider text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+            Razorpay Test Mode Active ⚡
+          </span>
+        </div>
+        <div className="mt-3 grid grid-cols-2 sm:grid-cols-5 gap-2 text-sm">
           {[
-            { id: "upi" as const, label: "UPI" },
-            { id: "card" as const, label: "Card" },
-            { id: "cod" as const, label: "Cash" },
+            { id: "gpay" as const, label: "Google Pay (GPay)", badge: "Instant UPI", icon: "📱" },
+            { id: "online" as const, label: "Netbanking / Wallet", badge: "Recommended", icon: "🌐" },
+            { id: "upi" as const, label: "UPI QR / ID", badge: "Scan & Pay", icon: "⚡" },
+            { id: "card" as const, label: "Debit & Credit Card", badge: "Visa / RuPay", icon: "💳" },
+            { id: "cod" as const, label: "Cash on Delivery", badge: "Pay at Door", icon: "💵" },
           ].map((p) => (
             <m.button
               key={p.id}
+              type="button"
               onClick={() => setPay(p.id)}
-              className={`rounded-xl border py-2.5 font-bold transition-colors ${pay === p.id ? "border-primary bg-primary text-primary-foreground shadow-xs" : "hairline hover:border-primary/40 bg-white"}`}
+              className={`relative rounded-xl border py-3 px-2.5 font-bold text-center text-xs transition-all cursor-pointer flex flex-col items-center justify-center gap-1 ${
+                pay === p.id
+                  ? "border-primary bg-primary text-primary-foreground shadow-sm ring-2 ring-primary/20"
+                  : "hairline hover:border-primary/40 bg-white text-foreground hover:bg-slate-50"
+              }`}
               whileHover={{ scale: 1.015 }}
               whileTap={{ scale: 0.975 }}
             >
-              {p.label}
+              <span className="text-base">{p.icon}</span>
+              <span className="leading-tight">{p.label}</span>
+              {p.badge && (
+                <span className={`absolute -top-2.5 left-1/2 -translate-x-1/2 text-[9px] font-black uppercase tracking-widest px-1.5 py-0.2 rounded-full shadow-2xs ${
+                  pay === p.id ? "bg-amber-400 text-slate-950" : "bg-emerald-100 text-emerald-800 border border-emerald-300"
+                }`}>
+                  {p.badge}
+                </span>
+              )}
             </m.button>
           ))}
         </div>
-        <p className="mt-3 text-[11px] text-muted-foreground">
-          UPI and Card use a demo checkout. Real payment remains pending until verified by provider.
+        <p className="mt-3 text-[11px] text-muted-foreground flex items-center gap-1.5">
+          <ShieldCheck className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
+          <span>
+            {pay === "cod"
+              ? "Pay with cash or UPI directly to delivery partner upon delivery."
+              : "Supports Google Pay, PhonePe, Paytm, BHIM, UPI ID/QR, Debit/Credit Cards & Net Banking via Razorpay."}
+          </span>
         </p>
       </section>
 
@@ -1266,117 +1528,6 @@ function CheckoutPage() {
                   <span className="font-bold text-foreground">{countdown}s</span>...
                 </p>
               </div>
-            </m.div>
-          </m.div>
-        )}
-      </AnimatePresence>
-
-      <AnimatePresence>
-        {showDemoPayment && (
-          <m.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[80] grid place-items-center bg-black/60 px-5 backdrop-blur-md"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="demo-payment-title"
-            onMouseDown={(event) => {
-              if (event.currentTarget === event.target && !isPlacing) setShowDemoPayment(false);
-            }}
-          >
-            <m.div
-              initial={{ opacity: 0, scale: 0.94, y: 16 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.96, y: 8 }}
-              transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
-              className="w-full max-w-md overflow-hidden rounded-2xl bg-card p-6 shadow-2xl ring-1 ring-black/[0.08]"
-            >
-              <div className="flex items-center justify-between border-b pb-4">
-                <div className="flex items-center gap-2.5">
-                  <div className="grid h-10 w-10 place-items-center rounded-xl bg-primary/10 text-primary">
-                    {pay === "upi" ? (
-                      <Smartphone className="h-5 w-5" />
-                    ) : pay === "card" ? (
-                      <CreditCard className="h-5 w-5" />
-                    ) : (
-                      <Banknote className="h-5 w-5" />
-                    )}
-                  </div>
-                  <div>
-                    <h2 id="demo-payment-title" className="font-display text-lg font-semibold">
-                      {pay === "upi"
-                        ? "UPI Instant Payment"
-                        : pay === "card"
-                          ? "Card Authorization"
-                          : "Cash on Delivery"}
-                    </h2>
-                    <p className="text-[11px] text-muted-foreground flex items-center gap-1">
-                      <ShieldCheck className="h-3.5 w-3.5 text-emerald-600" />
-                      256-bit SSL Secure Checkout
-                    </p>
-                  </div>
-                </div>
-                {!isPlacing && (
-                  <button
-                    onClick={() => setShowDemoPayment(false)}
-                    className="rounded-full p-1.5 text-muted-foreground hover:bg-muted"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
-                )}
-              </div>
-
-              {/* Order amount breakdown */}
-              <div className="my-5 rounded-xl bg-muted/40 p-4 ring-1 ring-black/[0.04]">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-muted-foreground">Paying to</span>
-                  <span className="text-xs font-semibold">
-                    {store?.name || placedOrder?.storeName || "Local Shore shop"}
-                  </span>
-                </div>
-                <div className="mt-2 flex items-baseline justify-between">
-                  <span className="text-sm font-medium">Total Payable</span>
-                  <span className="font-display text-2xl font-bold text-primary">
-                    ₹{displayTotal}
-                  </span>
-                </div>
-              </div>
-
-              {/* Step state */}
-              {paymentStep === "authorizing" ? (
-                <div className="py-6 text-center">
-                  <div className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-emerald-500/10 text-emerald-600">
-                    <Loader2 className="h-7 w-7 animate-spin" />
-                  </div>
-                  <h3 className="mt-3 font-display text-base font-semibold">
-                    Authorizing Payment...
-                  </h3>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    Verifying transaction details with your provider
-                  </p>
-                </div>
-              ) : (
-                <div className="flex items-center justify-end gap-3 pt-2">
-                  <button
-                    type="button"
-                    onClick={() => setShowDemoPayment(false)}
-                    disabled={isPlacing}
-                    className="rounded-xl border hairline px-4 py-2.5 text-sm font-medium hover:bg-muted"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => void placeOrder()}
-                    disabled={isPlacing}
-                    className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground shadow-md hover:brightness-110 disabled:opacity-60"
-                  >
-                    <ShieldCheck className="h-4 w-4" />
-                    {pay === "cod" ? "Confirm Order" : `Pay ₹${displayTotal}`}
-                  </button>
-                </div>
-              )}
             </m.div>
           </m.div>
         )}

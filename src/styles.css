@@ -43,8 +43,8 @@
   --color-ink: var(--ink);
   --color-teal: var(--teal);
   --color-teal-deep: var(--teal-deep);
-  --font-display: "Outfit", "Plus Jakarta Sans", ui-sans-serif, system-ui, -apple-system, sans-serif;
-  --font-sans: "Plus Jakarta Sans", "Outfit", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-display: "Outfit", "Plus Jakarta Sans", "Noto Sans Tamil", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-sans: "Plus Jakarta Sans", "Outfit", "Noto Sans Tamil", ui-sans-serif, system-ui, -apple-system, sans-serif;
   --font-mono: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
   --font-handwriting: "Caveat", cursive, sans-serif;
 
