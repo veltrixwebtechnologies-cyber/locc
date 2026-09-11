@@ -13,6 +13,7 @@ import {
   ShieldCheck,
   Headphones,
   Gift,
+  X,
 } from "lucide-react";
 import { useCart, cartTotals } from "@/lib/cart-store";
 import { useAuth } from "@/lib/auth-store";
@@ -38,6 +39,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const [deliveryLocation] = useDeliveryLocation();
   const gpsState = useGPSStatus();
   const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
+  const [isCartBarMinimized, setIsCartBarMinimized] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [headerQuery, setHeaderQuery] = useState("");
   const [searchFocused, setSearchFocused] = useState(false);
@@ -46,6 +48,11 @@ export function AppShell({ children }: { children: ReactNode }) {
   const savedCount = wishlistProducts.data?.length ?? wishlist.data?.length ?? 0;
   const isSignedIn = Boolean(auth.id);
   const hasLocation = mounted && deliveryLocation !== null;
+
+  const showFloatingCart =
+    itemCount > 0 &&
+    !pathname.startsWith("/cart") &&
+    !pathname.startsWith("/checkout");
 
   useEffect(() => {
     setMounted(true);
@@ -114,7 +121,13 @@ export function AppShell({ children }: { children: ReactNode }) {
   ];
 
   return (
-    <div className="min-h-screen bg-background pb-[calc(4.5rem+env(safe-area-inset-bottom,0px))] md:pb-0">
+    <div
+      className={`min-h-screen bg-background transition-[padding] duration-300 ${
+        showFloatingCart && !isCartBarMinimized
+          ? "pb-[calc(9.5rem+env(safe-area-inset-bottom,0px))] md:pb-8"
+          : "pb-[calc(4.5rem+env(safe-area-inset-bottom,0px))] md:pb-0"
+      }`}
+    >
       {/* Mobile top nav header */}
       <header className="sticky top-0 z-50 flex items-center justify-between border-b hairline bg-background/95 px-3.5 py-2.5 backdrop-blur md:hidden">
         <Link
@@ -471,25 +484,53 @@ export function AppShell({ children }: { children: ReactNode }) {
       </nav>
       {/* Floating Bottom Cart Bar (Optimized for Mobile & Desktop) */}
       <AnimatePresence>
-        {itemCount > 0 &&
-          !pathname.startsWith("/cart") &&
-          !pathname.startsWith("/checkout") && (
+        {showFloatingCart &&
+          (isCartBarMinimized ? (
             <m.div
+              key="minimized-cart-pill"
+              initial={{ scale: 0.8, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.8, opacity: 0, y: 20 }}
+              transition={{ type: "spring", stiffness: 400, damping: 28 }}
+              className="fixed bottom-[calc(4.2rem+env(safe-area-inset-bottom,0px))] right-3 z-[45] md:bottom-6 md:right-8 pointer-events-auto"
+            >
+              <button
+                type="button"
+                onClick={() => setIsCartBarMinimized(false)}
+                className="flex items-center gap-2 rounded-full bg-gradient-to-r from-[#4c1074] to-[#125c52] px-3.5 py-2 text-white shadow-xl ring-1 ring-white/20 backdrop-blur-xl hover:scale-105 active:scale-95 transition-all cursor-pointer"
+                title="Expand cart summary"
+                aria-label="Expand cart summary"
+              >
+                <div className="relative flex items-center justify-center">
+                  <ShoppingBag className="h-4 w-4 text-amber-300" />
+                  <span className="absolute -right-1.5 -top-1.5 grid h-3.5 min-w-[14px] place-items-center rounded-full bg-[var(--marigold)] px-0.5 font-mono text-[8px] font-extrabold text-ink shadow-xs">
+                    {itemCount}
+                  </span>
+                </div>
+                <span className="font-mono text-xs font-bold text-amber-200">₹{subtotal}</span>
+                <span className="text-[10px] font-extrabold bg-white/20 px-2 py-0.5 rounded-full text-white">
+                  Show Cart 🛍️
+                </span>
+              </button>
+            </m.div>
+          ) : (
+            <m.div
+              key="expanded-cart-bar"
               initial={{ y: 80, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               exit={{ y: 80, opacity: 0 }}
               transition={{ type: "spring", stiffness: 380, damping: 26 }}
-              className="fixed bottom-[calc(3.8rem+env(safe-area-inset-bottom,0px))] inset-x-3 z-[45] md:bottom-6 md:right-8 md:inset-x-auto md:w-88 pointer-events-auto"
+              className="fixed bottom-[calc(3.8rem+env(safe-area-inset-bottom,0px))] inset-x-3 z-[45] md:bottom-6 md:right-8 md:inset-x-auto md:w-96 pointer-events-auto"
             >
-              <div className="flex items-center justify-between gap-3 rounded-2xl bg-gradient-to-r from-[#4c1074] via-[#6b1fa0] to-[#125c52] p-3 text-white shadow-[0_12px_36px_rgba(0,0,0,0.4)] ring-1 ring-white/20 backdrop-blur-xl">
-                <div className="flex items-center gap-3 min-w-0">
+              <div className="flex items-center justify-between gap-2.5 rounded-2xl bg-gradient-to-r from-[#4c1074] via-[#6b1fa0] to-[#125c52] p-3 text-white shadow-[0_12px_36px_rgba(0,0,0,0.4)] ring-1 ring-white/20 backdrop-blur-xl">
+                <div className="flex items-center gap-2.5 min-w-0 flex-1">
                   <div className="relative grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-white/20 text-white shadow-inner">
-                    <ShoppingBag className="h-5 w-5" />
+                    <ShoppingBag className="h-5 w-5 text-amber-300" />
                     <span className="absolute -right-1 -top-1 grid h-4 min-w-[16px] place-items-center rounded-full bg-[var(--marigold)] px-1 font-mono text-[9px] font-extrabold text-ink shadow-xs">
                       {itemCount}
                     </span>
                   </div>
-                  <div className="min-w-0">
+                  <div className="min-w-0 flex-1">
                     <p className="text-xs font-bold text-white leading-tight truncate">
                       {itemCount} {itemCount === 1 ? "item" : "items"}{" "}
                       {cart.storeName ? `· ${cart.storeName}` : ""}
@@ -500,16 +541,28 @@ export function AppShell({ children }: { children: ReactNode }) {
                   </div>
                 </div>
 
-                <Link
-                  to="/cart"
-                  className="inline-flex shrink-0 items-center gap-1.5 rounded-xl bg-[var(--marigold)] px-4 py-2.5 text-xs font-extrabold text-ink shadow-md hover:brightness-105 active:scale-95 transition-all"
-                >
-                  View Cart
-                  <ArrowRight className="h-4 w-4" />
-                </Link>
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <Link
+                    to="/cart"
+                    className="inline-flex shrink-0 items-center gap-1.5 rounded-xl bg-[var(--marigold)] px-3.5 py-2 text-xs font-extrabold text-ink shadow-md hover:brightness-105 active:scale-95 transition-all"
+                  >
+                    View Cart
+                    <ArrowRight className="h-4 w-4" />
+                  </Link>
+
+                  <button
+                    type="button"
+                    onClick={() => setIsCartBarMinimized(true)}
+                    className="grid h-7 w-7 place-items-center rounded-full bg-black/20 hover:bg-black/40 text-white/80 hover:text-white transition-colors cursor-pointer"
+                    title="Minimize cart bar"
+                    aria-label="Minimize cart summary bar"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </div>
               </div>
             </m.div>
-          )}
+          ))}
       </AnimatePresence>
 
       <LocationModal isOpen={isLocationModalOpen} onClose={() => setIsLocationModalOpen(false)} />
