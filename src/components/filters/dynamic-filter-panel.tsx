@@ -226,6 +226,9 @@ export function DynamicFilterPanel({
                 }
               }
 
+              const isColorType =
+                def.type === "color" || def.key === "color" || def.key === "color_family";
+
               const isPillType =
                 def.type === "single_select" ||
                 def.type === "chip_group" ||
@@ -249,7 +252,39 @@ export function DynamicFilterPanel({
                     </div>
                   </AccordionTrigger>
                   <AccordionContent className="pt-1 pb-3">
-                    {isPillType ? (
+                    {isColorType ? (
+                      <div className="grid grid-cols-2 gap-1.5 pt-1">
+                        {optionsToRender.map((opt) => {
+                          const isSelected = selectedValues.includes(opt.value);
+                          const hex = getColorHex(opt.value);
+                          return (
+                            <button
+                              key={opt.id}
+                              type="button"
+                              onClick={() => toggleAttributeOption(def.key, opt.value)}
+                              className={`flex items-center justify-between px-2.5 py-1.5 rounded-xl border text-xs font-bold transition-all ${
+                                isSelected
+                                  ? "border-primary bg-primary/10 text-primary shadow-xs ring-1 ring-primary/30"
+                                  : "border-border/80 bg-background text-foreground hover:bg-muted/80"
+                              }`}
+                            >
+                              <div className="flex items-center gap-2 min-w-0">
+                                <span
+                                  className="w-3.5 h-3.5 rounded-full border border-black/20 shrink-0 shadow-2xs"
+                                  style={{ backgroundColor: hex }}
+                                />
+                                <span className="truncate">{opt.label}</span>
+                              </div>
+                              {opt.count !== undefined && (
+                                <span className="text-[10px] font-mono text-muted-foreground ml-1">
+                                  ({opt.count})
+                                </span>
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    ) : isPillType ? (
                       <div className="flex flex-wrap gap-1.5 pt-1">
                         {optionsToRender.map((opt) => {
                           const isSelected = selectedValues.includes(opt.value);

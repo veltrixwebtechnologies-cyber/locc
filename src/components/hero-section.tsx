@@ -213,6 +213,15 @@ export function HeroSection() {
             >
               <div className="relative w-full max-w-[320px] sm:max-w-sm lg:max-w-none lg:w-96 aspect-[16/9] lg:h-72 mx-auto rounded-2xl lg:rounded-3xl p-[3.5px] bg-gradient-to-r from-[#F3D053] via-amber-300 to-[#F3D053] shadow-[0_0_30px_rgba(243,208,83,0.55)] border border-amber-200/80 transition-transform duration-300 group-hover:scale-[1.02]">
                 <div className="relative w-full h-full overflow-hidden rounded-[13px] lg:rounded-[21px]">
+                  {/* Eager high-priority poster image to ensure instant <0.3s LCP paint */}
+                  <img
+                    src="/assets/delivery-rider-final.png"
+                    alt="LocalShore Instant Delivery"
+                    loading="eager"
+                    decoding="sync"
+                    {...({ fetchPriority: "high" } as Record<string, string>)}
+                    className="absolute inset-0 w-full h-full object-cover pointer-events-none z-0"
+                  />
                   <video
                     ref={videoRef}
                     src="/assets/delivery-rider-loop.mp4"
@@ -222,7 +231,7 @@ export function HeroSection() {
                     muted
                     playsInline
                     {...({ fetchPriority: "high" } as Record<string, string>)}
-                    className="w-full h-full object-cover pointer-events-none"
+                    className="relative z-10 w-full h-full object-cover pointer-events-none"
                   />
                 </div>
               </div>

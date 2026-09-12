@@ -2,70 +2,105 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { type ProductFilterState, type FilteredProduct, type FacetResult } from "@/lib/filter-types";
 
+// Module-level circuit breaker and in-memory cache for ultra-fast response
+let isProductRpcUnavailable = false;
+let isFacetRpcUnavailable = false;
+let cachedCatalogRows: FilteredProduct[] | null = null;
+
+function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error("RPC_TIMEOUT")), timeoutMs);
+    promise
+      .then((res) => {
+        clearTimeout(timer);
+        resolve(res);
+      })
+      .catch((err) => {
+        clearTimeout(timer);
+        reject(err);
+      });
+  });
+}
+
 export function useProductFilters(filterState: ProductFilterState) {
   const productsQuery = useQuery<{ products: FilteredProduct[]; total: number }>({
     queryKey: ["filter-products", filterState],
     staleTime: 1000 * 60 * 2,
     gcTime: 1000 * 60 * 10,
+    retry: false,
+    placeholderData: (previousData) => previousData,
     queryFn: async () => {
-      try {
-        const { data, error } = await (supabase as any).rpc("filter_marketplace_products", {
-          p_category_slug: filterState.category ?? null,
-          p_subcategory_slug: filterState.subcategory ?? null,
-          p_product_type_slug: filterState.productType ?? null,
-          p_query: filterState.query ?? null,
-          p_min_price: filterState.minPrice ?? null,
-          p_max_price: filterState.maxPrice ?? null,
-          p_min_rating: filterState.minRating ?? null,
-          p_in_stock: filterState.inStock ?? null,
-          p_on_sale: filterState.onSale ?? null,
-          p_open_now: filterState.openNow ?? null,
-          p_brand_names: filterState.brands.length > 0 ? filterState.brands : null,
-          p_shop_ids: filterState.shopIds.length > 0 ? filterState.shopIds : null,
-          p_attributes: filterState.attributes && Object.keys(filterState.attributes).length > 0 ? filterState.attributes : {},
-          p_sort_by: filterState.sortBy || "relevance",
-          p_limit: 24,
-          p_offset: ((filterState.page || 1) - 1) * 24,
-        });
+      if (!isProductRpcUnavailable) {
+        try {
+          const rpcPromise = (supabase as any).rpc("filter_marketplace_products", {
+            p_category_slug: filterState.category ?? null,
+            p_subcategory_slug: filterState.subcategory ?? null,
+            p_product_type_slug: filterState.productType ?? null,
+            p_query: filterState.query ?? null,
+            p_min_price: filterState.minPrice ?? null,
+            p_max_price: filterState.maxPrice ?? null,
+            p_min_rating: filterState.minRating ?? null,
+            p_in_stock: filterState.inStock ?? null,
+            p_on_sale: filterState.onSale ?? null,
+            p_open_now: filterState.openNow ?? null,
+            p_brand_names: filterState.brands.length > 0 ? filterState.brands : null,
+            p_shop_ids: filterState.shopIds.length > 0 ? filterState.shopIds : null,
+            p_attributes: filterState.attributes && Object.keys(filterState.attributes).length > 0 ? filterState.attributes : {},
+            p_sort_by: filterState.sortBy || "relevance",
+            p_limit: 24,
+            p_offset: ((filterState.page || 1) - 1) * 24,
+          });
 
-        if (error) {
-          console.warn("RPC filter_marketplace_products failed:", error);
-          throw error;
+          const { data, error } = (await withTimeout(rpcPromise, 800)) as any;
+
+          if (error) {
+            console.warn("RPC filter_marketplace_products unavailable:", error);
+            isProductRpcUnavailable = true;
+          } else if (data) {
+            const products = (data as FilteredProduct[]) || [];
+            const total = products.length > 0 ? Number(products[0].total_count) : 0;
+            return { products, total };
+          }
+        } catch (err) {
+          console.warn("RPC filter_marketplace_products timed out/failed:", err);
+          isProductRpcUnavailable = true;
         }
-
-        const products = (data as FilteredProduct[]) || [];
-        const total = products.length > 0 ? Number(products[0].total_count) : 0;
-
-        return { products, total };
-      } catch (err) {
-        console.warn("Falling back to client-side merchandising query:", err);
-        return await fallbackMerchandisingProducts(filterState);
       }
+
+      return await fallbackMerchandisingProducts(filterState);
     },
   });
 
   const facetsQuery = useQuery<FacetResult>({
     queryKey: ["filter-facets", filterState.category, filterState.query, filterState.minPrice, filterState.maxPrice, filterState.brands, filterState.attributes],
     staleTime: 1000 * 60 * 5,
+    retry: false,
     queryFn: async () => {
-      try {
-        const { data, error } = await (supabase as any).rpc("get_marketplace_facets", {
-          p_category_slug: filterState.category ?? null,
-          p_subcategory_slug: filterState.subcategory ?? null,
-          p_product_type_slug: filterState.productType ?? null,
-          p_query: filterState.query ?? null,
-          p_min_price: filterState.minPrice ?? null,
-          p_max_price: filterState.maxPrice ?? null,
-          p_brand_names: filterState.brands.length > 0 ? filterState.brands : null,
-          p_attributes: filterState.attributes || {},
-        });
+      if (!isFacetRpcUnavailable) {
+        try {
+          const rpcPromise = (supabase as any).rpc("get_marketplace_facets", {
+            p_category_slug: filterState.category ?? null,
+            p_subcategory_slug: filterState.subcategory ?? null,
+            p_product_type_slug: filterState.productType ?? null,
+            p_query: filterState.query ?? null,
+            p_min_price: filterState.minPrice ?? null,
+            p_max_price: filterState.maxPrice ?? null,
+            p_brand_names: filterState.brands.length > 0 ? filterState.brands : null,
+            p_attributes: filterState.attributes || {},
+          });
 
-        if (error) throw error;
-        return (data as FacetResult) || defaultFacetResult();
-      } catch (err) {
-        console.warn("Facet calculation fallback:", err);
-        return defaultFacetResult();
+          const { data, error } = (await withTimeout(rpcPromise, 800)) as any;
+
+          if (error) {
+            isFacetRpcUnavailable = true;
+          } else if (data) {
+            return (data as FacetResult) || defaultFacetResult();
+          }
+        } catch (err) {
+          isFacetRpcUnavailable = true;
+        }
       }
+      return defaultFacetResult();
     },
   });
 
@@ -87,6 +122,7 @@ function defaultFacetResult(): FacetResult {
     max_price: 10000,
     total_products: 0,
     brand_facets: [],
+    shop_facets: [],
     attributes: {},
   };
 }
@@ -328,6 +364,122 @@ const MOCK_MERCHANDISING_CATALOG: FilteredProduct[] = [
     total_count: 1,
   },
   {
+    id: "prod-phone-3",
+    seller_id: "seller-elec-1",
+    name: "OnePlus Nord CE 3 5G 8GB/128GB",
+    sku: "PHONE-ONEPLUS-03",
+    brand: "OnePlus",
+    brand_id: "brand-oneplus",
+    brand_name: "OnePlus",
+    category: "Mobile & Accessories",
+    category_id: "cat-mobile",
+    subcategory_id: null,
+    product_type_id: null,
+    description: "Snapdragon 782G processor, 80W SUPERVOOC charging, 50MP Sony IMX890 OIS camera.",
+    mrp: 26999,
+    selling_price: 22999,
+    discount_price: 22999,
+    stock: 22,
+    image_url: "https://images.unsplash.com/photo-1598327105666-5b89351aff97?auto=format&fit=crop&w=600&q=75",
+    images: [],
+    weight: "184g",
+    attributes: { ram: "8GB", storage: "128GB", network: "5G" },
+    shop_name: "Poorvika Mobile Hub",
+    distance_km: 0.8,
+    rating: 4.7,
+    review_count: 53,
+    is_open: true,
+    accepts_orders: true,
+    total_count: 1,
+  },
+  {
+    id: "prod-phone-4",
+    seller_id: "seller-elec-1",
+    name: "Redmi Note 13 5G 6GB/128GB",
+    sku: "PHONE-XIAOMI-13",
+    brand: "Xiaomi",
+    brand_id: "brand-xiaomi",
+    brand_name: "Xiaomi",
+    category: "Mobile & Accessories",
+    category_id: "cat-mobile",
+    subcategory_id: null,
+    product_type_id: null,
+    description: "Super slim 108MP 3X in-sensor zoom camera, 120Hz FHD+ AMOLED display.",
+    mrp: 19999,
+    selling_price: 15499,
+    discount_price: 15499,
+    stock: 28,
+    image_url: "https://images.unsplash.com/photo-1565849904461-04a58ad377e0?auto=format&fit=crop&w=600&q=75",
+    images: [],
+    weight: "173g",
+    attributes: { ram: "6GB", storage: "128GB", network: "5G" },
+    shop_name: "Poorvika Mobile Hub",
+    distance_km: 0.8,
+    rating: 4.6,
+    review_count: 67,
+    is_open: true,
+    accepts_orders: true,
+    total_count: 1,
+  },
+  {
+    id: "prod-phone-5",
+    seller_id: "seller-elec-1",
+    name: "Realme 12 Pro+ 5G 12GB/256GB",
+    sku: "PHONE-REALME-12",
+    brand: "Realme",
+    brand_id: "brand-realme",
+    brand_name: "Realme",
+    category: "Mobile & Accessories",
+    category_id: "cat-mobile",
+    subcategory_id: null,
+    product_type_id: null,
+    description: "64MP Periscope Portrait Camera, Luxury Watch Design with Snapdragon 7s Gen 2.",
+    mrp: 34999,
+    selling_price: 29999,
+    discount_price: 29999,
+    stock: 14,
+    image_url: "https://images.unsplash.com/photo-1546054454-aa26e2b734c7?auto=format&fit=crop&w=600&q=75",
+    images: [],
+    weight: "196g",
+    attributes: { ram: "12GB", storage: "256GB", network: "5G" },
+    shop_name: "Premier Mobile World",
+    distance_km: 1.5,
+    rating: 4.8,
+    review_count: 38,
+    is_open: true,
+    accepts_orders: true,
+    total_count: 1,
+  },
+  {
+    id: "prod-phone-6",
+    seller_id: "seller-elec-1",
+    name: "Samsung Galaxy A15 4G 4GB/64GB",
+    sku: "PHONE-SAMSUNG-A15",
+    brand: "Samsung",
+    brand_id: "brand-samsung",
+    brand_name: "Samsung",
+    category: "Mobile & Accessories",
+    category_id: "cat-mobile",
+    subcategory_id: null,
+    product_type_id: null,
+    description: "Super AMOLED 90Hz display, 50MP triple camera, Knox Security & 5000mAh battery.",
+    mrp: 14999,
+    selling_price: 11999,
+    discount_price: 11999,
+    stock: 20,
+    image_url: "https://images.unsplash.com/photo-1610945265064-0e34e5519bbf?auto=format&fit=crop&w=600&q=75",
+    images: [],
+    weight: "200g",
+    attributes: { ram: "4GB", storage: "64GB", network: "4G" },
+    shop_name: "Poorvika Mobile Hub",
+    distance_km: 0.8,
+    rating: 4.5,
+    review_count: 42,
+    is_open: true,
+    accepts_orders: true,
+    total_count: 1,
+  },
+  {
     id: "prod-earbuds-1",
     seller_id: "seller-elec-1",
     name: "Wireless Active Noise Cancelling Earbuds",
@@ -548,7 +700,7 @@ const MOCK_MERCHANDISING_CATALOG: FilteredProduct[] = [
     brand: "Royal Brass",
     brand_id: "brand-royalbrass",
     brand_name: "Royal Brass",
-    category: "Furniture & Home Decor",
+    category: "Home & Kitchen",
     category_id: "cat-furniture",
     subcategory_id: null,
     product_type_id: null,
@@ -569,61 +721,338 @@ const MOCK_MERCHANDISING_CATALOG: FilteredProduct[] = [
     accepts_orders: true,
     total_count: 1,
   },
+
+  // ── 8. Fresh & Produce ──────────────────────────────────────────────────────
+  {
+    id: "prod-fresh-1",
+    seller_id: "seller-fresh-1",
+    name: "Farm Fresh Alphonso Mangoes (1 kg)",
+    sku: "FRESH-MANGO-01",
+    brand: "Palamuthir",
+    brand_id: "brand-palamuthir",
+    brand_name: "Palamuthir",
+    category: "Fresh",
+    category_id: "cat-fresh",
+    subcategory_id: null,
+    product_type_id: null,
+    description: "Sweet, juicy organic Alphonso mangoes fresh from local orchards.",
+    mrp: 240,
+    selling_price: 180,
+    discount_price: 180,
+    stock: 40,
+    image_url: "https://images.unsplash.com/photo-1553279768-865429fa0078?auto=format&fit=crop&w=600&q=75",
+    images: [],
+    weight: "1kg",
+    attributes: { organic: true },
+    shop_name: "Kovai Pazhamudir Nilayam",
+    distance_km: 0.5,
+    rating: 4.9,
+    review_count: 112,
+    is_open: true,
+    accepts_orders: true,
+    total_count: 1,
+  },
+  {
+    id: "prod-fresh-2",
+    seller_id: "seller-fresh-1",
+    name: "Fresh Red Pomegranate & Tender Coconut",
+    sku: "FRESH-POM-02",
+    brand: "Palamuthir",
+    brand_id: "brand-palamuthir",
+    brand_name: "Palamuthir",
+    category: "Fresh",
+    category_id: "cat-fresh",
+    subcategory_id: null,
+    product_type_id: null,
+    description: "Ruby red sweet pomegranates rich in antioxidants.",
+    mrp: 230,
+    selling_price: 190,
+    discount_price: 190,
+    stock: 30,
+    image_url: "https://images.unsplash.com/photo-1610832958506-aa56368176cf?auto=format&fit=crop&w=600&q=75",
+    images: [],
+    weight: "1kg",
+    attributes: { organic: true },
+    shop_name: "Green Farm Organic Produce",
+    distance_km: 0.6,
+    rating: 4.8,
+    review_count: 64,
+    is_open: true,
+    accepts_orders: true,
+    total_count: 1,
+  },
+
+  // ── 9. Meat & Fish ──────────────────────────────────────────────────────────
+  {
+    id: "prod-meat-1",
+    seller_id: "seller-meat-1",
+    name: "Tender Mutton Curry Cut (500g)",
+    sku: "MEAT-MUTTON-01",
+    brand: "Kongu Butchery",
+    brand_id: "brand-kongu",
+    brand_name: "Kongu Butchery",
+    category: "Meat & Fish",
+    category_id: "cat-meat",
+    subcategory_id: null,
+    product_type_id: null,
+    description: "Freshly dressed tender goat mutton curry cut pieces.",
+    mrp: 520,
+    selling_price: 440,
+    discount_price: 440,
+    stock: 20,
+    image_url: "https://images.unsplash.com/photo-1607623814075-e51df1bdc82f?auto=format&fit=crop&w=600&q=75",
+    images: [],
+    weight: "500g",
+    attributes: {},
+    shop_name: "Kongu Country Mutton & Chicken Stall",
+    distance_km: 0.6,
+    rating: 4.9,
+    review_count: 88,
+    is_open: true,
+    accepts_orders: true,
+    total_count: 1,
+  },
+  {
+    id: "prod-meat-2",
+    seller_id: "seller-meat-1",
+    name: "Fresh Seer Fish / Vanjaram Slices (500g)",
+    sku: "MEAT-FISH-02",
+    brand: "Kadalkani",
+    brand_id: "brand-kadalkani",
+    brand_name: "Kadalkani",
+    category: "Meat & Fish",
+    category_id: "cat-meat",
+    subcategory_id: null,
+    product_type_id: null,
+    description: "Daily fresh sea-caught Vanjaram fish steak slices.",
+    mrp: 680,
+    selling_price: 580,
+    discount_price: 580,
+    stock: 15,
+    image_url: "https://images.unsplash.com/photo-1534422298391-e4f8c172dddb?auto=format&fit=crop&w=600&q=75",
+    images: [],
+    weight: "500g",
+    attributes: {},
+    shop_name: "Kadalkani Fresh Fish & Seafood",
+    distance_km: 1.5,
+    rating: 4.8,
+    review_count: 52,
+    is_open: true,
+    accepts_orders: true,
+    total_count: 1,
+  },
+
+  // ── 10. Beauty & Care ───────────────────────────────────────────────────────
+  {
+    id: "prod-beauty-1",
+    seller_id: "seller-beauty-1",
+    name: "Herbal Cold-Pressed Hair Oil (200ml)",
+    sku: "BEAUTY-OIL-01",
+    brand: "Nykaa Care",
+    brand_id: "brand-nykaa",
+    brand_name: "Nykaa Care",
+    category: "Beauty & Care",
+    category_id: "cat-beauty",
+    subcategory_id: null,
+    product_type_id: null,
+    description: "Traditional herbal hair oil infused with amla, bhringraj, and neem.",
+    mrp: 220,
+    selling_price: 160,
+    discount_price: 160,
+    stock: 45,
+    image_url: "https://images.unsplash.com/photo-1596462502278-27bfdc403348?auto=format&fit=crop&w=600&q=75",
+    images: [],
+    weight: "200ml",
+    attributes: { organic: true },
+    shop_name: "Nykaa Beauty & Personal Care Hub",
+    distance_km: 1.1,
+    rating: 4.8,
+    review_count: 73,
+    is_open: true,
+    accepts_orders: true,
+    total_count: 1,
+  },
+  {
+    id: "prod-beauty-2",
+    seller_id: "seller-beauty-1",
+    name: "Organic Aloe & Neem Radiance Face Wash",
+    sku: "BEAUTY-WASH-02",
+    brand: "Nykaa Care",
+    brand_id: "brand-nykaa",
+    brand_name: "Nykaa Care",
+    category: "Beauty & Care",
+    category_id: "cat-beauty",
+    subcategory_id: null,
+    product_type_id: null,
+    description: "Deep cleansing ayurvedic face wash for glowing, acne-free skin.",
+    mrp: 250,
+    selling_price: 180,
+    discount_price: 180,
+    stock: 35,
+    image_url: "https://images.unsplash.com/photo-1556228720-195a672e8a03?auto=format&fit=crop&w=600&q=75",
+    images: [],
+    weight: "150ml",
+    attributes: {},
+    shop_name: "Nykaa Beauty & Personal Care Hub",
+    distance_km: 1.1,
+    rating: 4.7,
+    review_count: 41,
+    is_open: true,
+    accepts_orders: true,
+    total_count: 1,
+  },
+
+  // ── 11. Pharmacy ───────────────────────────────────────────────────────────
+  {
+    id: "prod-pharm-1",
+    seller_id: "seller-pharm-1",
+    name: "Digital Pulse Oximeter & Heart Rate Monitor",
+    sku: "PHARM-OXI-01",
+    brand: "Care Wellness",
+    brand_id: "brand-care",
+    brand_name: "Care Wellness",
+    category: "Pharmacy",
+    category_id: "cat-pharmacy",
+    subcategory_id: null,
+    product_type_id: null,
+    description: "Accurate fingertip oxygen saturation SpO2 and pulse monitor.",
+    mrp: 999,
+    selling_price: 450,
+    discount_price: 450,
+    stock: 25,
+    image_url: "https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?auto=format&fit=crop&w=600&q=75",
+    images: [],
+    weight: "120g",
+    attributes: {},
+    shop_name: "Sri Lakshmi Medicals & Healthcare",
+    distance_km: 0.2,
+    rating: 4.9,
+    review_count: 94,
+    is_open: true,
+    accepts_orders: true,
+    total_count: 1,
+  },
+
+  // ── 12. Kids & Sports ──────────────────────────────────────────────────────
+  {
+    id: "prod-sports-1",
+    seller_id: "seller-sports-1",
+    name: "Kashmir Willow Cricket Bat (Size 6)",
+    sku: "SPORT-BAT-01",
+    brand: "Champion Sports",
+    brand_id: "brand-champion",
+    brand_name: "Champion Sports",
+    category: "Kids & Sports",
+    category_id: "cat-sports",
+    subcategory_id: null,
+    product_type_id: null,
+    description: "Handcrafted Kashmir willow cricket bat with durable rubber grip.",
+    mrp: 1899,
+    selling_price: 1150,
+    discount_price: 1150,
+    stock: 12,
+    image_url: "https://images.unsplash.com/photo-1517649763962-0c623266ddc0?auto=format&fit=crop&w=600&q=75",
+    images: [],
+    weight: "1.1kg",
+    attributes: {},
+    shop_name: "Champion Sports & Fitness",
+    distance_km: 1.3,
+    rating: 4.8,
+    review_count: 36,
+    is_open: true,
+    accepts_orders: true,
+    total_count: 1,
+  },
+  {
+    id: "prod-toys-1",
+    seller_id: "seller-toys-1",
+    name: "Wooden Educational Building Blocks Toy Set",
+    sku: "TOY-BLOCKS-01",
+    brand: "Little Angels",
+    brand_id: "brand-angels",
+    brand_name: "Little Angels",
+    category: "Kids & Sports",
+    category_id: "cat-toys",
+    subcategory_id: null,
+    product_type_id: null,
+    description: "Non-toxic wooden geometric shape sorter building blocks for toddlers.",
+    mrp: 899,
+    selling_price: 499,
+    discount_price: 499,
+    stock: 18,
+    image_url: "https://images.unsplash.com/photo-1566576912321-d58ddd7a6088?auto=format&fit=crop&w=600&q=75",
+    images: [],
+    weight: "600g",
+    attributes: {},
+    shop_name: "Little Angels Toys & Baby Care",
+    distance_km: 0.7,
+    rating: 4.9,
+    review_count: 55,
+    is_open: true,
+    accepts_orders: true,
+    total_count: 1,
+  },
 ];
 
 async function fallbackMerchandisingProducts(state: ProductFilterState): Promise<{ products: FilteredProduct[]; total: number }> {
   try {
-    let rows: FilteredProduct[] = [];
+    if (!cachedCatalogRows) {
+      let rows: FilteredProduct[] = [];
 
-    try {
-      const { data } = await (supabase as any)
-        .from("public_merchandising_products")
-        .select("*")
-        .order("created_at", { ascending: false });
+      try {
+        const fetchPromise = (supabase as any)
+          .from("public_merchandising_products")
+          .select("*")
+          .order("created_at", { ascending: false });
 
-      if (data && data.length > 0) {
-        rows = data.map((p: any) => ({
-          id: p.id,
-          seller_id: p.seller_id,
-          name: p.name,
-          sku: p.sku || "",
-          brand: p.brand || null,
-          brand_id: p.brand_id || null,
-          brand_name: p.brand_name || p.brand || null,
-          category: p.category || "",
-          category_id: p.category_id || null,
-          subcategory_id: null,
-          product_type_id: null,
-          description: p.description || "",
-          mrp: Number(p.mrp || p.selling_price),
-          selling_price: Number(p.selling_price),
-          discount_price: p.discount_price ? Number(p.discount_price) : null,
-          stock: Number(p.stock || 10),
-          image_url: p.image_url || "",
-          images: p.images || [],
-          weight: p.weight || null,
-          attributes: p.attributes || p.specifications || {},
-          shop_name: p.shop_name || "Local Shop",
-          distance_km: 1.2,
-          rating: Number(p.average_rating || 4.5),
-          review_count: Number(p.review_count || 12),
-          is_open: true,
-          accepts_orders: true,
-          total_count: 1,
-        }));
+        const { data } = (await withTimeout(fetchPromise, 1000)) as any;
+
+        if (data && data.length > 0) {
+          rows = data.map((p: any) => ({
+            id: p.id,
+            seller_id: p.seller_id,
+            name: p.name,
+            sku: p.sku || "",
+            brand: p.brand || null,
+            brand_id: p.brand_id || null,
+            brand_name: p.brand_name || p.brand || null,
+            category: p.category || "",
+            category_id: p.category_id || null,
+            subcategory_id: null,
+            product_type_id: null,
+            description: p.description || "",
+            mrp: Number(p.mrp || p.selling_price),
+            selling_price: Number(p.selling_price),
+            discount_price: p.discount_price ? Number(p.discount_price) : null,
+            stock: Number(p.stock || 10),
+            image_url: p.image_url || "",
+            images: p.images || [],
+            weight: p.weight || null,
+            attributes: p.attributes || p.specifications || {},
+            shop_name: p.shop_name || "Local Shop",
+            distance_km: 1.2,
+            rating: Number(p.average_rating || 4.5),
+            review_count: Number(p.review_count || 12),
+            is_open: true,
+            accepts_orders: true,
+            total_count: 1,
+          }));
+        }
+      } catch {
+        // Ignore DB fetch errors on fallback
       }
-    } catch {
-      // Ignore DB fetch errors on fallback
+
+      // Merge mock catalog if rows are sparse or missing matching queries
+      const combinedMap = new Map<string, FilteredProduct>();
+      for (const p of [...rows, ...MOCK_MERCHANDISING_CATALOG]) {
+        if (!combinedMap.has(p.id)) combinedMap.set(p.id, p);
+      }
+      cachedCatalogRows = Array.from(combinedMap.values());
     }
 
-    // Merge mock catalog if rows are sparse or missing matching queries
-    const combinedMap = new Map<string, FilteredProduct>();
-    for (const p of [...rows, ...MOCK_MERCHANDISING_CATALOG]) {
-      if (!combinedMap.has(p.id)) combinedMap.set(p.id, p);
-    }
-    let list = Array.from(combinedMap.values());
+    let list = [...cachedCatalogRows];
 
-    // Category filter with robust category group alias matching
+    // Category filter with robust category group alias matching across all 11 categories
     if (state.category && state.category !== "all" && state.category !== "all-shops") {
       const normCat = state.category.toLowerCase().replace(/[^a-z0-9]+/g, "");
       list = list.filter((p) => {
@@ -633,12 +1062,23 @@ async function fallbackMerchandisingProducts(state: ProductFilterState): Promise
           normProdCat.includes(normCat) ||
           normCat.includes(normProdCat) ||
           (normCat.includes("fashion") && (normProdCat.includes("fashion") || normProdCat.includes("boutique"))) ||
-          (normCat.includes("mobile") && (normProdCat.includes("mobile") || normProdCat.includes("electronic"))) ||
+          ((normCat.includes("mobile") || normCat.includes("electronic")) && (normProdCat.includes("mobile") || normProdCat.includes("electronic"))) ||
           (normCat.includes("grocery") && normProdCat.includes("grocery")) ||
-          (normCat.includes("bakery") && normProdCat.includes("bakery")) ||
+          (normCat.includes("bakery") && (normProdCat.includes("bakery") || normProdCat.includes("sweet"))) ||
           (normCat.includes("food") && (normProdCat.includes("food") || normProdCat.includes("restaurant"))) ||
           (normCat.includes("footwear") && normProdCat.includes("footwear")) ||
-          (normCat.includes("furniture") && (normProdCat.includes("furniture") || normProdCat.includes("decor")))
+          ((normCat.includes("home") || normCat.includes("kitchen") || normCat.includes("furniture") || normCat.includes("decor")) &&
+            (normProdCat.includes("home") || normProdCat.includes("kitchen") || normProdCat.includes("furniture") || normProdCat.includes("decor"))) ||
+          ((normCat.includes("fresh") || normCat.includes("fruit") || normCat.includes("veg") || normCat.includes("palamuthir")) &&
+            (normProdCat.includes("fresh") || normProdCat.includes("fruit") || normProdCat.includes("veg") || normProdCat.includes("produce"))) ||
+          ((normCat.includes("meat") || normCat.includes("fish")) &&
+            (normProdCat.includes("meat") || normProdCat.includes("fish") || normProdCat.includes("chicken") || normProdCat.includes("mutton") || normProdCat.includes("seafood"))) ||
+          ((normCat.includes("pharmacy") || normCat.includes("medical")) &&
+            (normProdCat.includes("pharmacy") || normProdCat.includes("medical") || normProdCat.includes("otc") || normProdCat.includes("wellness"))) ||
+          (normCat.includes("beauty") && (normProdCat.includes("beauty") || normProdCat.includes("care") || normProdCat.includes("cosmetic"))) ||
+          ((normCat.includes("toy") || normCat.includes("sport") || normCat.includes("kid") || normCat.includes("baby")) &&
+            (normProdCat.includes("toy") || normProdCat.includes("sport") || normProdCat.includes("baby") || normProdCat.includes("kid"))) ||
+          (normCat.includes("favorite") && p.rating >= 4.7)
         );
       });
     }
@@ -748,8 +1188,25 @@ async function fallbackMerchandisingProducts(state: ProductFilterState): Promise
     }
 
     // In Stock filter
-    if (state.inStock) {
+    if (state.inStock || state.inStockOnly) {
       list = list.filter((p) => p.stock > 0);
+    }
+
+    // Shop & Location filters
+    if (state.maxDistanceKm !== undefined && state.maxDistanceKm > 0) {
+      list = list.filter((p) => (p.distance_km ?? 0) <= state.maxDistanceKm!);
+    }
+
+    if (state.openNowOnly) {
+      list = list.filter((p) => p.is_open !== false);
+    }
+
+    if (state.localFavoriteOnly) {
+      list = list.filter((p) => p.rating >= 4.7);
+    }
+
+    if (state.verifiedShopOnly) {
+      list = list.filter((p) => p.rating >= 4.5);
     }
 
     const total = list.length;

@@ -20,7 +20,6 @@ import { useAuth } from "@/lib/auth-store";
 import {
   CategoryMegaMenu,
   HeaderCategoryMenu,
-  MobileCategoryStrip,
 } from "@/components/category-mega-menu";
 import { Fragment, type ReactNode, useEffect, useState, useRef } from "react";
 import { useWishlist, useWishlistProducts } from "@/lib/merchandising";
@@ -28,6 +27,7 @@ import { AnimatePresence, m } from "motion/react";
 import { SwiggyInstantSearchDropdown } from "@/components/ui/swiggy-instant-search-dropdown";
 import { useDeliveryLocation, initAutoGPSLocation, hasUserChosenLocation, useGPSStatus, detectCurrentGPSLocation } from "@/lib/location-store";
 import { LocationModal } from "@/components/ui/location-modal";
+import { LiquidGlassCategorySelector } from "@/components/liquid-glass-category-selector";
 
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
@@ -402,13 +402,9 @@ export function AppShell({ children }: { children: ReactNode }) {
           </nav>
         </div>
       </header>
-      {/* Category Mega Menu */}
-      <div className="relative z-40 hidden md:block overflow-visible">
-        <CategoryMegaMenu />
-      </div>
-
-      <div className="md:hidden">
-        <MobileCategoryStrip />
+      {/* Dynamic Liquid Glass Category Island (Desktop & Mobile) */}
+      <div className="relative z-40 overflow-visible">
+        <LiquidGlassCategorySelector />
       </div>
 
       <main className="mx-auto w-full max-w-[1600px] xl:max-w-[1800px] px-3 sm:px-4 md:px-6 lg:px-10 xl:px-12">{children}</main>
@@ -484,44 +480,15 @@ export function AppShell({ children }: { children: ReactNode }) {
       </nav>
       {/* Floating Bottom Cart Bar (Optimized for Mobile & Desktop) */}
       <AnimatePresence>
-        {showFloatingCart &&
-          (isCartBarMinimized ? (
-            <m.div
-              key="minimized-cart-pill"
-              initial={{ scale: 0.8, opacity: 0, y: 20 }}
-              animate={{ scale: 1, opacity: 1, y: 0 }}
-              exit={{ scale: 0.8, opacity: 0, y: 20 }}
-              transition={{ type: "spring", stiffness: 400, damping: 28 }}
-              className="fixed bottom-[calc(4.2rem+env(safe-area-inset-bottom,0px))] right-3 z-[45] md:bottom-6 md:right-8 pointer-events-auto"
-            >
-              <button
-                type="button"
-                onClick={() => setIsCartBarMinimized(false)}
-                className="flex items-center gap-2 rounded-full bg-gradient-to-r from-[#4c1074] to-[#125c52] px-3.5 py-2 text-white shadow-xl ring-1 ring-white/20 backdrop-blur-xl hover:scale-105 active:scale-95 transition-all cursor-pointer"
-                title="Expand cart summary"
-                aria-label="Expand cart summary"
-              >
-                <div className="relative flex items-center justify-center">
-                  <ShoppingBag className="h-4 w-4 text-amber-300" />
-                  <span className="absolute -right-1.5 -top-1.5 grid h-3.5 min-w-[14px] place-items-center rounded-full bg-[var(--marigold)] px-0.5 font-mono text-[8px] font-extrabold text-ink shadow-xs">
-                    {itemCount}
-                  </span>
-                </div>
-                <span className="font-mono text-xs font-bold text-amber-200">₹{subtotal}</span>
-                <span className="text-[10px] font-extrabold bg-white/20 px-2 py-0.5 rounded-full text-white">
-                  Show Cart 🛍️
-                </span>
-              </button>
-            </m.div>
-          ) : (
-            <m.div
-              key="expanded-cart-bar"
-              initial={{ y: 80, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              exit={{ y: 80, opacity: 0 }}
-              transition={{ type: "spring", stiffness: 380, damping: 26 }}
-              className="fixed bottom-[calc(3.8rem+env(safe-area-inset-bottom,0px))] inset-x-3 z-[45] md:bottom-6 md:right-8 md:inset-x-auto md:w-96 pointer-events-auto"
-            >
+        {showFloatingCart && !isCartBarMinimized && (
+          <m.div
+            key="expanded-cart-bar"
+            initial={{ y: 80, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 80, opacity: 0 }}
+            transition={{ type: "spring", stiffness: 380, damping: 26 }}
+            className="fixed bottom-[calc(3.8rem+env(safe-area-inset-bottom,0px))] inset-x-3 z-[45] md:bottom-6 md:right-8 md:inset-x-auto md:w-96 pointer-events-auto"
+          >
               <div className="flex items-center justify-between gap-2.5 rounded-2xl bg-gradient-to-r from-[#4c1074] via-[#6b1fa0] to-[#125c52] p-3 text-white shadow-[0_12px_36px_rgba(0,0,0,0.4)] ring-1 ring-white/20 backdrop-blur-xl">
                 <div className="flex items-center gap-2.5 min-w-0 flex-1">
                   <div className="relative grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-white/20 text-white shadow-inner">
@@ -562,7 +529,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                 </div>
               </div>
             </m.div>
-          ))}
+        )}
       </AnimatePresence>
 
       <LocationModal isOpen={isLocationModalOpen} onClose={() => setIsLocationModalOpen(false)} />

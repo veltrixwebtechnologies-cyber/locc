@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useDeliveryLocation } from "@/lib/location-store";
@@ -10,15 +10,21 @@ export function useLiveSearchResults(query: string) {
   const [deliveryLocation] = useDeliveryLocation();
 
   useEffect(() => {
-    const timer = window.setTimeout(() => setDebouncedQuery(trimmedQuery), 150);
+    const timer = window.setTimeout(() => setDebouncedQuery(trimmedQuery), 80);
     return () => window.clearTimeout(timer);
+  }, [trimmedQuery]);
+
+  // Synchronously compute instant local search results on every keystroke (0ms delay!)
+  const localCatalogResults = useMemo(() => {
+    if (!trimmedQuery) return [];
+    return getInstantSearchResults(trimmedQuery);
   }, [trimmedQuery]);
 
   const search = useQuery({
     queryKey: ["marketplace-search-v2", debouncedQuery, deliveryLocation?.lat, deliveryLocation?.lng],
     staleTime: 1000 * 60 * 5,
     gcTime: 1000 * 60 * 10,
-    retry: 1,
+    retry: 0,
     refetchOnWindowFocus: false,
     enabled: debouncedQuery.length > 0,
     queryFn: async () => {
@@ -154,14 +160,13 @@ export function useLiveSearchResults(query: string) {
     explainabilityTags: Array.isArray(row.explainability_tags) ? row.explainability_tags : undefined,
   }));
 
-  // Always merge with local catalog search so user ALWAYS gets rich results for products and shops!
-  const localCatalogResults = trimmedQuery.length > 0 ? getInstantSearchResults(trimmedQuery) : [];
-
   const resultMap = new Map<string, SearchResultItem>();
-  for (const r of rawResults) {
+
+  // Prioritize instant local catalog items first for zero-latency response
+  for (const r of localCatalogResults) {
     if (r.title) resultMap.set(r.title.toLowerCase(), r);
   }
-  for (const r of localCatalogResults) {
+  for (const r of rawResults) {
     if (r.title && !resultMap.has(r.title.toLowerCase())) {
       resultMap.set(r.title.toLowerCase(), r);
     }
@@ -174,7 +179,7 @@ export function useLiveSearchResults(query: string) {
     isLoading:
       trimmedQuery.length > 0 &&
       results.length === 0 &&
-      (debouncedQuery !== trimmedQuery || search.isLoading),
+      search.isLoading,
     error: search.error,
   };
 }

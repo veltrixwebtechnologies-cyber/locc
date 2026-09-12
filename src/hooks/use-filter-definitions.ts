@@ -2,6 +2,23 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { type FilterDefinition } from "@/lib/filter-types";
 
+let isFilterDefRpcUnavailable = false;
+
+function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error("RPC_TIMEOUT")), timeoutMs);
+    promise
+      .then((res) => {
+        clearTimeout(timer);
+        resolve(res);
+      })
+      .catch((err) => {
+        clearTimeout(timer);
+        reject(err);
+      });
+  });
+}
+
 export function useFilterDefinitions(
   categorySlug?: string,
   productTypeSlug?: string
@@ -10,23 +27,31 @@ export function useFilterDefinitions(
     queryKey: ["filter-definitions", categorySlug, productTypeSlug],
     staleTime: 1000 * 60 * 10,
     gcTime: 1000 * 60 * 30,
+    retry: false,
     queryFn: async () => {
-      try {
-        const { data, error } = await (supabase as any).rpc("get_applicable_filters", {
-          p_category_slug: categorySlug ?? null,
-          p_product_type_slug: productTypeSlug ?? null,
-        });
+      if (!isFilterDefRpcUnavailable) {
+        try {
+          const rpcPromise = (supabase as any).rpc("get_applicable_filters", {
+            p_category_slug: categorySlug ?? null,
+            p_product_type_slug: productTypeSlug ?? null,
+          });
 
-        if (error) {
-          console.warn("RPC get_applicable_filters error, using fallback definitions:", error);
+          const { data, error } = (await withTimeout(rpcPromise, 800)) as any;
+
+          if (error) {
+            console.warn("RPC get_applicable_filters error, using fallback definitions:", error);
+            isFilterDefRpcUnavailable = true;
+            return getFallbackFilterDefinitions(categorySlug);
+          }
+
+          return (data as FilterDefinition[]) ?? getFallbackFilterDefinitions(categorySlug);
+        } catch (err) {
+          console.warn("Filter definitions query fallback:", err);
+          isFilterDefRpcUnavailable = true;
           return getFallbackFilterDefinitions(categorySlug);
         }
-
-        return (data as FilterDefinition[]) ?? getFallbackFilterDefinitions(categorySlug);
-      } catch (err) {
-        console.warn("Filter definitions query fallback:", err);
-        return getFallbackFilterDefinitions(categorySlug);
       }
+      return getFallbackFilterDefinitions(categorySlug);
     },
   });
 }
@@ -79,6 +104,22 @@ function getFallbackFilterDefinitions(categorySlug?: string): FilterDefinition[]
       brandDef,
       priceDef,
       {
+        id: "fit",
+        key: "fit",
+        label: "Fit",
+        type: "single_select",
+        is_universal: false,
+        is_required: false,
+        display_order: 9,
+        options: [
+          { id: "ft1", value: "Slim", label: "Slim Fit", display_order: 1 },
+          { id: "ft2", value: "Regular", label: "Regular Fit", display_order: 2 },
+          { id: "ft3", value: "Relaxed", label: "Relaxed Fit", display_order: 3 },
+          { id: "ft4", value: "Baggy", label: "Baggy Fit", display_order: 4 },
+          { id: "ft5", value: "Oversized", label: "Oversized Fit", display_order: 5 },
+        ],
+      },
+      {
         id: "size",
         key: "size",
         label: "Size",
@@ -87,12 +128,16 @@ function getFallbackFilterDefinitions(categorySlug?: string): FilterDefinition[]
         is_required: true,
         display_order: 10,
         options: [
-          { id: "s1", value: "XS", label: "XS", display_order: 1 },
-          { id: "s2", value: "S", label: "S", display_order: 2 },
-          { id: "s3", value: "M", label: "M", display_order: 3 },
-          { id: "s4", value: "L", label: "L", display_order: 4 },
-          { id: "s5", value: "XL", label: "XL", display_order: 5 },
-          { id: "s6", value: "XXL", label: "XXL", display_order: 6 },
+          { id: "s0", value: "28", label: "28", display_order: 1 },
+          { id: "s01", value: "30", label: "30", display_order: 2 },
+          { id: "s02", value: "32", label: "32", display_order: 3 },
+          { id: "s03", value: "34", label: "34", display_order: 4 },
+          { id: "s1", value: "XS", label: "XS", display_order: 5 },
+          { id: "s2", value: "S", label: "S", display_order: 6 },
+          { id: "s3", value: "M", label: "M", display_order: 7 },
+          { id: "s4", value: "L", label: "L", display_order: 8 },
+          { id: "s5", value: "XL", label: "XL", display_order: 9 },
+          { id: "s6", value: "XXL", label: "XXL", display_order: 10 },
         ],
       },
       {
@@ -109,6 +154,7 @@ function getFallbackFilterDefinitions(categorySlug?: string): FilterDefinition[]
           { id: "c3", value: "Blue", label: "Navy Blue", display_order: 3 },
           { id: "c4", value: "Red", label: "Red", display_order: 4 },
           { id: "c5", value: "Green", label: "Olive Green", display_order: 5 },
+          { id: "c6", value: "Grey", label: "Grey", display_order: 6 },
         ],
       },
       {
@@ -121,8 +167,9 @@ function getFallbackFilterDefinitions(categorySlug?: string): FilterDefinition[]
         display_order: 12,
         options: [
           { id: "f1", value: "Cotton", label: "Pure Cotton", display_order: 1 },
-          { id: "f2", value: "Linen", label: "Linen", display_order: 2 },
-          { id: "f3", value: "Polyester", label: "Polyester", display_order: 3 },
+          { id: "f2", value: "Denim", label: "Denim", display_order: 2 },
+          { id: "f3", value: "Linen", label: "Linen", display_order: 3 },
+          { id: "f4", value: "Polyester", label: "Polyester", display_order: 4 },
         ],
       },
       ratingDef,

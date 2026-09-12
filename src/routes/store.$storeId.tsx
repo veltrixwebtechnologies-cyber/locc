@@ -731,7 +731,7 @@ function StorePage() {
                                 onClick={() => {
                                   void recordProductEvent(p.id, "add_to_cart");
                                   flyProductToCart(p.id);
-                                  cartStore.add(p.storeId, store.name, p);
+                                  cartStore.add(store.id || p.storeId, store.name, p);
                                 }}
                                 className="rounded-lg bg-white border border-emerald-600 text-emerald-700 hover:bg-emerald-600 hover:text-white px-3.5 py-1 text-xs font-black uppercase tracking-wider shadow-sm transition-all active:scale-95 cursor-pointer flex items-center gap-1"
                               >
@@ -744,7 +744,7 @@ function StorePage() {
                                 onAdd={() => {
                                   void recordProductEvent(p.id, "add_to_cart");
                                   flyProductToCart(p.id);
-                                  cartStore.add(p.storeId, store.name, p);
+                                  cartStore.add(store.id || p.storeId, store.name, p);
                                 }}
                                 onChange={(n) => cartStore.setQty(p.id, n)}
                                 addClassName="rounded-lg bg-emerald-700 text-white px-2 py-0.5 text-xs font-bold shadow-sm"
@@ -933,20 +933,22 @@ function StorePage() {
       </div>
 
       {/* Sticky Cart Footer Bar when items are present */}
-      {totals.itemCount > 0 && (cart.storeId === store.id || store.id === APPROVED_STORE.id) && (
-        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-purple-200 bg-[#981495] text-white shadow-2xl">
-          <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-5 py-3 md:px-6">
+      {totals.itemCount > 0 && (
+        <div className="fixed inset-x-0 bottom-0 z-[60] border-t-2 border-amber-300/80 bg-[#981495] text-white shadow-[0_-8px_30px_rgba(0,0,0,0.35)] backdrop-blur-md">
+          <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-5 py-3.5 md:px-6">
             <div className="text-sm">
               <p className="font-mono text-[10px] uppercase tracking-widest text-purple-200 font-bold">
-                {totals.itemCount} item{totals.itemCount > 1 ? "s" : ""} · from {store.name}
+                {totals.itemCount} item{totals.itemCount > 1 ? "s" : ""} · from {cart.storeName || store.name}
               </p>
-              <p className="font-display text-xl font-extrabold text-white">₹{totals.subtotal}</p>
+              <p className="font-display text-xl font-black text-amber-300">₹{totals.subtotal.toLocaleString("en-IN")}</p>
             </div>
             <button
+              type="button"
               onClick={() => navigate({ to: "/cart" })}
-              className="rounded-full bg-amber-400 hover:bg-amber-300 px-5 py-2.5 text-xs font-black text-slate-950 shadow-lg transition-all active:scale-95 cursor-pointer"
+              className="inline-flex items-center gap-2 rounded-full bg-amber-400 hover:bg-amber-300 px-6 py-3 text-xs font-black text-slate-950 shadow-xl transition-all active:scale-95 cursor-pointer hover:shadow-amber-400/20"
             >
-              Review Cart &rarr;
+              <span>Review Cart</span>
+              <span className="text-sm">&rarr;</span>
             </button>
           </div>
         </div>

@@ -96,15 +96,6 @@ export const cartStore = {
         ];
     state = { storeId, storeName, lines };
     persist();
-    if (previousStoreName && typeof window !== "undefined") {
-      try {
-        toast.info(
-          `Cart updated to ${storeName}. Items from ${previousStoreName} were replaced for single-shop checkout.`,
-        );
-      } catch {
-        // Safe fallback
-      }
-    }
   },
   setQty(productId: string, qty: number) {
     ensureHydrated();

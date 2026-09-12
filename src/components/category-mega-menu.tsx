@@ -85,7 +85,7 @@ const categoryPromos: Record<string, CategoryPromo> = {
   },
 };
 
-const menuGroups = [
+export const menuGroups = [
   {
     id: "fresh",
     label: "Fresh",
@@ -633,107 +633,129 @@ export function HeaderCategoryMenu() {
 }
 
 export function MobileCategoryStrip() {
-  const [isOpen, setIsOpen] = useState(false);
-  const [openGroup, setOpenGroup] = useState<string | null>(null);
-  const selected = menuGroups.find((group) => group.id === openGroup);
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
   return (
-    <div className="border-b hairline bg-background md:hidden">
-      <div className="px-4 py-3">
-        <div className="flex items-center justify-between">
+    <>
+      <div className="sticky top-[53px] z-40 border-b border-purple-100/90 bg-white/95 text-slate-800 shadow-2xs backdrop-blur-md md:hidden">
+        <div className="flex items-center gap-1.5 px-3 py-2 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          {/* 1. All Categories Button (Amazon style) */}
           <button
             type="button"
-            aria-expanded={isOpen}
-            onClick={() => setIsOpen((value) => !value)}
-            className="text-left"
+            onClick={() => setDrawerOpen(true)}
+            className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-gradient-to-r from-purple-900 to-indigo-900 text-white border border-purple-950 px-3 py-1 text-xs font-black shadow-xs active:scale-95 transition-all cursor-pointer"
           >
-            <p className="font-mono text-[10px] uppercase tracking-widest text-primary">Browse</p>
-            <h2 className="font-display text-lg leading-tight text-foreground">Categories</h2>
+            <Menu className="h-3.5 w-3.5 text-[#F3D053]" />
+            <span>All</span>
           </button>
-          <Link
-            to="/search"
-            search={{ category: undefined, q: undefined }}
-            onClick={() => {
-              setIsOpen(false);
-              setOpenGroup(null);
-            }}
-            className="text-[11px] font-medium text-muted-foreground"
-          >
-            All
-          </Link>
-        </div>
-        {isOpen && (
-          <div className="mt-3 flex gap-2 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-            {menuGroups.map((group) => (
-              <button
-                key={group.id}
-                type="button"
-                aria-expanded={openGroup === group.id}
-                onClick={() => setOpenGroup(openGroup === group.id ? null : group.id)}
-                className={`flex min-w-[86px] flex-col items-center gap-1 rounded-lg border hairline bg-card px-2 py-2 text-center text-[11px] font-semibold text-foreground shadow-sm transition-all active:scale-[0.98] hover:border-primary/40 hover:bg-muted ${openGroup === group.id ? "border-primary/50 bg-muted ring-2 ring-primary/15" : ""}`}
-              >
-                <span className="h-11 w-11 overflow-hidden rounded-full border hairline bg-card">
-                  {imageFor(group.categoryId) ? (
-                    <img
-                      src={imageFor(group.categoryId)}
-                      alt=""
-                      loading="lazy"
-                      className="h-full w-full object-cover"
-                    />
-                  ) : (
-                    <PackageSearch className="m-2.5 h-5 w-5 text-primary" />
-                  )}
-                </span>
-                {group.label}
-              </button>
-            ))}
-          </div>
-        )}
 
-        {isOpen && selected && (
-          <div className="mt-3 overflow-hidden rounded-xl border hairline bg-card shadow-xl">
-            <div
-              className="awning h-1.5"
-              style={{ ["--awning-color" as string]: "var(--teal)" }}
-              aria-hidden
-            />
-            <div className="bg-primary px-4 py-3 text-primary-foreground">
-              <p className="font-mono text-[10px] uppercase tracking-widest opacity-80">
-                Shop Local
-              </p>
-              <p className="mt-1 font-display text-xl leading-tight">{selected.label}</p>
-            </div>
-            <div className="grid grid-cols-2 gap-x-4 gap-y-4 p-4">
-              {selected.columns.map((column) => (
-                <div key={column.heading}>
-                  <Link
-                    to="/search"
-                    search={{ category: selected.categoryId, q: column.heading }}
-                    onClick={() => setOpenGroup(null)}
-                    className="text-xs font-bold text-primary underline-offset-4 hover:underline"
-                  >
-                    {column.heading}
-                  </Link>
-                  <ul className="mt-2 space-y-1.5">
-                    {column.items.map((item) => (
-                      <li key={item}>
-                        <Link
-                          to="/search"
-                          search={{ category: selected.categoryId, q: item }}
-                          onClick={() => setOpenGroup(null)}
-                          className="text-xs text-foreground/85 underline-offset-4 hover:text-primary hover:underline"
-                        >
-                          {item}
-                        </Link>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
+          <div className="h-4 w-px bg-slate-200 shrink-0 mx-0.5" />
+
+          {/* Quick Amazon-Style Category Pills */}
+          {[
+            { label: "🔥 Deals", searchParams: { q: "deals" } },
+            { label: "🥦 Fresh", searchParams: { category: "fruits_veg" } },
+            { label: "🥩 Meat & Fish", searchParams: { category: "meat_fish" } },
+            { label: "🥐 Bakery", searchParams: { category: "bakery" } },
+            { label: "👗 Fashion", searchParams: { category: "fashion" } },
+            { label: "💄 Beauty", searchParams: { category: "beauty" } },
+            { label: "📱 Electronics", searchParams: { category: "electronics" } },
+            { label: "🍳 Home & Kitchen", searchParams: { category: "home_kitchen" } },
+            { label: "💊 Pharmacy", searchParams: { category: "pharmacy" } },
+            { label: "⚽ Toys & Sports", searchParams: { category: "toys" } },
+            { label: "🏆 Best Shops", to: "/best-shops" },
+          ].map((item, idx) => (
+            <Link
+              key={idx}
+              to={(item.to as any) || "/search"}
+              search={item.searchParams as any}
+              className="inline-flex shrink-0 items-center gap-1 rounded-full bg-slate-100 hover:bg-purple-50 text-slate-700 hover:text-purple-900 border border-slate-200/80 px-3 py-1 text-xs font-extrabold whitespace-nowrap active:scale-95 transition-all"
+            >
+              <span>{item.label}</span>
+            </Link>
+          ))}
+        </div>
       </div>
-    </div>
+
+      {/* Complete 31-Category Drawer Triggered by "All" */}
+      {drawerOpen && (
+        <div className="fixed inset-0 z-[100]">
+          <button
+            type="button"
+            aria-label="Close categories"
+            onClick={() => setDrawerOpen(false)}
+            className="absolute inset-0 cursor-default bg-black/60 backdrop-blur-xs"
+          />
+          <aside className="relative flex h-full w-[min(420px,90vw)] flex-col overflow-y-auto bg-background text-foreground shadow-2xl">
+            <div className="flex items-center justify-between bg-gradient-to-r from-purple-900 via-indigo-900 to-purple-950 px-5 py-5 text-white">
+              <div className="flex items-center gap-2.5">
+                <Menu className="h-5 w-5 text-[#F3D053]" />
+                <div>
+                  <h3 className="font-display text-lg font-bold text-white">All 31 Shop Categories</h3>
+                  <p className="text-[11px] text-purple-200">Complete neighborhood marketplace directory</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                aria-label="Close categories"
+                onClick={() => setDrawerOpen(false)}
+                className="rounded-full p-2 hover:bg-white/15 text-white transition-colors"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="flex-1 divide-y divide-border overflow-y-auto">
+              <DrawerSection title="🛒 Essentials & Daily Provisions">
+                <DrawerLink label="Kirana & Grocery" category="kirana-grocery" onClick={() => setDrawerOpen(false)} />
+                <DrawerLink label="Supermarkets" category="supermarkets" onClick={() => setDrawerOpen(false)} />
+                <DrawerLink label="Pharmacies & Medicals" category="pharmacies" onClick={() => setDrawerOpen(false)} />
+                <DrawerLink label="Fruits & Vegetables" category="fruits-vegetables" onClick={() => setDrawerOpen(false)} />
+                <DrawerLink label="Meat & Fish" category="meat-fish" onClick={() => setDrawerOpen(false)} />
+              </DrawerSection>
+
+              <DrawerSection title="🍽️ Food, Dining & Sweets">
+                <DrawerLink label="Bakeries" category="bakeries" onClick={() => setDrawerOpen(false)} />
+                <DrawerLink label="Sweet Shops" category="sweet-shops" onClick={() => setDrawerOpen(false)} />
+                <DrawerLink label="Restaurants" category="restaurants" onClick={() => setDrawerOpen(false)} />
+                <DrawerLink label="Cafés & Tea Shops" category="cafes-tea-shops" onClick={() => setDrawerOpen(false)} />
+              </DrawerSection>
+
+              <DrawerSection title="👗 Fashion, Beauty & Accessories">
+                <DrawerLink label="Fashion & Clothing" category="fashion-clothing" onClick={() => setDrawerOpen(false)} />
+                <DrawerLink label="Boutiques" category="boutiques" onClick={() => setDrawerOpen(false)} />
+                <DrawerLink label="Footwear" category="footwear" onClick={() => setDrawerOpen(false)} />
+                <DrawerLink label="Jewellery & Watches" category="jewellery-watches" onClick={() => setDrawerOpen(false)} />
+                <DrawerLink label="Beauty & Care" category="beauty-care" onClick={() => setDrawerOpen(false)} />
+              </DrawerSection>
+
+              <DrawerSection title="📱 Electronics & Devices">
+                <DrawerLink label="Electronics" category="electronics" onClick={() => setDrawerOpen(false)} />
+                <DrawerLink label="Mobile & Accessories" category="mobile-accessories" onClick={() => setDrawerOpen(false)} />
+              </DrawerSection>
+
+              <DrawerSection title="🏠 Home, Living & Hardware">
+                <DrawerLink label="Home & Kitchen" category="home-kitchen" onClick={() => setDrawerOpen(false)} />
+                <DrawerLink label="Furniture & Home Decor" category="furniture-home-decor" onClick={() => setDrawerOpen(false)} />
+                <DrawerLink label="Home & Hardware" category="hardware-electrical" onClick={() => setDrawerOpen(false)} />
+                <DrawerLink label="Pooja Stores" category="pooja-stores" onClick={() => setDrawerOpen(false)} />
+              </DrawerSection>
+
+              <DrawerSection title="⚽ Lifestyle, Kids & Services">
+                <DrawerLink label="Books & Stationery" category="books-stationery" onClick={() => setDrawerOpen(false)} />
+                <DrawerLink label="Sports & Fitness" category="sports-fitness" onClick={() => setDrawerOpen(false)} />
+                <DrawerLink label="Toys & Baby" category="toys-baby" onClick={() => setDrawerOpen(false)} />
+                <DrawerLink label="Gift Shops" category="gift-shops" onClick={() => setDrawerOpen(false)} />
+                <DrawerLink label="Flower Shops" category="flower-shops" onClick={() => setDrawerOpen(false)} />
+                <DrawerLink label="Pet Shops" category="pet-shops" onClick={() => setDrawerOpen(false)} />
+                <DrawerLink label="Auto & Bike" category="auto-bike" onClick={() => setDrawerOpen(false)} />
+                <DrawerLink label="Repair Shops" category="repair-shops" onClick={() => setDrawerOpen(false)} />
+                <DrawerLink label="Local Services" category="local-services" onClick={() => setDrawerOpen(false)} />
+              </DrawerSection>
+            </div>
+          </aside>
+        </div>
+      )}
+    </>
   );
 }

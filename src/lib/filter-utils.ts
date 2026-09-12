@@ -90,6 +90,7 @@ export function parseFilterParams(searchParams: Record<string, unknown>): Produc
     openNow,
     brands,
     shopIds,
+    shopTypes: [],
     attributes,
     sortBy: typeof searchParams.sort === "string" ? searchParams.sort : "relevance",
     page: typeof searchParams.page === "string" ? Number(searchParams.page) : typeof searchParams.page === "number" ? searchParams.page : 1,

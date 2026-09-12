@@ -339,7 +339,7 @@ function Home() {
         const pShop = product.shop_name.toLowerCase();
 
         const matchesQuery = qWords.some(
-          (w) => pName.includes(w) || pCat.includes(w) || pShop.includes(w),
+          (w: string) => pName.includes(w) || pCat.includes(w) || pShop.includes(w),
         );
         if (!matchesQuery) return false;
       }

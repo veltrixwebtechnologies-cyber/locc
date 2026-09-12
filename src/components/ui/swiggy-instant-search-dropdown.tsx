@@ -127,13 +127,18 @@ export function SwiggyInstantSearchDropdown({
     );
   }
 
+  const shopsList = results.filter((item) => item.type === "Shop");
+  const productsList = results.filter((item) => item.type === "Product");
+  const brandsList = results.filter((item) => item.type === "Brand");
+  const categoriesList = results.filter((item) => item.type === "Category");
+
   return (
     <div
-      className={`w-full bg-background rounded-2xl border hairline shadow-2xl overflow-hidden max-h-[480px] overflow-y-auto animate-in fade-in zoom-in-95 duration-150 ${className}`}
+      className={`w-full bg-background rounded-2xl border hairline shadow-2xl overflow-hidden max-h-[520px] overflow-y-auto animate-in fade-in zoom-in-95 duration-150 ${className}`}
     >
       <div className="sticky top-0 bg-background/95 backdrop-blur-md px-4 py-2.5 border-b border-border/50 flex items-center justify-between z-10">
         <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-          Results ({results.length})
+          Matches ({results.length})
         </span>
         {onClearQuery && (
           <button
@@ -146,44 +151,101 @@ export function SwiggyInstantSearchDropdown({
         )}
       </div>
 
-      <div className="p-2 space-y-1">
-        {results.map((item) => (
-          <div
-            key={item.id}
-            onMouseDown={(e) => {
-              e.preventDefault();
-              handleResultClick(item);
-            }}
-            className="flex items-center gap-3.5 px-3 py-2.5 rounded-xl hover:bg-muted/80 active:bg-muted transition-colors cursor-pointer group"
-          >
-            {/* Square Thumbnail Image */}
-            <div className="relative w-12 h-12 md:w-14 md:h-14 rounded-xl overflow-hidden bg-muted shrink-0 border border-border/40 shadow-xs">
-              <img
-                src={item.imageUrl}
-                alt={item.title}
-                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
-                onError={(e) => {
-                  (e.target as HTMLImageElement).src =
-                    "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=150&q=75";
-                }}
-              />
+      <div className="p-2 space-y-3">
+        {/* 🏪 SHOPS SECTION */}
+        {shopsList.length > 0 && (
+          <div>
+            <div className="px-3 py-1 text-[11px] font-extrabold uppercase tracking-wider text-purple-700 dark:text-purple-300 flex items-center gap-1.5 bg-purple-50 dark:bg-purple-950/40 rounded-lg mb-1">
+              <Store className="w-3.5 h-3.5" />
+              <span>Shops ({shopsList.length})</span>
             </div>
-
-            {/* Title and Subtitle */}
-            <div className="flex-1 min-w-0">
-              <h4 className="text-sm font-medium text-foreground truncate group-hover:text-primary transition-colors">
-                <HighlightText text={item.title} query={query} />
-              </h4>
-              <p className="text-xs font-normal text-muted-foreground truncate mt-0.5">
-                {item.subtitle}
-                {item.price ? ` • ₹${item.price}` : ""}
-              </p>
-            </div>
-
-            <ChevronRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all" />
+            {shopsList.map((item) => (
+              <SearchResultRow key={item.id} item={item} query={query} onClick={() => handleResultClick(item)} />
+            ))}
           </div>
-        ))}
+        )}
+
+        {/* 🛍️ PRODUCTS SECTION */}
+        {productsList.length > 0 && (
+          <div>
+            <div className="px-3 py-1 text-[11px] font-extrabold uppercase tracking-wider text-primary flex items-center gap-1.5 bg-primary/10 rounded-lg mb-1">
+              <ShoppingBag className="w-3.5 h-3.5" />
+              <span>Products ({productsList.length})</span>
+            </div>
+            {productsList.map((item) => (
+              <SearchResultRow key={item.id} item={item} query={query} onClick={() => handleResultClick(item)} />
+            ))}
+          </div>
+        )}
+
+        {/* 🏷️ BRANDS SECTION */}
+        {brandsList.length > 0 && (
+          <div>
+            <div className="px-3 py-1 text-[11px] font-extrabold uppercase tracking-wider text-amber-700 dark:text-amber-300 flex items-center gap-1.5 bg-amber-50 dark:bg-amber-950/40 rounded-lg mb-1">
+              <span>🏷️ Brands ({brandsList.length})</span>
+            </div>
+            {brandsList.map((item) => (
+              <SearchResultRow key={item.id} item={item} query={query} onClick={() => handleResultClick(item)} />
+            ))}
+          </div>
+        )}
+
+        {/* 📁 CATEGORIES SECTION */}
+        {categoriesList.length > 0 && (
+          <div>
+            <div className="px-3 py-1 text-[11px] font-extrabold uppercase tracking-wider text-indigo-700 dark:text-indigo-300 flex items-center gap-1.5 bg-indigo-50 dark:bg-indigo-950/40 rounded-lg mb-1">
+              <span>📁 Categories ({categoriesList.length})</span>
+            </div>
+            {categoriesList.map((item) => (
+              <SearchResultRow key={item.id} item={item} query={query} onClick={() => handleResultClick(item)} />
+            ))}
+          </div>
+        )}
       </div>
+    </div>
+  );
+}
+
+function SearchResultRow({
+  item,
+  query,
+  onClick,
+}: {
+  item: SearchResultItem;
+  query: string;
+  onClick: () => void;
+}) {
+  return (
+    <div
+      onMouseDown={(e) => {
+        e.preventDefault();
+        onClick();
+      }}
+      className="flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-muted/80 active:bg-muted transition-colors cursor-pointer group"
+    >
+      <div className="relative w-10 h-10 rounded-xl overflow-hidden bg-muted shrink-0 border border-border/40 shadow-xs">
+        <img
+          src={item.imageUrl}
+          alt={item.title}
+          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+          onError={(e) => {
+            (e.target as HTMLImageElement).src =
+              "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=150&q=75";
+          }}
+        />
+      </div>
+
+      <div className="flex-1 min-w-0">
+        <h4 className="text-xs font-bold text-foreground truncate group-hover:text-primary transition-colors">
+          <HighlightText text={item.title} query={query} />
+        </h4>
+        <p className="text-[11px] font-medium text-muted-foreground truncate">
+          {item.subtitle}
+          {item.price ? ` • ₹${item.price}` : ""}
+        </p>
+      </div>
+
+      <ChevronRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all" />
     </div>
   );
 }

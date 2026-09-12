@@ -72,6 +72,9 @@ export interface ProductFilterState
   userLng?: number;
   sortBy: string;
   page: number;
+  inStock?: boolean;
+  onSale?: boolean;
+  openNow?: boolean;
 }
 
 export interface FacetCountItem {
@@ -80,12 +83,21 @@ export interface FacetCountItem {
   count: number;
 }
 
+export interface ShopFacetItem {
+  id: string;
+  name: string;
+  distance_km?: number;
+  rating?: number;
+  is_open?: boolean;
+  count: number;
+}
+
 export interface FacetResult {
   min_price: number;
   max_price: number;
   total_products: number;
   brand_facets: FacetCountItem[];
-  shop_facets: FacetCountItem[];
+  shop_facets: ShopFacetItem[];
   attributes: Record<string, FacetCountItem[]>;
 }
 

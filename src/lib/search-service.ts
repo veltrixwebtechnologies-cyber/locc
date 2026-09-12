@@ -90,6 +90,7 @@ function levenshteinDistance(a: string, b: string): number {
   if (a === b) return 0;
   if (!a.length) return b.length;
   if (!b.length) return a.length;
+  if (Math.abs(a.length - b.length) > 3) return 99;
 
   const prev = new Array(b.length + 1);
   const curr = new Array(b.length + 1);
@@ -110,14 +111,19 @@ function levenshteinDistance(a: string, b: string): number {
 
 function tokenSimilarityScore(queryToken: string, candidateToken: string): number {
   if (!queryToken || !candidateToken) return 0;
+  if (queryToken === candidateToken) return 1;
+  if (candidateToken.startsWith(queryToken) || queryToken.startsWith(candidateToken)) return 0.95;
+  if (candidateToken.includes(queryToken) || queryToken.includes(candidateToken)) return 0.8;
+
   const qStem = stemWord(queryToken);
   const cStem = stemWord(candidateToken);
 
-  if (queryToken === candidateToken || qStem === cStem) return 1;
-  if (candidateToken.startsWith(queryToken) || queryToken.startsWith(candidateToken)) return 0.95;
+  if (qStem === cStem) return 1;
   if (cStem.startsWith(qStem) || qStem.startsWith(cStem)) return 0.9;
-  if (candidateToken.includes(queryToken) || queryToken.includes(candidateToken)) return 0.8;
   if (cStem.includes(qStem) || qStem.includes(cStem)) return 0.75;
+
+  if (queryToken.length <= 2 || candidateToken.length <= 2) return 0;
+  if (Math.abs(queryToken.length - candidateToken.length) > 2) return 0;
 
   const distance = levenshteinDistance(qStem, cStem);
   const maxLen = Math.max(qStem.length, cStem.length);
@@ -138,20 +144,25 @@ function scoreTextMatch(query: string, values: string[]): number {
     if (!rawValue) continue;
 
     const normalizedValue = normalizeForSearch(rawValue);
-    const compactValue = compactForSearch(rawValue);
-    const valueTokens = tokenizeForSearch(rawValue);
-    const valueStems = stemTokens(valueTokens);
+    if (normalizedValue === normalizedQuery) return 120;
+    
     let score = 0;
-
-    if (normalizedValue === normalizedQuery) {
-      score = Math.max(score, 120);
-    } else if (normalizedValue.startsWith(normalizedQuery)) {
-      score = Math.max(score, 105);
+    if (normalizedValue.startsWith(normalizedQuery)) {
+      score = 105;
     } else if (normalizedValue.includes(normalizedQuery)) {
-      score = Math.max(score, 75);
+      score = 80;
     }
 
-    // Stemmed exact or partial matches
+    const compactValue = compactForSearch(rawValue);
+    if (compactValue === compactQuery) {
+      score = Math.max(score, 115);
+    } else if (compactValue.includes(compactQuery)) {
+      score = Math.max(score, 82);
+    }
+
+    const valueTokens = tokenizeForSearch(rawValue);
+    const valueStems = stemTokens(valueTokens);
+
     const queryStemStr = queryStems.join(" ");
     const valueStemStr = valueStems.join(" ");
     if (valueStemStr === queryStemStr) {
@@ -160,15 +171,15 @@ function scoreTextMatch(query: string, values: string[]): number {
       score = Math.max(score, 85);
     }
 
-    if (compactValue === compactQuery) {
-      score = Math.max(score, 115);
-    } else if (compactValue.includes(compactQuery)) {
-      score = Math.max(score, 82);
-    }
-
-    for (const qToken of queryTokens) {
-      for (const cToken of valueTokens) {
-        score = Math.max(score, tokenSimilarityScore(qToken, cToken) * 60);
+    // Only run token-by-token comparison if we don't already have a strong match
+    if (score < 90) {
+      for (const qToken of queryTokens) {
+        for (const cToken of valueTokens) {
+          const sim = tokenSimilarityScore(qToken, cToken);
+          if (sim > 0) {
+            score = Math.max(score, sim * 60);
+          }
+        }
       }
     }
 
@@ -371,7 +382,7 @@ export async function executeLocalShoreSearch(params: {
 }) {
   try {
     const { supabase } = await import("@/integrations/supabase/client");
-    const { data, error } = await supabase.rpc("search_localshore_products", {
+    const { data, error } = (await (supabase as any).rpc("search_localshore_products", {
       p_search_query: params.query || null,
       p_category: params.category || null,
       p_subcategory: params.subcategory || null,
@@ -390,7 +401,7 @@ export async function executeLocalShoreSearch(params: {
       p_sort_by: params.sortBy || "relevance",
       p_page: params.page || 1,
       p_page_size: params.pageSize || 24,
-    });
+    })) as any;
 
     if (!error && data && data.products) {
       return {

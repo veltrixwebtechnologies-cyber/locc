@@ -145,6 +145,23 @@ export function FilterChips({
         </Badge>
       )}
 
+      {/* Distance Radius Chip */}
+      {filterState.maxDistanceKm !== undefined && (
+        <Badge
+          variant="secondary"
+          className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium bg-emerald-500/10 text-emerald-800 dark:text-emerald-300 border border-emerald-500/20"
+        >
+          <span>Within {filterState.maxDistanceKm} km</span>
+          <button
+            type="button"
+            onClick={() => onRemoveBoolean("maxDistanceKm" as any)}
+            className="hover:text-destructive transition-colors"
+          >
+            <X className="h-3 w-3 stroke-[2.5]" />
+          </button>
+        </Badge>
+      )}
+
       {/* Attribute Chips */}
       {Object.entries(filterState.attributes).map(([attrKey, values]) =>
         values.map((v) => (
