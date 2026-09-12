@@ -117,6 +117,14 @@ export function AppShell({ children }: { children: ReactNode }) {
     { to: "/profile", label: "Profile", icon: User, match: (p) => p.startsWith("/profile") },
   ];
 
+  const hideCategories =
+    pathname.startsWith("/order/") ||
+    pathname.startsWith("/orders") ||
+    pathname.startsWith("/checkout") ||
+    pathname.startsWith("/cart") ||
+    pathname.startsWith("/profile") ||
+    pathname.startsWith("/auth");
+
   return (
     <div
       className={`min-h-screen bg-background transition-[padding] duration-300 ${
@@ -398,10 +406,12 @@ export function AppShell({ children }: { children: ReactNode }) {
           </nav>
         </div>
       </header>
-      {/* Dynamic Liquid Glass Category Island (Desktop & Mobile) */}
-      <div className="relative z-40 overflow-visible">
-        <LiquidGlassCategorySelector />
-      </div>
+      {/* Dynamic Liquid Glass Category Island (Desktop & Mobile) - Hidden on Order Tracking, Checkout, Cart & Profile */}
+      {!hideCategories && (
+        <div className="relative z-40 overflow-visible">
+          <LiquidGlassCategorySelector />
+        </div>
+      )}
 
       <main className="mx-auto w-full max-w-[1600px] xl:max-w-[1800px] px-3 sm:px-4 md:px-6 lg:px-10 xl:px-12">{children}</main>
 
