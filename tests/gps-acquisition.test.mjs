@@ -65,7 +65,7 @@ test("first approximate fix can improve without silently failing the location re
   assert.deepEqual(env.requests[0], { enableHighAccuracy: true, maximumAge: 0, timeout: 20000 });
 });
 
-test("approximate-only results require an explicit browsing-area choice", async (t) => {
+test("approximate-only results are rejected without changing the selected location", async (t) => {
   const env = setup(t);
   t.mock.timers.enable({ apis: ["setTimeout", "Date"] });
   const pending = store.detectCurrentGPSLocation();
@@ -73,10 +73,8 @@ test("approximate-only results require an explicit browsing-area choice", async 
     assert.ok(error instanceof LocationAcquisitionError);
     assert.match(error.message, /approximate.*2.5 km/);
     assert.equal(store.getActiveDeliveryLocation(), null);
-    const chosen = store.confirmApproximateGPSLocation(error.approximatePosition);
-    assert.equal(chosen.isApproximate, true);
-    assert.equal(chosen.accuracy, 2500);
-    assert.equal(chosen.lat, 9.9816);
+    assert.equal(typeof store.confirmApproximateGPSLocation, "undefined");
+    assert.match(error.message, /required 25 m accuracy/);
     return true;
   });
   env.emit(position(2500));
@@ -171,4 +169,47 @@ test("invalid/stale readings never become approximate candidates", async (t) => 
   env.emit({ ...position(), coords: { latitude: 0, longitude: 0, accuracy: 5 } });
   t.mock.timers.tick(20000);
   await checked;
+});
+
+test("readings worse than 25 metres keep waiting until a sufficiently accurate fix arrives", async (t) => {
+  const env = setup(t);
+  const pending = store.detectCurrentGPSLocation();
+  env.emit(position(50));
+  await Promise.resolve();
+  assert.equal(store.getActiveDeliveryLocation(), null);
+  env.emit(position(25));
+  assert.equal((await pending).accuracy, 25);
+});
+
+test("the global store cannot reselect coarse GPS through the public setter", (t) => {
+  setup(t);
+  assert.throws(
+    () =>
+      store.setActiveDeliveryLocation({ ...store.PRESET_LOCATIONS[0], isGPS: true, accuracy: 50 }),
+    /precise/,
+  );
+  assert.equal(store.getActiveDeliveryLocation(), null);
+});
+
+test("cached GPS from the previous approximate policy is discarded on startup", async (t) => {
+  setup(t);
+  for (const [index, stored] of [
+    { isGPS: true, accuracy: 2500, isApproximate: true },
+    { isGPS: true, accuracy: 50 },
+    { isGPS: true, accuracy: null },
+  ].entries()) {
+    replaceGlobal(t, "localStorage", {
+      getItem(key) {
+        return key === "localshore_location_confirmed"
+          ? "1"
+          : JSON.stringify({ ...store.PRESET_LOCATIONS[0], ...stored });
+      },
+    });
+    const isolated = sourceLoader(process.cwd(), {
+      sonner: "export const toast={success(){},error(){}};",
+      react: `export const useState=()=>{}; export const useEffect=()=>{}; // startup case ${index}`,
+    });
+    const freshStore = await isolated("src/lib/location-store.ts");
+    assert.equal(freshStore.getActiveDeliveryLocation(), null);
+  }
 });

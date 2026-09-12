@@ -1,3 +1,5 @@
+import { acquireCurrentPosition } from "@/lib/acquire-location";
+import { toast } from "sonner";
 import { useEffect, useRef, useState, useImperativeHandle, forwardRef } from "react";
 import * as maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
@@ -368,36 +370,34 @@ export const InteractiveMapView = forwardRef<InteractiveMapViewRef, Props>(
       });
     };
 
+    const locationRequest = useRef<AbortController | null>(null);
+    useEffect(
+      () => () => {
+        locationRequest.current?.abort();
+        toast.dismiss("map-current-location");
+      },
+      [],
+    );
     const handleUseCurrentLocation = () => {
-      if (!navigator.geolocation) return;
-      const onSuccess = (pos: GeolocationPosition) => {
-        const loc = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-        onUserLocationChange?.(loc);
-        if (mapRef.current) {
-          mapRef.current.flyTo({ center: [loc.lng, loc.lat], zoom: 14 });
-        }
-      };
-      const onFallback = () => {
-        if (mapRef.current) {
-          mapRef.current.flyTo({ center: [userLocation.lng, userLocation.lat], zoom: 14 });
-        }
-      };
-      navigator.geolocation.getCurrentPosition(
-        onSuccess,
-        (err) => {
-          if (err.code === err.TIMEOUT) {
-            // Retry with low accuracy (WiFi/IP geolocation)
-            navigator.geolocation.getCurrentPosition(onSuccess, onFallback, {
-              enableHighAccuracy: false,
-              maximumAge: 300_000,
-              timeout: 10_000,
-            });
-          } else {
-            onFallback();
-          }
-        },
-        { enableHighAccuracy: true, maximumAge: 30_000, timeout: 8_000 },
-      );
+      locationRequest.current?.abort();
+      const controller = new AbortController();
+      locationRequest.current = controller;
+      toast.loading("Waiting for precise device location…", { id: "map-current-location" });
+      void acquireCurrentPosition({ signal: controller.signal })
+        .then((position) => {
+          if (controller.signal.aborted) return;
+          const loc = { lat: position.coords.latitude, lng: position.coords.longitude };
+          onUserLocationChange?.(loc);
+          mapRef.current?.flyTo({ center: [loc.lng, loc.lat], zoom: 17 });
+          toast.success("Current location updated", { id: "map-current-location" });
+        })
+        .catch((error) => {
+          if (controller.signal.aborted) return;
+          toast.error(
+            error instanceof Error ? error.message : "Precise location unavailable. Retry.",
+            { id: "map-current-location" },
+          );
+        });
     };
 
     return (

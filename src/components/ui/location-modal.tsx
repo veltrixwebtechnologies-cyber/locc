@@ -11,13 +11,11 @@ import {
   useDeliveryLocation,
   detectCurrentGPSLocation,
   cancelCurrentGPSLocation,
-  confirmApproximateGPSLocation,
   useGPSStatus,
   getGPSStatus,
   PRESET_LOCATIONS,
   type DeliveryLocation,
 } from "@/lib/location-store";
-import { LocationAcquisitionError } from "@/lib/acquire-location";
 import { geocodeSearch } from "@/lib/map-service/providers";
 import { toast } from "sonner";
 
@@ -31,7 +29,6 @@ export function LocationModal({ isOpen, onClose }: LocationModalProps) {
   const [isLocating, setIsLocating] = useState(false);
   const gpsState = useGPSStatus();
   const [locationError, setLocationError] = useState("");
-  const [approximatePosition, setApproximatePosition] = useState<GeolocationPosition | null>(null);
   const locationRequest = useRef(0);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<any[]>([]);
@@ -43,7 +40,6 @@ export function LocationModal({ isOpen, onClose }: LocationModalProps) {
     if (isOpen) {
       setIsLocating(false);
       setLocationError("");
-      setApproximatePosition(null);
     }
     return () => {
       locationRequest.current++;
@@ -64,7 +60,6 @@ export function LocationModal({ isOpen, onClose }: LocationModalProps) {
     const request = ++locationRequest.current;
     setIsLocating(true);
     setLocationError("");
-    setApproximatePosition(null);
     try {
       await detectCurrentGPSLocation({ silent: false });
       if (request === locationRequest.current) onClose();
@@ -79,8 +74,6 @@ export function LocationModal({ isOpen, onClose }: LocationModalProps) {
           ? error.message
           : "Location unavailable. Retry or search for your area.",
       );
-      if (error instanceof LocationAcquisitionError)
-        setApproximatePosition(error.approximatePosition ?? null);
     } finally {
       if (request === locationRequest.current) setIsLocating(false);
     }
@@ -252,31 +245,6 @@ export function LocationModal({ isOpen, onClose }: LocationModalProps) {
                   className="mt-3 rounded-xl bg-amber-50 p-3 text-xs text-amber-950"
                 >
                   <p>{locationError}</p>
-                  {approximatePosition && (
-                    <>
-                      <p className="mt-2">
-                        You can use this approximate area to browse shops. Confirm your exact
-                        delivery entrance on the checkout map.
-                      </p>
-                      <button
-                        type="button"
-                        className="mt-2 rounded-lg bg-purple-700 px-3 py-2 font-semibold text-white"
-                        onClick={() => {
-                          try {
-                            confirmApproximateGPSLocation(approximatePosition);
-                            onClose();
-                          } catch (error) {
-                            setApproximatePosition(null);
-                            setLocationError(
-                              error instanceof Error ? error.message : "Retry location detection.",
-                            );
-                          }
-                        }}
-                      >
-                        Use approximate area
-                      </button>
-                    </>
-                  )}
                 </div>
               )}
             </div>

@@ -1,8 +1,7 @@
-import { parseCoordinates } from "./coordinates";
+import { parseCoordinates, MAX_NAVIGATION_ACCURACY_M } from "./coordinates";
 import {
   acquireCurrentPosition,
   accuracyLabel,
-  freshBrowserPosition,
   LocationAcquisitionError,
 } from "./acquire-location";
 /**
@@ -29,7 +28,6 @@ export interface DeliveryLocation {
   lng: number;
   isGPS?: boolean;
   accuracy?: number | null;
-  isApproximate?: boolean;
   pincode?: string;
 }
 
@@ -168,6 +166,15 @@ function getStoredLocation(): DeliveryLocation | null {
     if (cached) {
       const parsed = JSON.parse(cached);
       if (parsed && parseCoordinates(parsed.lat, parsed.lng)) {
+        // Discard GPS areas accepted under the old approximate-location policy.
+        if (
+          parsed.isGPS &&
+          (parsed.isApproximate ||
+            !Number.isFinite(parsed.accuracy) ||
+            parsed.accuracy < 0 ||
+            parsed.accuracy > MAX_NAVIGATION_ACCURACY_M)
+        )
+          return null;
         return parsed;
       }
     }
@@ -221,6 +228,14 @@ export function cancelCurrentGPSLocation() {
 }
 
 export function setActiveDeliveryLocation(loc: DeliveryLocation) {
+  if (
+    loc.isGPS &&
+    (!Number.isFinite(loc.accuracy) ||
+      loc.accuracy! < 0 ||
+      loc.accuracy! > MAX_NAVIGATION_ACCURACY_M)
+  ) {
+    throw new Error("A precise device location is required. Retry location detection.");
+  }
   cancelCurrentGPSLocation();
   setGPSStatus("idle");
   publishLocation(loc);
@@ -331,21 +346,17 @@ export function initAutoGPSLocation() {
 }
 
 /** Update the selected coordinates immediately; the optional address lookup cannot block GPS. */
-function locationFromPosition(
-  position: GeolocationPosition,
-  approximate = false,
-): DeliveryLocation {
+function locationFromPosition(position: GeolocationPosition): DeliveryLocation {
   const { latitude: lat, longitude: lng, accuracy } = position.coords;
   const point = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
   return {
     id: `gps-${Date.now()}`,
-    label: approximate ? `Approximate area near ${point} (±${accuracyLabel(accuracy)})` : point,
-    area: approximate ? `Approximate area (±${accuracyLabel(accuracy)})` : `Near ${point}`,
+    label: point,
+    area: `Near ${point}`,
     city: "",
     lat,
     lng,
     isGPS: true,
-    isApproximate: approximate,
     accuracy,
   };
 }
@@ -391,12 +402,10 @@ async function enrichLocationLabel(
       "";
     publishLocation({
       ...location,
-      label: location.isApproximate
-        ? `Approximate: ${parts.slice(0, 3).join(", ")} (±${accuracyLabel(location.accuracy!)})`
-        : parts.slice(0, 3).join(", "),
-      area: location.isApproximate ? `Near ${parts[0]} (approximate)` : parts[0],
+      label: parts.slice(0, 3).join(", "),
+      area: parts[0],
       city: [district, data.address?.state].filter(Boolean).join(", "),
-      pincode: location.isApproximate ? undefined : data.address?.postcode,
+      pincode: data.address?.postcode,
     });
   } catch {
     // Coordinates remain selected if address lookup is blocked, slow, or unavailable.
@@ -404,20 +413,6 @@ async function enrichLocationLabel(
     clearTimeout(timeout);
     signal.removeEventListener("abort", abort);
   }
-}
-
-/** Explicit browsing-area choice only. Checkout independently requires an entrance pin. */
-export function confirmApproximateGPSLocation(position: GeolocationPosition): DeliveryLocation {
-  if (!freshBrowserPosition(position))
-    throw new Error("This location reading has expired. Retry location detection.");
-  cancelCurrentGPSLocation();
-  const controller = new AbortController();
-  activeGPSRequest = controller;
-  const location = locationFromPosition(position, true);
-  publishLocation(location);
-  setGPSStatus("ok");
-  void enrichLocationLabel(location, locationRevision, controller.signal);
-  return location;
 }
 
 export async function detectCurrentGPSLocation(options?: {

@@ -1,4 +1,9 @@
-import { parseCoordinates, usableGPS, MAX_LOCATION_AGE_MS } from "./coordinates";
+import {
+  parseCoordinates,
+  usableGPS,
+  MAX_LOCATION_AGE_MS,
+  MAX_NAVIGATION_ACCURACY_M,
+} from "./coordinates";
 
 export type LocationFailure = "denied" | "unavailable" | "timeout" | "unsupported" | "error";
 
@@ -6,7 +11,6 @@ export class LocationAcquisitionError extends Error {
   constructor(
     message: string,
     public status: LocationFailure,
-    public approximatePosition?: GeolocationPosition,
   ) {
     super(message);
     this.name = "LocationAcquisitionError";
@@ -77,9 +81,8 @@ export function acquireCurrentPosition(
       if (best && freshBrowserPosition(best)) {
         fail(
           new LocationAcquisitionError(
-            `Your browser supplied an approximate location (±${accuracyLabel(best.coords.accuracy)}). Enable precise location and retry, or choose an area below.`,
+            `Your browser supplied an approximate location (±${accuracyLabel(best.coords.accuracy)}). Waiting did not produce the required ${MAX_NAVIGATION_ACCURACY_M} m accuracy. Enable precise location and retry, or choose your destination manually.`,
             "unavailable",
-            best,
           ),
         );
       } else if (lastError?.code === 2) {
