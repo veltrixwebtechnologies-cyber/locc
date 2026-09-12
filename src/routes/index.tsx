@@ -38,7 +38,7 @@ import { scrollToShops } from "@/lib/scroll-utils";
 import { EcosystemMerchandisingStrips } from "@/components/ecosystem-merchandising-strips";
 import { isTestEntity } from "@/lib/map-service/store-engine";
 import { useDeliveryLocation } from "@/lib/location-store";
-import { getCategoryByIdOrSlug, toStoreCategory } from "@/lib/shop-categories";
+import { getCategoryByIdOrSlug, toStoreCategory, isStoreInCategory } from "@/lib/shop-categories";
 import { calculateHaversineDistanceKm } from "@/lib/map-service/providers";
 import { rankShopsWithML } from "@/lib/ml-shop-ranker";
 import { AppDownloadBanner } from "@/components/app-download-banner";
@@ -212,7 +212,7 @@ function Home() {
     const allStores =
       liveVendorStores.length > 0 ? [...liveVendorStores, ...baseStores] : baseStores;
     const filteredList = allStores.filter((s) => {
-      if (activeFilter && s.category !== activeFilter) return false;
+      if (activeFilter && !isStoreInCategory(s.category, activeFilter, s.rating)) return false;
       if (
         normalizedQuery &&
         !s.name.toLowerCase().includes(normalizedQuery) &&
@@ -320,8 +320,9 @@ function Home() {
 
       if (activeFilter) {
         const matchesCategory =
-          storeCat === activeFilter ||
-          prodCat === activeFilter ||
+          isStoreInCategory(storeCat, activeFilter) ||
+          isStoreInCategory(prodCat, activeFilter) ||
+          isStoreInCategory(product.category, activeFilter) ||
           (product.category &&
             product.category.toLowerCase().includes(activeFilter.toLowerCase())) ||
           (cat && product.category && product.category.toLowerCase().includes(cat.toLowerCase()));
@@ -355,8 +356,9 @@ function Home() {
         const storeCat = store?.category || toStoreCategory(product.category);
         const prodCat = toStoreCategory(product.category);
         return (
-          storeCat === activeFilter ||
-          prodCat === activeFilter ||
+          isStoreInCategory(storeCat, activeFilter) ||
+          isStoreInCategory(prodCat, activeFilter) ||
+          isStoreInCategory(product.category, activeFilter) ||
           (product.category &&
             product.category.toLowerCase().includes(activeFilter.toLowerCase())) ||
           (cat && product.category && product.category.toLowerCase().includes(cat.toLowerCase()))
@@ -410,8 +412,7 @@ function Home() {
         />
       </div>
 
-      {/* Swiggy-style quick category icon strip - Placed right after Map View */}
-      <SwiggyQuickCategories />
+      {/* Swiggy-style shop row */}
 
       <SwiggyShopRow
         stores={filtered}

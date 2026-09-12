@@ -257,40 +257,6 @@ export function LocalShoreMapExperience({
         </div>
       </div>
 
-      {/* CATEGORY FILTER PILLS BAR */}
-      <div className="my-4 flex items-center gap-2 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden pb-1">
-        {QUICK_FILTERS.map((f) => {
-          const isActive = f.id === activeQuickFilter;
-          return (
-            <button
-              key={f.id}
-              type="button"
-              onClick={() => {
-                const newCat = f.id === "all" ? undefined : (f.id as any);
-                startTransition(() => {
-                  setFilters((prev) => ({ ...prev, category: newCat }));
-                  onCategoryChange?.(f.id);
-                });
-              }}
-              className={`shrink-0 rounded-full px-4 py-2 text-xs md:text-sm font-bold transition-all ${
-                isActive
-                  ? "bg-[#981495] text-white shadow-md shadow-purple-900/10 scale-[1.02]"
-                  : "bg-slate-100/90 text-slate-700 hover:bg-slate-200/80 hover:text-slate-900 border border-slate-200/60"
-              }`}
-            >
-              {f.label}
-            </button>
-          );
-        })}
-        <button
-          type="button"
-          className="shrink-0 flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
-        >
-          <Filter className="h-3.5 w-3.5" />
-          Filters
-        </button>
-      </div>
-
       {/* NEIGHBORHOOD MAP PREVIEW CARD (Shown when map is closed, matching exact reference UI) */}
       {!showDesktopMap && (
         <NeighborhoodMapPreviewCard

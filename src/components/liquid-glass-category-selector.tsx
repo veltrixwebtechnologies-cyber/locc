@@ -386,9 +386,9 @@ export function LiquidGlassCategorySelector() {
               const targetLink = cat.to
                 ? { to: cat.to, search: {} }
                 : {
-                    to: "/search",
-                    search: cat.searchCategory
-                      ? { category: cat.searchCategory }
+                    to: currentPath.startsWith("/search") ? "/search" : "/",
+                    search: cat.searchCategory || cat.id !== "all"
+                      ? { category: cat.searchCategory || cat.id }
                       : { category: undefined, q: undefined },
                   };
 
