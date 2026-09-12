@@ -23,6 +23,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useDeliveryLocation, detectCurrentGPSLocation } from "@/lib/location-store";
 import { getCategoryByIdOrSlug } from "@/lib/shop-categories";
+import { fetchPublicProductsServerFn, fetchPublicShopsServerFn } from "@/lib/catalog.server";
 
 // Quick category filter tabs matching the reference design
 const QUICK_FILTERS = [
@@ -98,7 +99,7 @@ export function LocalShoreMapExperience({
     }));
   }, [initialQuery, initialCategory]);
 
-  // Query live Supabase approved vendor catalog & product catalog (cached across app)
+  // Query live approved vendor catalog & product catalog (Redis-cached via server functions)
   const approvedProducts = useQuery({
     queryKey: ["approved-product-catalog"],
     staleTime: 1000 * 60 * 5,
@@ -107,20 +108,8 @@ export function LocalShoreMapExperience({
     refetchOnWindowFocus: false,
     queryFn: async () => {
       try {
-        const { data: catData, error: catError } = await (supabase as any)
-          .from("approved_product_catalog")
-          .select(
-            "id,seller_id,name,category,selling_price,image_url,stock,shop_name,business_type,city,state,address_line1",
-          );
-        let data = catData;
-        if (catError) {
-          const fallback = await (supabase as any)
-            .from("products")
-            .select("id,seller_id,name,category,selling_price,image_url,stock")
-            .in("status", ["active", "approved"]);
-          data = fallback.data;
-        }
-        return (data ?? []).filter((p: any) => !isTestEntity(p.name));
+        const res = await fetchPublicProductsServerFn({ data: { category: "all", limit: 100 } });
+        return (res.products ?? []).filter((p: any) => !isTestEntity(p.name));
       } catch (err) {
         console.warn("Map products query fallback:", err);
         return [];
@@ -129,17 +118,21 @@ export function LocalShoreMapExperience({
   });
 
   const approvedVendors = useQuery({
-    queryKey: ["approved-vendors"],
+    queryKey: ["approved-vendors", userLocation?.lat, userLocation?.lng],
     staleTime: 1000 * 60 * 5,
     gcTime: 1000 * 60 * 10,
     retry: 1,
     refetchOnWindowFocus: false,
     queryFn: async () => {
       try {
-        const { data } = await (supabase as any)
-          .from("approved_vendor_catalog")
-          .select("id,shop_name,business_type,city,state,address_line1,category,lat,lng");
-        return (data ?? []).filter((v: any) => !isTestEntity(v.shop_name));
+        const res = await fetchPublicShopsServerFn({
+          data: {
+            lat: userLocation?.lat,
+            lng: userLocation?.lng,
+            limit: 100,
+          },
+        });
+        return (res.shops ?? []).filter((v: any) => !isTestEntity(v.name || v.shop_name));
       } catch (err) {
         console.warn("Map vendors query fallback:", err);
         return [];

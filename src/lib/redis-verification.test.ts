@@ -3,6 +3,7 @@
  */
 
 import { redisGet, redisSet, redisGetVersion, redisIncrementVersion, redisRateLimit, hashFilters } from "./redis.server.js";
+import { buildCatalogCacheKey, normalizeSortOrder } from "./catalog.server.js";
 
 export async function runRedisVerificationSuite() {
   console.log("\n=======================================================");
@@ -83,6 +84,68 @@ export async function runRedisVerificationSuite() {
     }
   } catch (err) {
     console.error("❌ TEST 4 FAILED with exception:", err);
+    fails++;
+  }
+
+  // TEST 5: Sort & Pagination Cache Key Generation
+  try {
+    const keyA = buildCatalogCacheKey({
+      prefix: "products",
+      version: "1",
+      locBucket: "global",
+      category: "Grocery",
+      sort: "price asc",
+      page: 1,
+      limit: 20,
+      filterHash: "f_123",
+    });
+
+    const keyB = buildCatalogCacheKey({
+      prefix: "products",
+      version: "1",
+      locBucket: "global",
+      category: "grocery",
+      sort: "price_asc",
+      page: 1,
+      limit: 20,
+      filterHash: "f_123",
+    });
+
+    const keyC_page2 = buildCatalogCacheKey({
+      prefix: "products",
+      version: "1",
+      locBucket: "global",
+      category: "grocery",
+      sort: "price_asc",
+      page: 2,
+      limit: 20,
+      filterHash: "f_123",
+    });
+
+    const keyD_sortRating = buildCatalogCacheKey({
+      prefix: "products",
+      version: "1",
+      locBucket: "global",
+      category: "grocery",
+      sort: "rating",
+      page: 1,
+      limit: 20,
+      filterHash: "f_123",
+    });
+
+    const isIdentical = keyA === keyB;
+    const isDistinctPage = keyA !== keyC_page2;
+    const isDistinctSort = keyA !== keyD_sortRating;
+
+    if (isIdentical && isDistinctPage && isDistinctSort) {
+      console.log(`✔ TEST 5 PASSED: Sort & Pagination Cache Keys are deterministic & collision-free (${keyA}).`);
+      passes++;
+    } else {
+      console.error(`❌ TEST 5 FAILED: keyA=${keyA}, keyB=${keyB}, keyC=${keyC_page2}, keyD=${keyD_sortRating}`);
+      fails++;
+    }
+  } catch (err) {
+    console.error("❌ TEST 5 FAILED with exception:", err);
     fails++;
   }
 

@@ -3,8 +3,8 @@ import { isValidCoordinate, haversineDistanceKm } from "@/lib/geo";
 
 // Default OpenStreetMap tile provider (No API key required)
 const CUSTOM_TILE_URL =
-  import.meta.env.VITE_MAP_TILE_URL || "https://tile.openstreetmap.org/{z}/{x}/{y}.png";
-const CUSTOM_STYLE_URL = import.meta.env.VITE_MAP_STYLE_URL;
+  import.meta?.env?.VITE_MAP_TILE_URL || "https://tile.openstreetmap.org/{z}/{x}/{y}.png";
+const CUSTOM_STYLE_URL = import.meta?.env?.VITE_MAP_STYLE_URL;
 
 export function getMapLibreStyle() {
   if (CUSTOM_STYLE_URL) {
@@ -47,7 +47,7 @@ export async function geocodeSearch(query: string): Promise<GeocodeResult[]> {
   if (!query || query.trim().length < 2) return [];
 
   const baseUrl =
-    import.meta.env.VITE_GEOCODING_API_URL || "https://nominatim.openstreetmap.org/search";
+    import.meta?.env?.VITE_GEOCODING_API_URL || "https://nominatim.openstreetmap.org/search";
   const params = new URLSearchParams({
     q: query,
     format: "json",
@@ -89,7 +89,7 @@ export async function fetchOSRMRoute(
 ): Promise<RouteResult | null> {
   if (!isValidCoordinate(startLat, startLng) || !isValidCoordinate(endLat, endLng)) return null;
   const osrmUrl =
-    import.meta.env.VITE_ROUTING_API_URL ||
+    import.meta?.env?.VITE_ROUTING_API_URL ||
     `https://router.project-osrm.org/route/v1/driving/${startLng},${startLat};${endLng},${endLat}?overview=full&geometries=geojson&steps=true`;
 
   try {

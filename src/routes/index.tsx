@@ -28,6 +28,7 @@ import {
 } from "@/components/swiggy-inspiration-sections";
 import { HeroSection } from "@/components/hero-section";
 import { LocalShoreMapExperience } from "@/components/map/localshore-map-experience";
+import { fetchPublicProductsServerFn, fetchPublicShopsServerFn } from "@/lib/catalog.server";
 import {
   FlipkartCategoryStrip,
   FlipkartBannerRow,
@@ -86,22 +87,8 @@ function Home() {
     refetchOnWindowFocus: false,
     queryFn: async () => {
       try {
-        const { data: catData, error: catError } = await (supabase as any)
-          .from("approved_product_catalog")
-          .select(
-            "id,seller_id,name,category,selling_price,image_url,stock,shop_name,business_type,city,state,address_line1",
-          )
-          .order("created_at", { ascending: false });
-        let data = catData;
-        if (catError) {
-          const fallback = await (supabase as any)
-            .from("products")
-            .select("id,seller_id,name,category,selling_price,image_url,stock")
-            .in("status", ["active", "approved"])
-            .order("created_at", { ascending: false });
-          data = fallback.data;
-        }
-        return (data ?? []).filter((p: any) => !isTestEntity(p.name));
+        const res = await fetchPublicProductsServerFn({ data: { category: "all", sort: "newest", limit: 100 } });
+        return (res.products ?? []).filter((p: any) => !isTestEntity(p.name));
       } catch (err) {
         console.warn("Products query fallback:", err);
         return [];
