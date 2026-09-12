@@ -713,6 +713,31 @@ function CheckoutPage() {
           currency: rzpOrder.currency || "INR",
           name: "LocalShore Marketplace",
           description: `Order from ${store.name}`,
+          config: {
+            display: {
+              blocks: {
+                upi_block: {
+                  name: "Pay via UPI",
+                  instruments: [{ method: "upi" }],
+                },
+                other_block: {
+                  name: "Cards & Netbanking",
+                  instruments: [{ method: "card" }, { method: "netbanking" }, { method: "wallet" }],
+                },
+              },
+              sequence: ["block.upi_block", "block.other_block"],
+              preferences: {
+                show_default_blocks: true,
+              },
+            },
+          },
+          prefill: {
+            name: user?.user_metadata?.display_name || "Customer",
+            email: user?.email || "customer@localshore.in",
+            contact: user?.phone || "9876543210",
+            method: payGroup === "upi" ? "upi" : payGroup === "card" ? "card" : payGroup === "online" ? "netbanking" : undefined,
+          },
+          theme: { color: "#2A6F77" },
           handler: async function (response: any) {
             setPaymentStatusText("Verifying cryptographic signature...");
             try {
@@ -774,17 +799,7 @@ function CheckoutPage() {
               setPaymentStep("idle");
             },
           },
-          prefill: {
-            name: user?.user_metadata?.display_name || "Customer",
-            email: user?.email || "",
-            contact: user?.phone || "",
-          },
-          theme: { color: "#2A6F77" },
         };
-
-        if (rzpOrder.razorpay_order_id && !rzpOrder.razorpay_order_id.startsWith("order_test_")) {
-          options.order_id = rzpOrder.razorpay_order_id;
-        }
 
         const razorpayInstance = new (window as any).Razorpay(options);
         razorpayInstance.on("payment.failed", function (response: any) {
