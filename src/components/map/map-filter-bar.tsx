@@ -1,5 +1,14 @@
 import { useState } from "react";
-import { SlidersHorizontal, MapPin, Star, Clock, CheckCircle2, Truck, ShoppingBag, X } from "lucide-react";
+import {
+  SlidersHorizontal,
+  MapPin,
+  Star,
+  Clock,
+  CheckCircle2,
+  Truck,
+  ShoppingBag,
+  X,
+} from "lucide-react";
 import type { MapFilterOptions } from "@/lib/map-service/types";
 import { deliveryCategories, type StoreCategory, categoryLabel } from "@/lib/mock-data";
 

@@ -4,8 +4,11 @@ import { AppShell } from "@/components/app-shell";
 import { ChevronRight, Gift, CreditCard, Send, Calendar, Clock, CheckCircle2 } from "lucide-react";
 import { m, AnimatePresence } from "motion/react";
 import {
-  GIFT_CARD_DESIGNS, GIFT_CARD_DENOMINATIONS, GIFT_CARD_TYPES,
-  SAMPLE_GIFT_CARDS, type GiftCardDesign,
+  GIFT_CARD_DESIGNS,
+  GIFT_CARD_DENOMINATIONS,
+  GIFT_CARD_TYPES,
+  SAMPLE_GIFT_CARDS,
+  type GiftCardDesign,
 } from "@/lib/gift-cards-data";
 
 export const Route = createFileRoute("/gift-cards")({ component: GiftCardsPage });
@@ -27,7 +30,13 @@ function GiftCardsPage() {
       <div className="mx-auto max-w-5xl px-4 py-6 sm:px-6">
         {/* Breadcrumb */}
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <Link to="/" search={{ category: undefined, q: undefined }} className="hover:text-primary">Home</Link>
+          <Link
+            to="/"
+            search={{ category: undefined, q: undefined }}
+            className="hover:text-primary"
+          >
+            Home
+          </Link>
           <ChevronRight className="h-3 w-3" />
           <span className="font-semibold text-foreground">Gift Cards</span>
         </div>
@@ -40,11 +49,16 @@ function GiftCardsPage() {
         >
           <div className="flex items-center gap-2">
             <Gift className="h-5 w-5" />
-            <span className="text-xs font-bold uppercase tracking-widest text-white/80">LocalShore Gift Cards</span>
+            <span className="text-xs font-bold uppercase tracking-widest text-white/80">
+              LocalShore Gift Cards
+            </span>
           </div>
-          <h1 className="mt-3 font-display text-3xl font-extrabold sm:text-4xl">Give someone a little local love</h1>
+          <h1 className="mt-3 font-display text-3xl font-extrabold sm:text-4xl">
+            Give someone a little local love
+          </h1>
           <p className="mt-2 max-w-lg text-sm text-white/80">
-            Send a LocalShore gift card to friends and family. They can shop from any local store on the platform.
+            Send a LocalShore gift card to friends and family. They can shop from any local store on
+            the platform.
           </p>
         </m.div>
 
@@ -99,7 +113,10 @@ function GiftCardsPage() {
                   {GIFT_CARD_DENOMINATIONS.map((d) => (
                     <button
                       key={d.value}
-                      onClick={() => { setSelectedAmount(d.value); setCustomAmount(""); }}
+                      onClick={() => {
+                        setSelectedAmount(d.value);
+                        setCustomAmount("");
+                      }}
                       className={`relative rounded-xl px-5 py-2.5 text-sm font-bold transition ${
                         selectedAmount === d.value && !customAmount
                           ? "bg-purple-700 text-white shadow-md"
@@ -135,7 +152,9 @@ function GiftCardsPage() {
                       key={d.id}
                       onClick={() => setSelectedDesign(d)}
                       className={`aspect-[3/2] rounded-xl bg-gradient-to-br ${d.gradient} flex items-center justify-center text-2xl transition ring-offset-2 ${
-                        selectedDesign.id === d.id ? "ring-2 ring-purple-500 scale-105" : "opacity-80 hover:opacity-100"
+                        selectedDesign.id === d.id
+                          ? "ring-2 ring-purple-500 scale-105"
+                          : "opacity-80 hover:opacity-100"
                       }`}
                     >
                       {d.emoji}
@@ -183,15 +202,21 @@ function GiftCardsPage() {
                   className={`mt-2 overflow-hidden rounded-3xl bg-gradient-to-br ${selectedDesign.gradient} p-6 text-white shadow-xl`}
                 >
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold uppercase tracking-widest text-white/70">LocalShore Gift Card</span>
+                    <span className="text-xs font-bold uppercase tracking-widest text-white/70">
+                      LocalShore Gift Card
+                    </span>
                     <span className="text-3xl">{selectedDesign.emoji}</span>
                   </div>
-                  <p className="mt-6 font-display text-4xl font-extrabold">₹{amount.toLocaleString()}</p>
-                  {recipientName && <p className="mt-2 text-sm font-semibold">To: {recipientName}</p>}
+                  <p className="mt-6 font-display text-4xl font-extrabold">
+                    ₹{amount.toLocaleString()}
+                  </p>
+                  {recipientName && (
+                    <p className="mt-2 text-sm font-semibold">To: {recipientName}</p>
+                  )}
                   {message && <p className="mt-1 text-xs text-white/70 italic">"{message}"</p>}
                   <div className="mt-6 flex items-center justify-between text-xs text-white/60">
                     <span>Valid for 12 months</span>
-                    <span className="font-mono">••••  ••••  ••••</span>
+                    <span className="font-mono">•••• •••• ••••</span>
                   </div>
                 </m.div>
 
@@ -222,41 +247,59 @@ function GiftCardsPage() {
               </div>
             ) : (
               SAMPLE_GIFT_CARDS.map((card) => {
-                const design = GIFT_CARD_DESIGNS.find((d) => d.id === card.designId) ?? GIFT_CARD_DESIGNS[0];
+                const design =
+                  GIFT_CARD_DESIGNS.find((d) => d.id === card.designId) ?? GIFT_CARD_DESIGNS[0];
                 return (
-                  <div key={card.id} className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xs">
+                  <div
+                    key={card.id}
+                    className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xs"
+                  >
                     <div className={`bg-gradient-to-r ${design.gradient} p-4 text-white`}>
                       <div className="flex items-center justify-between">
                         <span className="text-xs font-bold uppercase tracking-widest text-white/70">
                           {card.type === "localshore" ? "LocalShore" : card.type} Gift Card
                         </span>
-                        <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
-                          card.status === "active" ? "bg-white/20" : "bg-black/20"
-                        }`}>
+                        <span
+                          className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                            card.status === "active" ? "bg-white/20" : "bg-black/20"
+                          }`}
+                        >
                           {card.status}
                         </span>
                       </div>
-                      <p className="mt-2 font-display text-2xl font-extrabold">₹{card.balance.toLocaleString()}</p>
-                      <p className="text-xs text-white/70">of ₹{card.originalAmount.toLocaleString()}</p>
+                      <p className="mt-2 font-display text-2xl font-extrabold">
+                        ₹{card.balance.toLocaleString()}
+                      </p>
+                      <p className="text-xs text-white/70">
+                        of ₹{card.originalAmount.toLocaleString()}
+                      </p>
                       <p className="mt-2 font-mono text-xs text-white/60">{card.code}</p>
                     </div>
                     <div className="p-4">
                       {card.senderName && (
-                        <p className="text-xs text-slate-600">From: <strong>{card.senderName}</strong></p>
+                        <p className="text-xs text-slate-600">
+                          From: <strong>{card.senderName}</strong>
+                        </p>
                       )}
                       {card.message && (
                         <p className="mt-1 text-xs text-slate-500 italic">"{card.message}"</p>
                       )}
                       <div className="mt-3 flex items-center gap-4 text-[11px] text-slate-500">
-                        <span className="flex items-center gap-1"><Calendar className="h-3 w-3" /> Expires {card.expiresAt}</span>
-                        <span className="flex items-center gap-1"><Clock className="h-3 w-3" /> {card.transactions.length} transactions</span>
+                        <span className="flex items-center gap-1">
+                          <Calendar className="h-3 w-3" /> Expires {card.expiresAt}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <Clock className="h-3 w-3" /> {card.transactions.length} transactions
+                        </span>
                       </div>
                       {/* Transaction list */}
                       <div className="mt-3 border-t border-slate-100 pt-3 space-y-1.5">
                         {card.transactions.map((tx) => (
                           <div key={tx.id} className="flex items-center justify-between text-xs">
                             <span className="text-slate-600">{tx.description}</span>
-                            <span className={`font-bold ${tx.type === "credit" ? "text-emerald-600" : "text-slate-900"}`}>
+                            <span
+                              className={`font-bold ${tx.type === "credit" ? "text-emerald-600" : "text-slate-900"}`}
+                            >
                               {tx.type === "credit" ? "+" : ""}₹{Math.abs(tx.amount)}
                             </span>
                           </div>

@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, startTransition } from "react";
 import { Search } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { AwningCard } from "@/components/awning-card";
@@ -37,80 +37,45 @@ import { getFallbackProductImage, isValidImageUrl } from "@/lib/image-utils";
 import { scrollToShops } from "@/lib/scroll-utils";
 import { EcosystemMerchandisingStrips } from "@/components/ecosystem-merchandising-strips";
 import { isTestEntity } from "@/lib/map-service/store-engine";
+import { useDeliveryLocation } from "@/lib/location-store";
+import { getCategoryByIdOrSlug, toStoreCategory, isStoreInCategory } from "@/lib/shop-categories";
+import { calculateHaversineDistanceKm } from "@/lib/map-service/providers";
+import { rankShopsWithML } from "@/lib/ml-shop-ranker";
+import { AppDownloadBanner } from "@/components/app-download-banner";
 
 const getCategoryDisplayName = (catName?: string | null): string => {
-  if (!catName) return "";
-  const lower = catName.toLowerCase();
-  if (categoryLabel[lower as StoreCategory]) return categoryLabel[lower as StoreCategory];
-  if (lower === "flour_mill") return "Flour & Masala Mill (மாவு & மசாலா ஆலை)";
-  if (lower === "palamuthir") return "Palamuthir Nilayam";
-  if (lower === "meat_fish") return "Meat, Fish & Chicken";
-  if (lower === "fashion_accessories") return "Chain & Kammal Gifts";
-  if (lower === "boutiques") return "Designer Boutiques";
-  if (lower === "showrooms") return "Showrooms";
-  if (lower === "fast_fashion") return "Fast Fashion (Branded)";
-  if (lower === "individual_fashion") return "Individual Fashion";
-  if (lower === "kitchen_appliances") return "Kitchen Utensils & Appliances";
-  if (lower === "home_decor") return "Home Interior Decor";
-  if (lower === "grocery" || lower === "fresh" || lower === "ready") return "Daily Grocery";
-  if (lower === "pharmacy" || lower === "wellness" || lower === "personal" || lower === "care" || lower.includes("pharm")) return "Pharmacy & Care";
-  if (lower === "bakery" || lower === "snacks" || lower.includes("bake")) return "Fresh Bakery";
-  if (lower === "stationery" || lower === "electronics" || lower === "tech") return "Books & Tech";
-  return catName.replace(/_/g, " ").replace(/-/g, " ");
-};
-
-const toStoreCategory = (value?: string | null): StoreCategory => {
-  const category = (value ?? "").toLowerCase();
-  if (category.includes("palamuthir") || category.includes("fruit") || category.includes("veggie")) return "palamuthir";
-  if (category.includes("flour") || category.includes("mill") || category.includes("maavu") || category.includes("batter")) return "flour_mill";
-  if (category.includes("meat") || category.includes("fish") || category.includes("chicken") || category.includes("mutton")) return "meat_fish";
-  if (category.includes("kammal") || category.includes("chain") || category.includes("accessory") || category.includes("gift") || category.includes("earring")) return "fashion_accessories";
-  if (category.includes("boutique") || category.includes("silk") || category.includes("saree") || category.includes("stitching")) return "boutiques";
-  if (category.includes("showroom") || category.includes("appliance")) return "showrooms";
-  if (category.includes("fast_fashion") || category.includes("brand") || category.includes("zudio")) return "fast_fashion";
-  if (category.includes("individual_fashion") || category.includes("cloth") || category.includes("garment") || category.includes("dhoti")) return "individual_fashion";
-  if (category.includes("kitchen") || category.includes("vessel") || category.includes("cooker") || category.includes("mixer")) return "kitchen_appliances";
-  if (category.includes("decor") || category.includes("interior") || category.includes("curtain") || category.includes("brass")) return "home_decor";
-  if (
-    category.includes("pharm") ||
-    category.includes("pharam") ||
-    category.includes("wellness") ||
-    category.includes("care") ||
-    category.includes("med") ||
-    category.includes("health")
-  ) {
-    return "pharmacy";
-  }
-  if (
-    category.includes("station") ||
-    category.includes("book") ||
-    category.includes("office") ||
-    category.includes("paper")
-  ) {
-    return "stationery";
-  }
-  if (
-    category.includes("bake") ||
-    category.includes("cake") ||
-    category.includes("bread") ||
-    category.includes("pastry")
-  ) {
-    return "bakery";
-  }
-  return "grocery";
+  if (!catName || catName === "all") return "";
+  return getCategoryByIdOrSlug(catName).name;
 };
 
 export const Route = createFileRoute("/")({
-  validateSearch: (s: Record<string, unknown>) => ({
-    category: typeof s.category === "string" ? s.category : undefined,
-    q: typeof s.q === "string" ? s.q : undefined,
-  }),
+  validateSearch: (s: Record<string, unknown>) => s,
   component: Home,
 });
 
 function Home() {
-  const search = Route.useSearch();
+  const search = Route.useSearch() as Record<string, any>;
   const navigate = Route.useNavigate();
+
+  useEffect(() => {
+    if (
+      search.subcategory ||
+      search.sub_category ||
+      search.productType ||
+      search.product_type ||
+      (search.category && search.category !== "all" && search.category !== "all-shops")
+    ) {
+      void navigate({
+        to: "/search",
+        search: search,
+        replace: true,
+      });
+    }
+  }, [search, navigate]);
+
+  const [deliveryLoc] = useDeliveryLocation();
+  const locLat = deliveryLoc?.lat ?? 11.0285;
+  const locLng = deliveryLoc?.lng ?? 76.9258;
   const [query, setQuery] = useState(search.q ?? "");
   const [cat, setCat] = useState<string>(search.category ?? "all");
   const approvedProducts = useQuery({
@@ -121,13 +86,14 @@ function Home() {
     refetchOnWindowFocus: false,
     queryFn: async () => {
       try {
-        let { data, error } = await (supabase as any)
+        const { data: catData, error: catError } = await (supabase as any)
           .from("approved_product_catalog")
           .select(
             "id,seller_id,name,category,selling_price,image_url,stock,shop_name,business_type,city,state,address_line1",
           )
           .order("created_at", { ascending: false });
-        if (error) {
+        let data = catData;
+        if (catError) {
           const fallback = await (supabase as any)
             .from("products")
             .select("id,seller_id,name,category,selling_price,image_url,stock")
@@ -204,24 +170,9 @@ function Home() {
     }
   }, [search.category, search.q]);
 
-  const activeFilter: StoreCategory | undefined = useMemo(() => {
-    if (!cat || cat === "all") return undefined;
-    const catLower = cat.toLowerCase();
-    if (catLower === "grocery" || catLower === "pharmacy" || catLower === "stationery" || catLower === "bakery") {
-      return catLower as StoreCategory;
-    }
-    if (catLower === "tech" || catLower === "electronics" || catLower === "home") {
-      return "stationery";
-    }
-    if (catLower === "wellness" || catLower === "personal" || catLower === "care" || catLower === "meds") {
-      return "pharmacy";
-    }
-    if (catLower === "snacks" || catLower === "bakes") {
-      return "bakery";
-    }
-    const found = deliveryCategories.find((c) => c.id.toLowerCase() === catLower)?.filter;
-    if (found) return found;
-    return toStoreCategory(catLower);
+  const activeFilter = useMemo(() => {
+    if (!cat || cat === "all" || cat === "all-shops") return undefined;
+    return cat;
   }, [cat]);
 
   const filtered = useMemo(() => {
@@ -230,21 +181,38 @@ function Home() {
     const liveSellerIds = new Set(liveProducts.map((product: any) => product.seller_id));
     const liveVendorStores = (approvedVendors.data ?? [])
       .filter((vendor: any) => liveSellerIds.has(vendor.id))
-      .map((vendor: any, index: number) => ({
-        ...APPROVED_STORE,
-        id: vendor.id,
-        name: vendor.shop_name || APPROVED_STORE.name,
-        tagline: vendor.business_type || "Approved local vendor",
-        category: toStoreCategory(vendor.category),
-        address:
-          [vendor.address_line1, vendor.city, vendor.state].filter(Boolean).join(", ") ||
-          APPROVED_STORE.address,
-        imageUrl: vendor.storefront_image_url || APPROVED_STORE.imageUrl,
-        distanceKm: 2 + index * 0.2,
-      }));
-    const allStores = liveVendorStores.length > 0 ? [...liveVendorStores, ...stores] : stores;
-    return allStores.filter((s) => {
-      if (activeFilter && s.category !== activeFilter) return false;
+      .map((vendor: any, index: number) => {
+        const vLat = Number(vendor.lat) || locLat + index * 0.005;
+        const vLng = Number(vendor.lng) || locLng + index * 0.005;
+        const dKm = calculateHaversineDistanceKm(locLat, locLng, vLat, vLng);
+        return {
+          ...APPROVED_STORE,
+          id: vendor.id,
+          name: vendor.shop_name || APPROVED_STORE.name,
+          tagline: vendor.business_type || "Approved local vendor",
+          category: toStoreCategory(vendor.category),
+          address:
+            [vendor.address_line1, vendor.city, vendor.state].filter(Boolean).join(", ") ||
+            APPROVED_STORE.address,
+          imageUrl: vendor.storefront_image_url || APPROVED_STORE.imageUrl,
+          distanceKm: Number(dKm.toFixed(1)),
+          etaMin: Math.max(10, Math.round(dKm * 5 + 10)),
+        };
+      });
+    const baseStores = stores.map((s, idx) => {
+      const sLat = Number(s.lat) || locLat + idx * 0.006;
+      const sLng = Number(s.lng) || locLng + idx * 0.006;
+      const dKm = calculateHaversineDistanceKm(locLat, locLng, sLat, sLng);
+      return {
+        ...s,
+        distanceKm: Number(dKm.toFixed(1)),
+        etaMin: Math.max(10, Math.round(dKm * 5 + 10)),
+      };
+    });
+    const allStores =
+      liveVendorStores.length > 0 ? [...liveVendorStores, ...baseStores] : baseStores;
+    const filteredList = allStores.filter((s) => {
+      if (activeFilter && !isStoreInCategory(s.category, activeFilter, s.rating)) return false;
       if (
         normalizedQuery &&
         !s.name.toLowerCase().includes(normalizedQuery) &&
@@ -260,7 +228,31 @@ function Home() {
       }
       return true;
     });
-  }, [activeFilter, query, approvedProducts.data, approvedVendors.data]);
+
+    const mlRanked = rankShopsWithML(
+      filteredList.map((s) => ({
+        id: s.id,
+        name: s.name,
+        category: s.category,
+        lat: s.lat,
+        lng: s.lng,
+        rating: s.rating,
+        is_open: true,
+      })),
+      locLat,
+      locLng,
+      query
+    );
+
+    const mlScoreById = new Map(mlRanked.map((r) => [r.id, r.total_ml_score]));
+
+    return filteredList.sort((a, b) => {
+      const scoreA = mlScoreById.get(a.id) ?? 50;
+      const scoreB = mlScoreById.get(b.id) ?? 50;
+      if (scoreB !== scoreA) return scoreB - scoreA;
+      return a.distanceKm - b.distanceKm;
+    });
+  }, [activeFilter, query, approvedProducts.data, approvedVendors.data, deliveryLoc]);
 
   const homepageProducts = useMemo<MerchandisingProduct[]>(() => {
     const liveProducts = (approvedProducts.data ?? []).map((product: any) => ({
@@ -328,21 +320,27 @@ function Home() {
 
       if (activeFilter) {
         const matchesCategory =
-          storeCat === activeFilter ||
-          prodCat === activeFilter ||
-          (product.category && product.category.toLowerCase().includes(activeFilter.toLowerCase())) ||
+          isStoreInCategory(storeCat, activeFilter) ||
+          isStoreInCategory(prodCat, activeFilter) ||
+          isStoreInCategory(product.category, activeFilter) ||
+          (product.category &&
+            product.category.toLowerCase().includes(activeFilter.toLowerCase())) ||
           (cat && product.category && product.category.toLowerCase().includes(cat.toLowerCase()));
         if (!matchesCategory) return false;
       }
 
       if (query.trim()) {
-        const qWords = query.trim().toLowerCase().split(/[\s&,/]+/).filter(Boolean);
+        const qWords = query
+          .trim()
+          .toLowerCase()
+          .split(/[\s&,/]+/)
+          .filter(Boolean);
         const pName = product.name.toLowerCase();
         const pCat = (product.category || "").toLowerCase();
         const pShop = product.shop_name.toLowerCase();
 
-        const matchesQuery = qWords.some((w) =>
-          pName.includes(w) || pCat.includes(w) || pShop.includes(w)
+        const matchesQuery = qWords.some(
+          (w: string) => pName.includes(w) || pCat.includes(w) || pShop.includes(w),
         );
         if (!matchesQuery) return false;
       }
@@ -358,9 +356,11 @@ function Home() {
         const storeCat = store?.category || toStoreCategory(product.category);
         const prodCat = toStoreCategory(product.category);
         return (
-          storeCat === activeFilter ||
-          prodCat === activeFilter ||
-          (product.category && product.category.toLowerCase().includes(activeFilter.toLowerCase())) ||
+          isStoreInCategory(storeCat, activeFilter) ||
+          isStoreInCategory(prodCat, activeFilter) ||
+          isStoreInCategory(product.category, activeFilter) ||
+          (product.category &&
+            product.category.toLowerCase().includes(activeFilter.toLowerCase())) ||
           (cat && product.category && product.category.toLowerCase().includes(cat.toLowerCase()))
         );
       });
@@ -385,41 +385,69 @@ function Home() {
       {/* 2. Swiggy Featured Merchant Ad Banner */}
       <SwiggyFeaturedBanner />
 
+      {/* RedBus-Style App Download & Offer Banner */}
+      <AppDownloadBanner />
+
       {/* Shops section — full-width split view matching reference design */}
       <div id="shops-section" className="scroll-mt-24 px-5 pt-6 md:px-8">
         <LocalShoreMapExperience
           initialQuery={query}
           initialCategory={cat}
           onQueryChange={(q) => {
-            navigate({
-              search: (prev) => ({ ...prev, q: q || undefined }),
-              resetScroll: false,
+            startTransition(() => {
+              navigate({
+                search: (prev) => ({ ...prev, q: q || undefined }),
+                resetScroll: false,
+              });
             });
           }}
           onCategoryChange={(c) => {
-            navigate({
-              search: (prev) => ({ ...prev, category: c === "all" ? undefined : c }),
-              resetScroll: false,
+            startTransition(() => {
+              navigate({
+                search: (prev) => ({ ...prev, category: c === "all" ? undefined : c }),
+                resetScroll: false,
+              });
             });
           }}
         />
       </div>
 
-      {/* Swiggy-style quick category icon strip - Placed right after Map View */}
-      <SwiggyQuickCategories />
+      {/* Swiggy-style shop row */}
+
+      <SwiggyShopRow
+        stores={filtered}
+        activeCategory={activeFilter || "all"}
+        onSelectCategory={(catId) => {
+          startTransition(() => {
+            navigate({
+              search: (prev) => ({
+                category: catId === "all" || catId === "all-shops" ? undefined : catId,
+                q: prev.q,
+              }),
+              resetScroll: false,
+            });
+            scrollToShops();
+          });
+        }}
+      />
 
       <div className="px-5 md:px-8">
         {/* Active category filter bar */}
-        {((cat && cat !== "all") || query) && (
+        {((cat && cat !== "all" && cat !== "all-shops") || query) && (
           <div className="mx-5 mb-4 flex items-center justify-between rounded-xl border border-primary/20 bg-primary/5 px-4 py-2.5 md:mx-8">
             <div className="flex items-center gap-2 text-xs font-semibold text-foreground md:text-sm">
               <span className="h-2 w-2 rounded-full bg-primary" />
               <span>
-                {cat && cat !== "all" ? (
-                  <>Filtering by: <strong className="text-primary">{displayCategoryName}</strong></>
+                {cat && cat !== "all" && cat !== "all-shops" ? (
+                  <>
+                    Filtering by: <strong className="text-primary">{displayCategoryName}</strong>
+                  </>
                 ) : null}
                 {query ? (
-                  <>{cat && cat !== "all" ? " · " : ""}Matching: <strong className="text-primary">"{query}"</strong></>
+                  <>
+                    {cat && cat !== "all" && cat !== "all-shops" ? " · " : ""}Matching:{" "}
+                    <strong className="text-primary">"{query}"</strong>
+                  </>
                 ) : null}
               </span>
             </div>
@@ -438,14 +466,16 @@ function Home() {
           stores={stores}
           activeCategory={activeFilter || "all"}
           onCategoryChange={(catId) => {
-            navigate({
-              search: (prev) => ({
-                category: catId === "all" ? undefined : catId,
-                q: prev.q,
-              }),
-              resetScroll: false,
+            startTransition(() => {
+              navigate({
+                search: (prev) => ({
+                  category: catId === "all" || catId === "all-shops" ? undefined : catId,
+                  q: prev.q,
+                }),
+                resetScroll: false,
+              });
+              scrollToShops();
             });
-            scrollToShops();
           }}
         />
 
@@ -455,7 +485,9 @@ function Home() {
         {/* Flipkart-Style Signature "Best Deals on..." Container */}
         <FlipkartBestDealsShowcase
           products={homepageProducts}
-          title={activeFilter ? `Best Deals on ${displayCategoryName}` : "Best Deals on Local Shore"}
+          title={
+            activeFilter ? `Best Deals on ${displayCategoryName}` : "Best Deals on Local Shore"
+          }
         />
 
         {/* Category Products Grid */}
@@ -470,7 +502,8 @@ function Home() {
                     : "Popular products near you"}
               </h2>
               <p className="mt-0.5 text-xs text-muted-foreground">
-                {homepageProducts.length} item{homepageProducts.length === 1 ? "" : "s"} available for instant 20-40 min delivery
+                {homepageProducts.length} item{homepageProducts.length === 1 ? "" : "s"} available
+                for instant 20-40 min delivery
               </p>
             </div>
             {activeFilter && (
@@ -482,7 +515,9 @@ function Home() {
 
           {homepageProducts.length === 0 ? (
             <div className="rounded-xl border border-dashed border-border p-6 text-center">
-              <p className="text-sm font-medium text-foreground">No products found in this category.</p>
+              <p className="text-sm font-medium text-foreground">
+                No products found in this category.
+              </p>
               <p className="mt-1 text-xs text-muted-foreground">
                 Try selecting a different category or clearing search filters.
               </p>
@@ -500,7 +535,9 @@ function Home() {
                     onClick={() => setVisibleProductLimit((prev) => prev + 20)}
                     className="inline-flex items-center gap-2 rounded-full border border-amber-500/40 bg-card px-6 py-2.5 text-xs font-bold text-foreground shadow-sm transition hover:bg-amber-500/10 active:scale-95"
                   >
-                    <span>Show more products ({homepageProducts.length - visibleProductLimit} remaining)</span>
+                    <span>
+                      Show more products ({homepageProducts.length - visibleProductLimit} remaining)
+                    </span>
                   </button>
                 </div>
               )}
@@ -530,6 +567,9 @@ function Home() {
       <div className="px-5 md:px-8">
         <EcosystemMerchandisingStrips />
       </div>
+
+      {/* App Download Promo Banner */}
+      <AppDownloadBanner />
 
       {/* All shops grid — shown below the Swiggy row as secondary listing */}
       <div className="mt-6 flex items-center justify-between px-5 pt-2 md:mt-8 md:px-8">

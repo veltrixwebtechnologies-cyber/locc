@@ -34,13 +34,25 @@ import { m } from "motion/react";
 import { SkeletonCard } from "@/components/motion/presets";
 import { productsByStore, stores, Store } from "@/lib/mock-data";
 import { ProductThumb } from "@/components/product-thumb";
+import { useDeliveryLocation } from "@/lib/location-store";
+import { isValidCoordinate, haversineDistanceKm } from "@/lib/geo";
+import { SearchShopRecommendations } from "@/components/search-shop-recommendations";
+import { NearbySimilarShopsWidget } from "@/components/nearby-similar-shops-widget";
+import { LottieLoading } from "@/components/ui/lottie-loading";
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
-export const Route = createFileRoute("/product/$productId")({ component: ProductPage });
+export const Route = createFileRoute("/product/$productId")({
+  validateSearch: (search: Record<string, unknown>): { sq?: string } => ({
+    sq: (search.sq as string) || (search.q as string) || undefined,
+  }),
+  component: ProductPage,
+});
 
 function ProductPage() {
   const { productId } = Route.useParams();
+  const searchParams = Route.useSearch();
+  const sq = searchParams.sq || "";
   const auth = useAuth();
   const queryClient = useQueryClient();
   const cart = useCart();
@@ -85,7 +97,7 @@ function ProductPage() {
         { event: "*", schema: "public", table: "products", filter: `id=eq.${productId}` },
         () => {
           void queryClient.invalidateQueries({ queryKey: ["product", productId] });
-        }
+        },
       )
       .subscribe();
     return () => {
@@ -232,9 +244,7 @@ function ProductPage() {
     },
   });
 
-  const canReview = Boolean(
-    auth.id && deliveredProductOrder.data && !existingReview.data?.length,
-  );
+  const canReview = Boolean(auth.id && deliveredProductOrder.data && !existingReview.data?.length);
 
   const submitReview = useMutation({
     mutationFn: async () => {
@@ -242,8 +252,7 @@ function ProductPage() {
       if (!session.session?.user) throw new Error("Sign in to review this product.");
       if (!deliveredProductOrder.data)
         throw new Error("You can review this product after it has been delivered.");
-      if (existingReview.data?.length)
-        throw new Error("You have already reviewed this product.");
+      if (existingReview.data?.length) throw new Error("You have already reviewed this product.");
       if (!body.trim()) throw new Error("Write a short review first.");
       const { error } = await (supabase as any).from("reviews").insert({
         product_id: productId,
@@ -266,14 +275,45 @@ function ProductPage() {
   if (product.isLoading) {
     return (
       <AppShell>
-        <div className="mx-auto max-w-7xl px-4 py-6 md:px-8">
-          <div className="grid gap-8 md:grid-cols-2">
-            <SkeletonCard className="h-[420px] rounded-2xl" />
+        <div className="mx-auto max-w-7xl px-4 py-6 md:px-8 min-h-[65vh]">
+          {/* Breadcrumb Skeleton */}
+          <div className="mb-6 flex items-center gap-2">
+            <div className="premium-skeleton h-3.5 w-14 rounded" />
+            <span className="text-slate-300">/</span>
+            <div className="premium-skeleton h-3.5 w-24 rounded" />
+            <span className="text-slate-300">/</span>
+            <div className="premium-skeleton h-3.5 w-36 rounded" />
+          </div>
+
+          <div className="grid gap-8 lg:grid-cols-[minmax(0,1.15fr)_minmax(340px,0.85fr)] items-start">
+            {/* Gallery Image Skeleton with Lottie Loading */}
             <div className="space-y-4">
+              <div className="relative flex min-h-[320px] sm:min-h-[380px] md:min-h-[420px] items-center justify-center rounded-2xl border border-purple-100/80 bg-gradient-to-br from-purple-50/50 via-white to-purple-50/30 p-6 shadow-sm overflow-hidden">
+                <LottieLoading
+                  message="Loading product details..."
+                  subtext="Fetching live pricing & store inventory"
+                  size="lg"
+                />
+              </div>
+              <div className="flex gap-3">
+                <div className="premium-skeleton h-16 w-16 rounded-xl shrink-0" />
+                <div className="premium-skeleton h-16 w-16 rounded-xl shrink-0" />
+                <div className="premium-skeleton h-16 w-16 rounded-xl shrink-0" />
+              </div>
+            </div>
+
+            {/* Product Meta & Pricing Card Skeleton */}
+            <div className="space-y-5 rounded-2xl border border-purple-100/80 bg-card p-6 shadow-sm">
+              <div className="premium-skeleton h-5 w-32 rounded-full" />
+              <div className="premium-skeleton h-8 w-4/5 rounded-lg" />
               <div className="premium-skeleton h-4 w-1/3 rounded" />
-              <div className="premium-skeleton h-10 w-4/5 rounded-lg" />
-              <div className="premium-skeleton h-6 w-1/4 rounded" />
-              <div className="premium-skeleton h-12 w-2/5 rounded-xl" />
+              <div className="premium-skeleton h-9 w-1/4 rounded-lg mt-4" />
+              <div className="premium-skeleton h-12 w-full rounded-xl mt-6" />
+              <div className="space-y-2.5 pt-5 border-t border-slate-100">
+                <div className="premium-skeleton h-4 w-full rounded" />
+                <div className="premium-skeleton h-4 w-5/6 rounded" />
+                <div className="premium-skeleton h-4 w-2/3 rounded" />
+              </div>
             </div>
           </div>
         </div>
@@ -305,9 +345,7 @@ function ProductPage() {
   const currentPrice = Number(item.discount_price ?? item.selling_price);
   const originalMrp = Number(item.mrp || currentPrice * 1.1);
   const discountPercent =
-    originalMrp > currentPrice
-      ? Math.round(((originalMrp - currentPrice) / originalMrp) * 100)
-      : 0;
+    originalMrp > currentPrice ? Math.round(((originalMrp - currentPrice) / originalMrp) * 100) : 0;
 
   const itemQtyInCart = cart.lines.find((line) => line.productId === item.id)?.qty ?? 0;
 
@@ -317,7 +355,11 @@ function ProductPage() {
         {/* Breadcrumb Bar */}
         <nav aria-label="Breadcrumb" className="border-b border-border/60 bg-muted/30">
           <div className="mx-auto flex max-w-7xl items-center gap-2 px-4 py-3 text-xs text-muted-foreground md:px-8">
-            <Link to="/" search={{ category: undefined, q: undefined }} className="hover:text-primary transition-colors">
+            <Link
+              to="/"
+              search={{ category: undefined, q: undefined }}
+              className="hover:text-primary transition-colors"
+            >
               Home
             </Link>
             <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/60" />
@@ -351,8 +393,9 @@ function ProductPage() {
                     Product Details
                   </h2>
                   <ChevronDown
-                    className={`h-5 w-5 text-muted-foreground transition-transform duration-200 ${showDetails ? "rotate-180" : ""
-                      }`}
+                    className={`h-5 w-5 text-muted-foreground transition-transform duration-200 ${
+                      showDetails ? "rotate-180" : ""
+                    }`}
                   />
                 </button>
 
@@ -396,14 +439,17 @@ function ProductPage() {
                         Key Features & Storage
                       </span>
                       <p className="text-xs leading-relaxed text-muted-foreground">
-                        Keep chilled for maximum crisp refreshment. Store in a cool, dry place away from direct sunlight. Serve cold.
+                        Keep chilled for maximum crisp refreshment. Store in a cool, dry place away
+                        from direct sunlight. Serve cold.
                       </p>
                     </div>
 
                     <div className="pt-2">
                       <button
                         type="button"
-                        onClick={() => toast.info("Full manufacturer specifications available on packaging.")}
+                        onClick={() =>
+                          toast.info("Full manufacturer specifications available on packaging.")
+                        }
                         className="inline-flex items-center gap-1 font-semibold text-emerald-700 hover:text-emerald-800 transition-colors"
                       >
                         View more details <ChevronDown className="h-3.5 w-3.5" />
@@ -427,7 +473,8 @@ function ProductPage() {
                       {item.name}
                     </h1>
                     <p className="mt-1.5 text-xs text-muted-foreground">
-                      Sold by <strong className="text-foreground font-semibold">{item.shop_name}</strong>
+                      Sold by{" "}
+                      <strong className="text-foreground font-semibold">{item.shop_name}</strong>
                     </p>
                   </div>
                   <WishlistButton
@@ -471,9 +518,7 @@ function ProductPage() {
                     </span>
                   )}
                 </div>
-                <p className="mt-1 text-[11px] text-muted-foreground">
-                  (Inclusive of all taxes)
-                </p>
+                <p className="mt-1 text-[11px] text-muted-foreground">(Inclusive of all taxes)</p>
 
                 {/* Primary Add to Cart Button */}
                 <div className="mt-6">
@@ -499,7 +544,9 @@ function ProductPage() {
                     </button>
                   ) : (
                     <div className="flex items-center gap-3">
-                      <span className="text-xs font-semibold text-muted-foreground">Quantity in cart:</span>
+                      <span className="text-xs font-semibold text-muted-foreground">
+                        Quantity in cart:
+                      </span>
                       <QtyStepper
                         qty={itemQtyInCart}
                         max={item.stock}
@@ -522,12 +569,16 @@ function ProductPage() {
                 <div className="mt-4 flex items-center justify-between border-t border-border/60 pt-4 text-xs text-muted-foreground">
                   <span className="inline-flex items-center gap-1.5">
                     <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
-                    <strong className="font-semibold text-foreground">{Number(item.average_rating || 4.7).toFixed(1)}</strong> ({item.review_count || 34} reviews)
+                    <strong className="font-semibold text-foreground">
+                      {Number(item.average_rating || 4.7).toFixed(1)}
+                    </strong>{" "}
+                    ({item.review_count || 34} reviews)
                   </span>
                   <div className="flex items-center gap-2">
                     <Link
                       to="/store/$storeId"
                       params={{ storeId: item.seller_id }}
+                      search={{ sq, category: undefined }}
                       className="inline-flex items-center gap-1 text-xs font-bold text-primary hover:underline"
                     >
                       <StoreIcon className="h-3.5 w-3.5" /> Visit store
@@ -550,7 +601,8 @@ function ProductPage() {
                     <div>
                       <p className="text-xs font-bold text-foreground">Round The Clock Delivery</p>
                       <p className="text-[11px] leading-relaxed text-muted-foreground">
-                        Get items delivered to your doorstep from local dark stores near you, whenever you need them.
+                        Get items delivered to your doorstep from local dark stores near you,
+                        whenever you need them.
                       </p>
                     </div>
                   </div>
@@ -562,7 +614,8 @@ function ProductPage() {
                     <div>
                       <p className="text-xs font-bold text-foreground">Best Prices & Offers</p>
                       <p className="text-[11px] leading-relaxed text-muted-foreground">
-                        Best price destination with offers directly from local merchants & manufacturers.
+                        Best price destination with offers directly from local merchants &
+                        manufacturers.
                       </p>
                     </div>
                   </div>
@@ -574,7 +627,8 @@ function ProductPage() {
                     <div>
                       <p className="text-xs font-bold text-foreground">Wide Assortment</p>
                       <p className="text-[11px] leading-relaxed text-muted-foreground">
-                        Choose from 30,000+ verified products across food, personal care, household & more.
+                        Choose from 30,000+ verified products across food, personal care, household
+                        & more.
                       </p>
                     </div>
                   </div>
@@ -603,20 +657,26 @@ function ProductPage() {
 
           {/* Section 3: Suggested Shops Horizontal Strip */}
           <section className="mt-10">
-            <SuggestedShopsStrip category={item.category} />
+            <SuggestedShopsStrip category={item.category} searchQuery={sq} currentShopId={item.seller_id} />
           </section>
 
           {/* Customer Reviews Section */}
           <section className="mt-12 rounded-2xl border border-[#ead9a8] bg-card p-6 shadow-sm">
             <h2 className="font-display text-xl font-bold text-foreground">Customer Reviews</h2>
             {!auth.id ? (
-              <p className="mt-2 text-xs text-muted-foreground">Sign in to write a review for this product.</p>
+              <p className="mt-2 text-xs text-muted-foreground">
+                Sign in to write a review for this product.
+              </p>
             ) : deliveredProductOrder.isLoading || existingReview.isLoading ? (
               <p className="mt-2 text-xs text-muted-foreground">Checking your order status…</p>
             ) : existingReview.data?.length ? (
-              <p className="mt-2 text-xs text-muted-foreground">You have already submitted a review for this product.</p>
+              <p className="mt-2 text-xs text-muted-foreground">
+                You have already submitted a review for this product.
+              </p>
             ) : !canReview ? (
-              <p className="mt-2 text-xs text-muted-foreground">Purchase and receive this product to write a review.</p>
+              <p className="mt-2 text-xs text-muted-foreground">
+                Purchase and receive this product to write a review.
+              </p>
             ) : (
               <div className="mt-4 grid gap-3 md:max-w-xl">
                 <label className="text-xs font-medium text-foreground">
@@ -655,15 +715,31 @@ function ProductPage() {
                 <article key={review.id} className="border-b border-border/40 pb-3 last:border-0">
                   <div className="flex items-center gap-1 text-amber-400">
                     {"★".repeat(review.rating)}
-                    <span className="text-xs font-bold text-foreground ml-2">{review.title || `${review.rating}.0`}</span>
+                    <span className="text-xs font-bold text-foreground ml-2">
+                      {review.title || `${review.rating}.0`}
+                    </span>
                   </div>
                   <p className="mt-1 text-xs text-foreground/90 leading-relaxed">{review.body}</p>
                 </article>
               ))}
               {!reviews.data?.length && (
-                <p className="text-xs text-muted-foreground">No approved customer reviews yet. Be the first to review!</p>
+                <p className="text-xs text-muted-foreground">
+                  No approved customer reviews yet. Be the first to review!
+                </p>
               )}
             </div>
+          </section>
+
+          {/* Section 4: Nearby Shops Selling Similar Products Near User Home */}
+          <section className="mt-12">
+            <NearbySimilarShopsWidget
+              currentCategory={item.category}
+              currentProductId={item.id}
+              currentStoreId={item.seller_id}
+              searchQuery={sq || item.name}
+              title="Shops Near Your Home Selling Similar Items"
+              subtitle={`Nearby local merchants in your neighborhood carrying ${item.category || "similar items"}`}
+            />
           </section>
         </main>
       </div>
@@ -714,10 +790,11 @@ function ProductGallery({
             key={`${thumb.label}-${index}`}
             type="button"
             onClick={() => setSelectedIdx(index)}
-            className={`relative h-20 w-20 shrink-0 overflow-hidden rounded-xl border bg-white p-2 transition-all ${selectedIdx === index
+            className={`relative h-20 w-20 shrink-0 overflow-hidden rounded-xl border bg-white p-2 transition-all ${
+              selectedIdx === index
                 ? "border-emerald-600 ring-2 ring-emerald-600/30 shadow-md"
                 : "border-border/70 hover:border-emerald-500/60"
-              }`}
+            }`}
           >
             <ProductThumb
               src={thumb.url || undefined}
@@ -927,8 +1004,25 @@ function BlinkitProductCard({ product }: { product: MerchandisingProduct }) {
 /* -------------------------------------------------------------------------- */
 /* Suggested Shops Horizontal Strip Component                                 */
 /* -------------------------------------------------------------------------- */
-function SuggestedShopsStrip({ category }: { category?: string | null }) {
+function SuggestedShopsStrip({
+  category,
+  searchQuery,
+  currentShopId,
+}: {
+  category?: string | null;
+  searchQuery?: string;
+  currentShopId?: string;
+}) {
   const containerRef = useRef<HTMLDivElement>(null);
+
+  if (searchQuery && searchQuery.trim()) {
+    return (
+      <SearchShopRecommendations
+        searchQuery={searchQuery}
+        currentShopId={currentShopId}
+      />
+    );
+  }
 
   const scroll = (direction: "left" | "right") => {
     if (containerRef.current) {
@@ -981,6 +1075,24 @@ function SuggestedShopsStrip({ category }: { category?: string | null }) {
 }
 
 function ShopCardItem({ store }: { store: Store }) {
+  const [deliveryLoc] = useDeliveryLocation();
+  const dKm =
+    typeof store.lat === "number" &&
+    typeof store.lng === "number" &&
+    isValidCoordinate(store.lat, store.lng) &&
+    deliveryLoc &&
+    typeof deliveryLoc.lat === "number" &&
+    typeof deliveryLoc.lng === "number" &&
+    isValidCoordinate(deliveryLoc.lat, deliveryLoc.lng)
+      ? Math.max(
+          0.1,
+          Math.round(
+            haversineDistanceKm(store.lat, store.lng, deliveryLoc.lat, deliveryLoc.lng) * 10,
+          ) / 10,
+        )
+      : (store.distanceKm ?? 1.2);
+  const eta = Math.max(10, Math.round(dKm * 5 + 10));
+
   return (
     <div className="group flex w-64 shrink-0 flex-col overflow-hidden rounded-2xl border border-[#ead9a8] bg-card p-3.5 shadow-xs transition-all hover:border-emerald-500/60 hover:shadow-md">
       <div className="relative aspect-[16/9] w-full overflow-hidden rounded-xl bg-muted">
@@ -1007,13 +1119,16 @@ function ShopCardItem({ store }: { store: Store }) {
             <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
             {store.rating.toFixed(1)}
           </span>
-          <span>{store.distanceKm.toFixed(1)} km</span>
-          <span className="font-semibold text-emerald-700 dark:text-emerald-400">⚡ {store.etaMin} mins</span>
+          <span>{dKm.toFixed(1)} km</span>
+          <span className="font-semibold text-emerald-700 dark:text-emerald-400">
+            ⚡ ~{eta} mins
+          </span>
         </div>
 
         <Link
           to="/store/$storeId"
           params={{ storeId: store.id }}
+          search={{ sq: undefined, category: undefined }}
           className="mt-2 w-full rounded-xl border border-primary/40 bg-primary/5 hover:bg-primary hover:text-primary-foreground py-2 text-center text-xs font-bold text-primary transition-all block"
         >
           Visit shop
@@ -1022,4 +1137,3 @@ function ShopCardItem({ store }: { store: Store }) {
     </div>
   );
 }
-

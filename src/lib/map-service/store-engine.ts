@@ -9,25 +9,9 @@ import {
 } from "@/lib/mock-data";
 import { calculateHaversineDistanceKm } from "./providers";
 import type { MapMarkerItem, MapFilterOptions, MapLocation } from "./types";
-import { isStoreInCategory } from "@/lib/shop-categories";
+import { isStoreInCategory, toStoreCategory } from "@/lib/shop-categories";
 
-export function toStoreCategory(value?: string | null): StoreCategory {
-  const category = (value ?? "").toLowerCase();
-  if (category.includes("palamuthir") || category.includes("fruit") || category.includes("veggie")) return "palamuthir";
-  if (category.includes("flour") || category.includes("mill") || category.includes("maavu")) return "flour_mill";
-  if (category.includes("meat") || category.includes("fish") || category.includes("chicken")) return "meat_fish";
-  if (category.includes("kammal") || category.includes("chain") || category.includes("accessory") || category.includes("earring")) return "fashion_accessories";
-  if (category.includes("boutique") || category.includes("silk") || category.includes("saree")) return "boutiques";
-  if (category.includes("showroom") || category.includes("appliance")) return "showrooms";
-  if (category.includes("fast_fashion") || category.includes("brand")) return "fast_fashion";
-  if (category.includes("individual_fashion") || category.includes("cloth")) return "individual_fashion";
-  if (category.includes("kitchen") || category.includes("vessel") || category.includes("cooker")) return "kitchen_appliances";
-  if (category.includes("decor") || category.includes("interior")) return "home_decor";
-  if (category.includes("pharm") || category.includes("health") || category.includes("med")) return "pharmacy";
-  if (category.includes("station") || category.includes("book")) return "stationery";
-  if (category.includes("bake") || category.includes("cake")) return "bakery";
-  return "grocery";
-}
+export { toStoreCategory };
 
 // Helper to generate realistic timestamp text for price freshness
 export function getPriceFreshnessText(index: number): string {
@@ -51,7 +35,7 @@ export function getPriceFreshnessText(index: number): string {
  */
 // Fallback price calculator per store category if explicit prices are missing or 0
 export function getCategoryFallbackPrice(cat: StoreCategory, index: number): number {
-  const defaults: Record<StoreCategory, number[]> = {
+  const defaults: Partial<Record<StoreCategory, number[]>> = {
     flour_mill: [45, 58, 75, 85],
     palamuthir: [50, 120, 180, 190],
     meat_fish: [260, 440, 580, 390],
@@ -83,7 +67,7 @@ export function formatPriceDisplay(
   minPrice: number,
   maxPrice?: number,
   unit?: string,
-  totalVariants: number = 1
+  totalVariants: number = 1,
 ): string {
   const cleanUnit = unit ? unit.trim().toLowerCase() : "";
   const isPerKg = cleanUnit.includes("kg") || cleanUnit.includes("kilo");
@@ -105,7 +89,16 @@ export function isTestEntity(name?: string | null): boolean {
   const lower = name.trim().toLowerCase();
   if (lower.length <= 2) return true;
   const testNames = [
-    "sss", "ggg", "rajaaa shop", "roja", "test", "test shop", "q", "sudhan", "tt", "hh", "h", "thiramisu"
+    "sss",
+    "ggg",
+    "test",
+    "test shop",
+    "q",
+    "sudhan",
+    "tt",
+    "hh",
+    "h",
+    "thiramisu",
   ];
   return testNames.includes(lower);
 }
@@ -118,7 +111,7 @@ export function getMapMarkerItems(
   userLocation: MapLocation,
   filters: MapFilterOptions,
   liveProducts: any[] = [],
-  liveVendors: any[] = []
+  liveVendors: any[] = [],
 ): MapMarkerItem[] {
   const query = (filters.query ?? "").trim().toLowerCase();
   const catFilter = filters.category && filters.category !== "all" ? filters.category : undefined;
@@ -135,7 +128,9 @@ export function getMapMarkerItems(
       name: vendor.shop_name || APPROVED_STORE.name,
       tagline: vendor.business_type || "Approved local vendor",
       category: toStoreCategory(vendor.category) as StoreCategory,
-      address: [vendor.address_line1, vendor.city, vendor.state].filter(Boolean).join(", ") || APPROVED_STORE.address,
+      address:
+        [vendor.address_line1, vendor.city, vendor.state].filter(Boolean).join(", ") ||
+        APPROVED_STORE.address,
       imageUrl: vendor.storefront_image_url || APPROVED_STORE.imageUrl,
       lat: vendor.lat,
       lng: vendor.lng,
@@ -189,7 +184,7 @@ export function getMapMarkerItems(
       userLocation.lat,
       userLocation.lng,
       effectiveLat,
-      effectiveLng
+      effectiveLng,
     );
 
     // Apply max distance filter (relative to active search location)
@@ -199,11 +194,12 @@ export function getMapMarkerItems(
 
     // Apply category filter (checking store category, tagline, and product categories)
     if (catFilter) {
-      const matchStoreCat = isStoreInCategory(store.category, catFilter, store.rating) ||
+      const matchStoreCat =
+        isStoreInCategory(store.category, catFilter, store.rating) ||
         isStoreInCategory(store.tagline, catFilter, store.rating);
       const seedProds = productsByStore[store.id] || [];
-      const matchProdCat = seedProds.some(
-        (p) => isStoreInCategory(p.category, catFilter, store.rating)
+      const matchProdCat = seedProds.some((p) =>
+        isStoreInCategory(p.category, catFilter, store.rating),
       );
       if (!matchStoreCat && !matchProdCat) {
         return;
@@ -245,13 +241,17 @@ export function getMapMarkerItems(
       matchingProducts = allStoreProducts.filter((p) => {
         const nameMatch = qTokens.some((t) => p.name.toLowerCase().includes(t));
         const catMatch = qTokens.some((t) => p.category.toLowerCase().includes(t));
-        const shopMatch = qTokens.some((t) => store.name.toLowerCase().includes(t) || store.tagline.toLowerCase().includes(t));
+        const shopMatch = qTokens.some(
+          (t) => store.name.toLowerCase().includes(t) || store.tagline.toLowerCase().includes(t),
+        );
         return nameMatch || catMatch || shopMatch;
       });
 
       // If no direct product matches query, check if store name itself matches
       if (matchingProducts.length === 0) {
-        const storeNameMatch = qTokens.some((t) => store.name.toLowerCase().includes(t) || store.tagline.toLowerCase().includes(t));
+        const storeNameMatch = qTokens.some(
+          (t) => store.name.toLowerCase().includes(t) || store.tagline.toLowerCase().includes(t),
+        );
         if (storeNameMatch) {
           matchingProducts = allStoreProducts;
         } else {
@@ -298,12 +298,13 @@ export function getMapMarkerItems(
       minPrice,
       maxPrice > minPrice ? maxPrice : undefined,
       topProduct?.unit,
-      matchingProducts.length
+      matchingProducts.length,
     );
 
-    const productNameDisplay = query && topProduct
-      ? topProduct.name
-      : store.tagline || (topProduct ? topProduct.name : store.name);
+    const productNameDisplay =
+      query && topProduct
+        ? topProduct.name
+        : store.tagline || (topProduct ? topProduct.name : store.name);
 
     markers.push({
       id: `marker-${store.id}`,

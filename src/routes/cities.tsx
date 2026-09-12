@@ -23,7 +23,13 @@ function CitiesPage() {
     <AppShell>
       <div className="mx-auto max-w-5xl px-4 py-6 sm:px-6 pb-12">
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <Link to="/" search={{ category: undefined, q: undefined }} className="hover:text-primary">Home</Link>
+          <Link
+            to="/"
+            search={{ category: undefined, q: undefined }}
+            className="hover:text-primary"
+          >
+            Home
+          </Link>
           <ChevronRight className="h-3 w-3" />
           <span className="font-semibold text-foreground">Cities We Deliver</span>
         </div>
@@ -39,7 +45,8 @@ function CitiesPage() {
             Cities we deliver
           </h1>
           <p className="mt-2 text-sm text-emerald-100">
-            LocalShore is growing across South India. Here's where you can shop local, delivered fast.
+            LocalShore is growing across South India. Here's where you can shop local, delivered
+            fast.
           </p>
           <div className="mt-4 flex flex-wrap gap-3">
             <span className="rounded-full bg-white/15 px-3 py-1 text-xs font-bold backdrop-blur-sm">
@@ -61,7 +68,9 @@ function CitiesPage() {
               key={f}
               onClick={() => setFilter(f)}
               className={`rounded-full px-4 py-2 text-xs font-bold transition ${
-                filter === f ? "bg-purple-700 text-white" : "bg-slate-100 text-slate-600 hover:bg-purple-50"
+                filter === f
+                  ? "bg-purple-700 text-white"
+                  : "bg-slate-100 text-slate-600 hover:bg-purple-50"
               }`}
             >
               {f === "all" ? "All Cities" : f === "active" ? "Active" : "Coming Soon"}
@@ -83,22 +92,34 @@ function CitiesPage() {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: i * 0.04 }}
                     className={`overflow-hidden rounded-2xl border bg-white shadow-xs transition hover:shadow-md ${
-                      city.status === "active" ? "border-slate-200" : "border-dashed border-slate-300"
+                      city.status === "active"
+                        ? "border-slate-200"
+                        : "border-dashed border-slate-300"
                     }`}
                   >
                     <div className="relative aspect-[2/1] overflow-hidden">
-                      <img src={city.imageUrl} alt={city.name} className="h-full w-full object-cover" />
+                      <img
+                        src={city.imageUrl}
+                        alt={city.name}
+                        className="h-full w-full object-cover"
+                      />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
                       <div className="absolute bottom-3 left-3">
                         <h3 className="text-lg font-extrabold text-white">{city.name}</h3>
                         <p className="text-xs text-white/70">{city.state}</p>
                       </div>
-                      <span className={`absolute top-2 right-2 flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold ${
-                        city.status === "active"
-                          ? "bg-emerald-100 text-emerald-800"
-                          : "bg-amber-100 text-amber-800"
-                      }`}>
-                        {city.status === "active" ? <CheckCircle2 className="h-3 w-3" /> : <Clock className="h-3 w-3" />}
+                      <span
+                        className={`absolute top-2 right-2 flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                          city.status === "active"
+                            ? "bg-emerald-100 text-emerald-800"
+                            : "bg-amber-100 text-amber-800"
+                        }`}
+                      >
+                        {city.status === "active" ? (
+                          <CheckCircle2 className="h-3 w-3" />
+                        ) : (
+                          <Clock className="h-3 w-3" />
+                        )}
                         {city.status === "active" ? "Active" : "Coming Soon"}
                       </span>
                     </div>
@@ -111,7 +132,10 @@ function CitiesPage() {
                           {city.popularCategories && (
                             <div className="mt-2 flex flex-wrap gap-1">
                               {city.popularCategories.map((cat) => (
-                                <span key={cat} className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-600">
+                                <span
+                                  key={cat}
+                                  className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-600"
+                                >
                                   {cat}
                                 </span>
                               ))}

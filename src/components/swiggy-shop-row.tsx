@@ -1,12 +1,13 @@
 import { Link } from "@tanstack/react-router";
 import { Star, ChevronLeft, ChevronRight, Heart, MapPin } from "lucide-react";
 import { m, AnimatePresence } from "motion/react";
-import { useRef, useState, useCallback } from "react";
+import { useRef, useState, useCallback, startTransition } from "react";
 import type { Store } from "@/lib/mock-data";
 import { categoryLabel } from "@/lib/mock-data";
 import { useShopsStatus } from "@/lib/shop-availability";
 import { WishlistButton } from "@/components/wishlist-button";
 import { scrollToShops } from "@/lib/scroll-utils";
+import { getFallbackProductImage, resolveImageUrl } from "@/lib/image-utils";
 
 /* ─── offer config per store category ─────────────────────────────────── */
 const CATEGORY_OFFERS: Record<string, { primary: string; bank: string; overlayTag: string }> = {
@@ -103,7 +104,7 @@ function SwiggyShopCard({
 
   return (
     <div className="group shrink-0 w-[260px] sm:w-[273px] transition-all duration-200">
-      <div className="relative overflow-hidden rounded-[24px] bg-white shadow-xs transition-shadow duration-300 hover:shadow-[0_8px_32px_-8px_rgba(0,0,0,0.18)]">
+      <div className="relative overflow-hidden rounded-[24px] bg-white transition-all duration-300 gold-metallic-border gold-glow-sm hover:shadow-[0_8px_32px_-8px_rgba(212,175,55,0.4)]">
         {/* Wishlist Button in Top Right */}
         <div className="absolute right-3 top-3 z-20">
           <WishlistButton
@@ -121,15 +122,15 @@ function SwiggyShopCard({
           />
         </div>
 
-        <Link
-          to="/store/$storeId"
-          params={{ storeId: store.id }}
-          className="block"
-        >
+        <Link to="/store/$storeId" params={{ storeId: store.id }} className="block">
           {/* ── Image area ── */}
           <div className="relative aspect-[16/10] w-full overflow-hidden bg-[#f0f0f5]">
             <img
-              src={imgError ? "https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=800&q=75" : store.imageUrl}
+              src={
+                imgError
+                  ? getFallbackProductImage(store.name, store.category)
+                  : resolveImageUrl(store.imageUrl, store.name, store.category)
+              }
               alt={store.name}
               loading="lazy"
               onError={() => setImgError(true)}
@@ -180,7 +181,9 @@ function SwiggyShopCard({
                 {store.rating.toFixed(1)}
               </span>
               <span>•</span>
-              <span>{store.etaMin}-{store.etaMin + 5} mins</span>
+              <span>
+                {store.etaMin}-{store.etaMin + 5} mins
+              </span>
             </div>
 
             {/* Subtitle — Cuisine/Category */}
@@ -193,13 +196,7 @@ function SwiggyShopCard({
 
             {/* Bank offer */}
             <div className="flex items-center gap-1.5">
-              <svg
-                width="14"
-                height="14"
-                viewBox="0 0 20 20"
-                fill="none"
-                className="shrink-0"
-              >
+              <svg width="14" height="14" viewBox="0 0 20 20" fill="none" className="shrink-0">
                 <rect
                   x="1"
                   y="3"
@@ -211,9 +208,7 @@ function SwiggyShopCard({
                 />
                 <path d="M1 8h18" stroke="#981495" strokeWidth="1.5" />
               </svg>
-              <p className="truncate text-[12px] font-semibold text-[#686b78]">
-                {offers.bank}
-              </p>
+              <p className="truncate text-[12px] font-semibold text-[#686b78]">{offers.bank}</p>
             </div>
           </div>
         </Link>
@@ -243,15 +238,15 @@ export function SwiggyShopRow({
 
   const handleTabClick = (catId: string) => {
     const nextTab = activeFilterTab === catId ? "all" : catId;
-    setInternalTab(nextTab);
-    if (onSelectCategory) {
-      onSelectCategory(nextTab);
-    }
+    startTransition(() => {
+      setInternalTab(nextTab);
+      if (onSelectCategory) {
+        onSelectCategory(nextTab);
+      }
+    });
   };
 
-  const realIds = stores
-    .map((s) => s.id)
-    .filter((id) => !id.startsWith("mock-"));
+  const realIds = stores.map((s) => s.id).filter((id) => !id.startsWith("mock-"));
   const statusQ = useShopsStatus(realIds);
 
   const updateArrows = useCallback(() => {
@@ -280,152 +275,7 @@ export function SwiggyShopRow({
 
   return (
     <section className="mt-8 px-5 md:px-8" aria-label={title}>
-      {/* Filter Tabs Bar (Swiggy exact) */}
-      <div className="mb-4 flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
-        <button
-          type="button"
-          onClick={() => handleTabClick("all")}
-          className={`shrink-0 rounded-full px-4 py-2 text-xs font-black transition-all ${
-            activeFilterTab === "all"
-              ? "bg-[#101c42] text-white shadow-sm"
-              : "bg-white text-slate-700 border border-slate-200 hover:bg-slate-50"
-          }`}
-        >
-          ALL SHOPS ({stores.length})
-        </button>
-        <button
-          type="button"
-          onClick={() => handleTabClick("palamuthir")}
-          className={`shrink-0 rounded-full px-4 py-2 text-xs font-black uppercase transition-all ${
-            activeFilterTab === "palamuthir"
-              ? "bg-[#981495] text-white shadow-sm"
-              : "bg-white text-slate-700 border border-slate-200 hover:bg-slate-50"
-          }`}
-        >
-          🍎 PALAMUTHIR NILAYAM
-        </button>
-        <button
-          type="button"
-          onClick={() => handleTabClick("flour_mill")}
-          className={`shrink-0 rounded-full px-4 py-2 text-xs font-black uppercase transition-all ${
-            activeFilterTab === "flour_mill"
-              ? "bg-[#981495] text-white shadow-sm"
-              : "bg-white text-slate-700 border border-slate-200 hover:bg-slate-50"
-          }`}
-        >
-          🌾🌶️ FLOUR & MASALA MILL (மாவு & மசாலா ஆலை)
-        </button>
-        <button
-          type="button"
-          onClick={() => handleTabClick("meat_fish")}
-          className={`shrink-0 rounded-full px-4 py-2 text-xs font-black uppercase transition-all ${
-            activeFilterTab === "meat_fish"
-              ? "bg-[#981495] text-white shadow-sm"
-              : "bg-white text-slate-700 border border-slate-200 hover:bg-slate-50"
-          }`}
-        >
-          🍗 MEAT, FISH & CHICKEN
-        </button>
-        <button
-          type="button"
-          onClick={() => handleTabClick("fashion_accessories")}
-          className={`shrink-0 rounded-full px-4 py-2 text-xs font-black uppercase transition-all ${
-            activeFilterTab === "fashion_accessories"
-              ? "bg-[#981495] text-white shadow-sm"
-              : "bg-white text-slate-700 border border-slate-200 hover:bg-slate-50"
-          }`}
-        >
-          💎 CHAIN & KAMMAL GIFTS
-        </button>
-        <button
-          type="button"
-          onClick={() => handleTabClick("boutiques")}
-          className={`shrink-0 rounded-full px-4 py-2 text-xs font-black uppercase transition-all ${
-            activeFilterTab === "boutiques"
-              ? "bg-[#981495] text-white shadow-sm"
-              : "bg-white text-slate-700 border border-slate-200 hover:bg-slate-50"
-          }`}
-        >
-          👗 BOUTIQUES
-        </button>
-        <button
-          type="button"
-          onClick={() => handleTabClick("showrooms")}
-          className={`shrink-0 rounded-full px-4 py-2 text-xs font-black uppercase transition-all ${
-            activeFilterTab === "showrooms"
-              ? "bg-[#981495] text-white shadow-sm"
-              : "bg-white text-slate-700 border border-slate-200 hover:bg-slate-50"
-          }`}
-        >
-          📺 SHOWROOMS
-        </button>
-        <button
-          type="button"
-          onClick={() => handleTabClick("fast_fashion")}
-          className={`shrink-0 rounded-full px-4 py-2 text-xs font-black uppercase transition-all ${
-            activeFilterTab === "fast_fashion"
-              ? "bg-[#981495] text-white shadow-sm"
-              : "bg-white text-slate-700 border border-slate-200 hover:bg-slate-50"
-          }`}
-        >
-          🛍️ FAST FASHION (BRANDED)
-        </button>
-        <button
-          type="button"
-          onClick={() => handleTabClick("individual_fashion")}
-          className={`shrink-0 rounded-full px-4 py-2 text-xs font-black uppercase transition-all ${
-            activeFilterTab === "individual_fashion"
-              ? "bg-[#981495] text-white shadow-sm"
-              : "bg-white text-slate-700 border border-slate-200 hover:bg-slate-50"
-          }`}
-        >
-          👔 INDIVIDUAL FASHION SHOPS
-        </button>
-        <button
-          type="button"
-          onClick={() => handleTabClick("kitchen_appliances")}
-          className={`shrink-0 rounded-full px-4 py-2 text-xs font-black uppercase transition-all ${
-            activeFilterTab === "kitchen_appliances"
-              ? "bg-[#981495] text-white shadow-sm"
-              : "bg-white text-slate-700 border border-slate-200 hover:bg-slate-50"
-          }`}
-        >
-          🍳 KITCHEN APPLIANCES
-        </button>
-        <button
-          type="button"
-          onClick={() => handleTabClick("home_decor")}
-          className={`shrink-0 rounded-full px-4 py-2 text-xs font-black uppercase transition-all ${
-            activeFilterTab === "home_decor"
-              ? "bg-[#981495] text-white shadow-sm"
-              : "bg-white text-slate-700 border border-slate-200 hover:bg-slate-50"
-          }`}
-        >
-          🏺 INTERIOR & HOME DECOR
-        </button>
-        <button
-          type="button"
-          onClick={() => handleTabClick("pharmacy")}
-          className={`shrink-0 rounded-full px-4 py-2 text-xs font-black uppercase transition-all ${
-            activeFilterTab === "pharmacy"
-              ? "bg-[#981495] text-white shadow-sm"
-              : "bg-white text-slate-700 border border-slate-200 hover:bg-slate-50"
-          }`}
-        >
-          💊 PHARMACY INDIVIDUAL
-        </button>
-        <button
-          type="button"
-          onClick={() => handleTabClick("stationery")}
-          className={`shrink-0 rounded-full px-4 py-2 text-xs font-black uppercase transition-all ${
-            activeFilterTab === "stationery"
-              ? "bg-[#981495] text-white shadow-sm"
-              : "bg-white text-slate-700 border border-slate-200 hover:bg-slate-50"
-          }`}
-        >
-          📚 BOOKS & STATIONERY
-        </button>
-      </div>
+
 
       {/* Header row */}
       <div className="mb-4 flex items-center justify-between">
@@ -436,16 +286,8 @@ export function SwiggyShopRow({
           <div className="mt-0.5 h-[3px] w-8 rounded-full bg-[#981495]" />
         </div>
         <div className="flex items-center gap-2">
-          <NavArrow
-            dir="left"
-            visible={canLeft}
-            onClick={() => scroll("left")}
-          />
-          <NavArrow
-            dir="right"
-            visible={canRight}
-            onClick={() => scroll("right")}
-          />
+          <NavArrow dir="left" visible={canLeft} onClick={() => scroll("left")} />
+          <NavArrow dir="right" visible={canRight} onClick={() => scroll("right")} />
         </div>
       </div>
 
@@ -459,11 +301,7 @@ export function SwiggyShopRow({
           const liveStatus = statusQ.data?.get(store.id);
           return (
             <div key={store.id} className="snap-start">
-              <SwiggyShopCard
-                store={store}
-                index={index}
-                liveIsOpen={liveStatus?.isOpen}
-              />
+              <SwiggyShopCard store={store} index={index} liveIsOpen={liveStatus?.isOpen} />
             </div>
           );
         })}
@@ -642,11 +480,7 @@ export function SwiggyQuickCategories() {
           </div>
           <div className="flex w-full items-center justify-between gap-4 md:gap-6">
             {ROW2.map((cat, i) => (
-              <CategoryCircle
-                key={cat.id}
-                cat={cat}
-                index={ROW1.length + i}
-              />
+              <CategoryCircle key={cat.id} cat={cat} index={ROW1.length + i} />
             ))}
           </div>
         </div>
@@ -666,13 +500,14 @@ function CategoryCircle({
   index: number;
 }) {
   const [hasError, setHasError] = useState(false);
-  const fallback = "https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=300&q=80";
+  const fallback =
+    "https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=300&q=80";
 
   return (
     <div className="shrink-0">
       <Link
         to="/"
-        search={{ category: cat.id, q: undefined }}
+        search={{ category: cat.id === "all" || cat.id === "all-shops" ? undefined : cat.id, q: undefined }}
         resetScroll={false}
         onClick={scrollToShops}
         className="group flex flex-col items-center gap-1.5"

@@ -57,46 +57,50 @@ export function ProductCard({
 
   const sellingPrice = Number(product.discount_price ?? product.selling_price ?? 0);
   const mrp = Number(product.mrp ?? (sellingPrice ? Math.round(sellingPrice * 1.25) : 0));
-  const discountPercent =
-    mrp > sellingPrice ? Math.round(((mrp - sellingPrice) / mrp) * 100) : 0;
-  const dealTag = `${discountPercent}% OFF`;
+  const discountPercent = mrp > sellingPrice ? Math.round(((mrp - sellingPrice) / mrp) * 100) : 0;
+  const unit = (product as any).unit || (product as any).weight || "1 unit";
 
   return (
     <div
       data-product-id={product.id}
-      className={`group relative flex min-w-0 flex-col overflow-hidden rounded-2xl border border-amber-300/80 bg-white shadow-xs transition-all duration-200 hover:-translate-y-1 hover:border-amber-400 hover:shadow-md hover:shadow-amber-500/10 active:scale-[0.98] ${
-        compact ? "p-2.5" : "p-3.5"
+      className={`group relative flex min-w-0 flex-col justify-between overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-xs hover:border-purple-300 hover:shadow-md transition-all duration-200 ${
+        compact ? "p-2.5" : "p-3"
       }`}
     >
-      {/* Top right Wishlist button overlay */}
-      <div className="absolute right-2.5 top-2.5 z-10">
-        <WishlistButton
-          productId={product.id}
-          productName={product.name}
-          item={{
-            productId: product.id,
-            name: product.name,
-            shopName: product.shop_name,
-            category: product.category ?? "Other",
-            price: sellingPrice,
-            imageUrl: product.image_url ?? undefined,
-            sellerId: product.seller_id,
-          }}
-        />
-      </div>
+      <div>
+        {/* Top Image Frame with floating badges */}
+        <div className="relative aspect-square w-full overflow-hidden rounded-xl bg-slate-50/90 border border-slate-100 p-2 flex items-center justify-center">
+          {/* Wishlist button top-right */}
+          <div className="absolute right-2 top-2 z-10">
+            <WishlistButton
+              productId={product.id}
+              productName={product.name}
+              item={{
+                productId: product.id,
+                name: product.name,
+                shopName: product.shop_name,
+                category: product.category ?? "Other",
+                price: sellingPrice,
+                imageUrl: product.image_url ?? undefined,
+                sellerId: product.seller_id,
+              }}
+            />
+          </div>
 
-      <Link
-        to="/product/$productId"
-        params={{ productId: product.id }}
-        className="flex flex-col h-full"
-        onClick={() => {
-          void recordProductEvent(product.id, "view");
-          void recordRecentProductView(product.id);
-        }}
-      >
-        {/* Grey inner padded image container frame */}
-        <div className="aspect-[4/3] w-full overflow-hidden rounded-xl bg-slate-50 p-2 flex items-center justify-center border border-amber-200/50 relative">
-          <div className="h-full w-full flex items-center justify-center">
+          {/* Unit weight tag bottom-left inside image frame */}
+          <div className="absolute bottom-2 left-2 z-10 rounded-md bg-slate-900/80 backdrop-blur-xs px-2 py-0.5 text-[10px] font-bold text-white shadow-xs">
+            {unit}
+          </div>
+
+          <Link
+            to="/product/$productId"
+            params={{ productId: product.id }}
+            className="h-full w-full flex items-center justify-center"
+            onClick={() => {
+              void recordProductEvent(product.id, "view");
+              void recordRecentProductView(product.id);
+            }}
+          >
             <SafeProductImage
               src={imageUrl}
               productName={product.name}
@@ -107,51 +111,97 @@ export function ProductCard({
               data-product-image
               className="h-full w-full object-contain transition-transform duration-300 group-hover:scale-105"
             />
+          </Link>
+
+          {/* ADD Button positioned at bottom-right corner of image frame (Matching Image 2 position!) */}
+          <div className="absolute right-2 bottom-2 z-20">
+            {quantity === 0 ? (
+              <button
+                type="button"
+                onClick={() => {
+                  void recordProductEvent(product.id, "add_to_cart");
+                  flyProductToCart(product.id);
+                  cartStore.add(product.seller_id, product.shop_name, {
+                    id: product.id,
+                    name: product.name,
+                    unit: unit,
+                    price: sellingPrice,
+                    stock: product.stock,
+                  });
+                }}
+                className="rounded-lg bg-white border border-emerald-600 text-emerald-700 hover:bg-emerald-600 hover:text-white px-3.5 py-1 text-xs font-black uppercase tracking-wider shadow-sm transition-all active:scale-95 cursor-pointer flex items-center gap-1"
+              >
+                <span>ADD</span>
+              </button>
+            ) : (
+              <QtyStepper
+                qty={quantity}
+                max={product.stock}
+                onAdd={() => {
+                  void recordProductEvent(product.id, "add_to_cart");
+                  flyProductToCart(product.id);
+                  cartStore.add(product.seller_id, product.shop_name, {
+                    id: product.id,
+                    name: product.name,
+                    unit: unit,
+                    price: sellingPrice,
+                    stock: product.stock,
+                  });
+                }}
+                onChange={(nextQuantity) => cartStore.setQty(product.id, nextQuantity)}
+                addClassName="rounded-lg bg-emerald-700 text-white px-2 py-0.5 text-xs font-bold shadow-sm"
+              />
+            )}
           </div>
         </div>
 
-        {/* Product details */}
-        <div className="mt-3 flex flex-col justify-between flex-1">
-          <div>
-            <h3 className="line-clamp-1 text-sm font-bold text-slate-800 group-hover:text-purple-700 transition-colors">
-              {product.name}
-            </h3>
-            <div className="mt-1 flex items-baseline gap-2">
-              <span className="text-sm font-black text-slate-900">
-                ₹{sellingPrice}
-              </span>
-              {mrp > sellingPrice && (
-                <span className="text-[11px] font-medium text-slate-400 line-through">
-                  ₹{mrp}
-                </span>
-              )}
-            </div>
-            <p className="mt-0.5 text-xs font-black text-purple-700">
-              {dealTag}
-            </p>
-          </div>
-        </div>
-      </Link>
-
-      {/* Add to cart / Qty stepper at bottom */}
-      <div className="mt-3 pt-2 border-t border-slate-100">
-        <QtyStepper
-          qty={quantity}
-          max={product.stock}
-          onAdd={() => {
-            void recordProductEvent(product.id, "add_to_cart");
-            flyProductToCart(product.id);
-            cartStore.add(product.seller_id, product.shop_name, {
-              id: product.id,
-              name: product.name,
-              unit: product.category ?? "",
-              price: sellingPrice,
-              stock: product.stock,
-            });
+        {/* Product details section */}
+        <Link
+          to="/product/$productId"
+          params={{ productId: product.id }}
+          className="mt-2.5 block space-y-1"
+          onClick={() => {
+            void recordProductEvent(product.id, "view");
+            void recordRecentProductView(product.id);
           }}
-          onChange={(nextQuantity) => cartStore.setQty(product.id, nextQuantity)}
-          addClassName="w-full rounded-xl bg-purple-50 py-1.5 text-xs font-bold text-purple-700 border border-purple-200/60 transition hover:bg-purple-700 hover:text-white"
-        />
+        >
+          {/* Price line with strikethrough MRP */}
+          <div className="flex items-baseline gap-2">
+            <span className="text-base font-black text-slate-900">₹{sellingPrice}</span>
+            {mrp > sellingPrice && (
+              <span className="text-xs font-semibold text-slate-400 line-through">₹{mrp}</span>
+            )}
+          </div>
+
+          {discountPercent > 0 && (
+            <p className="text-[11px] font-extrabold text-blue-600 uppercase tracking-tight">
+              {discountPercent}% OFF ON MRP
+            </p>
+          )}
+
+          {/* Title */}
+          <h3 className="line-clamp-2 text-xs sm:text-sm font-bold text-slate-800 leading-snug group-hover:text-[#981495] transition-colors">
+            {product.name}
+          </h3>
+
+          {/* Rating & ETA */}
+          <div className="flex items-center gap-2 pt-0.5 text-[11px] font-bold text-slate-600">
+            <span className="flex items-center gap-0.5 text-amber-600">
+              <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
+              {(product.average_rating ?? 4.8).toFixed(1)}
+            </span>
+            <span className="text-slate-300">•</span>
+            <span className="text-slate-500">⏱ 15 mins</span>
+          </div>
+
+          {/* Category pill with arrow */}
+          <div className="pt-1">
+            <span className="inline-flex items-center gap-1 rounded-md bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-600 group-hover:bg-purple-50 group-hover:text-[#981495] transition-colors">
+              <span>All {product.category || "Item"}</span>
+              <span className="text-[8px]">▶</span>
+            </span>
+          </div>
+        </Link>
       </div>
     </div>
   );

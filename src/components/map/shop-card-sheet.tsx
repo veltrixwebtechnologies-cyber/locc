@@ -1,6 +1,15 @@
 import { useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { MapPin, Star, Navigation, ArrowRight, Clock, CheckCircle2, Store as StoreIcon, X } from "lucide-react";
+import {
+  MapPin,
+  Star,
+  Navigation,
+  ArrowRight,
+  Clock,
+  CheckCircle2,
+  Store as StoreIcon,
+  X,
+} from "lucide-react";
 import type { MapMarkerItem } from "@/lib/map-service/types";
 import { categoryColor, categoryLabel } from "@/lib/mock-data";
 import { getFallbackProductImage, isValidImageUrl } from "@/lib/image-utils";
@@ -11,15 +20,14 @@ interface Props {
   marker: MapMarkerItem;
   userLocation: { lat: number; lng: number };
   onClose: () => void;
-  onDirectionsCalculated?: (geometry: [number, number][], distanceKm: number, durationMins: number) => void;
+  onDirectionsCalculated?: (
+    geometry: [number, number][],
+    distanceKm: number,
+    durationMins: number,
+  ) => void;
 }
 
-export function ShopCardSheet({
-  marker,
-  userLocation,
-  onClose,
-  onDirectionsCalculated,
-}: Props) {
+export function ShopCardSheet({ marker, userLocation, onClose, onDirectionsCalculated }: Props) {
   const [loadingRoute, setLoadingRoute] = useState(false);
   const [isWishlisted, setIsWishlisted] = useState(false);
 
@@ -28,8 +36,8 @@ export function ShopCardSheet({
     try {
       const route = await fetchMapRoute(userLocation, { lat: marker.lat, lng: marker.lng });
       if (route) {
-        const distKm = Math.round((route.distanceMeters / 1000) * 10) / 10;
-        const durMins = Math.round(route.durationSeconds / 60);
+        const distKm = Math.round(((route.distanceMeters ?? 0) / 1000) * 10) / 10;
+        const durMins = Math.round((route.durationSeconds ?? 0) / 60);
         onDirectionsCalculated?.(route.geometry, distKm, durMins);
         toast.success(`Route calculated: ${distKm} km (${durMins} mins drive)`);
       } else {
@@ -78,7 +86,7 @@ export function ShopCardSheet({
           onError={(e) => {
             (e.currentTarget as HTMLImageElement).src = getFallbackProductImage(
               marker.productName,
-              marker.category
+              marker.category,
             );
           }}
         />
@@ -93,7 +101,9 @@ export function ShopCardSheet({
         <button
           onClick={() => {
             setIsWishlisted(!isWishlisted);
-            toast.success(isWishlisted ? "Removed from Wishlist" : `Saved ${marker.shopName} to Wishlist`);
+            toast.success(
+              isWishlisted ? "Removed from Wishlist" : `Saved ${marker.shopName} to Wishlist`,
+            );
           }}
           className="absolute top-3 right-3 grid h-9 w-9 place-items-center rounded-full bg-black/40 text-white backdrop-blur-xs hover:bg-black/60 transition-colors"
         >
@@ -131,7 +141,9 @@ export function ShopCardSheet({
           <div className="flex items-center gap-1 rounded-lg bg-amber-500/10 px-2 py-1 text-xs font-extrabold text-foreground shrink-0 border border-amber-500/20">
             <Star className="h-3.5 w-3.5 fill-[#F59E0B] text-[#F59E0B]" />
             <span>{marker.rating.toFixed(2)}</span>
-            <span className="font-normal text-muted-foreground">({Math.floor(marker.rating * 15)})</span>
+            <span className="font-normal text-muted-foreground">
+              ({Math.floor(marker.rating * 15)})
+            </span>
           </div>
         </div>
 

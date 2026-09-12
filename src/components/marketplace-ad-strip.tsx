@@ -96,10 +96,7 @@ export function MarketplaceAdStrip() {
   const featured = FEATURED_CAMPAIGNS[activeSlide]!;
 
   return (
-    <section
-      aria-labelledby="marketplace-promotions-title"
-      className="px-5 pb-6 md:px-8"
-    >
+    <section aria-labelledby="marketplace-promotions-title" className="px-5 pb-6 md:px-8">
       <h2 id="marketplace-promotions-title" className="sr-only">
         Marketplace promotions
       </h2>
@@ -125,7 +122,9 @@ export function MarketplaceAdStrip() {
             search={{ category: featured.category, q: featured.q }}
             onClick={() => {
               setTimeout(() => {
-                document.getElementById("shops-section")?.scrollIntoView({ behavior: "smooth", block: "start" });
+                document
+                  .getElementById("shops-section")
+                  ?.scrollIntoView({ behavior: "smooth", block: "start" });
               }, 50);
             }}
             className="mt-6 inline-flex rounded-lg bg-[#a96b00] px-4 py-2.5 text-sm font-bold text-white shadow-sm transition-transform hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
@@ -190,7 +189,9 @@ export function MarketplaceAdStrip() {
             search={{ category: campaign.category, q: campaign.q }}
             onClick={() => {
               setTimeout(() => {
-                document.getElementById("shops-section")?.scrollIntoView({ behavior: "smooth", block: "start" });
+                document
+                  .getElementById("shops-section")
+                  ?.scrollIntoView({ behavior: "smooth", block: "start" });
               }, 50);
             }}
             aria-label={`Explore ${campaign.title}`}

@@ -1,14 +1,43 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { AppShell } from "@/components/app-shell";
-import { useOrders, orderStatusLabel } from "@/lib/orders-store";
+import { useOrdersState, orderStatusLabel } from "@/lib/orders-store";
 import { Clock, Star } from "lucide-react";
+import { LottieLoading } from "@/components/ui/lottie-loading";
 
 export const Route = createFileRoute("/orders")({
   component: OrdersPage,
 });
 
+function OrdersSkeleton() {
+  return (
+    <div className="mx-5 mt-4 space-y-4 pb-6">
+      <LottieLoading
+        message="Fetching your order history..."
+        subtext="Checking live status & delivery updates"
+        size="sm"
+      />
+      <div className="space-y-3 animate-pulse">
+        {[1, 2, 3].map((i) => (
+          <div key={i} className="rounded-xl bg-card p-4 ring-1 ring-black/[0.05] shadow-sm">
+            <div className="flex items-center justify-between">
+              <div className="h-3 w-20 rounded bg-slate-200 dark:bg-slate-800" />
+              <div className="h-3 w-16 rounded bg-slate-200 dark:bg-slate-800" />
+            </div>
+            <div className="mt-3 h-5 w-44 rounded bg-slate-200 dark:bg-slate-800" />
+            <div className="mt-4 flex items-center justify-between border-t hairline pt-2">
+              <div className="h-3 w-28 rounded bg-slate-200 dark:bg-slate-800" />
+              <div className="h-4 w-20 rounded-full bg-slate-200 dark:bg-slate-800" />
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function OrdersPage() {
-  const orders = useOrders();
+  const { orders, isLoading } = useOrdersState();
+
   return (
     <AppShell>
       <div className="px-5 pt-6">
@@ -18,7 +47,9 @@ function OrdersPage() {
         <h1 className="mt-1 font-display text-3xl">History</h1>
       </div>
 
-      {orders.length === 0 ? (
+      {isLoading && orders.length === 0 ? (
+        <OrdersSkeleton />
+      ) : orders.length === 0 ? (
         <div className="mx-5 mt-8 rounded-xl border hairline bg-card p-6 text-center">
           <p className="font-display text-lg">No orders yet.</p>
           <p className="mt-1 text-sm text-muted-foreground">
@@ -49,7 +80,10 @@ function OrdersPage() {
                       Order #{o.code}
                     </span>
                     <span className="font-mono text-xs text-muted-foreground">
-                      {new Date(o.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                      {new Date(o.createdAt).toLocaleTimeString([], {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
                     </span>
                   </div>
                   <p className="mt-1 font-display text-lg leading-tight">{o.storeName}</p>
@@ -79,8 +113,8 @@ function OrdersPage() {
                         isDelivered
                           ? "bg-emerald-600/10 text-emerald-700"
                           : isCancelled
-                          ? "bg-rose-500/10 text-rose-700"
-                          : "bg-primary/10 text-primary"
+                            ? "bg-rose-500/10 text-rose-700"
+                            : "bg-primary/10 text-primary"
                       }`}
                     >
                       {orderStatusLabel[o.status]}

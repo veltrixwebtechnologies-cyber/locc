@@ -7,3 +7,7 @@ Customer tracking uses road routes and cancels obsolete route requests. Routing 
 Validation: `npm run test:maps`, `npx tsc --noEmit`, and `npm run build`. Tests cover confirmation invalidation, route failure, and road-segment progress. Real authenticated checkout and delivery tracking still require Supabase configuration and test accounts.
 
 Release with the matching DeliveryHub and VendorAdmin branches. Existing incorrect order pins are not automatically repaired. Verify saved-address checkout, manual pin changes, pickup-to-customer route changes, and customer updates during an authenticated phone delivery. Public OSRM car routes depend on network availability and map coverage and do not include live traffic or motorcycle-specific routing.
+
+## 12 September integration
+
+The original patch history and current main have been merged without rewriting commits. Additional location fixes and regression tests are included. See [LOCATION-FIX-REPORT.md](LOCATION-FIX-REPORT.md) for the complete cross-repository report, validation, and rollout requirements.

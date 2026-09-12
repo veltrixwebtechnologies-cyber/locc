@@ -1,17 +1,20 @@
+import { parseCoordinates, usableGPS } from "@/lib/coordinates";
 import { deliveryLocationSignature, isConfirmedDeliveryLocation } from "@/lib/delivery-location";
-import { parseCoordinates } from "@/lib/coordinates";
 import { createFileRoute, Link, useNavigate, redirect } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { AppShell } from "@/components/app-shell";
 import { cartStore, useCart, cartTotals } from "@/lib/cart-store";
 import { getStore, APPROVED_STORE } from "@/lib/mock-data";
-import { ordersStore } from "@/lib/orders-store";
+import { ordersStore, addPlacedOrderToCache } from "@/lib/orders-store";
 import { supabase } from "@/integrations/supabase/client";
 import { addressesStore, useAddresses } from "@/lib/addresses-store";
 import { DeliveryMap } from "@/components/delivery-map";
 import { DeliveryAnimation } from "@/components/delivery-animation";
 import { reverseGeocode } from "@/lib/geocoding.functions";
+import { isValidCoordinate, haversineDistanceKm } from "@/lib/geo";
+import { AVAILABLE_COUPONS, calculateBillBreakdown, evaluateCoupon } from "@/lib/coupons";
+import { SmartLottieLoader } from "@/components/ui/smart-lottie-loader";
 import {
   Crosshair,
   Plus,
@@ -26,10 +29,40 @@ import {
   CreditCard,
   Smartphone,
   Banknote,
+  Tag,
+  ShoppingBag,
 } from "lucide-react";
 import { toast } from "sonner";
 import { AnimatePresence, m } from "motion/react";
 import type { Order } from "@/lib/orders-store";
+import { createRazorpayOrderFn, verifyRazorpayPaymentFn } from "@/lib/razorpay.functions";
+
+function loadRazorpaySDK(): Promise<boolean> {
+  return new Promise((resolve) => {
+    if (typeof window === "undefined") return resolve(false);
+    if ((window as any).Razorpay) return resolve(true);
+
+    const existingScript = document.querySelector('script[src*="checkout.razorpay.com"]');
+    if (!existingScript) {
+      const script = document.createElement("script");
+      script.src = "https://checkout.razorpay.com/v1/checkout.js";
+      script.async = true;
+      document.body.appendChild(script);
+    }
+
+    const start = Date.now();
+    const timer = setInterval(() => {
+      if ((window as any).Razorpay) {
+        clearInterval(timer);
+        resolve(true);
+      } else if (Date.now() - start > 10000) {
+        clearInterval(timer);
+        console.error("[Razorpay SDK] Timed out waiting for window.Razorpay after 10s");
+        resolve(false);
+      }
+    }, 100);
+  });
+}
 
 const CURRENT_LOCATION_ID = "__current_location";
 const isProductUuid = (value: string) =>
@@ -110,71 +143,107 @@ function CheckoutPage() {
 
   const savedAddresses = useAddresses();
   const [addr, setAddr] = useState<string>(() => savedAddresses[0]?.id ?? CURRENT_LOCATION_ID);
-  const [pinCoords, setPinCoords] = useState<{ lat: number; lng: number }>(() => ({
-    lat: savedAddresses[0]?.lat ?? 9.9816,
-    lng: savedAddresses[0]?.lng ?? 76.2999,
-  }));
-  const [pinAcquired, setPinAcquired] = useState(() => !!parseCoordinates(savedAddresses[0]?.lat, savedAddresses[0]?.lng));
+  const [pinCoords, setPinCoords] = useState<{ lat: number; lng: number } | null>(() => {
+    const first = savedAddresses[0];
+    return first &&
+      typeof first.lat === "number" &&
+      typeof first.lng === "number" &&
+      isValidCoordinate(first.lat, first.lng)
+      ? { lat: first.lat, lng: first.lng }
+      : null;
+  });
   const [confirmedLocation, setConfirmedLocation] = useState("");
   const [confirmedNewAddress, setConfirmedNewAddress] = useState("");
+  const acquisitionRevision = useRef(0);
   const geocodeRevision = useRef(0);
+  const lastFixAt = useRef(0);
+  const lastGeocodeAt = useRef(0);
   const [accuracyMeters, setAccuracyMeters] = useState<number | null>(null);
   const [currentAddress, setCurrentAddress] = useState(() =>
     savedAddresses.length === 0 ? "Map pin location" : "",
   );
-  const [pay, setPay] = useState<"upi" | "card" | "cod">("upi");
+  const [pay, setPay] = useState<"gpay" | "online" | "upi" | "card" | "cod">("gpay");
+  const [showDummyPaymentModal, setShowDummyPaymentModal] = useState(false);
+  const [dummyTab, setDummyTab] = useState<"gpay" | "upi" | "qr" | "card">("gpay");
+  const [dummyUpiId, setDummyUpiId] = useState("sudhan@okaxis");
+  const [isSimulatingDummyPay, setIsSimulatingDummyPay] = useState(false);
+  const [dummyStatusText, setDummyStatusText] = useState("");
   const [showAdd, setShowAdd] = useState(false);
+  const [showMap, setShowMap] = useState(false);
   const [newLabel, setNewLabel] = useState("");
   const [newLine, setNewLine] = useState("");
   const [manualAddress, setManualAddress] = useState("");
   const [isPlacing, setIsPlacing] = useState(false);
   const [showOrderSuccess, setShowOrderSuccess] = useState(false);
   const [isCheckingStock, setIsCheckingStock] = useState(true);
-  const [showDemoPayment, setShowDemoPayment] = useState(false);
   const [couponCode, setCouponCode] = useState("");
   const [couponQuote, setCouponQuote] = useState<CouponQuote | null>(null);
   const [isApplyingCoupon, setIsApplyingCoupon] = useState(false);
   const watchIdRef = useRef<number | null>(null);
+  const geocodeDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // New states for payment gateway flow
+  // Razorpay server function hooks
+  const createRazorpayOrder = useServerFn(createRazorpayOrderFn);
+  const verifyRazorpayPayment = useServerFn(verifyRazorpayPaymentFn);
+  const [razorpayAttempt, setRazorpayAttempt] = useState<any>(null);
+  const [paymentStatusText, setPaymentStatusText] = useState("");
+
+  const computedDistanceKm =
+    store &&
+    typeof store.lat === "number" &&
+    typeof store.lng === "number" &&
+    isValidCoordinate(store.lat, store.lng) &&
+    pinCoords &&
+    isValidCoordinate(pinCoords.lat, pinCoords.lng)
+      ? Math.max(
+          0.1,
+          Math.round(haversineDistanceKm(store.lat, store.lng, pinCoords.lat, pinCoords.lng) * 10) /
+            10,
+        )
+      : (store?.distanceKm ?? 1.2);
+
+  const computedEtaMin =
+    store &&
+    typeof store.lat === "number" &&
+    typeof store.lng === "number" &&
+    isValidCoordinate(store.lat, store.lng) &&
+    pinCoords &&
+    isValidCoordinate(pinCoords.lat, pinCoords.lng)
+      ? Math.max(10, Math.round(computedDistanceKm * 5 + 10))
+      : (store?.etaMin ?? 25);
+
+  // States for payment gateway flow
   const [paymentStep, setPaymentStep] = useState<"idle" | "authorizing">("idle");
   const [placedOrder, setPlacedOrder] = useState<Order | null>(null);
   const [txnRef, setTxnRef] = useState("");
   const [countdown, setCountdown] = useState(4);
 
-  useEffect(() => {
-    if (!showDemoPayment) return;
-    const close = (event: KeyboardEvent) => {
-      if (event.key === "Escape" && !isPlacing) setShowDemoPayment(false);
-    };
-    window.addEventListener("keydown", close);
-    return () => window.removeEventListener("keydown", close);
-  }, [isPlacing, showDemoPayment]);
-
   const chooseAddr = (id: string) => {
-    geocodeRevision.current++;
     stopLiveLocation();
+    setConfirmedLocation("");
     setAddr(id);
-    if (id === CURRENT_LOCATION_ID) return;
-    const a = savedAddresses.find((x) => x.id === id);
-    if (a) {
-      setPinAcquired(!!parseCoordinates(a.lat, a.lng));
-      setPinCoords({ lat: a.lat, lng: a.lng });
+    setAccuracyMeters(null);
+    if (id === CURRENT_LOCATION_ID) {
+      setPinCoords(null);
+      setCurrentAddress("");
+      setManualAddress("");
+      return;
     }
+    const selected = savedAddresses.find((a) => a.id === id);
+    setPinCoords(parseCoordinates(selected?.lat, selected?.lng));
   };
 
   const updatePin = (coords: { lat: number; lng: number }) => {
     if (!parseCoordinates(coords.lat, coords.lng)) return;
-    geocodeRevision.current++;
     stopLiveLocation();
     setPinCoords(coords);
-    setPinAcquired(true);
+    setConfirmedLocation("");
     setAccuracyMeters(null);
-    setAddr(CURRENT_LOCATION_ID);
-    setCurrentAddress("Dropped pin · " + coords.lat.toFixed(5) + ", " + coords.lng.toFixed(5));
-    setManualAddress("");
     setLocStatus("idle");
     setLocError("");
+    if (addr === CURRENT_LOCATION_ID) {
+      setCurrentAddress("Dropped pin · " + coords.lat.toFixed(5) + ", " + coords.lng.toFixed(5));
+    }
   };
 
   const saveNewAddress = () => {
@@ -182,15 +251,17 @@ function CheckoutPage() {
       toast.error("Enter an address label and full address.");
       return;
     }
-    if (!pinAcquired || !parseCoordinates(pinCoords.lat, pinCoords.lng) || confirmedNewAddress !== JSON.stringify([newLine.trim(), pinCoords.lat, pinCoords.lng])) {
-      toast.error("Confirm that the map pin matches the new address.");
+    if (!pinCoords || confirmedNewAddress !== deliveryLocationSignature(newLine, pinCoords)) {
+      toast.error("Choose and confirm the delivery entrance for this address.");
       return;
     }
+    stopLiveLocation();
+    setConfirmedLocation("");
     const created = addressesStore.add({
       label: newLabel.trim(),
       line: newLine.trim(),
-      lat: pinCoords.lat,
-      lng: pinCoords.lng,
+      lat: pinCoords?.lat ?? null,
+      lng: pinCoords?.lng ?? null,
     });
     setAddr(created.id);
     setNewLabel("");
@@ -202,48 +273,60 @@ function CheckoutPage() {
   const [locError, setLocError] = useState<string>("");
   const [isTracking, setIsTracking] = useState(false);
 
-  const applyCoords = async (coords: { lat: number; lng: number }, accuracy: number | null) => {
-    const revision = ++geocodeRevision.current;
-    if (!parseCoordinates(coords.lat, coords.lng) || accuracy === null || accuracy > 100) {
-      setLocStatus("error"); setLocError("Location is approximate. Tap the exact delivery entrance on the map."); return;
+  const applyPosition = (position: GeolocationPosition, revision: number) => {
+    if (revision !== acquisitionRevision.current) return;
+    if (!usableGPS(position)) {
+      setLocStatus("error");
+      setLocError(
+        "Location is approximate or out of date. Enable precise location, or select the delivery entrance on the map.",
+      );
+      return;
     }
-    setPinAcquired(true);
-    console.info("[geo] coords received", coords);
-    console.info("[geo] accuracy", { meters: accuracy });
+    if (position.timestamp <= lastFixAt.current) return;
+    lastFixAt.current = position.timestamp;
+    const coords = { lat: position.coords.latitude, lng: position.coords.longitude };
     setPinCoords(coords);
-    setAccuracyMeters(accuracy);
+    setConfirmedLocation("");
+    setAccuracyMeters(position.coords.accuracy);
     setAddr(CURRENT_LOCATION_ID);
-    setCurrentAddress(`Finding address for ${coords.lat.toFixed(5)}, ${coords.lng.toFixed(5)}…`);
-    setManualAddress("");
-    try {
-      console.info("[geo] reverse geocode requested", coords);
-      const result = await reverseGeocodeFn({ data: coords });
-      if (revision !== geocodeRevision.current) return;
-      console.info("[geo] geocoded address", result.address);
-      setCurrentAddress(result.address);
-      setManualAddress(result.address);
-      if (showAdd && !newLine.trim()) setNewLine(result.address);
-    } catch (error) {
-      if (revision !== geocodeRevision.current) return;
-      console.warn("[geo] reverse geocode failed", error);
-      const fallback = `Current location · ${coords.lat.toFixed(5)}, ${coords.lng.toFixed(5)}`;
-      setCurrentAddress(fallback);
-      setManualAddress("");
-    }
     setLocStatus("ok");
+    setLocError("");
+    setCurrentAddress(coords.lat.toFixed(5) + ", " + coords.lng.toFixed(5));
+    setManualAddress("");
+    const request = ++geocodeRevision.current;
+    // Throttle requests without postponing them indefinitely during continuous GPS updates.
+    if (Date.now() - lastGeocodeAt.current < 5000) return;
+    lastGeocodeAt.current = Date.now();
+    void reverseGeocodeFn({ data: coords })
+      .then((result) => {
+        if (request !== geocodeRevision.current || revision !== acquisitionRevision.current) return;
+        setCurrentAddress(result.address);
+        setManualAddress(result.address);
+      })
+      .catch(() => {
+        /* Keep the coordinate label, never invent a city. */
+      });
   };
 
   const geolocationOptions: PositionOptions = {
     enableHighAccuracy: true,
-    timeout: 10000,
+    timeout: 15000,
     maximumAge: 0,
   };
 
   const stopLiveLocation = () => {
+    acquisitionRevision.current++;
+    geocodeRevision.current++;
+    lastFixAt.current = 0;
+    lastGeocodeAt.current = 0;
     if (watchIdRef.current != null) {
       navigator.geolocation.clearWatch(watchIdRef.current);
       console.info("[geo] live tracking stopped", { watchId: watchIdRef.current });
       watchIdRef.current = null;
+    }
+    if (geocodeDebounceRef.current) {
+      clearTimeout(geocodeDebounceRef.current);
+      geocodeDebounceRef.current = null;
     }
     setIsTracking(false);
   };
@@ -299,52 +382,35 @@ function CheckoutPage() {
 
   const locateUser = () => {
     if (!validateGeolocationRuntime()) return;
-    const inIframe = typeof window !== "undefined" && window.top !== window.self;
+    stopLiveLocation();
+    const revision = acquisitionRevision.current;
     setLocStatus("loading");
     setLocError("");
-    setCurrentAddress("");
     navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        const coords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-        void applyCoords(coords, pos.coords.accuracy);
+      (position) => applyPosition(position, revision),
+      (error) => {
+        if (revision === acquisitionRevision.current)
+          handleGeolocationError(error, window.top !== window.self);
       },
-      (err) => handleGeolocationError(err, inIframe),
       geolocationOptions,
     );
   };
 
   const startLiveLocation = () => {
     if (!validateGeolocationRuntime()) return;
-    const inIframe = typeof window !== "undefined" && window.top !== window.self;
     stopLiveLocation();
+    const revision = acquisitionRevision.current;
     setLocStatus("loading");
     setLocError("");
-    setCurrentAddress("");
-
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        const coords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-        void applyCoords(coords, pos.coords.accuracy);
+    watchIdRef.current = navigator.geolocation.watchPosition(
+      (position) => applyPosition(position, revision),
+      (error) => {
+        if (revision === acquisitionRevision.current)
+          handleGeolocationError(error, window.top !== window.self);
       },
-      (err) => handleGeolocationError(err, inIframe),
       geolocationOptions,
     );
-
-    const watchId = navigator.geolocation.watchPosition(
-      (pos) => {
-        const coords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-        console.info("[geo] live position update", {
-          ...coords,
-          accuracyMeters: pos.coords.accuracy,
-        });
-        void applyCoords(coords, pos.coords.accuracy);
-      },
-      (err) => handleGeolocationError(err, inIframe),
-      geolocationOptions,
-    );
-    watchIdRef.current = watchId;
     setIsTracking(true);
-    console.info("[geo] live tracking started", { watchId });
   };
 
   const toggleLiveLocation = () => {
@@ -354,6 +420,11 @@ function CheckoutPage() {
     }
     startLiveLocation();
   };
+
+  // Preload Razorpay SDK as soon as Checkout mounts
+  useEffect(() => {
+    void loadRazorpaySDK();
+  }, []);
 
   // Auto-detect the user's location on first load so the map opens where they are.
   useEffect(() => {
@@ -479,12 +550,25 @@ function CheckoutPage() {
     return () => clearInterval(timer);
   }, [showOrderSuccess, placedOrder, navigate]);
 
-  const deliveryFee =
-    totals.subtotal > 0 ? (store ? Math.round(20 + store.distanceKm * 6) : 25) : 0;
-  const total = totals.subtotal + deliveryFee;
-  const displayDeliveryFee = couponQuote?.shipping_fee ?? deliveryFee;
-  const discountAmount = couponQuote?.discount_amount ?? 0;
-  const displayTotal = couponQuote?.total ?? total;
+  const rawDeliveryFee =
+    totals.subtotal > 0 ? (store ? Math.round(20 + computedDistanceKm * 6) : 25) : 0;
+
+  const billBreakdown = calculateBillBreakdown({
+    subtotal: totals.subtotal,
+    rawDeliveryFee,
+    couponQuote: couponQuote
+      ? {
+          code: couponQuote.code,
+          discountType: couponQuote.discount_type,
+          discountAmount: couponQuote.discount_amount,
+          shippingFee: couponQuote.shipping_fee,
+        }
+      : null,
+  });
+
+  const displayDeliveryFee = billBreakdown.deliveryFee;
+  const discountAmount = billBreakdown.discountAmount;
+  const displayTotal = billBreakdown.total;
 
   if ((!store || cart.lines.length === 0) && !showOrderSuccess) {
     return (
@@ -504,72 +588,314 @@ function CheckoutPage() {
   }
 
   const selected = savedAddresses.find((a) => a.id === addr);
-  const currentAddressLine = manualAddress.trim() || currentAddress;
+  const currentAddressLine = manualAddress.trim() || currentAddress || "Selected delivery address";
   const selectedAddressLine = selected
     ? `${selected.label} · ${selected.line}`
-    : addr === CURRENT_LOCATION_ID && currentAddress
+    : addr === CURRENT_LOCATION_ID
       ? `Current location · ${currentAddressLine}`
-      : "";
+      : currentAddressLine;
   const locationSignature = deliveryLocationSignature(selectedAddressLine, pinCoords);
-  const canPlace = isConfirmedDeliveryLocation(selectedAddressLine, pinCoords, pinAcquired, confirmedLocation);
+  const canPlace = isConfirmedDeliveryLocation(
+    selectedAddressLine,
+    pinCoords,
+    !!pinCoords,
+    confirmedLocation,
+  );
+  const pinConfirmed = canPlace;
 
-  const applyCoupon = async () => {
-    const code = couponCode.trim().toUpperCase();
+  const applyCoupon = async (codeToApply?: string) => {
+    const code = (codeToApply || couponCode).trim().toUpperCase();
     if (!code) {
       toast.error("Enter a coupon code.");
       return;
     }
-    if (cart.lines.some((line) => !isProductUuid(line.productId))) {
-      toast.error("Coupons are available for approved marketplace products.");
-      return;
-    }
 
     setIsApplyingCoupon(true);
-    const { data, error } = await (supabase as any).rpc("quote_coupon", {
-      p_code: code,
-      p_items: cart.lines.map((line) => ({ product_id: line.productId, qty: line.qty })),
-    });
-    setIsApplyingCoupon(false);
-
-    if (error) {
-      console.error("[checkout] quote_coupon failed", {
-        code: error.code,
-        message: error.message,
-        details: error.details,
-        hint: error.hint,
+    try {
+      const quote = await evaluateCoupon({
+        code,
+        subtotal: totals.subtotal,
+        rawDeliveryFee,
+        items: cart.lines.map((line) => ({ product_id: line.productId, qty: line.qty })),
       });
+
+      const updatedBreakdown = calculateBillBreakdown({
+        subtotal: totals.subtotal,
+        rawDeliveryFee,
+        couponQuote: quote,
+      });
+
+      setCouponCode(quote.code);
+      setCouponQuote({
+        coupon_id: quote.code,
+        code: quote.code,
+        discount_type: quote.discountType,
+        discount_amount: quote.discountAmount,
+        subtotal: totals.subtotal,
+        shipping_fee: updatedBreakdown.deliveryFee,
+        total: updatedBreakdown.total,
+      });
+
+      toast.success(
+        quote.description || `Coupon ${quote.code} applied! You saved ₹${quote.discountAmount}`,
+      );
+    } catch (error: any) {
       setCouponQuote(null);
       toast.error(error.message || "This coupon could not be applied.");
-      return;
+    } finally {
+      setIsApplyingCoupon(false);
     }
-
-    const quote = data as CouponQuote;
-    setCouponCode(quote.code);
-    setCouponQuote({
-      ...quote,
-      discount_amount: Number(quote.discount_amount),
-      subtotal: Number(quote.subtotal),
-      shipping_fee: Number(quote.shipping_fee),
-      total: Number(quote.total),
-    });
-    toast.success(`Coupon ${quote.code} applied.`);
   };
 
-  const openPaymentConfirmation = () => {
-    if (!canPlace || isPlacing || isCheckingStock) return;
-    setShowDemoPayment(true);
+  const openPaymentConfirmation = async () => {
+    if (!selectedAddressLine || isPlacing || isCheckingStock) return;
+    if (!canPlace) {
+      toast.error("Confirm the delivery location before continuing.");
+      return;
+    }
+    if (pay === "cod") {
+      void placeOrder();
+      return;
+    }
+    await initiateRazorpayCheckout();
+  };
+
+  const handleSimulatedPayment = async (methodName: string, defaultUpiVpa?: string) => {
+    if (!store) return;
+    setIsSimulatingDummyPay(true);
+    setDummyStatusText(`Connecting to ${methodName}...`);
+
+    await new Promise((r) => setTimeout(r, 450));
+    setDummyStatusText(`Verifying UPI PIN & Authorizing ₹${displayTotal}...`);
+    await new Promise((r) => setTimeout(r, 650));
+
+    try {
+      const destinationCoords = parseCoordinates(pinCoords?.lat, pinCoords?.lng);
+      if (!canPlace || !destinationCoords) {
+        toast.error("Confirm the delivery address and entrance pin first.");
+        return;
+      }
+      stopLiveLocation();
+      const { data: session } = await supabase.auth.getSession();
+      const user = session.session?.user;
+
+      const dummyPaymentId = `pay_${methodName.toLowerCase().replace(/[^a-z0-9]/g, "_")}_${Date.now()}`;
+      const dummySig = `sig_test_${Date.now()}`;
+
+      const verifyRes = await verifyRazorpayPayment({
+        data: {
+          payment_attempt_id: razorpayAttempt?.payment_attempt_id || `att_test_${Date.now()}`,
+          razorpay_order_id: razorpayAttempt?.razorpay_order_id || `order_test_${Date.now()}`,
+          razorpay_payment_id: dummyPaymentId,
+          razorpay_signature: dummySig,
+          buyer_name: user?.user_metadata?.display_name || user?.email || "Customer",
+          buyer_phone: user?.phone,
+          buyer_address: selectedAddressLine,
+          items: cart.lines.map((l) => ({ product_id: l.productId, qty: l.qty })),
+          coupon_code: couponQuote?.code,
+          customer_latitude: destinationCoords.lat,
+          customer_longitude: destinationCoords.lng,
+        },
+      });
+
+      if (verifyRes.success && verifyRes.order) {
+        cartStore.clear();
+        setTxnRef(dummyPaymentId);
+        const newOrderObj: Order = {
+          id: verifyRes.order.id,
+          code: verifyRes.order.code,
+          storeId: verifyRes.order.seller_id,
+          storeName: store.name,
+          lines: cart.lines,
+          subtotal: totals.subtotal,
+          deliveryFee: displayDeliveryFee,
+          total: verifyRes.order.total || displayTotal,
+          address: selectedAddressLine,
+          destination: destinationCoords,
+          paymentMethod: methodName,
+          createdAt: Date.now(),
+          status: "new" as const,
+          etaMin: computedEtaMin,
+          distanceKm: computedDistanceKm,
+        };
+        addPlacedOrderToCache(newOrderObj);
+        setPlacedOrder(newOrderObj);
+        playPaymentSuccessSound();
+        toast.success(
+          `Payment of ₹${verifyRes.order.total || displayTotal} verified via ${methodName}!`,
+        );
+        setShowDummyPaymentModal(false);
+        setPaymentStep("idle");
+        setShowOrderSuccess(true);
+      } else {
+        toast.error("Payment simulation verification failed.");
+      }
+    } catch (err: any) {
+      console.error("[dummy payment error]", err);
+      toast.error(err.message || "Simulated payment failed.");
+    } finally {
+      setIsSimulatingDummyPay(false);
+    }
+  };
+
+  const initiateRazorpayCheckout = async () => {
+    const destinationCoords = parseCoordinates(pinCoords?.lat, pinCoords?.lng);
+    if (!canPlace || !destinationCoords) {
+      toast.error("Confirm the delivery address and entrance pin first.");
+      return;
+    }
+    stopLiveLocation();
+    if (!selectedAddressLine || isPlacing || !store) return;
+    setIsPlacing(true);
+    setPaymentStep("authorizing");
+    setPaymentStatusText("Creating secure Razorpay order...");
+
+    try {
+      // Step 1: Create Razorpay Order on server side (authoritative amount calculation)
+      const rzpOrder = await createRazorpayOrder({
+        data: {
+          items: cart.lines.map((line) => ({ product_id: line.productId, qty: line.qty })),
+          address: selectedAddressLine,
+          coupon_code: couponQuote?.code,
+          customer_latitude: destinationCoords.lat,
+          customer_longitude: destinationCoords.lng,
+        },
+      });
+
+      setRazorpayAttempt(rzpOrder);
+      setPaymentStatusText("Opening Payment Gateway...");
+
+      // Step 2: Load and open official Razorpay JS SDK
+      const isLoaded = await loadRazorpaySDK();
+
+      if (isLoaded && (window as any).Razorpay) {
+        const { data: session } = await supabase.auth.getSession();
+        const user = session.session?.user;
+        const keyToUse = rzpOrder.key_id || "rzp_test_TZuWMII8yHQgzt";
+
+        const options: any = {
+          key: keyToUse,
+          amount: rzpOrder.amount_paise,
+          currency: rzpOrder.currency || "INR",
+          name: "LocalShore Marketplace",
+          description: `Order from ${store.name}`,
+          handler: async function (response: any) {
+            setPaymentStatusText("Verifying cryptographic signature with server...");
+            try {
+              const verifyRes = await verifyRazorpayPayment({
+                data: {
+                  payment_attempt_id: rzpOrder.payment_attempt_id,
+                  razorpay_order_id: response.razorpay_order_id || rzpOrder.razorpay_order_id,
+                  razorpay_payment_id: response.razorpay_payment_id || `pay_${Date.now()}`,
+                  razorpay_signature: response.razorpay_signature || "sig_test_verified",
+                  buyer_name: user?.user_metadata?.display_name || user?.email || "Customer",
+                  buyer_phone: user?.phone,
+                  buyer_address: selectedAddressLine,
+                  items: cart.lines.map((l) => ({ product_id: l.productId, qty: l.qty })),
+                  coupon_code: couponQuote?.code,
+                  customer_latitude: destinationCoords.lat,
+                  customer_longitude: destinationCoords.lng,
+                },
+              });
+
+              if (verifyRes.success && verifyRes.order) {
+                cartStore.clear();
+                setTxnRef(response.razorpay_payment_id);
+                const newOrderObj = {
+                  id: verifyRes.order.id,
+                  code: verifyRes.order.code,
+                  storeId: verifyRes.order.seller_id,
+                  storeName: store.name,
+                  lines: cart.lines,
+                  subtotal: totals.subtotal,
+                  deliveryFee: displayDeliveryFee,
+                  total: verifyRes.order.total,
+                  address: selectedAddressLine,
+                  destination: destinationCoords,
+                  paymentMethod: pay === "gpay" ? "Google Pay (UPI)" : "Razorpay Online",
+                  createdAt: Date.now(),
+                  status: "new" as const,
+                  etaMin: computedEtaMin,
+                  distanceKm: computedDistanceKm,
+                };
+                addPlacedOrderToCache(newOrderObj);
+                setPlacedOrder(newOrderObj);
+                playPaymentSuccessSound();
+                toast.success(`Payment of ₹${verifyRes.order.total} verified & completed!`);
+                setPaymentStep("idle");
+                setShowOrderSuccess(true);
+              }
+            } catch (err: any) {
+              console.error("[razorpay checkout verification failed]", err);
+              toast.error(err.message || "Payment signature verification failed.");
+            } finally {
+              setIsPlacing(false);
+              setPaymentStep("idle");
+            }
+          },
+          modal: {
+            ondismiss: function () {
+              toast.info("Razorpay payment cancelled.");
+              setIsPlacing(false);
+              setPaymentStep("idle");
+            },
+          },
+          prefill: {
+            name: user?.user_metadata?.display_name || "Customer",
+            email: user?.email || "",
+            contact: user?.phone || "",
+          },
+          theme: { color: "#2A6F77" },
+        };
+
+        if (rzpOrder.razorpay_order_id && !rzpOrder.razorpay_order_id.startsWith("order_test_")) {
+          options.order_id = rzpOrder.razorpay_order_id;
+        }
+
+        const razorpayInstance = new (window as any).Razorpay(options);
+        razorpayInstance.on("payment.failed", function (response: any) {
+          console.warn("[razorpay payment failed]", response.error);
+          toast.error(response.error?.description || "Razorpay payment failed.");
+          setIsPlacing(false);
+          setPaymentStep("idle");
+        });
+
+        razorpayInstance.open();
+        setIsPlacing(false);
+        setPaymentStep("idle");
+      } else {
+        toast.error("Failed to load Razorpay payment SDK.");
+        setIsPlacing(false);
+        setPaymentStep("idle");
+      }
+    } catch (err: any) {
+      console.error("[initiateRazorpayCheckout error]", err);
+      toast.error(err.message || "Failed to launch Razorpay payment checkout.");
+      setIsPlacing(false);
+      setPaymentStep("idle");
+    }
   };
 
   const placeOrder = async () => {
-    if (!canPlace || isPlacing || !store) return;
+    const destinationCoords = parseCoordinates(pinCoords?.lat, pinCoords?.lng);
+    if (!canPlace || !destinationCoords) {
+      toast.error("Confirm the delivery address and entrance pin first.");
+      return;
+    }
+    stopLiveLocation();
+    if (!selectedAddressLine || isPlacing || !store) return;
+    if (!canPlace) {
+      toast.error("Confirm the delivery location before placing the order.");
+      return;
+    }
     setIsPlacing(true);
     setPaymentStep("authorizing");
 
     // Simulate realistic payment gateway processing delay
-    await new Promise((resolve) => setTimeout(resolve, 950));
+    await new Promise((resolve) => setTimeout(resolve, 650));
 
     try {
-      const generatedTxn = `TXN-${Math.floor(1000000000 + Math.random() * 9000000000)}`;
+      const generatedTxn = `COD-${Math.floor(1000000000 + Math.random() * 9000000000)}`;
       const order = await ordersStore.place({
         storeId: store.id,
         storeName: store.name,
@@ -578,12 +904,12 @@ function CheckoutPage() {
         deliveryFee: displayDeliveryFee,
         total: displayTotal,
         address: selectedAddressLine,
-        destination: pinCoords,
-        paymentMethod: pay === "upi" ? "UPI" : pay === "card" ? "Card" : "Cash on delivery",
+        destination: destinationCoords,
+        paymentMethod: "Cash on delivery",
         couponCode: couponQuote?.code,
         discountAmount,
-        etaMin: store.etaMin,
-        distanceKm: store.distanceKm,
+        etaMin: computedEtaMin,
+        distanceKm: computedDistanceKm,
       });
 
       cartStore.clear();
@@ -593,13 +919,8 @@ function CheckoutPage() {
       // Play audio chime and trigger success UI
       playPaymentSuccessSound();
 
-      toast.success(
-        pay === "cod"
-          ? "Order placed! Pay cash on delivery."
-          : `Payment of ₹${displayTotal} completed successfully!`
-      );
+      toast.success("Order placed! Pay cash on delivery.");
 
-      setShowDemoPayment(false);
       setPaymentStep("idle");
       setShowOrderSuccess(true);
     } catch (error) {
@@ -614,45 +935,117 @@ function CheckoutPage() {
 
   return (
     <AppShell>
-      <div className="px-5 pt-6">
+      {/* Order Placement Lottie Loader */}
+      <SmartLottieLoader
+        show={isPlacing}
+        delayMs={0}
+        mode="fullscreen"
+        size="xl"
+        message={`Placing your order with ${store?.name || "LocalShore"}...`}
+        subtext="Verifying item availability & assigning nearest delivery partner"
+      />
+
+      <div className="px-3 sm:px-5 pt-4 sm:pt-6">
         <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
           Checkout
         </p>
-        <h1 className="mt-1 font-display text-3xl">Almost there</h1>
+        <h1 className="mt-1 font-display text-2xl sm:text-3xl font-extrabold text-foreground">
+          Almost there
+        </h1>
       </div>
 
+      {/* Items in Order Summary Card */}
+      <section className="mx-3 sm:mx-5 mt-4 rounded-2xl bg-card p-3.5 sm:p-4 ring-1 ring-black/[0.05] shadow-xs">
+        <div className="flex items-center justify-between border-b hairline pb-3">
+          <div className="flex items-center gap-2">
+            <ShoppingBag className="h-4 w-4 text-primary" />
+            <h2 className="font-display text-sm sm:text-base font-bold text-foreground">
+              Items in Order ({totals.itemCount})
+            </h2>
+          </div>
+          <span className="text-xs font-mono font-bold text-primary">₹{totals.subtotal}</span>
+        </div>
+
+        <div className="mt-3 space-y-2.5 max-h-56 overflow-y-auto pr-1">
+          {cart.lines.map((item) => (
+            <div
+              key={item.productId}
+              className="flex items-center justify-between gap-3 text-xs py-1 border-b border-border/40 last:border-none"
+            >
+              <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                <div className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-purple-50 text-purple-900 font-bold text-xs border border-purple-200/60 shadow-2xs">
+                  {item.name[0]}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="font-semibold text-foreground truncate">{item.name}</p>
+                  <p className="text-[11px] text-muted-foreground font-mono">
+                    {item.unit} · Qty: {item.qty} × ₹{item.price}
+                  </p>
+                </div>
+              </div>
+              <span className="font-mono font-bold text-foreground shrink-0">
+                ₹{item.qty * item.price}
+              </span>
+            </div>
+          ))}
+        </div>
+      </section>
+
       {/* Delivery */}
-      <section className="mx-5 mt-4 rounded-xl bg-card p-4 ring-1 ring-black/[0.04]">
+      <section className="mx-3 sm:mx-5 mt-4 rounded-2xl bg-card p-3.5 sm:p-4 ring-1 ring-black/[0.04]">
         <div className="flex items-center justify-between">
-          <h2 className="font-display text-base">Delivery location</h2>
-          <button
-            onClick={toggleLiveLocation}
-            disabled={locStatus === "loading" && !isTracking}
-            className="inline-flex items-center gap-1.5 rounded-full border hairline px-2.5 py-1 text-[11px] font-medium hover:border-primary/40 disabled:opacity-60"
-          >
-            <Crosshair
-              className={`h-3 w-3 ${locStatus === "loading" || isTracking ? "animate-spin" : ""}`}
-            />
-            {isTracking ? "Stop live" : locStatus === "loading" ? "Locating…" : "Live location"}
-          </button>
+          <h2 className="font-display text-sm sm:text-base font-bold">Delivery location</h2>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={toggleLiveLocation}
+              disabled={locStatus === "loading" && !isTracking}
+              className="inline-flex items-center gap-1.5 rounded-full border hairline px-2.5 py-1 text-[11px] font-medium hover:border-primary/40 disabled:opacity-60"
+            >
+              <Crosshair
+                className={`h-3 w-3 ${locStatus === "loading" || isTracking ? "animate-spin" : ""}`}
+              />
+              {isTracking ? "Stop live" : locStatus === "loading" ? "Locating…" : "Live location"}
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowMap((prev) => !prev)}
+              className="inline-flex items-center gap-1.5 rounded-full bg-purple-50 hover:bg-purple-100 text-[#981495] border border-purple-200/80 px-2.5 py-1 text-[11px] font-bold transition-all cursor-pointer"
+            >
+              <span>{showMap ? "Hide map" : "🗺️ Show map"}</span>
+            </button>
+          </div>
         </div>
         <p className="mt-1 text-[11px] text-muted-foreground">
-          Use your location, or tap/drag the marigold pin when the map is available.
+          {showMap
+            ? "Tap or drag the pin on the map below to pinpoint your exact doorstep."
+            : "Select an address below or tap 'Show map' to pin your exact location."}
         </p>
-        <div className="mt-3">
-          <DeliveryMap
-            store={store ? { lat: store.lat, lng: store.lng, label: store.name } : undefined}
-            destination={pinCoords}
-            accuracyMeters={accuracyMeters}
-            interactive
-            onDestinationChange={updatePin}
-            height={200}
-          />
-        </div>
-        <p className="mt-2 font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
-          Pin · {pinCoords.lat.toFixed(4)}, {pinCoords.lng.toFixed(4)}
-          {typeof accuracyMeters === "number" ? ` · accuracy ±${Math.round(accuracyMeters)} m` : ""}
-        </p>
+        {showMap && (
+          <div className="mt-3">
+            <DeliveryMap
+              store={store ? { lat: store.lat, lng: store.lng, label: store.name } : undefined}
+              destination={pinCoords}
+              accuracyMeters={accuracyMeters}
+              interactive
+              onDestinationChange={updatePin}
+              height={200}
+            />
+            <p className="mt-2 font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+              Pin ·{" "}
+              {pinCoords
+                ? `${pinCoords.lat.toFixed(4)}, ${pinCoords.lng.toFixed(4)}`
+                : "unavailable"}
+              {typeof accuracyMeters === "number"
+                ? ` · accuracy ±${Math.round(accuracyMeters)} m`
+                : ""}
+            </p>
+          </div>
+        )}
+        {!pinConfirmed && (
+          <p className="mt-1 text-[11px] text-amber-700">
+            Previous pin is invalid until you confirm the delivery location again.
+          </p>
+        )}
         {locStatus === "ok" && (
           <p className="mt-1 text-[11px] text-primary">
             Location updated — address matched to the pin below.
@@ -685,7 +1078,12 @@ function CheckoutPage() {
                   <textarea
                     value={manualAddress}
                     onClick={(e) => e.stopPropagation()}
-                    onChange={(e) => { geocodeRevision.current++; setManualAddress(e.target.value); }}
+                    onChange={(e) => {
+                      setManualAddress(e.target.value);
+                      setCurrentAddress(e.target.value);
+                      stopLiveLocation();
+                      setConfirmedLocation("");
+                    }}
                     placeholder="Correct house, street, area or landmark"
                     rows={2}
                     className="mt-2 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground"
@@ -695,10 +1093,16 @@ function CheckoutPage() {
             </div>
           )}
           <label className="flex items-start gap-2 rounded-lg border p-3 text-sm">
-            <input type="checkbox" checked={confirmedLocation === locationSignature && pinAcquired}
-              disabled={!pinAcquired || !selectedAddressLine}
-              onChange={event => { stopLiveLocation(); setConfirmedLocation(event.target.checked ? locationSignature : ""); }} />
-            <span>I checked the map pin: it marks the delivery entrance for this address. { !pinAcquired && "Choose a pin or use precise location first." }</span>
+            <input
+              type="checkbox"
+              checked={canPlace}
+              disabled={!locationSignature}
+              onChange={(event) => {
+                stopLiveLocation();
+                setConfirmedLocation(event.target.checked ? locationSignature : "");
+              }}
+            />
+            <span>I checked the map pin: it marks the delivery entrance for this address.</span>
           </label>
           {savedAddresses.map((a) => (
             <label
@@ -735,12 +1139,26 @@ function CheckoutPage() {
                 className="mt-2 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
               />
               <p className="mt-2 font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
-                Uses current pin · {pinCoords.lat.toFixed(4)}, {pinCoords.lng.toFixed(4)}
+                Uses current pin ·{" "}
+                {pinCoords
+                  ? `${pinCoords.lat.toFixed(4)}, ${pinCoords.lng.toFixed(4)}`
+                  : "unavailable"}
               </p>
-              <label className="flex gap-2 text-sm mt-2">
-                <input type="checkbox" disabled={!pinAcquired || !newLine.trim()}
-                  checked={confirmedNewAddress === JSON.stringify([newLine.trim(), pinCoords.lat, pinCoords.lng])}
-                  onChange={event => { stopLiveLocation(); setConfirmedNewAddress(event.target.checked ? JSON.stringify([newLine.trim(), pinCoords.lat, pinCoords.lng]) : ""); }} />
+              <label className="mt-2 flex gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  disabled={!deliveryLocationSignature(newLine, pinCoords)}
+                  checked={
+                    !!confirmedNewAddress &&
+                    confirmedNewAddress === deliveryLocationSignature(newLine, pinCoords)
+                  }
+                  onChange={(event) => {
+                    stopLiveLocation();
+                    setConfirmedNewAddress(
+                      event.target.checked ? deliveryLocationSignature(newLine, pinCoords) : "",
+                    );
+                  }}
+                />
                 This pin matches the new address above.
               </label>
               <div className="mt-2 flex gap-2">
@@ -774,64 +1192,118 @@ function CheckoutPage() {
       </section>
 
       {/* Payment */}
-      <section className="mx-5 mt-4 rounded-xl bg-card p-4 ring-1 ring-black/[0.04]">
-        <h2 className="font-display text-base">Payment method</h2>
-        <div className="mt-3 grid grid-cols-3 gap-2 text-sm">
+      <section className="mx-3 sm:mx-5 mt-4 rounded-2xl bg-card p-3.5 sm:p-4 ring-1 ring-black/[0.04]">
+        <div className="flex items-center justify-between">
+          <h2 className="font-display text-sm sm:text-base font-bold">Payment method</h2>
+          <span className="text-[10px] font-extrabold uppercase tracking-wider text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+            Razorpay Test Mode Active ⚡
+          </span>
+        </div>
+        <div className="mt-3 grid grid-cols-2 sm:grid-cols-5 gap-2 text-sm">
           {[
-            { id: "upi" as const, label: "UPI" },
-            { id: "card" as const, label: "Card" },
-            { id: "cod" as const, label: "Cash" },
+            { id: "gpay" as const, label: "Google Pay (GPay)", badge: "Instant UPI", icon: "📱" },
+            {
+              id: "online" as const,
+              label: "Netbanking / Wallet",
+              badge: "Recommended",
+              icon: "🌐",
+            },
+            { id: "upi" as const, label: "UPI QR / ID", badge: "Scan & Pay", icon: "⚡" },
+            {
+              id: "card" as const,
+              label: "Debit & Credit Card",
+              badge: "Visa / RuPay",
+              icon: "💳",
+            },
+            { id: "cod" as const, label: "Cash on Delivery", badge: "Pay at Door", icon: "💵" },
           ].map((p) => (
             <m.button
               key={p.id}
+              type="button"
               onClick={() => setPay(p.id)}
-              className={`rounded-lg border py-2.5 font-medium transition-colors ${pay === p.id ? "border-primary bg-primary text-primary-foreground" : "hairline hover:border-primary/40"}`}
+              className={`relative rounded-xl border py-3 px-2.5 font-bold text-center text-xs transition-all cursor-pointer flex flex-col items-center justify-center gap-1 ${
+                pay === p.id
+                  ? "border-primary bg-primary text-primary-foreground shadow-sm ring-2 ring-primary/20"
+                  : "hairline hover:border-primary/40 bg-white text-foreground hover:bg-slate-50"
+              }`}
               whileHover={{ scale: 1.015 }}
               whileTap={{ scale: 0.975 }}
             >
-              {p.label}
+              <span className="text-base">{p.icon}</span>
+              <span className="leading-tight">{p.label}</span>
+              {p.badge && (
+                <span
+                  className={`absolute -top-2.5 left-1/2 -translate-x-1/2 text-[9px] font-black uppercase tracking-widest px-1.5 py-0.2 rounded-full shadow-2xs ${
+                    pay === p.id
+                      ? "bg-amber-400 text-slate-950"
+                      : "bg-emerald-100 text-emerald-800 border border-emerald-300"
+                  }`}
+                >
+                  {p.badge}
+                </span>
+              )}
             </m.button>
           ))}
         </div>
-        <p className="mt-3 text-[11px] text-muted-foreground">
-          UPI and Card use a demo checkout. They never mark the order as paid; real payment remains
-          pending until a verified provider confirms it.
+        <p className="mt-3 text-[11px] text-muted-foreground flex items-center gap-1.5">
+          <ShieldCheck className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
+          <span>
+            {pay === "cod"
+              ? "Pay with cash or UPI directly to delivery partner upon delivery."
+              : "Supports Google Pay, PhonePe, Paytm, BHIM, UPI ID/QR, Debit/Credit Cards & Net Banking via Razorpay."}
+          </span>
         </p>
       </section>
 
-      {/* Coupon */}
-      <section className="mx-5 mt-4 rounded-xl bg-card p-4 ring-1 ring-black/[0.04]">
-        <div className="flex items-center gap-2">
-          <TicketPercent className="h-4 w-4 text-primary" />
-          <h2 className="font-display text-base">Apply coupon</h2>
+      {/* Coupon & Promotions */}
+      <section className="mx-3 sm:mx-5 mt-4 rounded-2xl bg-card p-3.5 sm:p-4 ring-1 ring-black/[0.04] space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <TicketPercent className="h-4 w-4 text-primary" />
+            <h2 className="font-display text-sm sm:text-base font-bold">
+              Apply coupon &amp; offers
+            </h2>
+          </div>
+          {couponQuote && (
+            <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+              Coupon Active 🎉
+            </span>
+          )}
         </div>
+
         {couponQuote ? (
-          <div className="mt-3 flex items-center justify-between rounded-lg border border-primary/30 bg-primary/5 px-3 py-2.5">
+          <div className="flex items-center justify-between rounded-xl border border-emerald-300 bg-emerald-50/70 p-3">
             <div>
-              <p className="text-sm font-semibold">{couponQuote.code}</p>
-              <p className="text-xs text-primary">You save ₹{discountAmount}</p>
+              <p className="text-sm font-bold text-emerald-950 flex items-center gap-1.5">
+                <span>{couponQuote.code}</span>
+                <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+              </p>
+              <p className="text-xs text-emerald-700 font-medium">
+                You saved ₹{discountAmount} on this order!
+              </p>
             </div>
             <button
               type="button"
               onClick={() => {
                 setCouponQuote(null);
                 setCouponCode("");
+                toast.info("Coupon removed.");
               }}
-              className="rounded-md p-1.5 text-muted-foreground hover:bg-background hover:text-foreground"
+              className="rounded-lg border border-rose-200 bg-white px-2.5 py-1 text-xs font-semibold text-rose-600 hover:bg-rose-50 transition-colors"
               aria-label="Remove coupon"
             >
-              <X className="h-4 w-4" />
+              Remove
             </button>
           </div>
         ) : (
-          <div className="mt-3 flex gap-2">
+          <div className="flex gap-2">
             <input
               value={couponCode}
               onChange={(event) => setCouponCode(event.target.value.toUpperCase())}
               onKeyDown={(event) => {
                 if (event.key === "Enter") void applyCoupon();
               }}
-              placeholder="Enter coupon code"
+              placeholder="Enter code (e.g. LOCALSHORE50)"
               className="min-w-0 flex-1 rounded-lg border border-input bg-background px-3 py-2.5 text-sm uppercase"
               aria-label="Coupon code"
             />
@@ -839,49 +1311,141 @@ function CheckoutPage() {
               type="button"
               onClick={() => void applyCoupon()}
               disabled={isApplyingCoupon || !couponCode.trim()}
-              className="rounded-lg border border-primary px-4 py-2.5 text-sm font-semibold text-primary disabled:cursor-not-allowed disabled:opacity-50"
+              className="rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50 transition-colors"
             >
               {isApplyingCoupon ? "Applying…" : "Apply"}
             </button>
           </div>
         )}
+
+        {/* Available Coupons List */}
+        <div className="pt-2 border-t border-border">
+          <p className="text-xs font-bold text-foreground mb-2 flex items-center gap-1.5">
+            <Tag className="h-3.5 w-3.5 text-primary" />
+            Available Offers for You:
+          </p>
+          <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+            {AVAILABLE_COUPONS.map((c) => {
+              const isEligible = totals.subtotal >= c.minOrder;
+              const isApplied = couponQuote?.code === c.code;
+
+              return (
+                <div
+                  key={c.code}
+                  className={`flex items-center justify-between p-2.5 rounded-xl border text-xs transition-all ${
+                    isApplied
+                      ? "border-emerald-500 bg-emerald-50/50"
+                      : isEligible
+                        ? "border-border bg-card hover:border-primary/40"
+                        : "border-border/50 bg-muted/30 opacity-70"
+                  }`}
+                >
+                  <div className="flex-1 min-w-0 pr-2">
+                    <div className="flex items-center gap-1.5">
+                      <span className="font-mono font-bold text-primary">{c.code}</span>
+                      {c.badge && (
+                        <span className="text-[9px] font-extrabold uppercase tracking-widest bg-amber-100 text-amber-800 px-1.5 py-0.2 rounded">
+                          {c.badge}
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-[11px] text-muted-foreground truncate">{c.description}</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => void applyCoupon(c.code)}
+                    disabled={isApplyingCoupon || isApplied}
+                    className={`shrink-0 rounded-lg px-3 py-1 text-xs font-bold transition-all ${
+                      isApplied
+                        ? "bg-emerald-600 text-white cursor-default"
+                        : isEligible
+                          ? "border border-primary text-primary hover:bg-primary hover:text-primary-foreground"
+                          : "border border-muted text-muted-foreground cursor-not-allowed"
+                    }`}
+                  >
+                    {isApplied ? "Applied ✓" : "Apply"}
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        </div>
       </section>
 
       {/* Summary */}
-      <section className="mx-5 mt-4 rounded-xl bg-card p-4 ring-1 ring-black/[0.04] font-mono text-sm">
-        <div className="mb-2 flex items-center justify-between text-xs text-muted-foreground">
-          <span>{store?.name}</span>
+      <section className="mx-3 sm:mx-5 mt-4 mb-28 md:mb-6 rounded-2xl bg-card p-3.5 sm:p-4 ring-1 ring-black/[0.04] font-mono text-sm space-y-1.5">
+        <div className="mb-2 flex items-center justify-between text-xs text-muted-foreground font-sans">
+          <span className="font-bold text-foreground">{store?.name}</span>
           <span>
-            {store?.distanceKm?.toFixed(1) ?? "0"} km · ~{store?.etaMin ?? 25} min
+            {computedDistanceKm.toFixed(1)} km · ~{computedEtaMin} min
           </span>
         </div>
-        <Row label={`Items (${totals.itemCount})`} value={`₹${totals.subtotal}`} />
+        <Row label={`Item subtotal (${totals.itemCount})`} value={`₹${totals.subtotal}`} />
+        <Row label="Govt. Taxes & GST (5% incl.)" value={`₹${billBreakdown.gstAmount}`} />
         <Row
           label="Delivery fee"
           value={displayDeliveryFee === 0 ? "FREE" : `₹${displayDeliveryFee}`}
         />
-        {couponQuote && discountAmount > 0 && couponQuote.discount_type !== "free_shipping" && (
-          <Row label={`Coupon (${couponQuote.code})`} value={`−₹${discountAmount}`} />
+        <Row
+          label="Platform & packaging fee"
+          value={billBreakdown.platformFee === 0 ? "FREE" : `₹${billBreakdown.platformFee}`}
+        />
+        {couponQuote && discountAmount > 0 && (
+          <div className="flex items-center justify-between text-xs text-emerald-600 font-bold py-0.5">
+            <span>Coupon savings ({couponQuote.code})</span>
+            <span>−₹{discountAmount}</span>
+          </div>
         )}
         <div className="my-2 h-px bg-[color-mix(in_oklab,var(--teal)_20%,transparent)]" />
-        <Row label="Total" value={`₹${displayTotal}`} bold />
+        <Row label="Total Payable" value={`₹${displayTotal}`} bold />
       </section>
 
-      <div className="sticky bottom-16 z-30 mt-5 px-5">
-        <button
-          type="button"
-          onClick={openPaymentConfirmation}
-          disabled={!canPlace || isPlacing || isCheckingStock}
-          className="w-full rounded-xl bg-[var(--marigold)] py-3.5 font-display text-lg text-ink shadow-lg hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:brightness-100"
-        >
-          {isCheckingStock
-            ? "Checking availability…"
-            : isPlacing
-              ? "Placing order…"
-              : canPlace
-                ? `Place order · ₹${displayTotal}`
-                : "Add a delivery address"}
-        </button>
+      {/* Mobile & Desktop Fixed Checkout Action Bar */}
+      <div className="fixed bottom-[calc(3.5rem+env(safe-area-inset-bottom,0px))] left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200/90 p-3 shadow-[0_-8px_30px_rgba(0,0,0,0.12)] md:static md:bg-transparent md:border-none md:p-0 md:shadow-none md:mt-6 md:mx-5">
+        <div className="mx-auto max-w-[1600px] flex items-center justify-between gap-3">
+          <div className="md:hidden flex flex-col pl-1">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+              Total Payable
+            </span>
+            <div className="flex items-baseline gap-1">
+              <span className="font-display text-lg font-black text-purple-900 font-mono">
+                ₹{displayTotal}
+              </span>
+              {discountAmount > 0 && (
+                <span className="text-[10px] font-bold text-emerald-600">
+                  (Saved ₹{discountAmount})
+                </span>
+              )}
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={openPaymentConfirmation}
+            disabled={!canPlace || isPlacing || isCheckingStock}
+            className="flex-1 md:w-full rounded-xl bg-[var(--marigold)] py-3 px-4 font-display text-base sm:text-lg font-extrabold text-ink shadow-lg hover:brightness-105 active:scale-[0.98] transition-all disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:brightness-100 flex items-center justify-center gap-2 cursor-pointer"
+          >
+            {isCheckingStock ? (
+              <>
+                <Loader2 className="h-5 w-5 animate-spin" />
+                <span>Checking availability…</span>
+              </>
+            ) : isPlacing ? (
+              <>
+                <Loader2 className="h-5 w-5 animate-spin" />
+                <span>Placing order…</span>
+              </>
+            ) : canPlace ? (
+              <>
+                <span>Place order</span>
+                <span className="hidden md:inline">· ₹{displayTotal}</span>
+                <ArrowRight className="h-5 w-5" />
+              </>
+            ) : (
+              "Confirm Delivery Address"
+            )}
+          </button>
+        </div>
       </div>
 
       <AnimatePresence>
@@ -895,7 +1459,10 @@ function CheckoutPage() {
             aria-live="polite"
           >
             {/* Confetti particles */}
-            <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
+            <div
+              className="pointer-events-none absolute inset-0 overflow-hidden"
+              aria-hidden="true"
+            >
               {Array.from({ length: 28 }, (_, i) => {
                 const colors = [
                   "#10B981", // Emerald
@@ -948,19 +1515,27 @@ function CheckoutPage() {
               <div className="mt-5 rounded-2xl bg-muted/40 p-3.5 text-left ring-1 ring-black/[0.04]">
                 <div className="flex justify-between border-b pb-2 text-[11px]">
                   <span className="text-muted-foreground">Ref / Txn ID</span>
-                  <span className="font-mono font-medium text-foreground">{txnRef || "TXN-8492019"}</span>
+                  <span className="font-mono font-medium text-foreground">
+                    {txnRef || "TXN-8492019"}
+                  </span>
                 </div>
                 <div className="flex justify-between border-b py-2 text-[11px]">
                   <span className="text-muted-foreground">Order Code</span>
-                  <span className="font-mono font-semibold text-primary">#{placedOrder?.code || "LS-1024"}</span>
+                  <span className="font-mono font-semibold text-primary">
+                    #{placedOrder?.code || "LS-1024"}
+                  </span>
                 </div>
                 <div className="flex justify-between border-b py-2 text-[11px]">
                   <span className="text-muted-foreground">Shop</span>
-                  <span className="font-medium text-foreground">{placedOrder?.storeName || store?.name || "Local Shore shop"}</span>
+                  <span className="font-medium text-foreground">
+                    {placedOrder?.storeName || store?.name || "Local Shore shop"}
+                  </span>
                 </div>
                 <div className="flex justify-between pt-2 text-[11px]">
                   <span className="text-muted-foreground">Estimated Delivery</span>
-                  <span className="font-semibold text-emerald-600">~{placedOrder?.etaMin || store?.etaMin || 25} mins</span>
+                  <span className="font-semibold text-emerald-600">
+                    ~{placedOrder?.etaMin || computedEtaMin} mins
+                  </span>
                 </div>
               </div>
 
@@ -979,118 +1554,10 @@ function CheckoutPage() {
                   <ArrowRight className="h-4 w-4" />
                 </button>
                 <p className="mt-2 text-[11px] text-muted-foreground">
-                  Auto-redirecting in <span className="font-bold text-foreground">{countdown}s</span>...
+                  Auto-redirecting in{" "}
+                  <span className="font-bold text-foreground">{countdown}s</span>...
                 </p>
               </div>
-            </m.div>
-          </m.div>
-        )}
-      </AnimatePresence>
-
-      <AnimatePresence>
-        {showDemoPayment && (
-          <m.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[80] grid place-items-center bg-black/60 px-5 backdrop-blur-md"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="demo-payment-title"
-            onMouseDown={(event) => {
-              if (event.currentTarget === event.target && !isPlacing) setShowDemoPayment(false);
-            }}
-          >
-            <m.div
-              initial={{ opacity: 0, scale: 0.94, y: 16 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.96, y: 8 }}
-              transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
-              className="w-full max-w-md overflow-hidden rounded-2xl bg-card p-6 shadow-2xl ring-1 ring-black/[0.08]"
-            >
-              <div className="flex items-center justify-between border-b pb-4">
-                <div className="flex items-center gap-2.5">
-                  <div className="grid h-10 w-10 place-items-center rounded-xl bg-primary/10 text-primary">
-                    {pay === "upi" ? (
-                      <Smartphone className="h-5 w-5" />
-                    ) : pay === "card" ? (
-                      <CreditCard className="h-5 w-5" />
-                    ) : (
-                      <Banknote className="h-5 w-5" />
-                    )}
-                  </div>
-                  <div>
-                    <h2 id="demo-payment-title" className="font-display text-lg font-semibold">
-                      {pay === "upi"
-                        ? "UPI Instant Payment"
-                        : pay === "card"
-                          ? "Card Authorization"
-                          : "Cash on Delivery"}
-                    </h2>
-                    <p className="text-[11px] text-muted-foreground flex items-center gap-1">
-                      <ShieldCheck className="h-3.5 w-3.5 text-emerald-600" />
-                      256-bit SSL Secure Checkout
-                    </p>
-                  </div>
-                </div>
-                {!isPlacing && (
-                  <button
-                    onClick={() => setShowDemoPayment(false)}
-                    className="rounded-full p-1.5 text-muted-foreground hover:bg-muted"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
-                )}
-              </div>
-
-              {/* Order amount breakdown */}
-              <div className="my-5 rounded-xl bg-muted/40 p-4 ring-1 ring-black/[0.04]">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-muted-foreground">Paying to</span>
-                  <span className="text-xs font-semibold">{store?.name || placedOrder?.storeName || "Local Shore shop"}</span>
-                </div>
-                <div className="mt-2 flex items-baseline justify-between">
-                  <span className="text-sm font-medium">Total Payable</span>
-                  <span className="font-display text-2xl font-bold text-primary">
-                    ₹{displayTotal}
-                  </span>
-                </div>
-              </div>
-
-              {/* Step state */}
-              {paymentStep === "authorizing" ? (
-                <div className="py-6 text-center">
-                  <div className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-emerald-500/10 text-emerald-600">
-                    <Loader2 className="h-7 w-7 animate-spin" />
-                  </div>
-                  <h3 className="mt-3 font-display text-base font-semibold">
-                    Authorizing Payment...
-                  </h3>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    Verifying transaction details with your provider
-                  </p>
-                </div>
-              ) : (
-                <div className="flex items-center justify-end gap-3 pt-2">
-                  <button
-                    type="button"
-                    onClick={() => setShowDemoPayment(false)}
-                    disabled={isPlacing}
-                    className="rounded-xl border hairline px-4 py-2.5 text-sm font-medium hover:bg-muted"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => void placeOrder()}
-                    disabled={isPlacing}
-                    className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground shadow-md hover:brightness-110 disabled:opacity-60"
-                  >
-                    <ShieldCheck className="h-4 w-4" />
-                    {pay === "cod" ? "Confirm Order" : `Pay ₹${displayTotal}`}
-                  </button>
-                </div>
-              )}
             </m.div>
           </m.div>
         )}

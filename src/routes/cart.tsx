@@ -1,10 +1,13 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useMemo } from "react";
+import { useEffect, useState } from "react";
 import { AppShell } from "@/components/app-shell";
 import { cartStore, useCart, cartTotals } from "@/lib/cart-store";
 import { QtyStepper } from "@/components/qty-stepper";
 import { getStore, APPROVED_STORE } from "@/lib/mock-data";
 import { useAuth } from "@/lib/auth-store";
+import { useDeliveryLocation } from "@/lib/location-store";
+import { isValidCoordinate, haversineDistanceKm } from "@/lib/geo";
+import { AVAILABLE_COUPONS, calculateBillBreakdown } from "@/lib/coupons";
 import {
   ArrowRight,
   Check,
@@ -18,6 +21,7 @@ import {
   Sparkles,
   Star,
   Tag,
+  TicketPercent,
   Trash2,
   Truck,
   Zap,
@@ -48,6 +52,10 @@ function CartPage() {
   const navigate = useNavigate();
   const isSignedIn = !!(auth.phone || auth.email);
 
+  const [deliveryLoc] = useDeliveryLocation();
+  const locLat = deliveryLoc?.lat ?? 11.0285;
+  const locLng = deliveryLoc?.lng ?? 76.9258;
+
   const knownStore =
     cart.storeId === APPROVED_STORE.id
       ? APPROVED_STORE
@@ -60,14 +68,52 @@ function CartPage() {
       ? { ...APPROVED_STORE, id: cart.storeId, name: cart.storeName ?? "Local Shore shop" }
       : null);
 
-  const deliveryFee =
-    totals.subtotal > 0 ? (store ? Math.round(20 + store.distanceKm * 6) : 25) : 0;
+  const computedDistanceKm =
+    store &&
+    typeof store.lat === "number" &&
+    typeof store.lng === "number" &&
+    isValidCoordinate(store.lat, store.lng) &&
+    deliveryLoc &&
+    typeof deliveryLoc.lat === "number" &&
+    typeof deliveryLoc.lng === "number" &&
+    isValidCoordinate(deliveryLoc.lat, deliveryLoc.lng)
+      ? Math.max(
+          0.1,
+          Math.round(
+            haversineDistanceKm(store.lat, store.lng, locLat, locLng) * 10,
+          ) / 10,
+        )
+      : (store?.distanceKm ?? 1.2);
+
+  const computedEtaMin =
+    store &&
+    typeof store.lat === "number" &&
+    typeof store.lng === "number" &&
+    isValidCoordinate(store.lat, store.lng) &&
+    deliveryLoc &&
+    typeof deliveryLoc.lat === "number" &&
+    typeof deliveryLoc.lng === "number" &&
+    isValidCoordinate(deliveryLoc.lat, deliveryLoc.lng)
+      ? Math.max(10, Math.round(computedDistanceKm * 5 + 10))
+      : (store?.etaMin ?? 25);
+
+  const rawDeliveryFee =
+    totals.subtotal > 0 ? (store ? Math.round(20 + computedDistanceKm * 6) : 25) : 0;
   const freeDeliveryTarget = 500;
   const freeDeliveryRemaining = Math.max(0, freeDeliveryTarget - totals.subtotal);
-  const freeDeliveryProgress = Math.min(100, Math.round((totals.subtotal / freeDeliveryTarget) * 100));
-  const isFreeDelivery = freeDeliveryRemaining === 0;
-  const effectiveDelivery = isFreeDelivery ? 0 : deliveryFee;
-  const total = totals.subtotal + effectiveDelivery;
+  const freeDeliveryProgress = Math.min(
+    100,
+    Math.round((totals.subtotal / freeDeliveryTarget) * 100),
+  );
+
+  const billBreakdown = calculateBillBreakdown({
+    subtotal: totals.subtotal,
+    rawDeliveryFee,
+  });
+
+  const isFreeDelivery = billBreakdown.isFreeDelivery;
+  const effectiveDelivery = billBreakdown.deliveryFee;
+  const total = billBreakdown.total;
 
   // Filter out suggestions that are already in cart
   const cartIds = new Set(cart.lines.map((l) => l.productId));
@@ -118,11 +164,11 @@ function CartPage() {
         <div className="mx-auto flex max-w-6xl items-center gap-8 overflow-x-auto px-5 py-2.5 text-[11px] font-semibold text-muted-foreground md:px-8 [scrollbar-width:none]">
           <span className="inline-flex shrink-0 items-center gap-1.5">
             <MapPin className="h-3.5 w-3.5 text-primary" />
-            Delivering to Pappampatti Pirivu, Coimbatore
+            Delivering to {deliveryLoc?.area || deliveryLoc?.label || "Select your location"}
           </span>
           <span className="inline-flex shrink-0 items-center gap-1.5">
             <Zap className="h-3.5 w-3.5 text-primary" />
-            20–40 min delivery
+            ~{computedEtaMin} min delivery
           </span>
           <span className="inline-flex shrink-0 items-center gap-1.5">
             <ShieldCheck className="h-3.5 w-3.5 text-primary" />
@@ -158,7 +204,7 @@ function CartPage() {
             </Link>
           </m.div>
         ) : (
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-[1fr_340px] pb-28 md:pb-0">
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-[1fr_340px] pb-44 md:pb-0">
             {/* ── LEFT COLUMN ─────────────────────────────────── */}
             <div className="space-y-4">
               {/* Store info card */}
@@ -172,7 +218,7 @@ function CartPage() {
                       <p className="text-[11px] font-medium text-muted-foreground">Ordering from</p>
                       <p className="truncate font-bold text-foreground">{store.name}</p>
                       <p className="text-xs text-muted-foreground">
-                        {store.distanceKm.toFixed(1)} km · est. {store.etaMin} min
+                        {computedDistanceKm.toFixed(1)} km · est. {computedEtaMin} min
                       </p>
                     </div>
                     <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-emerald-50 border border-emerald-200 px-2.5 py-1 text-[11px] font-semibold text-emerald-700">
@@ -208,7 +254,9 @@ function CartPage() {
 
                       {/* Product info */}
                       <div className="flex-1 min-w-0">
-                        <p className="font-semibold text-sm text-foreground line-clamp-1">{l.name}</p>
+                        <p className="font-semibold text-sm text-foreground line-clamp-1">
+                          {l.name}
+                        </p>
                         <p className="text-xs text-muted-foreground mt-0.5">
                           {l.unit} · ₹{l.price} each
                         </p>
@@ -257,7 +305,7 @@ function CartPage() {
                 </div>
               </div>
 
-              {/* ── MOBILE ONLY: Quick Price Summary right after Cart ── */}
+              {/* ── MOBILE ONLY: Detailed Bill Breakdown ── */}
               <div className="block md:hidden rounded-2xl border border-border bg-card p-4 shadow-sm space-y-3">
                 <div className="flex items-center justify-between">
                   <p className="text-sm font-bold text-foreground">Bill Details</p>
@@ -277,13 +325,29 @@ function CartPage() {
                     <span className="font-semibold text-foreground">₹{totals.subtotal}</span>
                   </div>
                   <div className="flex justify-between text-muted-foreground">
+                    <span>Govt. Taxes &amp; GST (5% incl.)</span>
+                    <span className="font-semibold text-foreground">₹{billBreakdown.gstAmount}</span>
+                  </div>
+                  <div className="flex justify-between text-muted-foreground">
                     <span>Delivery fee</span>
-                    <span className={isFreeDelivery ? "font-semibold text-emerald-600" : "font-semibold text-foreground"}>
-                      {isFreeDelivery ? "FREE" : `₹${deliveryFee}`}
+                    <span
+                      className={
+                        isFreeDelivery
+                          ? "font-semibold text-emerald-600"
+                          : "font-semibold text-foreground"
+                      }
+                    >
+                      {isFreeDelivery ? "FREE" : `₹${billBreakdown.deliveryFee}`}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-muted-foreground">
+                    <span>Platform &amp; Packaging Fee</span>
+                    <span className="font-semibold text-foreground">
+                      {billBreakdown.platformFee === 0 ? "FREE" : `₹${billBreakdown.platformFee}`}
                     </span>
                   </div>
                   <div className="border-t border-border pt-2 flex justify-between text-sm font-bold text-foreground">
-                    <span>To Pay</span>
+                    <span>Total Amount</span>
                     <span>₹{total}</span>
                   </div>
                 </div>
@@ -336,17 +400,38 @@ function CartPage() {
               {/* ── Trust badges strip ──────────────────────── */}
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                 {[
-                  { icon: <Truck className="h-4 w-4 text-primary" />, title: "Fast local delivery", sub: "20–40 mins" },
-                  { icon: <Package className="h-4 w-4 text-primary" />, title: "Freshly packed", sub: "by local shops" },
-                  { icon: <ShieldCheck className="h-4 w-4 text-primary" />, title: "Secure checkout", sub: "100% safe" },
-                  { icon: <RotateCcw className="h-4 w-4 text-primary" />, title: "Easy returns", sub: "Hassle-free" },
+                  {
+                    icon: <Truck className="h-4 w-4 text-primary" />,
+                    title: "Fast local delivery",
+                    sub: "20–40 mins",
+                  },
+                  {
+                    icon: <Package className="h-4 w-4 text-primary" />,
+                    title: "Freshly packed",
+                    sub: "by local shops",
+                  },
+                  {
+                    icon: <ShieldCheck className="h-4 w-4 text-primary" />,
+                    title: "Secure checkout",
+                    sub: "100% safe",
+                  },
+                  {
+                    icon: <RotateCcw className="h-4 w-4 text-primary" />,
+                    title: "Easy returns",
+                    sub: "Hassle-free",
+                  },
                 ].map((b) => (
-                  <div key={b.title} className="flex items-center gap-2.5 rounded-xl border border-border bg-card p-3">
+                  <div
+                    key={b.title}
+                    className="flex items-center gap-2.5 rounded-xl border border-border bg-card p-3"
+                  >
                     <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10">
                       {b.icon}
                     </div>
                     <div>
-                      <p className="text-[11px] font-bold text-foreground leading-tight">{b.title}</p>
+                      <p className="text-[11px] font-bold text-foreground leading-tight">
+                        {b.title}
+                      </p>
                       <p className="text-[10px] text-muted-foreground">{b.sub}</p>
                     </div>
                   </div>
@@ -356,7 +441,8 @@ function CartPage() {
               {/* ── Social proof ────────────────────────────── */}
               <div className="rounded-2xl border border-border bg-card px-4 py-3 text-center">
                 <p className="text-xs font-semibold text-muted-foreground">
-                  Loved by <span className="text-foreground font-bold">10,000+</span> customers in Coimbatore ❤️
+                  Loved by <span className="text-foreground font-bold">10,000+</span> customers in
+                  Coimbatore ❤️
                 </p>
                 <div className="mt-2 flex items-center justify-center gap-6 text-xs">
                   <span className="flex items-center gap-1.5 border-r border-border pr-6">
@@ -410,46 +496,55 @@ function CartPage() {
               </div>
 
               {/* Savings callout */}
-              {deliveryFee > 0 && (
+              {effectiveDelivery > 0 && (
                 <div className="flex items-center justify-between gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-3">
                   <div>
                     <p className="text-xs font-bold text-amber-800">
-                      Yay! You're saving ₹{Math.round(deliveryFee * 0.3)} on delivery 🎉
+                      Yay! You're saving ₹{Math.round(effectiveDelivery * 0.3)} on delivery 🎉
                     </p>
-                    <p className="text-[11px] text-amber-600">Add more items to get FREE delivery!</p>
+                    <p className="text-[11px] text-amber-600">
+                      Add more items to get FREE delivery!
+                    </p>
                   </div>
                   <span className="text-2xl shrink-0">🛵</span>
                 </div>
               )}
 
               {/* Price details */}
-              <div className="rounded-2xl border border-border bg-card p-4 shadow-sm">
+              <div className="rounded-2xl border border-border bg-card p-4 shadow-sm space-y-3">
                 <div className="flex items-center justify-between">
                   <p className="text-sm font-bold text-foreground">Price Details</p>
-                  <button className="text-[11px] font-semibold text-primary hover:underline">
-                    View savings
-                  </button>
+                  <span className="text-[11px] font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                    Offers Available
+                  </span>
                 </div>
-                <div className="mt-3 space-y-2.5">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Item subtotal</span>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between text-muted-foreground">
+                    <span>Item subtotal</span>
                     <span className="font-medium text-foreground">₹{totals.subtotal}</span>
                   </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="flex items-center gap-1 text-muted-foreground">
-                      Delivery fee
-                      <span className="flex h-3.5 w-3.5 cursor-help items-center justify-center rounded-full border border-slate-300 text-[8px] font-bold text-slate-400">
-                        i
-                      </span>
+                  <div className="flex justify-between text-muted-foreground text-xs">
+                    <span>Govt. Taxes &amp; GST (5% incl.)</span>
+                    <span className="font-medium text-foreground">₹{billBreakdown.gstAmount}</span>
+                  </div>
+                  <div className="flex justify-between text-muted-foreground text-xs">
+                    <span>Delivery Fee</span>
+                    <span
+                      className={`font-medium ${isFreeDelivery ? "text-emerald-600 font-bold" : "text-foreground"}`}
+                    >
+                      {isFreeDelivery ? "FREE" : `₹${billBreakdown.deliveryFee}`}
                     </span>
-                    <span className={`font-medium ${isFreeDelivery ? "text-emerald-600" : "text-foreground"}`}>
-                      {isFreeDelivery ? "FREE" : `₹${deliveryFee}`}
+                  </div>
+                  <div className="flex justify-between text-muted-foreground text-xs">
+                    <span>Platform &amp; Packaging Fee</span>
+                    <span className="font-medium text-foreground">
+                      {billBreakdown.platformFee === 0 ? "FREE" : `₹${billBreakdown.platformFee}`}
                     </span>
                   </div>
                   <div className="my-1 border-t border-border" />
-                  <div className="flex justify-between">
-                    <span className="font-bold text-foreground">Total</span>
-                    <span className="font-bold text-lg text-foreground">₹{total}</span>
+                  <div className="flex justify-between items-baseline">
+                    <span className="font-bold text-foreground">Total Payable</span>
+                    <span className="font-bold text-xl text-foreground">₹{total}</span>
                   </div>
                 </div>
 
@@ -487,7 +582,9 @@ function CartPage() {
                 <div className="mt-3 flex items-center gap-2.5 rounded-xl border border-border bg-muted/40 p-3">
                   <ShieldCheck className="h-5 w-5 shrink-0 text-slate-400" />
                   <div>
-                    <p className="text-[11px] font-bold text-foreground">Safe &amp; Secure Payments</p>
+                    <p className="text-[11px] font-bold text-foreground">
+                      Safe &amp; Secure Payments
+                    </p>
                     <p className="text-[10px] text-muted-foreground">
                       Your payment information is 100% secure
                     </p>
@@ -500,7 +597,7 @@ function CartPage() {
 
         {/* ── STICKY BOTTOM BAR FOR MOBILE ───────────────────────── */}
         {cart.lines.length > 0 && (
-          <div className="fixed bottom-0 inset-x-0 z-40 border-t border-border bg-card/95 p-3.5 shadow-[0_-4px_25px_rgba(0,0,0,0.12)] backdrop-blur-md md:hidden">
+          <div className="fixed bottom-[calc(3.5rem+env(safe-area-inset-bottom,0px))] inset-x-0 z-50 border-t border-border bg-card/95 p-3.5 shadow-[0_-4px_25px_rgba(0,0,0,0.12)] backdrop-blur-md md:hidden">
             <div className="flex items-center justify-between gap-3 max-w-md mx-auto">
               <div className="flex flex-col">
                 <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">

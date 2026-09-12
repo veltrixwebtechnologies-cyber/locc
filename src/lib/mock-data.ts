@@ -13,7 +13,30 @@ export type StoreCategory =
   | "fashion_accessories"
   | "bakery"
   | "grocery"
-  | "restaurants";
+  | "restaurants"
+  | "supermarkets"
+  | "sweet_shops"
+  | "cafes"
+  | "fruits_veg"
+  | "fashion"
+  | "footwear"
+  | "jewellery"
+  | "electronics"
+  | "mobile"
+  | "books_stationery"
+  | "beauty"
+  | "home_kitchen"
+  | "furniture"
+  | "hardware"
+  | "sports"
+  | "toys"
+  | "gifts"
+  | "flowers"
+  | "pet_shops"
+  | "pooja"
+  | "auto"
+  | "repair"
+  | "local_services";
 
 export interface Store {
   id: string;
@@ -38,7 +61,8 @@ export interface DeliveryCategory {
 }
 
 const catImg = (id: string) => `https://images.unsplash.com/${id}?auto=format&fit=crop&w=300&q=75`;
-const storeImg = (id: string) => `https://images.unsplash.com/${id}?auto=format&fit=crop&w=800&q=75`;
+const storeImg = (id: string) =>
+  `https://images.unsplash.com/${id}?auto=format&fit=crop&w=800&q=75`;
 const img = (id: string) => `https://images.unsplash.com/${id}?auto=format&fit=crop&w=300&q=75`;
 
 export const APPROVED_STORE: Store = {
@@ -51,8 +75,8 @@ export const APPROVED_STORE: Store = {
   isOpen: true,
   etaMin: 30,
   address: "Available from approved local vendors",
-  lat: 9.9816,
-  lng: 76.2999,
+  lat: 11.0028,
+  lng: 77.0865,
   imageUrl: catImg("photo-1542838132-92c53300491e"),
 };
 
@@ -142,7 +166,7 @@ export interface Product {
   stock?: number;
 }
 
-export const categoryColor: Record<StoreCategory, string> = {
+export const categoryColor: Partial<Record<StoreCategory, string>> = {
   showrooms: "#4F46E5",
   boutiques: "#DB2777",
   fast_fashion: "#7C3AED",
@@ -160,7 +184,7 @@ export const categoryColor: Record<StoreCategory, string> = {
   restaurants: "#E11D48",
 };
 
-export const categoryLabel: Record<StoreCategory, string> = {
+export const categoryLabel: Partial<Record<StoreCategory, string>> = {
   showrooms: "Showrooms",
   boutiques: "Designer Boutiques",
   fast_fashion: "Fast Fashion (Branded)",
@@ -189,8 +213,8 @@ const legacyStores: Store[] = [
     isOpen: true,
     etaMin: 15,
     address: "Main Road, Pappampatti Pirivu, Coimbatore",
-    lat: 10.9990,
-    lng: 76.9740,
+    lat: 10.999,
+    lng: 76.974,
     imageUrl: storeImg("photo-1509440159596-0249088772ff"),
   },
   {
@@ -204,7 +228,7 @@ const legacyStores: Store[] = [
     etaMin: 18,
     address: "Pappampatti Pirivu Bus Stop, Coimbatore",
     lat: 10.9985,
-    lng: 76.9730,
+    lng: 76.973,
     imageUrl: storeImg("photo-1604719312566-8912e9227c6a"),
   },
   // ── 0. Swiggy Featured Restaurants & Bakes ──────────────────────────────────────
@@ -232,8 +256,8 @@ const legacyStores: Store[] = [
     isOpen: true,
     etaMin: 22,
     address: "Race Course Road, Coimbatore",
-    lat: 10.9980,
-    lng: 76.9710,
+    lat: 10.998,
+    lng: 76.971,
     imageUrl: storeImg("photo-1568901346375-23c9450c58cd"),
   },
   // ── 1. Fresh Stalls & Bakes ────────────────────────────────────────────────────────────
@@ -262,7 +286,7 @@ const legacyStores: Store[] = [
     etaMin: 18,
     address: "12, Trichy Road, Pappampatti Pirivu, Coimbatore",
     lat: 11.0027,
-    lng: 77.0860,
+    lng: 77.086,
     imageUrl: storeImg("photo-1604719312566-8912e9227c6a"),
   },
   {
@@ -552,7 +576,7 @@ const legacyStores: Store[] = [
     etaMin: 22,
     address: "Near SBI ATM, Pappampatti Pirivu, Coimbatore",
     lat: 11.0031,
-    lng: 77.0860,
+    lng: 77.086,
     imageUrl: storeImg("photo-1441986300917-64674bd600d8"),
   },
   {
@@ -580,7 +604,7 @@ const legacyStores: Store[] = [
     etaMin: 32,
     address: "Commercial Hub, Singanallur Junction, Coimbatore",
     lat: 10.9975,
-    lng: 77.0270,
+    lng: 77.027,
     imageUrl: storeImg("photo-1617137984095-74e4e5e3613f"),
   },
   {
@@ -593,8 +617,8 @@ const legacyStores: Store[] = [
     isOpen: true,
     etaMin: 37,
     address: "Main Market, Ondipudur Hub, Coimbatore",
-    lat: 10.9930,
-    lng: 77.0510,
+    lat: 10.993,
+    lng: 77.051,
     imageUrl: storeImg("photo-1441986300917-64674bd600d8"),
   },
 
@@ -757,7 +781,7 @@ const legacyStores: Store[] = [
     address: "63, Vessels Bazaar Road, Pappampatti Pirivu, Coimbatore",
     lat: 11.0032,
     lng: 77.0841,
-    imageUrl: storeImg("photo-1556911220-e15b29be8c8f"),
+    imageUrl: storeImg("photo-1556909114-f6e7ad7d3136"),
   },
   {
     id: "s_kitch2",
@@ -771,7 +795,7 @@ const legacyStores: Store[] = [
     address: "Bus Stand Road, Singanallur Junction, Coimbatore",
     lat: 10.9981,
     lng: 77.0238,
-    imageUrl: storeImg("photo-1584990347449-716c15a3a17a"),
+    imageUrl: storeImg("photo-1584269600464-37b1b58a9fe7"),
   },
   {
     id: "s_kitch3",
@@ -785,7 +809,7 @@ const legacyStores: Store[] = [
     address: "Bazaar Street, Ondipudur Hub, Coimbatore",
     lat: 10.9902,
     lng: 77.0518,
-    imageUrl: storeImg("photo-1556911220-e15b29be8c8f"),
+    imageUrl: storeImg("photo-1556909114-f6e7ad7d3136"),
   },
 
   // ── 11. Home Decor ────────────────────────────────────────────────────────
@@ -828,7 +852,7 @@ const legacyStores: Store[] = [
     etaMin: 40,
     address: "Greenway Road, Ondipudur Hub, Coimbatore",
     lat: 10.9919,
-    lng: 77.0530,
+    lng: 77.053,
     imageUrl: storeImg("photo-1584100936595-c0654b55a2e2"),
   },
 
@@ -871,8 +895,8 @@ const legacyStores: Store[] = [
     isOpen: true,
     etaMin: 32,
     address: "High Street, Singanallur Junction, Coimbatore",
-    lat: 10.9970,
-    lng: 77.0260,
+    lat: 10.997,
+    lng: 77.026,
     imageUrl: storeImg("photo-1549465220-1a8b9238cd48"),
   },
   {
@@ -929,7 +953,7 @@ const legacyStores: Store[] = [
     isOpen: true,
     etaMin: 40,
     address: "Trichy Road, Ondipudur Hub, Coimbatore",
-    lat: 10.9910,
+    lat: 10.991,
     lng: 77.0532,
     imageUrl: storeImg("photo-1509440159596-0249088772ff"),
   },
@@ -987,15 +1011,156 @@ const legacyStores: Store[] = [
     isOpen: true,
     etaMin: 25,
     address: "15, Fancy Bazaar, Pappampatti Pirivu, Coimbatore",
-    lat: 11.0050,
-    lng: 77.0880,
+    lat: 11.005,
+    lng: 77.088,
     imageUrl: storeImg("photo-1513519245088-0e12902e5a38"),
   },
 ];
 
-// Curated LocalShoree starter catalog: original neighborhood shops beyond groceries,
-// each with products generated from its category below.
-export const stores: Store[] = [
+export const kovilmeduStores: Store[] = [
+  {
+    id: "s_kovil_bakes",
+    name: "Roja Bakes & Sweets (கோவில்மேடு)",
+    category: "bakery",
+    tagline: "Oven fresh bread, Roja special Mysurpa, chicken puffs & evening snacks",
+    distanceKm: 0.3,
+    rating: 4.9,
+    isOpen: true,
+    etaMin: 15,
+    address: "Thadagam Main Road, Kovilmedu, Coimbatore",
+    lat: 11.0288,
+    lng: 76.9260,
+    imageUrl: storeImg("photo-1509440159596-0249088772ff"),
+  },
+  {
+    id: "s_kovil_mart",
+    name: "Kovilmedu Supermarket & Kirana",
+    category: "grocery",
+    tagline: "Daily fresh groceries, staples, cooking oil, snacks & household ration",
+    distanceKm: 0.4,
+    rating: 4.8,
+    isOpen: true,
+    etaMin: 18,
+    address: "Opp. Kovilmedu Arch, Thadagam Road, Coimbatore",
+    lat: 11.0282,
+    lng: 76.9254,
+    imageUrl: storeImg("photo-1604719312566-8912e9227c6a"),
+  },
+  {
+    id: "s_kovil_pala",
+    name: "Kovilmedu Organic Palamuthir Nilayam (பழமுதிர்)",
+    category: "palamuthir",
+    tagline: "Daily fresh organic fruits, tender coconut, hill banana & farm veggies",
+    distanceKm: 0.5,
+    rating: 4.9,
+    isOpen: true,
+    etaMin: 18,
+    address: "Thadagam Road, Near Bus Stop, Kovilmedu, Coimbatore",
+    lat: 11.0291,
+    lng: 76.9265,
+    imageUrl: storeImg("photo-1610832958506-aa56368176cf"),
+  },
+  {
+    id: "s_kovil_flour",
+    name: "Sri Amman Flour & Masala Mill (கோவில்மேடு ஆலை)",
+    category: "flour_mill",
+    tagline: "Fresh Idli/Dosa batter, milled wheat & freshly ground sambar masala",
+    distanceKm: 0.3,
+    rating: 4.9,
+    isOpen: true,
+    etaMin: 15,
+    address: "Temple Street, Kovilmedu, Coimbatore",
+    lat: 11.0278,
+    lng: 76.9250,
+    imageUrl: storeImg("photo-1586201375761-83865001e31c"),
+  },
+  {
+    id: "s_kovil_meat",
+    name: "Kongu Country Mutton & Chicken Stall (கோவில்மேடு)",
+    category: "meat_fish",
+    tagline: "Fresh tender Mutton, Nattu Kozhi (Country Chicken) & farm eggs",
+    distanceKm: 0.6,
+    rating: 4.8,
+    isOpen: true,
+    etaMin: 20,
+    address: "Thadagam Main Road, Kovilmedu, Coimbatore",
+    lat: 11.0295,
+    lng: 76.9270,
+    imageUrl: storeImg("photo-1607623814075-e51df1bdc82f"),
+  },
+  {
+    id: "s_kovil_pharm",
+    name: "Kovilmedu Care Medicals & Chemist",
+    category: "pharmacy",
+    tagline: "24/7 chemist, surgicals, OTC medicines & baby care",
+    distanceKm: 0.2,
+    rating: 4.8,
+    isOpen: true,
+    etaMin: 12,
+    address: "Junction Arch, Kovilmedu, Coimbatore",
+    lat: 11.0286,
+    lng: 76.9256,
+    imageUrl: storeImg("photo-1587854692152-cbe660dbde88"),
+  },
+  {
+    id: "s_kovil_jewel",
+    name: "Meenakshi Fashion Jewellery & Gift Corner (கோவில்மேடு)",
+    category: "fashion_accessories",
+    tagline: "Gold-plated chains, Kammal/Earrings, Thodu, Bangles & Gifts",
+    distanceKm: 0.5,
+    rating: 4.9,
+    isOpen: true,
+    etaMin: 22,
+    address: "Bazaar Street, Kovilmedu, Coimbatore",
+    lat: 11.0280,
+    lng: 76.9262,
+    imageUrl: storeImg("photo-1535632066927-ab7c9ab60908"),
+  },
+  {
+    id: "s_kovil_appliances",
+    name: "Sri Murugan Kitchen Appliances (பாத்திரம்)",
+    category: "kitchen_appliances",
+    tagline: "Stainless steel utensils, mixer grinders & pressure cookers",
+    distanceKm: 0.7,
+    rating: 4.7,
+    isOpen: true,
+    etaMin: 25,
+    address: "Thadagam Road, Kovilmedu, Coimbatore",
+    lat: 11.0275,
+    lng: 76.9245,
+    imageUrl: storeImg("photo-1556911220-e15b29be8c8f"),
+  },
+  {
+    id: "s_kovil_fashion",
+    name: "Kovilmedu Readymades & Menswear",
+    category: "individual_fashion",
+    tagline: "Quality cotton shirts, dhotis, pants & casual wear",
+    distanceKm: 0.6,
+    rating: 4.7,
+    isOpen: true,
+    etaMin: 22,
+    address: "Main Road, Kovilmedu, Coimbatore",
+    lat: 11.0298,
+    lng: 76.9261,
+    imageUrl: storeImg("photo-1441986300917-64674bd600d8"),
+  },
+  {
+    id: "s_kovil_boutique",
+    name: "Vasantham Boutique & Tailoring Studio (கோவில்மேடு)",
+    category: "boutiques",
+    tagline: "Handloom silk sarees, Aari embroidery work & designer kurtis",
+    distanceKm: 0.8,
+    rating: 4.9,
+    isOpen: true,
+    etaMin: 25,
+    address: "Thadagam Road, Kovilmedu, Coimbatore",
+    lat: 11.0302,
+    lng: 76.9275,
+    imageUrl: storeImg("photo-1558769132-cb1aea458c5e"),
+  },
+];
+
+const starterStores: Store[] = [
   {
     id: "s_threadline_studio",
     name: "Threadline Studio",
@@ -1052,7 +1217,333 @@ export const stores: Store[] = [
     lng: 77.0523,
     imageUrl: storeImg("photo-1535632066927-ab7c9ab60908"),
   },
+  // --- ADDITIONAL COMPREHENSIVE LOCAL SHOPS FOR ALL CATEGORIES ---
+  {
+    id: "s_supermart_krishna",
+    name: "Sri Krishna Departmental Supermarket",
+    category: "supermarkets",
+    tagline: "Complete monthly family ration, organic staples & multi-departmental household goods",
+    distanceKm: 0.5,
+    rating: 4.8,
+    isOpen: true,
+    etaMin: 18,
+    address: "12 Trichy Main Road, Coimbatore",
+    lat: 11.0055,
+    lng: 77.0875,
+    imageUrl: storeImg("photo-1604719312566-8912e9227c6a"),
+  },
+  {
+    id: "s_sweets_anandha",
+    name: "Anandha Sweet Stall & Savouries",
+    category: "sweet_shops",
+    tagline: "Melt-in-mouth Mysurpa, Badam Halwa, Mixture, Karasev & festival sweets",
+    distanceKm: 0.7,
+    rating: 4.9,
+    isOpen: true,
+    etaMin: 15,
+    address: "88 Kovilmedu Junction, Coimbatore",
+    lat: 11.0285,
+    lng: 76.9268,
+    imageUrl: storeImg("photo-1555507036-ab1f4038808a"),
+  },
+  {
+    id: "s_kumbakonam_coffee",
+    name: "Kumbakonam Degree Filter Coffee & Tea",
+    category: "cafes",
+    tagline: "Authentic chicory filter coffee, hot ginger tea, fresh juices & evening tea snacks",
+    distanceKm: 0.4,
+    rating: 4.9,
+    isOpen: true,
+    etaMin: 12,
+    address: "44 Thadagam Road, Kovilmedu, Coimbatore",
+    lat: 11.0290,
+    lng: 76.9255,
+    imageUrl: storeImg("photo-1517248135467-4c7edcad34c4"),
+  },
+  {
+    id: "s_green_farm_pala",
+    name: "Green Farm Organic Produce & Palamuthir",
+    category: "fruits_veg",
+    tagline: "Farm fresh organic fruits, green leafy vegetables, tender coconut & hill bananas",
+    distanceKm: 0.6,
+    rating: 4.8,
+    isOpen: true,
+    etaMin: 16,
+    address: "21 Temple Street, Coimbatore",
+    lat: 11.0272,
+    lng: 76.9248,
+    imageUrl: storeImg("photo-1610832958506-aa56368176cf"),
+  },
+  {
+    id: "s_kalyan_fashion",
+    name: "Kalyan Menswear & Readymades",
+    category: "fashion",
+    tagline: "Branded cotton shirts, formal trousers, cotton dhotis & casual jeans",
+    distanceKm: 0.9,
+    rating: 4.7,
+    isOpen: true,
+    etaMin: 22,
+    address: "102 Crosscut Road, Coimbatore",
+    lat: 11.0180,
+    lng: 76.9550,
+    imageUrl: storeImg("photo-1441986300917-64674bd600d8"),
+  },
+  {
+    id: "s_walkwell_footwear",
+    name: "Walkwell Footwear & Leather Shoes",
+    category: "footwear",
+    tagline: "Formal leather shoes, daily slippers, ethnic sandals & kids sports footwear",
+    distanceKm: 1.0,
+    rating: 4.7,
+    isOpen: true,
+    etaMin: 20,
+    address: "15 Bazaar Street, Coimbatore",
+    lat: 11.0260,
+    lng: 76.9240,
+    imageUrl: storeImg("photo-1542291026-7eec264c27ff"),
+  },
+  {
+    id: "s_lalitha_jewellery",
+    name: "Lalitha Gold-Plated Jewellery & Gifts",
+    category: "jewellery",
+    tagline: "Traditional Temple Jhumka Kammal, gold-plated chains, silver anklets & bangles",
+    distanceKm: 1.2,
+    rating: 4.9,
+    isOpen: true,
+    etaMin: 24,
+    address: "77 DB Road, RS Puram, Coimbatore",
+    lat: 11.0090,
+    lng: 76.9490,
+    imageUrl: storeImg("photo-1535632066927-ab7c9ab60908"),
+  },
+  {
+    id: "s_vasanth_electronics",
+    name: "Vasanth Electronics & Smart TVs",
+    category: "electronics",
+    tagline: "4K Smart TVs, home soundbars, double door refrigerators & washing machines",
+    distanceKm: 1.4,
+    rating: 4.8,
+    isOpen: true,
+    etaMin: 28,
+    address: "50 Avinashi Road, Coimbatore",
+    lat: 11.0120,
+    lng: 76.9680,
+    imageUrl: storeImg("photo-1593784991095-a205069470b6"),
+  },
+  {
+    id: "s_poorvika_mobile",
+    name: "Poorvika Mobile Hub & Accessories",
+    category: "mobile",
+    tagline: "Smartphones, fast chargers, wireless earbuds, back covers & instant mobile repair",
+    distanceKm: 0.8,
+    rating: 4.8,
+    isOpen: true,
+    etaMin: 18,
+    address: "33 Kovilmedu Main Road, Coimbatore",
+    lat: 11.0292,
+    lng: 76.9263,
+    imageUrl: storeImg("photo-1511707171634-5f897ff02aa9"),
+  },
+  {
+    id: "s_students_stationery",
+    name: "Students Corner Books & Stationery",
+    category: "books_stationery",
+    tagline: "School notebooks, pens, exam files, project art materials & xerox printing",
+    distanceKm: 0.3,
+    rating: 4.9,
+    isOpen: true,
+    etaMin: 12,
+    address: "5 Near School Gate, Kovilmedu, Coimbatore",
+    lat: 11.0284,
+    lng: 76.9252,
+    imageUrl: storeImg("photo-1531346878377-a5be20888e57"),
+  },
+  {
+    id: "s_nykaa_beauty",
+    name: "Nykaa Beauty & Personal Care Hub",
+    category: "beauty",
+    tagline: "Herbal hair oils, skincare lotions, organic soaps, perfumes & cosmetic sets",
+    distanceKm: 1.1,
+    rating: 4.8,
+    isOpen: true,
+    etaMin: 22,
+    address: "89 DB Road, RS Puram, Coimbatore",
+    lat: 11.0105,
+    lng: 76.9495,
+    imageUrl: storeImg("photo-1596462502278-27bfdc403348"),
+  },
+  {
+    id: "s_butterfly_kitchen",
+    name: "Butterfly Stainless Steel Utensils & Stoves",
+    category: "home_kitchen",
+    tagline: "Non-stick cookware, pressure cookers, stainless steel vessels & gas stoves",
+    distanceKm: 0.9,
+    rating: 4.7,
+    isOpen: true,
+    etaMin: 20,
+    address: "62 Mettupalayam Road, Coimbatore",
+    lat: 11.0250,
+    lng: 76.9380,
+    imageUrl: storeImg("photo-1556911220-e15b29be8c8f"),
+  },
+  {
+    id: "s_woodcraft_furniture",
+    name: "Woodcraft Furniture & Interior Decor",
+    category: "furniture",
+    tagline: "Handcrafted brass Agal lamps, designer curtains, sofa sets & home furnishings",
+    distanceKm: 1.5,
+    rating: 4.9,
+    isOpen: true,
+    etaMin: 30,
+    address: "104 Trichy Road, Coimbatore",
+    lat: 10.9980,
+    lng: 77.0100,
+    imageUrl: storeImg("photo-1584100936595-c0654b55a2e2"),
+  },
+  {
+    id: "s_sriram_hardware",
+    name: "Sri Ram Hardware, Tools & Electricals",
+    category: "hardware",
+    tagline: "LED bulbs, switches, plumbing pipes, paint, hand tools & electrical supplies",
+    distanceKm: 0.6,
+    rating: 4.8,
+    isOpen: true,
+    etaMin: 16,
+    address: "28 Thadagam Road, Kovilmedu, Coimbatore",
+    lat: 11.0280,
+    lng: 76.9248,
+    imageUrl: storeImg("photo-1581092160607-ee22621dd758"),
+  },
+  {
+    id: "s_champion_sports",
+    name: "Champion Sports & Fitness Equipment",
+    category: "sports",
+    tagline: "Cricket bats, badminton rackets, dumbbells, gym wear & athletic gear",
+    distanceKm: 1.3,
+    rating: 4.8,
+    isOpen: true,
+    etaMin: 25,
+    address: "71 DB Road, RS Puram, Coimbatore",
+    lat: 11.0085,
+    lng: 76.9482,
+    imageUrl: storeImg("photo-1517649763962-0c623266ddc0"),
+  },
+  {
+    id: "s_little_angels_toys",
+    name: "Little Angels Toys & Baby Care",
+    category: "toys",
+    tagline: "Educational toys, baby diapers, strollers, board games & action figures",
+    distanceKm: 0.7,
+    rating: 4.9,
+    isOpen: true,
+    etaMin: 18,
+    address: "19 Crosscut Road, Coimbatore",
+    lat: 11.0175,
+    lng: 76.9542,
+    imageUrl: storeImg("photo-1566576912321-d58ddd7a6088"),
+  },
+  {
+    id: "s_archies_gifts",
+    name: "Archies Gift Shop & Custom Frames",
+    category: "gifts",
+    tagline: "Customized photo frames, greeting cards, fancy novelties & party hampers",
+    distanceKm: 0.8,
+    rating: 4.8,
+    isOpen: true,
+    etaMin: 20,
+    address: "45 DB Road, RS Puram, Coimbatore",
+    lat: 11.0078,
+    lng: 76.9475,
+    imageUrl: storeImg("photo-1549465220-1a8b9238cd48"),
+  },
+  {
+    id: "s_blossom_flowers",
+    name: "Blossoms Jasmine & Puja Flower Shop",
+    category: "flowers",
+    tagline: "Fresh Jasmine garlands (Malli), temple puja flowers & fresh rose bouquets",
+    distanceKm: 0.3,
+    rating: 4.9,
+    isOpen: true,
+    etaMin: 10,
+    address: "Near Kovilmedu Temple Gate, Coimbatore",
+    lat: 11.0287,
+    lng: 76.9259,
+    imageUrl: storeImg("photo-1563241527-3004b7be0ffd"),
+  },
+  {
+    id: "s_pet_world",
+    name: "Pet World Food & Aquarium Centre",
+    category: "pet_shops",
+    tagline: "Pedigree dog food, cat treats, fish aquariums, bird seeds & pet accessories",
+    distanceKm: 1.0,
+    rating: 4.8,
+    isOpen: true,
+    etaMin: 22,
+    address: "83 Thadagam Road, Coimbatore",
+    lat: 11.0310,
+    lng: 76.9280,
+    imageUrl: storeImg("photo-1583337130417-3346a1be7dee"),
+  },
+  {
+    id: "s_divine_pooja",
+    name: "Divine Agarbatti & Pooja Samagri Store",
+    category: "pooja",
+    tagline: "Camphor, incense sticks (Agarbatti), brass lamps, pooja oil & kumkum",
+    distanceKm: 0.4,
+    rating: 4.9,
+    isOpen: true,
+    etaMin: 14,
+    address: "14 Temple Street, Kovilmedu, Coimbatore",
+    lat: 11.0276,
+    lng: 76.9251,
+    imageUrl: storeImg("photo-1608571423902-eed4a5ad8108"),
+  },
+  {
+    id: "s_royal_auto",
+    name: "Royal Bike Accessories & Helmets",
+    category: "auto",
+    tagline: "ISI certified helmets, bike spare parts, motor oil & seat covers",
+    distanceKm: 1.1,
+    rating: 4.7,
+    isOpen: true,
+    etaMin: 22,
+    address: "95 Mettupalayam Road, Coimbatore",
+    lat: 11.0240,
+    lng: 76.9370,
+    imageUrl: storeImg("photo-1558981806-ec527fa84c39"),
+  },
+  {
+    id: "s_quickfix_repair",
+    name: "QuickFix Mobile & Appliance Service",
+    category: "repair",
+    tagline: "Mobile screen repair, gas stove servicing, mixer motor repair & watch battery replacement",
+    distanceKm: 0.5,
+    rating: 4.9,
+    isOpen: true,
+    etaMin: 15,
+    address: "37 Kovilmedu Main Road, Coimbatore",
+    lat: 11.0289,
+    lng: 76.9261,
+    imageUrl: storeImg("photo-1581092160607-ee22621dd758"),
+  },
+  {
+    id: "s_express_services",
+    name: "Express Print, DTP & Local Services",
+    category: "local_services",
+    tagline: "Color xerox, DTP printing, key duplication, laundry & tailoring services",
+    distanceKm: 0.4,
+    rating: 4.8,
+    isOpen: true,
+    etaMin: 12,
+    address: "22 Junction Bus Stand, Kovilmedu, Coimbatore",
+    lat: 11.0283,
+    lng: 76.9254,
+    imageUrl: storeImg("photo-1562654501-a0ccc0fc3fb1"),
+  },
 ];
+
+// Combine all Kovilmedu, legacy, and starter shops into the main store list
+export const stores: Store[] = [...kovilmeduStores, ...legacyStores, ...starterStores];
 
 const seedProducts = (storeId: string, cat: StoreCategory): Product[] => {
   const catalogs: Record<StoreCategory, Array<Omit<Product, "id" | "storeId">>> = {
@@ -1243,7 +1734,7 @@ const seedProducts = (storeId: string, cat: StoreCategory): Product[] => {
     ],
     showrooms: [
       {
-        name: "Smart 4K Ultra HD LED TV 43\"",
+        name: 'Smart 4K Ultra HD LED TV 43"',
         unit: "1 unit",
         price: 22990,
         category: "Electronics",
@@ -1287,6 +1778,27 @@ const seedProducts = (storeId: string, cat: StoreCategory): Product[] => {
         price: 599,
         category: "Menswear",
         imageUrl: img("photo-1489987707025-afc232f7ea0f"),
+      },
+      {
+        name: "Men Formal White Full Sleeve Linen Shirt",
+        unit: "1 pc",
+        price: 799,
+        category: "Shirts",
+        imageUrl: img("photo-1489987707025-afc232f7ea0f"),
+      },
+      {
+        name: "Men Regular Fit Denim Jeans",
+        unit: "1 pc",
+        price: 999,
+        category: "Jeans",
+        imageUrl: img("photo-1541099649105-f69ad21f3246"),
+      },
+      {
+        name: "Printed Cotton Round Neck T-Shirt",
+        unit: "1 pc",
+        price: 349,
+        category: "T-Shirts",
+        imageUrl: img("photo-1521572267360-ee0c2909d518"),
       },
     ],
     kitchen_appliances: [
@@ -1457,6 +1969,402 @@ const seedProducts = (storeId: string, cat: StoreCategory): Product[] => {
         imageUrl: img("photo-1563379091339-03b21ab4a4f8"),
       },
     ],
+    supermarkets: [
+      {
+        name: "Sona Masoori Rice (பொன்னி அரிசி)",
+        unit: "10 kg",
+        price: 680,
+        category: "Staples",
+        imageUrl: img("photo-1586201375761-83865001e31c"),
+      },
+      {
+        name: "Fortune Sunflower Oil Pouch",
+        unit: "1 Litre",
+        price: 135,
+        category: "Oils",
+        imageUrl: img("photo-1604719312566-8912e9227c6a"),
+      },
+    ],
+    sweet_shops: [
+      {
+        name: "Special Melt-in-Mouth Ghee Mysurpa",
+        unit: "250 g",
+        price: 160,
+        category: "Sweets",
+        imageUrl: img("photo-1555507036-ab1f4038808a"),
+      },
+      {
+        name: "Traditional Kara Sev & Special Mixture",
+        unit: "250 g",
+        price: 85,
+        category: "Savouries",
+        imageUrl: img("photo-1509440159596-0249088772ff"),
+      },
+    ],
+    cafes: [
+      {
+        name: "Authentic Kumbakonam Filter Coffee",
+        unit: "1 Cup",
+        price: 25,
+        category: "Coffee",
+        imageUrl: img("photo-1517248135467-4c7edcad34c4"),
+      },
+      {
+        name: "Fresh Watermelon & Orange Juice",
+        unit: "350 ml",
+        price: 60,
+        category: "Juices",
+        imageUrl: img("photo-1525385133512-2f3bdd039054"),
+      },
+    ],
+    fruits_veg: [
+      {
+        name: "Fresh Farm Red Apples",
+        unit: "1 kg",
+        price: 190,
+        category: "Fruits",
+        imageUrl: img("photo-1610832958506-aa56368176cf"),
+      },
+      {
+        name: "Organic Spinach & Greens Mix",
+        unit: "3 bunches",
+        price: 45,
+        category: "Vegetables",
+        imageUrl: img("photo-1576045057995-568f588f82fb"),
+      },
+    ],
+    fashion: [
+      {
+        name: "Men Pure Cotton Casual Shirt",
+        unit: "1 pc",
+        price: 699,
+        category: "Shirts",
+        imageUrl: img("photo-1489987707025-afc232f7ea0f"),
+      },
+      {
+        name: "Men Slim Fit Formal Linen Shirt",
+        unit: "1 pc",
+        price: 999,
+        category: "Shirts",
+        imageUrl: img("photo-1489987707025-afc232f7ea0f"),
+      },
+      {
+        name: "Traditional White Ramraj Dhoti & Shirt Set",
+        unit: "1 set",
+        price: 899,
+        category: "Dhotis & Shirts",
+        imageUrl: img("photo-1441986300917-64674bd600d8"),
+      },
+      {
+        name: "Men Round Neck Cotton T-Shirt",
+        unit: "1 pc",
+        price: 399,
+        category: "T-Shirts",
+        imageUrl: img("photo-1521572267360-ee0c2909d518"),
+      },
+      {
+        name: "Men Slim Fit Stretchable Denim Jeans",
+        unit: "1 pc",
+        price: 1199,
+        category: "Jeans",
+        imageUrl: img("photo-1541099649105-f69ad21f3246"),
+      },
+      {
+        name: "Women Cotton Floral Printed Kurti",
+        unit: "1 pc",
+        price: 549,
+        category: "Kurtis",
+        imageUrl: img("photo-1583391733956-6c78276477e2"),
+      },
+    ],
+    footwear: [
+      {
+        name: "Men Leather Formal Shoes",
+        unit: "1 pair",
+        price: 1299,
+        category: "Footwear",
+        imageUrl: img("photo-1542291026-7eec264c27ff"),
+      },
+      {
+        name: "Women Ethnic Leather Sandals",
+        unit: "1 pair",
+        price: 499,
+        category: "Footwear",
+        imageUrl: img("photo-1542291026-7eec264c27ff"),
+      },
+    ],
+    jewellery: [
+      {
+        name: "Temple Design Jhumka Kammal",
+        unit: "1 pair",
+        price: 350,
+        category: "Jewellery",
+        imageUrl: img("photo-1630019852942-f89202989a59"),
+      },
+      {
+        name: "Gold-Plated Traditional Chain",
+        unit: "1 pc",
+        price: 420,
+        category: "Jewellery",
+        imageUrl: img("photo-1535632066927-ab7c9ab60908"),
+      },
+    ],
+    electronics: [
+      {
+        name: "4K Smart LED Television 43 Inch",
+        unit: "1 unit",
+        price: 22990,
+        category: "TV",
+        imageUrl: img("photo-1593784991095-a205069470b6"),
+      },
+      {
+        name: "Surround Soundbar 120W Speaker",
+        unit: "1 unit",
+        price: 4990,
+        category: "Audio",
+        imageUrl: img("photo-1545454675-3531b543be5d"),
+      },
+    ],
+    mobile: [
+      {
+        name: "Type-C 65W Fast Charger Adapter",
+        unit: "1 unit",
+        price: 699,
+        category: "Chargers",
+        imageUrl: img("photo-1511707171634-5f897ff02aa9"),
+      },
+      {
+        name: "True Wireless Bluetooth Earbuds",
+        unit: "1 pair",
+        price: 1299,
+        category: "Earbuds",
+        imageUrl: img("photo-1511707171634-5f897ff02aa9"),
+      },
+    ],
+    books_stationery: [
+      {
+        name: "Classmate A4 Long Notebooks (Pack of 6)",
+        unit: "6 pcs",
+        price: 250,
+        category: "School",
+        imageUrl: img("photo-1531346878377-a5be20888e57"),
+      },
+      {
+        name: "Smooth Gel Ballpoint Pens (Set of 5)",
+        unit: "5 pcs",
+        price: 50,
+        category: "Office",
+        imageUrl: img("photo-1583485088034-697b5bc36b92"),
+      },
+    ],
+    beauty: [
+      {
+        name: "Herbal Coconut Hair Oil",
+        unit: "200 ml",
+        price: 110,
+        category: "Hair Care",
+        imageUrl: img("photo-1596462502278-27bfdc403348"),
+      },
+      {
+        name: "Moisturizing Face & Body Lotion",
+        unit: "250 ml",
+        price: 220,
+        category: "Bath & Body",
+        imageUrl: img("photo-1596462502278-27bfdc403348"),
+      },
+    ],
+    home_kitchen: [
+      {
+        name: "Stainless Steel 3-Tier Lunch Box",
+        unit: "1 pc",
+        price: 450,
+        category: "Kitchen",
+        imageUrl: img("photo-1556911220-e15b29be8c8f"),
+      },
+      {
+        name: "Non-Stick Frying Pan 24cm",
+        unit: "1 pc",
+        price: 650,
+        category: "Cookware",
+        imageUrl: img("photo-1556911220-e15b29be8c8f"),
+      },
+    ],
+    furniture: [
+      {
+        name: "Traditional Handcrafted Brass Agal Lamp",
+        unit: "1 pair",
+        price: 650,
+        category: "Home Decor",
+        imageUrl: img("photo-1513519245088-0e12902e5a38"),
+      },
+      {
+        name: "Velvet Cushion Covers (Set of 5)",
+        unit: "5 pcs",
+        price: 399,
+        category: "Furnishings",
+        imageUrl: img("photo-1584100936595-c0654b55a2e2"),
+      },
+    ],
+    hardware: [
+      {
+        name: "Havells 9W Cool Daylight LED Bulbs (Pack of 3)",
+        unit: "3 pcs",
+        price: 280,
+        category: "Electrical",
+        imageUrl: img("photo-1581092160607-ee22621dd758"),
+      },
+      {
+        name: "Heavy Duty Multi-Purpose Hand Tool Kit",
+        unit: "1 set",
+        price: 750,
+        category: "Tools",
+        imageUrl: img("photo-1581092160607-ee22621dd758"),
+      },
+    ],
+    sports: [
+      {
+        name: "Kashmir Willow Cricket Bat Size 6",
+        unit: "1 pc",
+        price: 1150,
+        category: "Cricket",
+        imageUrl: img("photo-1517649763962-0c623266ddc0"),
+      },
+      {
+        name: "Yonex Badminton Racket & Shuttlecock Set",
+        unit: "1 set",
+        price: 890,
+        category: "Badminton",
+        imageUrl: img("photo-1517649763962-0c623266ddc0"),
+      },
+    ],
+    toys: [
+      {
+        name: "Wooden Educational Building Blocks Toy",
+        unit: "1 set",
+        price: 499,
+        category: "Toys",
+        imageUrl: img("photo-1566576912321-d58ddd7a6088"),
+      },
+      {
+        name: "Soft Baby Care Diapers Large (Pack of 30)",
+        unit: "30 pcs",
+        price: 420,
+        category: "Baby",
+        imageUrl: img("photo-1566576912321-d58ddd7a6088"),
+      },
+    ],
+    gifts: [
+      {
+        name: "Customized Wooden Photo Frame",
+        unit: "1 pc",
+        price: 350,
+        category: "Gifting",
+        imageUrl: img("photo-1549465220-1a8b9238cd48"),
+      },
+      {
+        name: "Handmade Festive Greeting Card & Hamper",
+        unit: "1 set",
+        price: 299,
+        category: "Gifting",
+        imageUrl: img("photo-1549465220-1a8b9238cd48"),
+      },
+    ],
+    flowers: [
+      {
+        name: "Fresh Jasmine Flower Garland (மல்லிகைப் பூ சரங்கள்)",
+        unit: "1 meter",
+        price: 80,
+        category: "Garlands",
+        imageUrl: img("photo-1563241527-3004b7be0ffd"),
+      },
+      {
+        name: "Red Rose Bouquet for Occasions",
+        unit: "1 bouquet",
+        price: 250,
+        category: "Bouquets",
+        imageUrl: img("photo-1563241527-3004b7be0ffd"),
+      },
+    ],
+    pet_shops: [
+      {
+        name: "Pedigree Adult Dog Food Chicken & Vegetables",
+        unit: "1.2 kg",
+        price: 320,
+        category: "Dog Food",
+        imageUrl: img("photo-1583337130417-3346a1be7dee"),
+      },
+      {
+        name: "Colorful Fish Aquarium Glass Bowl & Feed",
+        unit: "1 set",
+        price: 450,
+        category: "Aquarium",
+        imageUrl: img("photo-1583337130417-3346a1be7dee"),
+      },
+    ],
+    pooja: [
+      {
+        name: "Pure Natural Camphor (பச்சைக் கற்பூரம்)",
+        unit: "100 g",
+        price: 90,
+        category: "Camphor",
+        imageUrl: img("photo-1608571423902-eed4a5ad8108"),
+      },
+      {
+        name: "Fragrant Sandal Incense Agarbatti Sticks",
+        unit: "Pack of 3",
+        price: 75,
+        category: "Incense",
+        imageUrl: img("photo-1608571423902-eed4a5ad8108"),
+      },
+    ],
+    auto: [
+      {
+        name: "ISI Certified Full-Face Bike Helmet",
+        unit: "1 pc",
+        price: 890,
+        category: "Helmets",
+        imageUrl: img("photo-1558981806-ec527fa84c39"),
+      },
+      {
+        name: "Castrol 4T 2-Wheeler Engine Oil 20W40",
+        unit: "1 Litre",
+        price: 380,
+        category: "Motor Oil",
+        imageUrl: img("photo-1558981806-ec527fa84c39"),
+      },
+    ],
+    repair: [
+      {
+        name: "Mobile Screen Guard Glass Replacement Service",
+        unit: "1 service",
+        price: 150,
+        category: "Mobile Repair",
+        imageUrl: img("photo-1581092160607-ee22621dd758"),
+      },
+      {
+        name: "Gas Stove Cleaning & Burner Service",
+        unit: "1 service",
+        price: 250,
+        category: "Stove Service",
+        imageUrl: img("photo-1581092160607-ee22621dd758"),
+      },
+    ],
+    local_services: [
+      {
+        name: "High Speed A4 Color Xerox & Printing",
+        unit: "10 pages",
+        price: 40,
+        category: "Printing",
+        imageUrl: img("photo-1562654501-a0ccc0fc3fb1"),
+      },
+      {
+        name: "Duplicate Door & Bike Key Duplication",
+        unit: "1 key",
+        price: 60,
+        category: "Key Duplication",
+        imageUrl: img("photo-1562654501-a0ccc0fc3fb1"),
+      },
+    ],
   };
   return (catalogs[cat] || catalogs.palamuthir).map((p, i) => ({
     ...p,
@@ -1466,7 +2374,12 @@ const seedProducts = (storeId: string, cat: StoreCategory): Product[] => {
 };
 
 export const productsByStore: Record<string, Product[]> = Object.fromEntries(
-  stores.map((s) => [s.id, seedProducts(s.id, s.category)])
+  stores.map((s) => [s.id, seedProducts(s.id, s.category)]),
 );
 
-export const getStore = (id: string) => stores.find((s) => s.id === id);
+export const getStore = (id: string) =>
+  stores.find((s) => s.id === id) ?? {
+    ...APPROVED_STORE,
+    id,
+    name: id.startsWith("s_") ? id.replace("s_", "").replace(/_/g, " ") : "Local Shore Shop",
+  };

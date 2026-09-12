@@ -1,14 +1,14 @@
 import { parseCoordinates, type Coordinates } from "./coordinates";
 
-export function deliveryLocationSignature(address: string, pin: Coordinates): string {
-  return address.trim() && parseCoordinates(pin.lat, pin.lng)
+export function deliveryLocationSignature(address: string, pin: Coordinates | null): string {
+  return address.trim() && pin && parseCoordinates(pin.lat, pin.lng)
     ? JSON.stringify([address.trim(), pin.lat, pin.lng])
     : "";
 }
 
 export function isConfirmedDeliveryLocation(
   address: string,
-  pin: Coordinates,
+  pin: Coordinates | null,
   acquired: boolean,
   confirmed: string,
 ): boolean {

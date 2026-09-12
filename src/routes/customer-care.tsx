@@ -2,8 +2,16 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { AppShell } from "@/components/app-shell";
 import {
-  ChevronRight, Search, MessageSquare, HelpCircle, Package,
-  ChevronDown, Send, Paperclip, Clock, LifeBuoy,
+  ChevronRight,
+  Search,
+  MessageSquare,
+  HelpCircle,
+  Package,
+  ChevronDown,
+  Send,
+  Paperclip,
+  Clock,
+  LifeBuoy,
 } from "lucide-react";
 import { m } from "motion/react";
 import { SUPPORT_CATEGORIES, SUPPORT_FAQS, type SupportCategory } from "@/lib/platform-data";
@@ -19,9 +27,10 @@ function CustomerCarePage() {
   const [showTicketForm, setShowTicketForm] = useState(false);
 
   const filteredFaqs = searchQuery.trim()
-    ? SUPPORT_FAQS.filter((f) =>
-        f.q.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        f.a.toLowerCase().includes(searchQuery.toLowerCase())
+    ? SUPPORT_FAQS.filter(
+        (f) =>
+          f.q.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          f.a.toLowerCase().includes(searchQuery.toLowerCase()),
       )
     : SUPPORT_FAQS;
 
@@ -30,7 +39,13 @@ function CustomerCarePage() {
       <div className="mx-auto max-w-5xl px-4 py-6 sm:px-6">
         {/* Breadcrumb */}
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <Link to="/" search={{ category: undefined, q: undefined }} className="hover:text-primary">Home</Link>
+          <Link
+            to="/"
+            search={{ category: undefined, q: undefined }}
+            className="hover:text-primary"
+          >
+            Home
+          </Link>
           <ChevronRight className="h-3 w-3" />
           <span className="font-semibold text-foreground">Customer Care</span>
         </div>
@@ -42,7 +57,9 @@ function CustomerCarePage() {
           className="mt-5 rounded-3xl bg-gradient-to-br from-purple-800 to-indigo-900 p-6 text-white shadow-xl sm:p-8"
         >
           <LifeBuoy className="h-8 w-8 text-purple-300" />
-          <h1 className="mt-3 font-display text-3xl font-extrabold sm:text-4xl">How can we help you?</h1>
+          <h1 className="mt-3 font-display text-3xl font-extrabold sm:text-4xl">
+            How can we help you?
+          </h1>
           <p className="mt-2 max-w-lg text-sm text-purple-200">
             Search for answers, browse categories, or raise a support ticket.
           </p>
@@ -67,7 +84,10 @@ function CustomerCarePage() {
             {SUPPORT_CATEGORIES.map((cat) => (
               <button
                 key={cat.id}
-                onClick={() => { setSelectedCategory(cat); setShowTicketForm(true); }}
+                onClick={() => {
+                  setSelectedCategory(cat);
+                  setShowTicketForm(true);
+                }}
                 className={`rounded-2xl border p-3.5 text-left transition hover:border-purple-300 hover:shadow-xs ${
                   selectedCategory?.id === cat.id
                     ? "border-purple-300 bg-purple-50 ring-1 ring-purple-200"
@@ -88,14 +108,19 @@ function CustomerCarePage() {
             <h2 className="text-sm font-bold text-slate-900">Frequently Asked Questions</h2>
             <div className="mt-3 space-y-2">
               {filteredFaqs.map((faq, i) => (
-                <div key={i} className="rounded-2xl border border-slate-200 bg-white overflow-hidden">
+                <div
+                  key={i}
+                  className="rounded-2xl border border-slate-200 bg-white overflow-hidden"
+                >
                   <button
                     onClick={() => setFaqOpen(faqOpen === i ? null : i)}
                     className="flex w-full items-center gap-3 p-4 text-left"
                   >
                     <HelpCircle className="h-4 w-4 shrink-0 text-purple-600" />
                     <span className="flex-1 text-sm font-semibold text-slate-900">{faq.q}</span>
-                    <ChevronDown className={`h-4 w-4 text-slate-400 transition-transform ${faqOpen === i ? "rotate-180" : ""}`} />
+                    <ChevronDown
+                      className={`h-4 w-4 text-slate-400 transition-transform ${faqOpen === i ? "rotate-180" : ""}`}
+                    />
                   </button>
                   {faqOpen === i && (
                     <div className="border-t border-slate-100 px-4 pb-4 pt-2">
@@ -108,7 +133,10 @@ function CustomerCarePage() {
                 <div className="rounded-2xl border border-dashed border-slate-200 p-6 text-center">
                   <p className="text-sm text-slate-500">No results found for "{searchQuery}"</p>
                   <button
-                    onClick={() => { setShowTicketForm(true); setSearchQuery(""); }}
+                    onClick={() => {
+                      setShowTicketForm(true);
+                      setSearchQuery("");
+                    }}
                     className="mt-2 text-xs font-bold text-purple-700 underline"
                   >
                     Raise a support ticket instead
@@ -165,7 +193,9 @@ function CustomerCarePage() {
                 <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs text-center">
                   <LifeBuoy className="mx-auto h-8 w-8 text-purple-600" />
                   <p className="mt-3 text-sm font-bold text-slate-900">Need more help?</p>
-                  <p className="mt-1 text-xs text-slate-500">Select a category or raise a ticket.</p>
+                  <p className="mt-1 text-xs text-slate-500">
+                    Select a category or raise a ticket.
+                  </p>
                   <button
                     onClick={() => setShowTicketForm(true)}
                     className="mt-4 rounded-xl bg-purple-700 px-5 py-2.5 text-xs font-bold text-white"

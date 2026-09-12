@@ -187,22 +187,31 @@ export function PromoCarousel() {
       try {
         const { data, error } = await (supabase as any)
           .from("banners")
-          .select("id,title,subtitle,image_url,link_url,sort_order,starts_at,ends_at")
-          .eq("placement", "hero")
-          .eq("is_active", true)
+          .select("id,title,subtitle,image_url,link_url,sort_order,starts_at,ends_at,is_active,placement")
           .order("sort_order", { ascending: true });
-        if (error) return [];
+        
+        let list = (data ?? []) as any[];
+        if (error || list.length === 0) {
+          const raw = typeof window !== "undefined" ? localStorage.getItem("localshore_admin_banners") : null;
+          if (raw) {
+            try {
+              list = JSON.parse(raw);
+            } catch {}
+          }
+        }
+
         const now = Date.now();
-        return ((data ?? []) as BannerRow[]).filter(
+        return list.filter(
           (banner) =>
-            (!banner.starts_at || new Date(banner.starts_at).getTime() <= now) &&
+            banner.is_active !== false &&
             (!banner.ends_at || new Date(banner.ends_at).getTime() > now),
         );
       } catch {
         return [];
       }
     },
-    staleTime: 60_000,
+    staleTime: 5_000,
+    refetchInterval: 5_000,
   });
   const adminCampaigns: Campaign[] = (bannerQuery.data ?? []).map((banner, index) => {
     const palette = campaignPalette[index % campaignPalette.length];
@@ -303,7 +312,8 @@ export function PromoCarousel() {
                 transition={{ duration: 1.1, ease: [0.22, 1, 0.36, 1] }}
                 className="absolute inset-0 h-full w-full object-cover"
                 style={{ objectPosition: campaign.imagePosition ?? "center" }}
-                fetchPriority={activeIndex === 0 ? "high" : "auto"}
+                fetchPriority={activeIndex === 0 ? "high" : undefined}
+                suppressHydrationWarning
               />
               <div
                 className="absolute inset-y-0 left-0 w-12 bg-gradient-to-r from-black/10 to-transparent"

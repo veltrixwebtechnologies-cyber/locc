@@ -2,10 +2,40 @@ import { parseCoordinates } from "./coordinates";
 import { useEffect, useState } from "react";
 import type { CartLine } from "./cart-store";
 import { supabase } from "@/integrations/supabase/client";
+import { isValidCoordinate, normalizeCoordinate, haversineDistanceKm } from "@/lib/geo";
 
 const isUuid = (value: string) =>
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
 const demoOrdersKey = (userId: string) => `localshore.demo-orders.${userId}.v1`;
+const ORDERS_CACHE_KEY = "localshore.orders_cache.v2";
+
+let memoryOrdersCache: Order[] | null = null;
+
+function getInitialCachedOrders(): Order[] {
+  if (memoryOrdersCache) return memoryOrdersCache;
+  if (typeof window !== "undefined") {
+    try {
+      const raw = localStorage.getItem(ORDERS_CACHE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) {
+          memoryOrdersCache = parsed;
+          return parsed;
+        }
+      }
+    } catch {}
+  }
+  return [];
+}
+
+function updateOrdersCache(rows: Order[]) {
+  memoryOrdersCache = rows;
+  if (typeof window !== "undefined") {
+    try {
+      localStorage.setItem(ORDERS_CACHE_KEY, JSON.stringify(rows));
+    } catch {}
+  }
+}
 
 function loadDemoOrders(userId: string): Order[] {
   if (typeof window === "undefined") return [];
@@ -20,16 +50,42 @@ function loadDemoOrders(userId: string): Order[] {
 function saveDemoOrder(userId: string, order: Order) {
   if (typeof window === "undefined") return;
   const existing = loadDemoOrders(userId);
-  window.localStorage.setItem(demoOrdersKey(userId), JSON.stringify([order, ...existing]));
+  const updated = [order, ...existing];
+  window.localStorage.setItem(demoOrdersKey(userId), JSON.stringify(updated));
+  updateOrdersCache([order, ...getInitialCachedOrders()]);
+}
+
+export function addPlacedOrderToCache(order: Order) {
+  const current = getInitialCachedOrders();
+  const existingIdx = current.findIndex((o) => o.id === order.id || o.code === order.code);
+  const updated =
+    existingIdx !== -1
+      ? current.map((o, idx) => (idx === existingIdx ? order : o))
+      : [order, ...current];
+  updateOrdersCache(updated);
+
+  supabase.auth.getSession().then(({ data }) => {
+    const userId = data.session?.user?.id;
+    if (userId) {
+      saveDemoOrder(userId, order);
+    }
+  });
 }
 
 export type OrderStatus =
   | "new"
   | "accepted"
+  | "vendor_accepted"
+  | "cancelled_by_vendor"
   | "preparing"
   | "packed"
   | "ready_for_pickup"
   | "assigned"
+  | "delivery_partner_assigned"
+  | "going_to_vendor"
+  | "arrived_at_vendor"
+  | "going_to_customer"
+  | "arrived_at_customer"
   | "rider_assigned"
   | "rider_accepted"
   | "rider_at_shop"
@@ -44,23 +100,29 @@ export type OrderStatus =
 
 export const orderStatusFlow: OrderStatus[] = [
   "new",
-  "accepted",
-  "preparing",
+  "vendor_accepted",
   "ready_for_pickup",
-  "rider_assigned",
-  "rider_at_shop",
+  "delivery_partner_assigned",
+  "arrived_at_vendor",
   "picked_up",
   "out_for_delivery",
   "delivered",
 ];
 
 export const orderStatusLabel: Record<OrderStatus, string> = {
-  new: "Order placed",
+  new: "Order placed (Awaiting Vendor)",
   accepted: "Shop accepted",
+  vendor_accepted: "Shop accepted & preparing",
+  cancelled_by_vendor: "Cancelled by vendor",
   preparing: "Shop preparing order",
   packed: "Order packed",
   ready_for_pickup: "Ready for pickup",
   assigned: "Delivery partner assigned",
+  delivery_partner_assigned: "Delivery partner assigned",
+  going_to_vendor: "Partner heading to shop",
+  arrived_at_vendor: "Partner arrived at shop",
+  going_to_customer: "Out for delivery",
+  arrived_at_customer: "Partner arrived at customer",
   rider_assigned: "Delivery partner assigned",
   rider_accepted: "Partner heading to shop",
   rider_at_shop: "Partner arrived at shop",
@@ -85,16 +147,25 @@ export interface Order {
   deliveryFee: number;
   total: number;
   address: string;
-  destination: { lat: number; lng: number };
+  destination: { lat: number; lng: number } | null;
   paymentMethod: string;
   deliveryOtp?: string;
   couponCode?: string;
   discountAmount?: number;
   createdAt: number;
   status: OrderStatus;
-  partner?: { name: string; rating: number; lat?: number; lng?: number; userRating?: number; vehicle?: string; deliveriesCount?: number };
+  partner?: {
+    name: string;
+    rating: number;
+    lat?: number;
+    lng?: number;
+    userRating?: number;
+    vehicle?: string;
+    deliveriesCount?: number;
+  };
   etaMin: number;
   distanceKm: number;
+  cancellationReason?: string;
 }
 
 function fromRow(row: any): Order {
@@ -105,47 +176,49 @@ function fromRow(row: any): Order {
     ? {
         name: row.assigned_partner.full_name ?? "Delivery Partner",
         rating: Number(row.assigned_partner.rating ?? 5.0),
-        lat: row.assigned_partner.current_latitude != null && Number.isFinite(Number(row.assigned_partner.current_latitude))
+        lat: Number.isFinite(Number(row.assigned_partner.current_latitude))
           ? Number(row.assigned_partner.current_latitude)
           : undefined,
-        lng: row.assigned_partner.current_longitude != null && Number.isFinite(Number(row.assigned_partner.current_longitude))
+        lng: Number.isFinite(Number(row.assigned_partner.current_longitude))
           ? Number(row.assigned_partner.current_longitude)
           : undefined,
       }
     : undefined;
 
-  const sellerPin = parseCoordinates(row.seller?.lat, row.seller?.lng) ?? parseCoordinates(row.seller?.wizard_data?.lat, row.seller?.wizard_data?.lng);
-  const sellerLat = sellerPin?.lat ?? NaN;
-  const sellerLng = sellerPin?.lng ?? NaN;
+  const sellerCoordinates =
+    normalizeCoordinate({ lat: row.seller?.lat, lng: row.seller?.lng }) ??
+    normalizeCoordinate(row.seller?.wizard_data?.pickupCoordinates) ??
+    normalizeCoordinate(row.seller?.wizard_data?.shopCoordinates) ??
+    null;
 
   // Try to extract live data from delivery assignment
   const assignment = Array.isArray(row.delivery_assignments)
-    ? row.delivery_assignments.find((a: any) => !['expired', 'rejected', 'cancelled'].includes(a.status))
+    ? row.delivery_assignments.find(
+        (a: any) => !["expired", "rejected", "cancelled"].includes(a.status),
+      )
     : null;
 
   // Get partner location from assignment if not from direct join
   const livePartnerLat = assignment?.current_latitude ?? partnerData?.lat;
   const livePartnerLng = assignment?.current_longitude ?? partnerData?.lng;
-  const liveHeading = Number(assignment?.current_heading ?? 0);
-
   // Calculate real distance if partner and destination locations are available
-  const custLat = row.customer_latitude != null && Number.isFinite(Number(row.customer_latitude)) ? Number(row.customer_latitude) : null;
-  const custLng = row.customer_longitude != null && Number.isFinite(Number(row.customer_longitude)) ? Number(row.customer_longitude) : null;
+  const custLat = isValidCoordinate(row.customer_latitude, row.customer_longitude)
+    ? row.customer_latitude
+    : null;
+  const custLng = isValidCoordinate(row.customer_latitude, row.customer_longitude)
+    ? row.customer_longitude
+    : null;
   let realDistanceKm = 2.4; // default
   let realEtaMin = 25; // default
   if (livePartnerLat && livePartnerLng && custLat && custLng) {
-    const R = 6371;
-    const dLat = ((custLat - livePartnerLat) * Math.PI) / 180;
-    const dLon = ((custLng - livePartnerLng) * Math.PI) / 180;
-    const a = Math.sin(dLat / 2) ** 2 + Math.cos((livePartnerLat * Math.PI) / 180) * Math.cos((custLat * Math.PI) / 180) * Math.sin(dLon / 2) ** 2;
-    realDistanceKm = Math.round(2 * R * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)) * 10) / 10;
+    realDistanceKm =
+      Math.round(haversineDistanceKm(livePartnerLat, livePartnerLng, custLat, custLng) * 10) / 10;
     realEtaMin = Math.max(3, Math.round((realDistanceKm / 22) * 60) + 3);
-  } else if (sellerLat && sellerLng && custLat && custLng) {
-    const R = 6371;
-    const dLat = ((custLat - sellerLat) * Math.PI) / 180;
-    const dLon = ((custLng - sellerLng) * Math.PI) / 180;
-    const a = Math.sin(dLat / 2) ** 2 + Math.cos((sellerLat * Math.PI) / 180) * Math.cos((custLat * Math.PI) / 180) * Math.sin(dLon / 2) ** 2;
-    realDistanceKm = Math.round(2 * R * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)) * 10) / 10;
+  } else if (sellerCoordinates && custLat && custLng) {
+    realDistanceKm =
+      Math.round(
+        haversineDistanceKm(sellerCoordinates.lat, sellerCoordinates.lng, custLat, custLng) * 10,
+      ) / 10;
     realEtaMin = Math.max(5, Math.round((realDistanceKm / 22) * 60) + 5);
   }
 
@@ -171,7 +244,7 @@ function fromRow(row: any): Order {
     code: row.order_number,
     storeId: row.seller_id,
     storeName: row.seller?.business_name ?? "Local Shore shop",
-    storeCoordinates: Number.isFinite(sellerLat) && Number.isFinite(sellerLng) ? { lat: sellerLat, lng: sellerLng } : undefined,
+    storeCoordinates: sellerCoordinates ?? undefined,
     lines: (row.order_items ?? []).map((item: any) => ({
       productId: item.product_id,
       storeId: row.seller_id,
@@ -184,7 +257,9 @@ function fromRow(row: any): Order {
     deliveryFee: Number(row.shipping_fee),
     total: Number(row.total),
     address: row.buyer_address ?? "",
-    destination: parseCoordinates(row.customer_latitude, row.customer_longitude) ?? { lat: NaN, lng: NaN },
+    destination: isValidCoordinate(row.customer_latitude, row.customer_longitude)
+      ? { lat: row.customer_latitude, lng: row.customer_longitude }
+      : null,
     paymentMethod:
       row.payment_method === "upi"
         ? "UPI"
@@ -199,39 +274,72 @@ function fromRow(row: any): Order {
     partner: partnerWithLive,
     etaMin: realEtaMin,
     distanceKm: realDistanceKm,
+    cancellationReason: row.cancellation_reason ?? undefined,
   };
 }
 
 async function loadOrders(): Promise<Order[]> {
   const { data: session } = await supabase.auth.getSession();
   const userId = session.session?.user.id;
-  if (!userId) return [];
+  if (!userId) {
+    const cached = getInitialCachedOrders();
+    return cached.length > 0 ? cached : [];
+  }
   const demoOrders = loadDemoOrders(userId);
 
-  // 1. Try query with delivery partner details and assignment location data
-  const { data: fullData, error: fullError } = await (supabase as any)
-    .from("orders")
-    .select("*, order_items(*), seller:sellers(business_name, lat, lng, wizard_data), assigned_partner:delivery_partners(full_name, rating, current_latitude, current_longitude), delivery_assignments(id, status, current_latitude, current_longitude, current_heading, estimated_delivery_eta)")
-    .eq("user_id", userId)
-    .order("placed_at", { ascending: false });
-
-  if (!fullError && fullData) {
-    return [...demoOrders, ...fullData.map(fromRow)];
-  }
-
-  // 2. Fallback query if delivery_partners join is blocked by RLS for customer role
   try {
-    const { data: simpleData, error: simpleError } = await (supabase as any)
+    const { data: ordersData, error } = await (supabase as any)
       .from("orders")
-      .select("*, order_items(*), seller:sellers(business_name, lat, lng, wizard_data)")
+      .select("*, order_items(*)")
       .eq("user_id", userId)
       .order("placed_at", { ascending: false });
 
-    if (simpleError) throw simpleError;
-    return [...demoOrders, ...(simpleData ?? []).map(fromRow)];
+    if (error) {
+      console.warn("[orders] orders query notice:", error.message);
+      const res = [...demoOrders];
+      updateOrdersCache(res);
+      return res;
+    }
+
+    if (!ordersData || ordersData.length === 0) {
+      updateOrdersCache(demoOrders);
+      return demoOrders;
+    }
+
+    // Fetch active delivery assignments for live partner tracking
+    const orderIds = ordersData.map((o: any) => o.id);
+    let assignmentsMap: Record<string, any> = {};
+    try {
+      const { data: assignments } = await (supabase as any)
+        .from("delivery_assignments")
+        .select(
+          "id, order_id, status, current_latitude, current_longitude, current_heading, estimated_delivery_eta",
+        )
+        .in("order_id", orderIds);
+      if (assignments) {
+        assignments.forEach((a: any) => {
+          if (a.order_id) assignmentsMap[a.order_id] = a;
+        });
+      }
+    } catch {
+      // Ignore assignment lookup errors
+    }
+
+    const processedOrders = ordersData.map((row: any) => {
+      const rowWithAssignment = {
+        ...row,
+        delivery_assignments: assignmentsMap[row.id] ? [assignmentsMap[row.id]] : [],
+      };
+      return fromRow(rowWithAssignment);
+    });
+
+    const res = [...demoOrders, ...processedOrders];
+    updateOrdersCache(res);
+    return res;
   } catch (error) {
-    console.error("[orders] history query failed", error);
-    return [];
+    console.error("[orders] loadOrders failed", error);
+    const cached = getInitialCachedOrders();
+    return cached.length > 0 ? cached : demoOrders;
   }
 }
 
@@ -270,9 +378,10 @@ export const ordersStore = {
     const { data: session } = await supabase.auth.getSession();
     const user = session.session?.user;
     if (!user) throw new Error("Sign in before placing an order");
+    if (!parseCoordinates(order.destination?.lat, order.destination?.lng))
+      throw new Error("Confirm a valid delivery entrance pin before placing an order.");
     if (!order.address.trim()) throw new Error("Add a delivery address before placing the order.");
     if (!order.lines.length) throw new Error("Your cart is empty.");
-    if (!parseCoordinates(order.destination?.lat, order.destination?.lng)) throw new Error("Confirm a valid delivery location pin before placing an order.");
 
     // Curated storefront products are intentionally local demo catalog entries,
     // not rows in approved_product_catalog. Keep their checkout flow usable while
@@ -301,8 +410,14 @@ export const ordersStore = {
       p_payment_method:
         order.paymentMethod === "UPI" ? "upi" : order.paymentMethod === "Card" ? "card" : "cod",
       p_coupon_code: order.couponCode ?? null,
-      p_customer_latitude: Number.isFinite(order.destination?.lat) ? order.destination.lat : null,
-      p_customer_longitude: Number.isFinite(order.destination?.lng) ? order.destination.lng : null,
+      p_customer_latitude:
+        order.destination && isValidCoordinate(order.destination.lat, order.destination.lng)
+          ? order.destination.lat
+          : null,
+      p_customer_longitude:
+        order.destination && isValidCoordinate(order.destination.lat, order.destination.lng)
+          ? order.destination.lng
+          : null,
     };
 
     const { data: created, error } = await (supabase as any).rpc("place_order_once", {
@@ -318,7 +433,7 @@ export const ordersStore = {
       throw new Error(orderErrorMessage(error));
     }
     if (!created?.id) throw new Error("The order was not created. Try again.");
-    return {
+    const newOrder: Order = {
       ...order,
       id: created.id,
       code: created.order_number,
@@ -330,7 +445,11 @@ export const ordersStore = {
       total: Number(created.total),
       couponCode: created.coupon_code ?? undefined,
       discountAmount: Number(created.discount_amount ?? 0),
+      etaMin: 25,
+      distanceKm: 2.4,
     };
+    updateOrdersCache([newOrder, ...getInitialCachedOrders()]);
+    return newOrder;
   },
 };
 
@@ -338,13 +457,99 @@ export async function advanceDemoOrder(orderId: string) {
   throw new Error("Order status is managed by the seller and delivery partner.");
 }
 
+export async function cancelOrder(orderId: string, reason: string): Promise<boolean> {
+  const { data: session } = await supabase.auth.getSession();
+  const userId = session.session?.user.id;
+
+  // 1. Update local storage demo order if present
+  if (userId) {
+    const demoOrders = loadDemoOrders(userId);
+    const demoIndex = demoOrders.findIndex(
+      (o) =>
+        o.id === orderId ||
+        o.code === orderId ||
+        (o.code && o.code.toLowerCase() === orderId.toLowerCase()),
+    );
+    if (demoIndex !== -1) {
+      demoOrders[demoIndex].status = "cancelled";
+      demoOrders[demoIndex].cancellationReason = reason;
+      if (typeof window !== "undefined") {
+        window.localStorage.setItem(demoOrdersKey(userId), JSON.stringify(demoOrders));
+        window.dispatchEvent(new Event("storage"));
+      }
+    }
+  }
+
+  // 2. Update real Supabase order if UUID
+  if (isUuid(orderId)) {
+    try {
+      const { error } = await (supabase as any)
+        .from("orders")
+        .update({
+          status: "cancelled",
+          cancellation_reason: reason,
+          cancelled_at: new Date().toISOString(),
+        })
+        .eq("id", orderId);
+
+      if (error) {
+        console.warn("Supabase order cancellation update error:", error);
+      }
+
+      // Also cancel active delivery assignment if any
+      await (supabase as any)
+        .from("delivery_assignments")
+        .update({ status: "cancelled" })
+        .eq("order_id", orderId);
+    } catch (err) {
+      console.warn("Cancel order database update error:", err);
+    }
+  }
+
+  // Also update cached order if present
+  const currentCached = getInitialCachedOrders();
+  const cachedIdx = currentCached.findIndex((o) => o.id === orderId || o.code === orderId);
+  if (cachedIdx !== -1) {
+    currentCached[cachedIdx].status = "cancelled";
+    currentCached[cachedIdx].cancellationReason = reason;
+    updateOrdersCache([...currentCached]);
+  }
+
+  return true;
+}
+
 export function useOrders() {
   return useOrdersState().orders;
 }
 
+import { toast } from "sonner";
+
+function playCustomerOrderChimeSound() {
+  if (typeof window === "undefined") return;
+  try {
+    const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+    if (!AudioCtx) return;
+    const ctx = new AudioCtx();
+    const notes = [523.25, 659.25, 783.99, 1046.5];
+    notes.forEach((freq, idx) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(freq, ctx.currentTime + idx * 0.12);
+      gain.gain.setValueAtTime(0.35, ctx.currentTime + idx * 0.12);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + idx * 0.12 + 0.38);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(ctx.currentTime + idx * 0.12);
+      osc.stop(ctx.currentTime + idx * 0.12 + 0.38);
+    });
+  } catch {}
+}
+
 export function useOrdersState() {
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [orders, setOrders] = useState<Order[]>(() => getInitialCachedOrders());
+  const [isLoading, setIsLoading] = useState<boolean>(() => getInitialCachedOrders().length === 0);
+
   useEffect(() => {
     let active = true;
     const refresh = () =>
@@ -359,13 +564,35 @@ export function useOrdersState() {
           console.error("[orders] refresh failed", error);
           if (active) setIsLoading(false);
         });
+
     refresh();
     const channel = supabase
       .channel("shoreline-orders")
-      .on("postgres_changes", { event: "*", schema: "public", table: "orders" }, refresh)
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "orders" },
+        (payload: any) => {
+          const newStatus = payload.new?.status as OrderStatus | undefined;
+          const oldStatus = payload.old?.status as OrderStatus | undefined;
+          if (newStatus && newStatus !== oldStatus && orderStatusLabel[newStatus]) {
+            playCustomerOrderChimeSound();
+            toast.info(`📦 Order Status: ${orderStatusLabel[newStatus]}`, {
+              id: `order-status-${payload.new?.id}`,
+              duration: 8000,
+            });
+          }
+          refresh();
+        },
+      )
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "orders" }, refresh)
       .on("postgres_changes", { event: "*", schema: "public", table: "order_items" }, refresh)
-      .on("postgres_changes", { event: "*", schema: "public", table: "delivery_assignments" }, refresh)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "delivery_assignments" },
+        refresh,
+      )
       .subscribe();
+
     const refreshWhenVisible = () => {
       if (document.visibilityState === "visible") refresh();
     };
@@ -380,5 +607,6 @@ export function useOrdersState() {
       void supabase.removeChannel(channel);
     };
   }, []);
+
   return { orders, isLoading };
 }

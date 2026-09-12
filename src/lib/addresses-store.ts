@@ -4,8 +4,8 @@ export interface Address {
   id: string;
   label: string;
   line: string;
-  lat: number;
-  lng: number;
+  lat: number | null;
+  lng: number | null;
 }
 
 const KEY = "localshore.addresses.v2";

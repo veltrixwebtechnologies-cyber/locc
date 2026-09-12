@@ -68,9 +68,26 @@ export interface ProfileExtra {
   notificationSettings: NotificationSettings;
   favoriteShopIds: string[];
   recentlyVisitedShopIds: string[];
-  writtenReviews: Array<{ id: string; shopName: string; rating: number; comment: string; date: string }>;
-  pendingReviewItems: Array<{ id: string; productName: string; shopName: string; purchasedDate: string }>;
-  savedCoupons: Array<{ code: string; title: string; minOrder: number; expires: string; discountText: string }>;
+  writtenReviews: Array<{
+    id: string;
+    shopName: string;
+    rating: number;
+    comment: string;
+    date: string;
+  }>;
+  pendingReviewItems: Array<{
+    id: string;
+    productName: string;
+    shopName: string;
+    purchasedDate: string;
+  }>;
+  savedCoupons: Array<{
+    code: string;
+    title: string;
+    minOrder: number;
+    expires: string;
+    discountText: string;
+  }>;
 }
 
 const DEFAULT_PROFILE_EXTRA: ProfileExtra = {
@@ -79,14 +96,38 @@ const DEFAULT_PROFILE_EXTRA: ProfileExtra = {
   rewardsPoints: 280,
   rewardHistory: [
     { id: "r1", title: "Order #LS28491 completed", date: "Yesterday", points: +40, type: "earned" },
-    { id: "r2", title: "Redeemed ₹50 Discount Coupon", date: "24 Aug 2026", points: -100, type: "redeemed" },
-    { id: "r3", title: "Order #LS28102 completed", date: "20 Aug 2026", points: +90, type: "earned" },
+    {
+      id: "r2",
+      title: "Redeemed ₹50 Discount Coupon",
+      date: "24 Aug 2026",
+      points: -100,
+      type: "redeemed",
+    },
+    {
+      id: "r3",
+      title: "Order #LS28102 completed",
+      date: "20 Aug 2026",
+      points: +90,
+      type: "earned",
+    },
     { id: "r4", title: "Welcome Bonus", date: "15 Aug 2026", points: +250, type: "earned" },
   ],
   paymentMethods: [
     { id: "p1", type: "upi", title: "GPay / UPI", subtitle: "sudhan@okhdfcbank", isDefault: true },
-    { id: "p2", type: "card", title: "HDFC Debit Card", subtitle: "Visa •••• 4521", isDefault: false },
-    { id: "p3", type: "card", title: "ICICI Credit Card", subtitle: "Mastercard •••• 8812", isDefault: false },
+    {
+      id: "p2",
+      type: "card",
+      title: "HDFC Debit Card",
+      subtitle: "Visa •••• 4521",
+      isDefault: false,
+    },
+    {
+      id: "p3",
+      type: "card",
+      title: "ICICI Credit Card",
+      subtitle: "Mastercard •••• 8812",
+      isDefault: false,
+    },
   ],
   deliveryPreferences: {
     contactless: true,
@@ -114,7 +155,12 @@ const DEFAULT_PROFILE_EXTRA: ProfileExtra = {
     personalizedDeals: true,
   },
   favoriteShopIds: ["store-sri-lakshmi", "store-annapoorna-sweets", "store-sri-krishna-bakery"],
-  recentlyVisitedShopIds: ["store-sri-lakshmi", "store-modern-mart", "store-fresh-basket", "store-city-chemists"],
+  recentlyVisitedShopIds: [
+    "store-sri-lakshmi",
+    "store-modern-mart",
+    "store-fresh-basket",
+    "store-city-chemists",
+  ],
   writtenReviews: [
     {
       id: "rev-1",
@@ -125,14 +171,48 @@ const DEFAULT_PROFILE_EXTRA: ProfileExtra = {
     },
   ],
   pendingReviewItems: [
-    { id: "p-rev-1", productName: "Aachi Garam Masala 100g", shopName: "Sri Lakshmi Stores", purchasedDate: "2 days ago" },
-    { id: "p-rev-2", productName: "Fresh Butter Bun 200g", shopName: "Sri Krishna Bakery", purchasedDate: "4 days ago" },
+    {
+      id: "p-rev-1",
+      productName: "Aachi Garam Masala 100g",
+      shopName: "Sri Lakshmi Stores",
+      purchasedDate: "2 days ago",
+    },
+    {
+      id: "p-rev-2",
+      productName: "Fresh Butter Bun 200g",
+      shopName: "Sri Krishna Bakery",
+      purchasedDate: "4 days ago",
+    },
   ],
   savedCoupons: [
-    { code: "LOCAL100", title: "₹100 OFF on Local Groceries", minOrder: 499, expires: "In 2 days", discountText: "₹100 OFF" },
-    { code: "FREEDEL", title: "Free Instant Delivery", minOrder: 199, expires: "In 5 days", discountText: "FREE DELIVERY" },
-    { code: "SHORE50", title: "₹50 Flat Discount on Bakery", minOrder: 299, expires: "In 7 days", discountText: "₹50 OFF" },
-    { code: "FESTIVE20", title: "20% OFF on Sweets & Snacks", minOrder: 599, expires: "In 10 days", discountText: "20% OFF" },
+    {
+      code: "LOCAL100",
+      title: "₹100 OFF on Local Groceries",
+      minOrder: 499,
+      expires: "In 2 days",
+      discountText: "₹100 OFF",
+    },
+    {
+      code: "FREEDEL",
+      title: "Free Instant Delivery",
+      minOrder: 199,
+      expires: "In 5 days",
+      discountText: "FREE DELIVERY",
+    },
+    {
+      code: "SHORE50",
+      title: "₹50 Flat Discount on Bakery",
+      minOrder: 299,
+      expires: "In 7 days",
+      discountText: "₹50 OFF",
+    },
+    {
+      code: "FESTIVE20",
+      title: "20% OFF on Sweets & Snacks",
+      minOrder: 599,
+      expires: "In 10 days",
+      discountText: "20% OFF",
+    },
   ],
 };
 

@@ -15,6 +15,7 @@ import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { pageVariants } from "@/components/motion/presets";
 import { Toaster } from "@/components/ui/sonner";
+import { PageLoadingScreen } from "@/components/ui/lottie-loading";
 
 function NotFoundComponent() {
   return (
@@ -70,6 +71,17 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   );
 }
 
+function PendingComponent() {
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-background px-4">
+      <PageLoadingScreen
+        message="Loading LocalShore..."
+        subtext="Sourcing from nearby neighborhood stores"
+      />
+    </div>
+  );
+}
+
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
   head: () => ({
     meta: [
@@ -94,13 +106,24 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     links: [
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
-      { rel: "stylesheet", href: "https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:ital,wght@0,400..800;1,400..800&display=swap" },
+      {
+        rel: "preload",
+        href: "/assets/delivery-rider-final.png",
+        as: "image",
+        fetchPriority: "high",
+      },
+      { rel: "preload", href: "/assets/delivery-rider-loop.mp4", as: "video", type: "video/mp4" },
+      {
+        rel: "stylesheet",
+        href: "https://fonts.googleapis.com/css2?family=Caveat:wght@400..700&family=Noto+Sans+Tamil:wght@400;500;600;700&family=Outfit:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:ital,wght@0,400..800;1,400..800&family=Poppins:wght@600;700;800;900&family=Urbanist:ital,wght@0,400..900;1,400..900&display=swap",
+      },
       { rel: "stylesheet", href: appCss },
       { rel: "icon", href: "/favicon.svg", type: "image/svg+xml" },
     ],
   }),
   shellComponent: RootShell,
   component: RootComponent,
+  pendingComponent: PendingComponent,
   notFoundComponent: NotFoundComponent,
   errorComponent: ErrorComponent,
 });

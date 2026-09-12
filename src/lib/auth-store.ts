@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { cartStore } from "@/lib/cart-store";
 
 interface AuthState {
   id: string | null;
@@ -43,10 +44,20 @@ function setState(next: AuthState) {
 function ensureAuthSubscription() {
   if (initialized || typeof window === "undefined") return;
   initialized = true;
-  supabase.auth.onAuthStateChange((_event, session) => setState(fromUser(session?.user ?? null)));
+  supabase.auth.onAuthStateChange((event, session) => {
+    if (event === "SIGNED_OUT" || (!session && state.id !== null)) {
+      cartStore.clear();
+    }
+    setState(fromUser(session?.user ?? null));
+  });
   void supabase.auth
     .getSession()
-    .then(({ data }) => setState(fromUser(data.session?.user ?? null)));
+    .then(({ data }) => {
+      if (!data.session) {
+        cartStore.clear();
+      }
+      setState(fromUser(data.session?.user ?? null));
+    });
 }
 
 export const authStore = {

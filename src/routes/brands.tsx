@@ -1,7 +1,15 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { AppShell } from "@/components/app-shell";
-import { ChevronRight, BadgeCheck, Search, ArrowRight, Sparkles, ShoppingBag, Star } from "lucide-react";
+import {
+  ChevronRight,
+  BadgeCheck,
+  Search,
+  ArrowRight,
+  Sparkles,
+  ShoppingBag,
+  Star,
+} from "lucide-react";
 import { m } from "motion/react";
 import { BRANDS } from "@/lib/platform-data";
 
@@ -23,7 +31,13 @@ function BrandsPage() {
     <AppShell>
       <div className="mx-auto max-w-5xl px-4 py-6 sm:px-6 pb-12">
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <Link to="/" search={{ category: undefined, q: undefined }} className="hover:text-primary">Home</Link>
+          <Link
+            to="/"
+            search={{ category: undefined, q: undefined }}
+            className="hover:text-primary"
+          >
+            Home
+          </Link>
           <ChevronRight className="h-3 w-3" />
           <span className="font-semibold text-foreground">Brand Stores</span>
         </div>
@@ -36,13 +50,16 @@ function BrandsPage() {
         >
           <div className="flex items-center gap-2">
             <ShoppingBag className="h-5 w-5 text-purple-400" />
-            <span className="text-xs font-bold uppercase tracking-widest text-purple-300">LocalShore Brand Stores</span>
+            <span className="text-xs font-bold uppercase tracking-widest text-purple-300">
+              LocalShore Brand Stores
+            </span>
           </div>
           <h1 className="mt-3 font-display text-3xl font-extrabold sm:text-4xl">
             Shop directly from brands you love
           </h1>
           <p className="mt-2 max-w-lg text-sm text-slate-300">
-            Authentic products from verified brands, delivered with LocalShore's local delivery speed.
+            Authentic products from verified brands, delivered with LocalShore's local delivery
+            speed.
           </p>
 
           {/* Search */}
@@ -73,15 +90,23 @@ function BrandsPage() {
                   className="group shrink-0 w-48 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xs transition hover:shadow-md hover:border-purple-300"
                 >
                   <div className="relative aspect-[16/9] overflow-hidden">
-                    <img src={brand.coverUrl} alt={brand.name} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                    <img
+                      src={brand.coverUrl}
+                      alt={brand.name}
+                      className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                    />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
                   </div>
                   <div className="p-3">
                     <div className="flex items-center gap-1.5">
                       <p className="text-sm font-bold text-slate-900">{brand.name}</p>
-                      {brand.verified && <BadgeCheck className="h-3.5 w-3.5 text-blue-500 fill-blue-100" />}
+                      {brand.verified && (
+                        <BadgeCheck className="h-3.5 w-3.5 text-blue-500 fill-blue-100" />
+                      )}
                     </div>
-                    <p className="mt-0.5 text-[10px] text-slate-500">{brand.productCount} products</p>
+                    <p className="mt-0.5 text-[10px] text-slate-500">
+                      {brand.productCount} products
+                    </p>
                   </div>
                 </Link>
               ))}
@@ -96,7 +121,9 @@ function BrandsPage() {
               key={f}
               onClick={() => setFilter(f)}
               className={`rounded-full px-4 py-2 text-xs font-bold capitalize transition ${
-                filter === f ? "bg-purple-700 text-white" : "bg-slate-100 text-slate-600 hover:bg-purple-50"
+                filter === f
+                  ? "bg-purple-700 text-white"
+                  : "bg-slate-100 text-slate-600 hover:bg-purple-50"
               }`}
             >
               {f === "all" ? "All Brands" : "Featured"}
@@ -119,13 +146,19 @@ function BrandsPage() {
                 className="group block overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xs transition hover:shadow-md hover:border-purple-300"
               >
                 <div className="relative aspect-[2/1] overflow-hidden">
-                  <img src={brand.coverUrl} alt={brand.name} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                  <img
+                    src={brand.coverUrl}
+                    alt={brand.name}
+                    className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                  />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
                   <div className="absolute bottom-3 left-3 right-3 flex items-end justify-between">
                     <div>
                       <div className="flex items-center gap-1.5">
                         <h3 className="text-lg font-extrabold text-white">{brand.name}</h3>
-                        {brand.verified && <BadgeCheck className="h-4 w-4 text-sky-300 fill-sky-100" />}
+                        {brand.verified && (
+                          <BadgeCheck className="h-4 w-4 text-sky-300 fill-sky-100" />
+                        )}
                       </div>
                       <p className="text-xs text-white/70">{brand.tagline}</p>
                     </div>
@@ -140,7 +173,9 @@ function BrandsPage() {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-xs font-semibold text-slate-500">{brand.category}</p>
-                      <p className="mt-0.5 text-[11px] text-slate-400">{brand.productCount} products</p>
+                      <p className="mt-0.5 text-[11px] text-slate-400">
+                        {brand.productCount} products
+                      </p>
                     </div>
                     <div className="flex items-center gap-1 rounded-lg bg-purple-50 px-3 py-1.5 text-xs font-bold text-purple-700 group-hover:bg-purple-700 group-hover:text-white transition">
                       Visit Store <ArrowRight className="h-3 w-3" />

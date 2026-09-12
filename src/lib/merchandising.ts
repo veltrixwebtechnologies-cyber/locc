@@ -211,7 +211,8 @@ export function useTrending() {
 export function useFeaturedBrands() {
   return useQuery({
     queryKey: ["merchandising", "featured-brands"],
-    retry: 1,
+    retry: false,
+    refetchOnWindowFocus: false,
     queryFn: async () => {
       try {
         const { data, error } = await (supabase as any)
@@ -230,7 +231,8 @@ export function useFeaturedBrands() {
 export function useActiveCollections() {
   return useQuery({
     queryKey: ["merchandising", "collections"],
-    retry: 1,
+    retry: false,
+    refetchOnWindowFocus: false,
     queryFn: async () => {
       try {
         const [gift, seasonal] = await Promise.all([
@@ -298,7 +300,8 @@ function discountPercent(product: Pick<MerchandisingProduct, "mrp" | "discount_p
 export function useActiveFlashSales() {
   return useQuery({
     queryKey: ["merchandising", "flash-sales"],
-    retry: 1,
+    retry: false,
+    refetchOnWindowFocus: false,
     queryFn: async () => {
       try {
         const now = new Date().toISOString();
@@ -573,7 +576,8 @@ export function useToggleWishlist() {
             .eq("item_key", productId),
         ]);
         if (wRes.error && wRes.error.code !== "PGRST116") throw wRes.error;
-        if (weRes.error && weRes.error.code !== "PGRST205" && weRes.error.status !== 404) throw weRes.error;
+        if (weRes.error && weRes.error.code !== "PGRST205" && weRes.error.status !== 404)
+          throw weRes.error;
       } else {
         if (isUuid) {
           const { data: userData, error: userError } = await supabase.auth.getUser();
@@ -665,4 +669,3 @@ export async function recordRecentProductView(productId: string) {
     console.warn("Recent view RPC skipped:", err);
   }
 }
-

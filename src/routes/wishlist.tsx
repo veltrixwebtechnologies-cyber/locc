@@ -14,6 +14,7 @@ import {
 } from "@/lib/merchandising";
 import { APPROVED_STORE } from "@/lib/mock-data";
 import { SafeProductImage } from "@/lib/image-utils";
+import { LottieLoading } from "@/components/ui/lottie-loading";
 
 export const Route = createFileRoute("/wishlist")({
   component: WishlistPage,
@@ -32,7 +33,12 @@ function WishlistPage() {
           Saved products
         </p>
         <h1 className="mt-1 font-display text-3xl flex items-baseline gap-2">
-          Wishlist {products.data?.length ? <span className="text-lg font-sans font-normal text-muted-foreground">({products.data.length} {products.data.length === 1 ? "item" : "items"})</span> : null}
+          Wishlist{" "}
+          {products.data?.length ? (
+            <span className="text-lg font-sans font-normal text-muted-foreground">
+              ({products.data.length} {products.data.length === 1 ? "item" : "items"})
+            </span>
+          ) : null}
         </h1>
       </div>
 
@@ -46,9 +52,14 @@ function WishlistPage() {
             Sign in
           </Link>
         </EmptyState>
+
       ) : wishlist.isLoading || products.isLoading ? (
-        <div className="py-16 text-center">
-          <Loader2 className="mx-auto h-5 w-5 animate-spin text-primary" />
+        <div className="py-12 flex justify-center">
+          <LottieLoading
+            message="Loading your saved items..."
+            subtext="Fetching latest prices & store availability"
+            size="md"
+          />
         </div>
       ) : wishlist.error || products.error ? (
         <EmptyState title="Wishlist could not be loaded">
