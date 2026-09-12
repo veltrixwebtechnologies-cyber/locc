@@ -17,10 +17,7 @@ import {
 } from "lucide-react";
 import { useCart, cartTotals } from "@/lib/cart-store";
 import { useAuth } from "@/lib/auth-store";
-import {
-  CategoryMegaMenu,
-  HeaderCategoryMenu,
-} from "@/components/category-mega-menu";
+import { CategoryMegaMenu } from "@/components/category-mega-menu";
 import { Fragment, type ReactNode, useEffect, useState, useRef } from "react";
 import { useWishlist, useWishlistProducts } from "@/lib/merchandising";
 import { AnimatePresence, m } from "motion/react";
@@ -342,7 +339,6 @@ export function AppShell({ children }: { children: ReactNode }) {
               const showBadge = badgeCount > 0;
               return (
                 <Fragment key={t.to}>
-                  {t.to === "/cart" && <HeaderCategoryMenu />}
                   <Link
                     to={t.to}
                     data-cart-target={t.to === "/cart" ? "" : undefined}
