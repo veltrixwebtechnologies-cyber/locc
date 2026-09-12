@@ -16,6 +16,13 @@ import {
   Sparkles,
   ShieldCheck,
   Package,
+  Info,
+  X,
+  CheckCircle2,
+  Truck,
+  PhoneCall,
+  Tag,
+  Percent,
 } from "lucide-react";
 import {
   getStore,
@@ -82,8 +89,20 @@ export const Route = createFileRoute("/store/$storeId")({
   ),
 });
 
-function getCategoryIcon(_catName: string) {
-  return <Package className="h-4 w-4 text-slate-400" />;
+function getCategoryEmoji(catName: string) {
+  const c = (catName || "").toLowerCase();
+  if (c.includes("all")) return "🏪";
+  if (c.includes("fruit") || c.includes("veg") || c.includes("produce")) return "🍎";
+  if (c.includes("dairy") || c.includes("milk") || c.includes("egg") || c.includes("breakfast")) return "🥛";
+  if (c.includes("snack") || c.includes("munch") || c.includes("biscuit") || c.includes("chip")) return "🍿";
+  if (c.includes("beverage") || c.includes("drink") || c.includes("juice") || c.includes("tea") || c.includes("coffee")) return "🧃";
+  if (c.includes("electr") || c.includes("mobile") || c.includes("tv") || c.includes("gadget")) return "📱";
+  if (c.includes("fashion") || c.includes("cloth") || c.includes("wear") || c.includes("silk") || c.includes("saree")) return "👗";
+  if (c.includes("beauty") || c.includes("personal") || c.includes("care") || c.includes("skin")) return "💄";
+  if (c.includes("home") || c.includes("clean") || c.includes("pantry") || c.includes("staple") || c.includes("rice")) return "🌾";
+  if (c.includes("sweet") || c.includes("bakery") || c.includes("cake")) return "🍰";
+  if (c.includes("meat") || c.includes("fish") || c.includes("chicken")) return "🍗";
+  return "📦";
 }
 
 function StorePage() {
@@ -220,6 +239,9 @@ function StorePage() {
   const [minPrice, setMinPrice] = useState<string>("");
   const [maxPrice, setMaxPrice] = useState<string>("");
   const [sortBy, setSortBy] = useState<"popular" | "newest" | "price-asc" | "price-desc">("popular");
+  const [inStockOnly, setInStockOnly] = useState(false);
+  const [offersOnly, setOffersOnly] = useState(false);
+  const [showStoreInfo, setShowStoreInfo] = useState(false);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [showFilters, setShowFilters] = useState(false);
 
@@ -313,6 +335,17 @@ function StorePage() {
       if (!isNaN(max)) list = list.filter((p) => p.price <= max);
     }
 
+    if (inStockOnly) {
+      list = list.filter((p) => (p.stock ?? 20) > 0);
+    }
+
+    if (offersOnly) {
+      list = list.filter((p) => {
+        const mrp = Math.round(p.price * 1.25);
+        return mrp > p.price;
+      });
+    }
+
     if (sortBy === "price-asc") {
       list.sort((a, b) => a.price - b.price);
     } else if (sortBy === "price-desc") {
@@ -322,7 +355,7 @@ function StorePage() {
     }
 
     return list;
-  }, [products, selectedCategory, query, minPrice, maxPrice, sortBy]);
+  }, [products, selectedCategory, query, minPrice, maxPrice, inStockOnly, offersOnly, sortBy]);
 
   const qtyOf = (id: string) => cart.lines.find((l) => l.productId === id)?.qty ?? 0;
 
@@ -359,8 +392,17 @@ function StorePage() {
           <div className="absolute inset-0 bg-gradient-to-r from-[#fdfbf9] via-[#fdfbf9]/95 via-80% to-transparent w-full md:w-[62%] z-10" />
           <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-black/30 z-10 md:hidden" />
 
-          {/* Verified Store Top-Right Badge */}
-          <div className="absolute top-4 right-4 z-20">
+          {/* Verified Store Top-Right Badge & Store Info button */}
+          <div className="absolute top-4 right-4 z-20 flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setShowStoreInfo(true)}
+              className="inline-flex items-center gap-1.5 rounded-full bg-slate-900/90 text-amber-300 hover:bg-slate-950 backdrop-blur-md px-3 py-1.5 text-xs font-bold transition-all shadow-md border border-amber-300/40 cursor-pointer"
+            >
+              <Info className="h-3.5 w-3.5 text-amber-400" />
+              <span className="hidden sm:inline">Store Info</span>
+            </button>
+
             <div className="inline-flex items-center gap-1.5 rounded-full bg-white/95 backdrop-blur-md px-3.5 py-1.5 text-xs font-black text-slate-900 shadow-xl border border-amber-300/80">
               <ShieldCheck className="h-4 w-4 text-[#981495] fill-[#981495]/20" />
               <span>Verified Store</span>
@@ -418,10 +460,14 @@ function StorePage() {
 
               {/* Info Badges Row */}
               <div className="mt-3 flex flex-wrap items-center gap-2 text-xs font-bold text-slate-700">
-                <div className="flex items-center gap-1 text-slate-600 bg-white/80 backdrop-blur-xs px-2.5 py-1 rounded-full border border-slate-200/80 shadow-2xs">
+                <button
+                  type="button"
+                  onClick={() => setShowStoreInfo(true)}
+                  className="flex items-center gap-1 text-slate-600 bg-white/80 backdrop-blur-xs px-2.5 py-1 rounded-full border border-slate-200/80 shadow-2xs hover:border-purple-300 transition-colors cursor-pointer"
+                >
                   <MapPin className="h-3.5 w-3.5 text-[#981495] shrink-0" />
                   <span className="truncate max-w-[200px] sm:max-w-[280px]">{store.address}</span>
-                </div>
+                </button>
 
                 <div className="flex items-center gap-1 rounded-full bg-emerald-50/90 px-2.5 py-1 text-emerald-800 border border-emerald-200/70 shadow-2xs">
                   <Clock className="h-3.5 w-3.5 text-emerald-600" />
@@ -442,6 +488,31 @@ function StorePage() {
               </div>
             </div>
           </div>
+        </div>
+
+        {/* ── STORE OFFERS & PROMO BANNER ── */}
+        <div className="mb-4 rounded-2xl bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500 p-3.5 shadow-sm border border-amber-300 flex items-center justify-between gap-3 text-slate-950">
+          <div className="flex items-center gap-3">
+            <div className="h-9 w-9 rounded-xl bg-slate-950 text-amber-300 flex items-center justify-center font-bold text-sm shrink-0 shadow-sm">
+              🏷️
+            </div>
+            <div>
+              <p className="text-xs font-black tracking-tight leading-tight">
+                SPECIAL NEIGHBORHOOD OFFER: Get ₹50 OFF on orders above ₹299 from {store.name}
+              </p>
+              <p className="text-[10px] font-bold text-slate-900 mt-0.5">
+                Use coupon code <strong className="font-mono bg-slate-950 text-amber-300 px-1.5 py-0.5 rounded text-[10px]">LOCAL50</strong> at checkout
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => setShowStoreInfo(true)}
+            className="hidden md:inline-flex items-center gap-1 rounded-full bg-slate-950 text-white hover:bg-slate-800 px-3.5 py-1.5 text-xs font-bold transition-all shrink-0 cursor-pointer"
+          >
+            <Info className="h-3.5 w-3.5 text-amber-400" />
+            <span>Store Info & License</span>
+          </button>
         </div>
 
         {/* ── FULL-WIDTH SEARCH + CATEGORIES + COMPACT FILTER TOOLBAR ── */}
@@ -470,14 +541,14 @@ function StorePage() {
               type="button"
               onClick={() => setShowFilters((f) => !f)}
               className={`relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-all cursor-pointer border ${
-                showFilters || minPrice || maxPrice || sortBy !== "popular"
+                showFilters || minPrice || maxPrice || inStockOnly || offersOnly || sortBy !== "popular"
                   ? "bg-[#981495] text-white border-[#981495]"
                   : "bg-purple-50 text-[#981495] hover:bg-[#981495] hover:text-white border-purple-200/60"
               }`}
               title="Toggle filters"
             >
               <SlidersHorizontal className="h-4 w-4" />
-              {(minPrice || maxPrice || sortBy !== "popular") && (
+              {(minPrice || maxPrice || inStockOnly || offersOnly || sortBy !== "popular") && (
                 <span className="absolute -top-1 -right-1 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-amber-400 text-[9px] font-black text-slate-900 ring-2 ring-white">
                   !
                 </span>
@@ -485,7 +556,7 @@ function StorePage() {
             </button>
           </div>
 
-          {/* Horizontal Scrollable Category Chips for fast mobile browsing */}
+          {/* Horizontal Scrollable Category Chips with Emojis */}
           {productCategories.length > 1 && (
             <div className="flex items-center gap-2 overflow-x-auto pb-1 pt-1 no-scrollbar">
               {productCategories.map((cat) => {
@@ -503,6 +574,7 @@ function StorePage() {
                         : "bg-white text-slate-700 hover:bg-purple-50 border-slate-200/80 hover:border-purple-200"
                     }`}
                   >
+                    <span>{getCategoryEmoji(cat.name)}</span>
                     <span>{cat.name}</span>
                     <span
                       className={`rounded-full px-1.5 py-0.2 text-[10px] font-extrabold ${
@@ -543,6 +615,33 @@ function StorePage() {
                     className="w-24 rounded-xl border border-amber-300/70 px-3 py-1.5 text-xs font-bold text-slate-900 outline-none focus:border-[#981495] bg-slate-50/50"
                   />
                 </div>
+              </div>
+
+              {/* Quick Toggle Buttons */}
+              <div className="flex flex-wrap gap-2 items-center">
+                <button
+                  type="button"
+                  onClick={() => setInStockOnly((v) => !v)}
+                  className={`rounded-full px-3 py-1.5 text-xs font-bold transition-all border cursor-pointer ${
+                    inStockOnly
+                      ? "bg-emerald-600 text-white border-emerald-600 shadow-xs"
+                      : "bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100"
+                  }`}
+                >
+                  ⚡ In Stock Only
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setOffersOnly((v) => !v)}
+                  className={`rounded-full px-3 py-1.5 text-xs font-bold transition-all border cursor-pointer ${
+                    offersOnly
+                      ? "bg-[#981495] text-white border-[#981495] shadow-xs"
+                      : "bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100"
+                  }`}
+                >
+                  🏷️ Discounts & Offers
+                </button>
               </div>
 
               {/* Sort By */}
@@ -679,8 +778,11 @@ function StorePage() {
                 {filteredProducts.map((p) => {
                   const q = qtyOf(p.id);
                   const mrp = Math.round(p.price * 1.25);
-                  const discountPct = Math.round(((mrp - p.price) / mrp) * 100);
+                  const savings = Math.max(0, mrp - p.price);
+                  const discountPct = mrp > p.price ? Math.round((savings / mrp) * 100) : 0;
                   const unit = p.unit || "1 unit";
+                  const stockNum = p.stock ?? 20;
+                  const isLowStock = stockNum > 0 && stockNum <= 5;
 
                   return (
                     <m.div
@@ -689,11 +791,25 @@ function StorePage() {
                       initial={{ opacity: 0, y: 10 }}
                       whileInView={{ opacity: 1, y: 0 }}
                       viewport={{ once: true, amount: 0.15 }}
-                      className="group relative flex flex-col justify-between overflow-hidden rounded-2xl border border-slate-200/90 bg-white p-3 shadow-xs hover:border-purple-300 hover:shadow-md transition-all duration-200"
+                      className="group relative flex flex-col justify-between overflow-hidden rounded-2xl border border-slate-200/90 bg-white p-3 shadow-xs hover:border-purple-300 hover:shadow-lg transition-all duration-200"
                     >
                       <div>
                         {/* Top Image Frame with floating badges */}
                         <div className="relative aspect-square w-full overflow-hidden rounded-xl bg-slate-50/90 border border-slate-100 p-2 flex items-center justify-center">
+                          {/* Top Left Badges: Discount & Low Stock */}
+                          <div className="absolute left-2 top-2 z-10 flex flex-col gap-1 items-start">
+                            {discountPct > 0 && (
+                              <span className="rounded-md bg-[#981495] text-amber-200 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider shadow-sm">
+                                {discountPct}% OFF
+                              </span>
+                            )}
+                            {isLowStock && (
+                              <span className="rounded-md bg-amber-500 text-slate-950 px-2 py-0.5 text-[9px] font-black shadow-sm">
+                                Only {stockNum} left!
+                              </span>
+                            )}
+                          </div>
+
                           {/* Wishlist Button top-right */}
                           <div className="absolute right-2 top-2 z-10">
                             <WishlistButton
@@ -723,7 +839,7 @@ function StorePage() {
                             size="lg"
                           />
 
-                          {/* ADD Button positioned at bottom-right corner of image frame (Matching Image 2 position!) */}
+                          {/* ADD Button positioned at bottom-right corner of image frame */}
                           <div className="absolute right-2 bottom-2 z-20">
                             {q === 0 ? (
                               <button
@@ -733,9 +849,9 @@ function StorePage() {
                                   flyProductToCart(p.id);
                                   cartStore.add(store.id || p.storeId, store.name, p);
                                 }}
-                                className="rounded-lg bg-white border border-emerald-600 text-emerald-700 hover:bg-emerald-600 hover:text-white px-3.5 py-1 text-xs font-black uppercase tracking-wider shadow-sm transition-all active:scale-95 cursor-pointer flex items-center gap-1"
+                                className="rounded-xl bg-white border-2 border-emerald-600 text-emerald-700 hover:bg-emerald-600 hover:text-white px-3 py-1 text-xs font-black uppercase tracking-wider shadow-md hover:shadow-emerald-600/20 transition-all active:scale-95 cursor-pointer flex items-center gap-1"
                               >
-                                <span>ADD</span>
+                                <span>+ ADD</span>
                               </button>
                             ) : (
                               <QtyStepper
@@ -747,7 +863,7 @@ function StorePage() {
                                   cartStore.add(store.id || p.storeId, store.name, p);
                                 }}
                                 onChange={(n) => cartStore.setQty(p.id, n)}
-                                addClassName="rounded-lg bg-emerald-700 text-white px-2 py-0.5 text-xs font-bold shadow-sm"
+                                addClassName="rounded-xl bg-emerald-700 text-white px-2 py-0.5 text-xs font-bold shadow-md"
                               />
                             )}
                           </div>
@@ -763,8 +879,8 @@ function StorePage() {
                           }}
                           className="mt-2.5 block space-y-1"
                         >
-                          {/* Price line with strikethrough MRP */}
-                          <div className="flex items-baseline gap-2">
+                          {/* Price line with strikethrough MRP & Savings callout */}
+                          <div className="flex items-baseline gap-2 flex-wrap">
                             <span className="text-base font-black text-slate-900">
                               ₹{p.price.toLocaleString("en-IN")}
                             </span>
@@ -773,13 +889,12 @@ function StorePage() {
                                 ₹{mrp.toLocaleString("en-IN")}
                               </span>
                             )}
+                            {savings > 0 && (
+                              <span className="text-[10px] font-extrabold text-emerald-700 bg-emerald-50 px-1.5 py-0.2 rounded border border-emerald-200">
+                                Save ₹{savings}
+                              </span>
+                            )}
                           </div>
-
-                          {discountPct > 0 && (
-                            <p className="text-[11px] font-extrabold text-blue-600 uppercase tracking-tight">
-                              {discountPct}% OFF ON MRP
-                            </p>
-                          )}
 
                           {/* Title */}
                           <h3 className="line-clamp-2 text-xs sm:text-sm font-bold text-slate-800 leading-snug group-hover:text-[#981495] transition-colors">
@@ -788,18 +903,18 @@ function StorePage() {
 
                           {/* Rating & ETA */}
                           <div className="flex items-center gap-2 pt-0.5 text-[11px] font-bold text-slate-600">
-                            <span className="flex items-center gap-0.5 text-amber-600">
+                            <span className="flex items-center gap-0.5 text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200/60">
                               <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
                               4.8
                             </span>
                             <span className="text-slate-300">•</span>
-                            <span className="text-slate-500">⏱ {computedEtaMin} mins</span>
+                            <span className="text-slate-500 font-medium">⚡ {computedEtaMin} mins</span>
                           </div>
 
-                          {/* Category pill with arrow */}
+                          {/* Category pill */}
                           <div className="pt-1">
                             <span className="inline-flex items-center gap-1 rounded-md bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-600 group-hover:bg-purple-50 group-hover:text-[#981495] transition-colors">
-                              <span>All {p.category || "Item"}</span>
+                              <span>{getCategoryEmoji(p.category || "")} {p.category || "Item"}</span>
                               <span className="text-[8px]">▶</span>
                             </span>
                           </div>
@@ -931,6 +1046,79 @@ function StorePage() {
           ]}
         />
       </div>
+
+      {/* Interactive Store Info Modal */}
+      {showStoreInfo && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="relative w-full max-w-lg overflow-hidden rounded-3xl bg-white p-6 shadow-2xl border-2 border-amber-300">
+            <button
+              type="button"
+              onClick={() => setShowStoreInfo(false)}
+              className="absolute top-4 right-4 h-9 w-9 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 hover:bg-slate-200 hover:text-slate-900 transition-colors cursor-pointer"
+            >
+              <X className="h-5 w-5" />
+            </button>
+
+            <div className="flex items-center gap-3.5 mb-5">
+              <div className="h-14 w-14 rounded-2xl bg-[#310938] text-[#f5d061] flex items-center justify-center font-bold text-2xl shrink-0 shadow-md border border-amber-300/40">
+                🏪
+              </div>
+              <div>
+                <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                  <CheckCircle2 className="h-3 w-3 text-emerald-600" /> FSSAI & Govt Verified Store
+                </span>
+                <h3 className="text-xl font-extrabold text-slate-900 leading-tight mt-0.5">{store.name}</h3>
+                <p className="text-xs font-medium text-slate-500">{store.category} · {store.tagline || "Verified Local Merchant"}</p>
+              </div>
+            </div>
+
+            <div className="space-y-3.5 divide-y divide-slate-100 text-xs">
+              <div className="pt-2 flex items-start gap-3">
+                <MapPin className="h-4 w-4 text-[#981495] shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-bold text-slate-900">Physical Store Address</p>
+                  <p className="text-slate-600 font-medium">{store.address}</p>
+                </div>
+              </div>
+
+              <div className="pt-3 flex items-start gap-3">
+                <Clock className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-bold text-slate-900">Operating Hours & Live Status</p>
+                  <p className="text-emerald-700 font-bold">Open Today · 9:00 AM – 9:30 PM</p>
+                  <p className="text-slate-500 font-medium">Orders placed now dispatch within 10 minutes</p>
+                </div>
+              </div>
+
+              <div className="pt-3 flex items-start gap-3">
+                <Truck className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-bold text-slate-900">Delivery & Returns Policy</p>
+                  <p className="text-slate-600 font-medium">🚀 Instant delivery in ~{computedEtaMin} mins ({computedDistanceKm} km)</p>
+                  <p className="text-slate-600 font-medium">🔄 Doorstep return & replacement support within 2 hours</p>
+                </div>
+              </div>
+
+              <div className="pt-3 flex items-start gap-3">
+                <ShieldCheck className="h-4 w-4 text-[#981495] shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-bold text-slate-900">Merchant Verification & License</p>
+                  <p className="text-slate-600 font-mono text-[11px]">Lic. No: 10824001009122</p>
+                  <p className="text-slate-500 font-medium">Verified local shoreline partner merchant</p>
+                </div>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setShowStoreInfo(false)}
+              className="mt-6 w-full rounded-2xl bg-[#981495] hover:bg-purple-800 text-white font-bold py-3 text-sm shadow-md transition-all cursor-pointer"
+            >
+              Got it, back to store
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Sticky Cart Footer Bar when items are present */}
       {totals.itemCount > 0 && (
