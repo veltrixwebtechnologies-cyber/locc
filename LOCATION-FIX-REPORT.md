@@ -1,5 +1,19 @@
 # Location integration and fixes — 12 September 2026
 
+## Follow-up: customer location selector after deployment
+
+The supplied video shows the customer location modal entering detection and then returning to the button without a visible explanation. It does not expose the browser's coordinates, accuracy, permission result, or the deployed commit, so it cannot establish which device-level error occurred.
+
+The corresponding source had three reproducible problems: a first coarse reading was rejected without waiting for an improving fix; processing failures were swallowed by the modal while the store did not display their actual cause; and selecting valid coordinates waited for unbounded reverse-geocoding requests. These are addressed in this follow-up:
+
+- A high-accuracy watch waits up to 20 seconds for an improving reading, with an application deadline even when the browser provides no callback. Permission denial stops immediately. Cancellation stops the watch and discards late responses.
+- Coordinates update immediately on a usable reading. Address lookup runs separately, is aborted after four seconds, and cannot replace a newer selected area. Failure retains an honest coordinate label, without an invented city.
+- The modal displays the actual failure and measured accuracy, allows retry/cancel, and no longer promises satellite or exact GPS acquisition.
+- When only a valid, recent approximate reading is available, the customer may explicitly choose **Use approximate area** for browsing shops. It stays labeled approximate with its accuracy. It is never silently accepted as a precise delivery pin; checkout's independent entrance-pin confirmation and driver-navigation checks remain in force. An expired approximate candidate requires another acquisition.
+- Added eight regression tests covering improving GPS, approximate confirmation, no callback, denied permission, stalled address lookup, cancellation, late responses, and invalid/stale readings. All 14 customer map tests, TypeScript checking, and the production build pass. The real modal was also checked in a browser with synthetic positions and a deliberately stalled address service.
+
+GitHub was checked again during this follow-up: `locc/main` remained at `dafb0f3`, while `amrs-map-patch` contained the previous integration `df02f6a`. Main did not contain that integration. Deploy the latest `amrs-map-patch` commit or merge it into the deployment branch first. No deployment or production database changes were performed for this follow-up.
+
 ## Branch integration
 
 Work was completed on `amrs-map-patch` in locc, DeliveryHub, and VendorAdmin. The remote patch branches had been moved to the same commits as main. The original patch commits were still available locally, so the integration uses merge commits rather than resetting, rebasing, or force-pushing the branches.

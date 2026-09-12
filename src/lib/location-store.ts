@@ -1,4 +1,10 @@
-import { usableGPS } from "./coordinates";
+import { parseCoordinates } from "./coordinates";
+import {
+  acquireCurrentPosition,
+  accuracyLabel,
+  freshBrowserPosition,
+  LocationAcquisitionError,
+} from "./acquire-location";
 /**
  * LocalShore Global Delivery Location Store
  * Reactive delivery location management supporting GPS Geolocation, Nominatim Reverse Geocoding,
@@ -13,7 +19,6 @@ import { usableGPS } from "./coordinates";
 
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
-import { reverseGeocode } from "@/lib/geocoding.functions";
 
 export interface DeliveryLocation {
   id: string;
@@ -24,6 +29,7 @@ export interface DeliveryLocation {
   lng: number;
   isGPS?: boolean;
   accuracy?: number | null;
+  isApproximate?: boolean;
   pincode?: string;
 }
 
@@ -161,7 +167,7 @@ function getStoredLocation(): DeliveryLocation | null {
     const cached = localStorage.getItem(STORAGE_KEY);
     if (cached) {
       const parsed = JSON.parse(cached);
-      if (parsed && typeof parsed.lat === "number" && typeof parsed.lng === "number") {
+      if (parsed && parseCoordinates(parsed.lat, parsed.lng)) {
         return parsed;
       }
     }
@@ -205,9 +211,22 @@ export function getActiveDeliveryLocation(): DeliveryLocation | null {
 }
 
 let locationRevision = 0;
+let activeGPSRequest: AbortController | null = null;
+
+export function cancelCurrentGPSLocation() {
+  locationRevision++;
+  activeGPSRequest?.abort();
+  activeGPSRequest = null;
+  if (gpsStatus === "detecting") setGPSStatus("idle");
+}
 
 export function setActiveDeliveryLocation(loc: DeliveryLocation) {
-  locationRevision++;
+  cancelCurrentGPSLocation();
+  setGPSStatus("idle");
+  publishLocation(loc);
+}
+
+function publishLocation(loc: DeliveryLocation) {
   activeLocation = { ...loc };
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(activeLocation));
@@ -225,7 +244,7 @@ export function setActiveDeliveryLocation(loc: DeliveryLocation) {
  * Clear the current delivery location (used when user wants to re-detect).
  */
 export function clearActiveDeliveryLocation() {
-  locationRevision++;
+  cancelCurrentGPSLocation();
   activeLocation = null;
   try {
     localStorage.removeItem(STORAGE_KEY);
@@ -311,174 +330,135 @@ export function initAutoGPSLocation() {
   }
 }
 
-/**
- * Detect Current GPS Location using Browser Geolocation API with two-stage fallback.
- * Updates both the GPS detection state AND (on success) the active delivery location.
- */
+/** Update the selected coordinates immediately; the optional address lookup cannot block GPS. */
+function locationFromPosition(
+  position: GeolocationPosition,
+  approximate = false,
+): DeliveryLocation {
+  const { latitude: lat, longitude: lng, accuracy } = position.coords;
+  const point = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+  return {
+    id: `gps-${Date.now()}`,
+    label: approximate ? `Approximate area near ${point} (±${accuracyLabel(accuracy)})` : point,
+    area: approximate ? `Approximate area (±${accuracyLabel(accuracy)})` : `Near ${point}`,
+    city: "",
+    lat,
+    lng,
+    isGPS: true,
+    isApproximate: approximate,
+    accuracy,
+  };
+}
+
+async function enrichLocationLabel(
+  location: DeliveryLocation,
+  revision: number,
+  signal: AbortSignal,
+) {
+  const controller = new AbortController();
+  const abort = () => controller.abort();
+  signal.addEventListener("abort", abort, { once: true });
+  const timeout = setTimeout(abort, 4000);
+  try {
+    if (signal.aborted) return;
+    const params = new URLSearchParams({
+      lat: String(location.lat),
+      lon: String(location.lng),
+      format: "json",
+      addressdetails: "1",
+      zoom: "16",
+    });
+    const response = await fetch(`https://nominatim.openstreetmap.org/reverse?${params}`, {
+      headers: { "Accept-Language": "en" },
+      signal: controller.signal,
+    });
+    if (!response.ok) return;
+    const data = await response.json();
+    if (
+      controller.signal.aborted ||
+      signal.aborted ||
+      revision !== locationRevision ||
+      activeLocation?.id !== location.id
+    )
+      return;
+    if (typeof data?.display_name !== "string" || !data.display_name.trim()) return;
+    const parts = data.display_name.split(",").map((part: string) => part.trim());
+    const district =
+      data.address?.city ||
+      data.address?.town ||
+      data.address?.county ||
+      data.address?.state_district ||
+      "";
+    publishLocation({
+      ...location,
+      label: location.isApproximate
+        ? `Approximate: ${parts.slice(0, 3).join(", ")} (±${accuracyLabel(location.accuracy!)})`
+        : parts.slice(0, 3).join(", "),
+      area: location.isApproximate ? `Near ${parts[0]} (approximate)` : parts[0],
+      city: [district, data.address?.state].filter(Boolean).join(", "),
+      pincode: location.isApproximate ? undefined : data.address?.postcode,
+    });
+  } catch {
+    // Coordinates remain selected if address lookup is blocked, slow, or unavailable.
+  } finally {
+    clearTimeout(timeout);
+    signal.removeEventListener("abort", abort);
+  }
+}
+
+/** Explicit browsing-area choice only. Checkout independently requires an entrance pin. */
+export function confirmApproximateGPSLocation(position: GeolocationPosition): DeliveryLocation {
+  if (!freshBrowserPosition(position))
+    throw new Error("This location reading has expired. Retry location detection.");
+  cancelCurrentGPSLocation();
+  const controller = new AbortController();
+  activeGPSRequest = controller;
+  const location = locationFromPosition(position, true);
+  publishLocation(location);
+  setGPSStatus("ok");
+  void enrichLocationLabel(location, locationRevision, controller.signal);
+  return location;
+}
+
 export async function detectCurrentGPSLocation(options?: {
   silent?: boolean;
 }): Promise<DeliveryLocation> {
-  if (typeof window === "undefined" || !navigator.geolocation) {
-    setGPSStatus("unsupported", "Geolocation is not supported by your browser.");
-    throw new Error("Geolocation is not supported by your browser.");
-  }
-
-  const requestRevision = ++locationRevision;
-  const silent = options?.silent ?? false;
-  setGPSStatus("detecting");
-
-  const processPosition = async (position: GeolocationPosition): Promise<DeliveryLocation> => {
-    if (!usableGPS(position))
-      throw new Error(
-        "Location is approximate or stale. Enable precise location or choose your destination manually.",
-      );
-    const { latitude: lat, longitude: lng, accuracy } = position.coords;
-    let area = `GPS Location (${lat.toFixed(3)}, ${lng.toFixed(3)})`;
-    let city = "";
-    let label = `Near ${lat.toFixed(4)}, ${lng.toFixed(4)}, Coimbatore, TN`;
-    let pincode: string | undefined;
-
-    try {
-      const params = new URLSearchParams({
-        lat: String(lat),
-        lon: String(lng),
-        format: "json",
-        addressdetails: "1",
-        zoom: "16",
-      });
-      const res = await fetch(`https://nominatim.openstreetmap.org/reverse?${params.toString()}`, {
-        headers: { "Accept-Language": "en" },
-      });
-      if (res.ok) {
-        const data = await res.json();
-        if (data && data.display_name) {
-          const parts = data.display_name.split(",").map((s: string) => s.trim());
-          const shortArea = parts[0] || "Live GPS Location";
-          const shortLabel = parts.slice(0, 3).join(", ");
-          const dist =
-            data.address?.city ||
-            data.address?.town ||
-            data.address?.county ||
-            data.address?.state_district ||
-            "";
-          const st = data.address?.state || "";
-
-          area = shortArea;
-          city = [dist, st].filter(Boolean).join(", ");
-          label = shortLabel;
-          if (data.address?.postcode) pincode = data.address.postcode;
-        }
-      } else {
-        // Fallback attempt: server function reverse geocode
-        const result = await reverseGeocode({ data: { lat, lng } });
-        if (result && result.area) {
-          area = result.area;
-          city = result.city || city;
-          label = result.address || label;
-        }
-      }
-    } catch (err) {
-      try {
-        const result = await reverseGeocode({ data: { lat, lng } });
-        if (result && result.area) {
-          area = result.area;
-          city = result.city || city;
-          label = result.address || label;
-        }
-      } catch (innerErr) {
-        console.warn("Geolocation reverse geocode fallback:", innerErr);
-      }
-    }
-
-    const newLoc: DeliveryLocation = {
-      id: `gps-${Date.now()}`,
-      label,
-      area,
-      city,
-      lat,
-      lng,
-      isGPS: true,
-      accuracy: accuracy ?? null,
-      pincode,
-    };
-
-    if (requestRevision !== locationRevision)
-      throw new Error("Location selection changed while GPS was resolving.");
-    setActiveDeliveryLocation(newLoc);
+  cancelCurrentGPSLocation();
+  const requestRevision = locationRevision;
+  const controller = new AbortController();
+  activeGPSRequest = controller;
+  setGPSStatus("detecting", "Waiting for your browser's location. Allow access if prompted.");
+  try {
+    const position = await acquireCurrentPosition({
+      signal: controller.signal,
+      onProgress: (message) => {
+        if (requestRevision === locationRevision) setGPSStatus("detecting", message);
+      },
+    });
+    if (controller.signal.aborted || requestRevision !== locationRevision)
+      throw new DOMException("Location selection changed.", "AbortError");
+    const location = locationFromPosition(position);
+    publishLocation(location);
     setGPSStatus("ok");
-
-    if (!silent) {
-      const toastDesc =
-        accuracy && accuracy > 100
-          ? `${area}, ${city} · Accuracy ±${Math.round(accuracy)}m — move to an open area for better precision`
-          : `${area}, ${city}`;
-      toast.success("Live Location Acquired", {
+    void enrichLocationLabel(location, requestRevision, controller.signal);
+    if (!options?.silent)
+      toast.success("Current location updated", {
         id: "live-location-toast",
-        description: toastDesc,
+        description: `Accuracy ±${accuracyLabel(position.coords.accuracy)}. Confirm your delivery entrance at checkout.`,
       });
-    }
-    return newLoc;
-  };
-
-  return new Promise((resolve, reject) => {
-    // Try High-Accuracy GPS first (ideal for mobile devices)
-    navigator.geolocation.getCurrentPosition(
-      async (pos) => {
-        try {
-          const loc = await processPosition(pos);
-          resolve(loc);
-        } catch (err) {
-          setGPSStatus("error", "Failed to process GPS location.");
-          reject(err);
-        }
-      },
-      (firstErr) => {
-        // High accuracy failed or timed out — retry with low accuracy (WiFi / IP / coarse desktop fix)
-        navigator.geolocation.getCurrentPosition(
-          async (pos) => {
-            try {
-              const loc = await processPosition(pos);
-              resolve(loc);
-            } catch (err) {
-              setGPSStatus("error", "Failed to process GPS location.");
-              reject(err);
-            }
-          },
-          (secondErr) => {
-            let msg = "Could not fetch current GPS location.";
-            let status: GPSStatus = "error";
-            if (
-              secondErr.code === secondErr.PERMISSION_DENIED ||
-              firstErr.code === firstErr.PERMISSION_DENIED
-            ) {
-              msg =
-                "Location access denied. Please enable location permission in browser site settings.";
-              status = "denied";
-            } else if (secondErr.code === secondErr.POSITION_UNAVAILABLE) {
-              msg = "GPS signal unavailable. Please select your location manually.";
-              status = "unavailable";
-            } else if (secondErr.code === secondErr.TIMEOUT) {
-              msg = "GPS request timed out. Please select your area from the list.";
-              status = "timeout";
-            }
-            setGPSStatus(status, msg);
-            if (!silent) {
-              toast.error("Geolocation Error", { id: "live-location-toast-err", description: msg });
-            }
-            reject(new Error(msg));
-          },
-          {
-            enableHighAccuracy: true,
-            timeout: 10000,
-            maximumAge: 0,
-          },
-        );
-      },
-      {
-        enableHighAccuracy: true,
-        timeout: 6000,
-        maximumAge: 0,
-      },
-    );
-  });
+    return location;
+  } catch (error) {
+    if (controller.signal.aborted || requestRevision !== locationRevision) throw error;
+    const message =
+      error instanceof Error
+        ? error.message
+        : "Could not determine your location. Retry or choose an area.";
+    setGPSStatus(error instanceof LocationAcquisitionError ? error.status : "error", message);
+    if (!options?.silent)
+      toast.error("Location could not be updated", {
+        id: "live-location-toast-err",
+        description: message,
+      });
+    throw error;
+  }
 }
