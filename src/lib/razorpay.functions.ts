@@ -76,6 +76,14 @@ export const createRazorpayOrderFn = createServerFn({ method: "POST" })
     return data;
   })
   .handler(async ({ data }): Promise<CreateRazorpayOrderResult> => {
+    // 0. Redis Rate Limit (3 attempts per 60 seconds) - Fail-Closed
+    const { redisRateLimit } = await import("@/lib/redis.server");
+    const rateId = `pay:${data.buyer_phone || 'guest'}:${data.items.map((i) => i.product_id).join('_')}`;
+    const rateCheck = await redisRateLimit(rateId, 3, 60);
+    if (!rateCheck.allowed) {
+      throw new Error("Too many payment attempts in a short time. Please wait 1 minute before trying again.");
+    }
+
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const admin = supabaseAdmin as any;
     const { keyId, keySecret } = getRazorpayCredentials();
