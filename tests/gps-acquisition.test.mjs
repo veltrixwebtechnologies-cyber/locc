@@ -28,6 +28,7 @@ function replaceGlobal(t, key, value) {
 }
 
 function setup(t) {
+  t.mock.timers.enable({ apis: ["setTimeout", "Date"], now: Date.now() });
   let success, failure;
   const cleared = [];
   const requests = [];
@@ -60,6 +61,7 @@ test("first approximate fix can improve without silently failing the location re
   assert.match(progress[0], /2.5 km/);
   assert.deepEqual(env.cleared, []);
   env.emit(position(12));
+  t.mock.timers.tick(3000);
   assert.equal((await pending).coords.accuracy, 12);
   assert.deepEqual(env.cleared, [1]);
   assert.deepEqual(env.requests[0], { enableHighAccuracy: true, maximumAge: 0, timeout: 20000 });
@@ -67,7 +69,6 @@ test("first approximate fix can improve without silently failing the location re
 
 test("approximate-only results are rejected without changing the selected location", async (t) => {
   const env = setup(t);
-  t.mock.timers.enable({ apis: ["setTimeout", "Date"] });
   const pending = store.detectCurrentGPSLocation();
   const checked = assert.rejects(pending, (error) => {
     assert.ok(error instanceof LocationAcquisitionError);
@@ -85,7 +86,6 @@ test("approximate-only results are rejected without changing the selected locati
 
 test("deadline stops a browser that never calls back, including an unanswered permission prompt", async (t) => {
   const env = setup(t);
-  t.mock.timers.enable({ apis: ["setTimeout"] });
   const pending = acquireCurrentPosition();
   const checked = assert.rejects(pending, /permission prompt/);
   t.mock.timers.tick(20000);
@@ -107,7 +107,6 @@ test("denied permission reports the real cause immediately without another reque
 
 test("coordinates update without waiting for a stalled reverse-geocoding service", async (t) => {
   const env = setup(t);
-  t.mock.timers.enable({ apis: ["setTimeout"] });
   let signal;
   t.mock.method(globalThis, "fetch", (_url, options) => {
     signal = options.signal;
@@ -115,6 +114,7 @@ test("coordinates update without waiting for a stalled reverse-geocoding service
   });
   const pending = store.detectCurrentGPSLocation();
   env.emit(position());
+  t.mock.timers.tick(3000);
   const location = await pending;
   assert.equal(location.lat, 9.9816);
   assert.equal(store.getGPSStatus().status, "ok");
@@ -149,6 +149,7 @@ test("late address lookup cannot overwrite a newer manually selected area", asyn
   );
   const pending = store.detectCurrentGPSLocation();
   env.emit(position());
+  t.mock.timers.tick(3000);
   await pending;
   store.setActiveDeliveryLocation(store.PRESET_LOCATIONS[0]);
   finish({ ok: true, json: async () => ({ display_name: "Late area, Wrong city" }) });
@@ -158,7 +159,6 @@ test("late address lookup cannot overwrite a newer manually selected area", asyn
 
 test("invalid/stale readings never become approximate candidates", async (t) => {
   const env = setup(t);
-  t.mock.timers.enable({ apis: ["setTimeout"] });
   const pending = acquireCurrentPosition();
   const checked = assert.rejects(pending, (error) => {
     assert.equal(error.approximatePosition, undefined);
@@ -178,6 +178,7 @@ test("readings worse than 25 metres keep waiting until a sufficiently accurate f
   await Promise.resolve();
   assert.equal(store.getActiveDeliveryLocation(), null);
   env.emit(position(25));
+  t.mock.timers.tick(3000);
   assert.equal((await pending).accuracy, 25);
 });
 

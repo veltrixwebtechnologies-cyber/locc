@@ -322,6 +322,31 @@ export function DeliveryMap({
     secAgo,
   ]);
 
+  useEffect(() => {
+    const map = mapRef.current,
+      L = LRef.current;
+    if (
+      !map ||
+      !L ||
+      !interactive ||
+      !destination ||
+      !parseCoordinates(destination.lat, destination.lng) ||
+      typeof accuracyMeters !== "number" ||
+      !Number.isFinite(accuracyMeters) ||
+      accuracyMeters <= 0
+    )
+      return;
+    const circle = L.circle([destination.lat, destination.lng], {
+      className: "gps-accuracy-circle",
+      radius: accuracyMeters,
+      color: "#7c3aed",
+      weight: 1,
+      fillOpacity: 0.12,
+      interactive: false,
+    }).addTo(map);
+    return () => circle.remove();
+  }, [destination?.lat, destination?.lng, accuracyMeters, interactive, loading]);
+
   // Sync Leaflet markers and route polyline with animation
   useEffect(() => {
     const map = mapRef.current;
@@ -351,9 +376,29 @@ export function DeliveryMap({
       });
 
       if (!m) {
-        m = L.marker([pos.lat, pos.lng], { icon }).addTo(map);
+        m = L.marker([pos.lat, pos.lng], { icon, draggable: interactive && id === "dest" }).addTo(
+          map,
+        );
         markersRef.current[id] = m;
+        if (interactive && id === "dest") {
+          const notify = () => {
+            const pin = m.getLatLng();
+            destinationCallback.current?.({ lat: pin.lat, lng: pin.lng });
+          };
+          m.on("dragstart", () => {
+            m.deliveryPinDragging = true;
+            notify();
+          });
+          m.on("dragend", () => {
+            m.deliveryPinDragging = false;
+            notify();
+          });
+        }
       } else {
+        if (interactive && id === "dest") {
+          if (!m.deliveryPinDragging) m.setLatLng([pos.lat, pos.lng]);
+          return;
+        }
         m.setIcon(icon);
         const startLatLng = m.getLatLng();
         const startTime = performance.now();
@@ -452,7 +497,13 @@ export function DeliveryMap({
 
       {/* Bottom Live Update Status Indicator */}
       <div className="absolute bottom-2 right-2 z-[400] rounded-lg bg-slate-900/80 px-2.5 py-1 font-mono text-[10px] text-slate-300 backdrop-blur-sm">
-        {lastUpdated.getTime() ? `Last GPS update ${secAgo}s ago` : "No live GPS fix"}
+        {interactive
+          ? typeof accuracyMeters === "number"
+            ? `Device accuracy ±${Math.round(accuracyMeters)} m`
+            : "Confirm the entrance pin"
+          : lastUpdated.getTime()
+            ? `Last GPS update ${secAgo}s ago`
+            : "No live GPS fix"}
       </div>
     </div>
   );

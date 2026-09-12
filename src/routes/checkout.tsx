@@ -1,3 +1,4 @@
+import { acquireCurrentPosition } from "@/lib/acquire-location";
 import { parseCoordinates, usableGPS } from "@/lib/coordinates";
 import { deliveryLocationSignature, isConfirmedDeliveryLocation } from "@/lib/delivery-location";
 import { createFileRoute, Link, useNavigate, redirect } from "@tanstack/react-router";
@@ -155,6 +156,7 @@ function CheckoutPage() {
   const [confirmedLocation, setConfirmedLocation] = useState("");
   const [confirmedNewAddress, setConfirmedNewAddress] = useState("");
   const acquisitionRevision = useRef(0);
+  const acquisitionController = useRef<AbortController | null>(null);
   const geocodeRevision = useRef(0);
   const lastFixAt = useRef(0);
   const lastGeocodeAt = useRef(0);
@@ -291,11 +293,12 @@ function CheckoutPage() {
     setAddr(CURRENT_LOCATION_ID);
     setLocStatus("ok");
     setLocError("");
+    // Keep the latest resolved label between lookups; frequent GPS updates must not
+    // invalidate every in-flight lookup or erase the address faster than it can resolve.
+    if (Date.now() - lastGeocodeAt.current < 5000) return;
     setCurrentAddress(coords.lat.toFixed(5) + ", " + coords.lng.toFixed(5));
     setManualAddress("");
     const request = ++geocodeRevision.current;
-    // Throttle requests without postponing them indefinitely during continuous GPS updates.
-    if (Date.now() - lastGeocodeAt.current < 5000) return;
     lastGeocodeAt.current = Date.now();
     void reverseGeocodeFn({ data: coords })
       .then((result) => {
@@ -316,6 +319,8 @@ function CheckoutPage() {
 
   const stopLiveLocation = () => {
     acquisitionRevision.current++;
+    acquisitionController.current?.abort();
+    acquisitionController.current = null;
     geocodeRevision.current++;
     lastFixAt.current = 0;
     lastGeocodeAt.current = 0;
@@ -386,14 +391,22 @@ function CheckoutPage() {
     const revision = acquisitionRevision.current;
     setLocStatus("loading");
     setLocError("");
-    navigator.geolocation.getCurrentPosition(
-      (position) => applyPosition(position, revision),
-      (error) => {
-        if (revision === acquisitionRevision.current)
-          handleGeolocationError(error, window.top !== window.self);
+    const controller = new AbortController();
+    acquisitionController.current = controller;
+    void acquireCurrentPosition({
+      signal: controller.signal,
+      onProgress: (message) => {
+        if (revision === acquisitionRevision.current) setLocError(message);
       },
-      geolocationOptions,
-    );
+    })
+      .then((position) => applyPosition(position, revision))
+      .catch((error) => {
+        if (controller.signal.aborted || revision !== acquisitionRevision.current) return;
+        setLocStatus("error");
+        setLocError(
+          error instanceof Error ? error.message : "Precise location unavailable. Retry.",
+        );
+      });
   };
 
   const startLiveLocation = () => {
@@ -1048,10 +1061,19 @@ function CheckoutPage() {
         )}
         {locStatus === "ok" && (
           <p className="mt-1 text-[11px] text-primary">
-            Location updated — address matched to the pin below.
+            Device location acquired. Check the address and confirm the delivery entrance.
           </p>
         )}
-        {locStatus === "error" && <p className="mt-1 text-[11px] text-destructive">{locError}</p>}
+        {locStatus === "loading" && (
+          <p role="status" className="mt-1 text-[11px] text-muted-foreground">
+            {locError || "Waiting for precise device location…"}
+          </p>
+        )}
+        {locStatus === "error" && (
+          <p role="alert" className="mt-1 text-[11px] text-destructive">
+            {locError}
+          </p>
+        )}
 
         <div className="mt-3 space-y-2">
           {savedAddresses.length === 0 && (
