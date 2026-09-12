@@ -754,6 +754,7 @@ function CheckoutPage() {
                   coupon_code: couponQuote?.code,
                   customer_latitude: destinationCoords.lat,
                   customer_longitude: destinationCoords.lng,
+                  payment_method: selectedMethodLabel,
                 },
               });
 

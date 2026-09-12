@@ -32,6 +32,7 @@ export interface VerifyRazorpayPaymentInput {
   coupon_code?: string;
   customer_latitude?: number | null;
   customer_longitude?: number | null;
+  payment_method?: string;
 }
 
 export interface VerifyRazorpayPaymentResult {
@@ -311,7 +312,7 @@ export const verifyRazorpayPaymentFn = createServerFn({ method: "POST" })
         p_buyer_phone: data.buyer_phone ?? null,
         p_buyer_address: data.buyer_address,
         p_items: data.items,
-        p_payment_method: "card",
+        p_payment_method: data.payment_method || "online",
         p_coupon_code: data.coupon_code ?? null,
         p_customer_latitude: data.customer_latitude ?? null,
         p_customer_longitude: data.customer_longitude ?? null,
@@ -363,6 +364,7 @@ export const verifyRazorpayPaymentFn = createServerFn({ method: "POST" })
           .from("orders")
           .update({
             payment_status: "paid",
+            payment_method: data.payment_method || "online",
             payment_reference: data.razorpay_payment_id,
             payment_currency: "INR",
             updated_at: new Date().toISOString(),
