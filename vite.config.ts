@@ -14,6 +14,35 @@ export default defineConfig({
           "default-src 'self' http: https: data: blob: 'unsafe-inline' 'unsafe-eval'; img-src 'self' data: blob: https:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; style-src-elem 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https: http:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.razorpay.com https://*.razorpay.com https:; frame-src 'self' https://www.google.com https://maps.google.com https://api.razorpay.com https://checkout.razorpay.com https://*.razorpay.com;",
       },
     },
+    build: {
+      chunkSizeWarningLimit: 800,
+      rollupOptions: {
+        output: {
+          manualChunks(id) {
+            if (
+              id.includes("node_modules/leaflet") ||
+              id.includes("node_modules/react-leaflet") ||
+              id.includes("node_modules/maplibre-gl")
+            ) {
+              return "maps-vendor";
+            }
+            if (id.includes("node_modules/lottie-react")) {
+              return "lottie-vendor";
+            }
+            if (id.includes("node_modules/recharts")) {
+              return "charts-vendor";
+            }
+            if (id.includes("node_modules/framer-motion") || id.includes("node_modules/motion")) {
+              return "motion-vendor";
+            }
+            if (id.includes("node_modules/@radix-ui")) {
+              return "radix-vendor";
+            }
+            return undefined;
+          },
+        },
+      },
+    },
   },
   nitro: {
     preset: "vercel",

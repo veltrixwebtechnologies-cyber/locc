@@ -193,11 +193,6 @@ function CheckoutPage() {
   const lastGeocodeAt = useRef(0);
   const [accuracyMeters, setAccuracyMeters] = useState<number | null>(null);
   const [pay, setPay] = useState<"gpay" | "online" | "upi" | "card" | "cod">("gpay");
-  const [showDummyPaymentModal, setShowDummyPaymentModal] = useState(false);
-  const [dummyTab, setDummyTab] = useState<"gpay" | "upi" | "qr" | "card">("gpay");
-  const [dummyUpiId, setDummyUpiId] = useState("sudhan@okaxis");
-  const [isSimulatingDummyPay, setIsSimulatingDummyPay] = useState(false);
-  const [dummyStatusText, setDummyStatusText] = useState("");
   const [showAdd, setShowAdd] = useState(false);
   const [showMap, setShowMap] = useState(false);
   const [newLabel, setNewLabel] = useState("");
@@ -689,83 +684,6 @@ function CheckoutPage() {
     await initiateRazorpayCheckout();
   };
 
-  const handleSimulatedPayment = async (methodName: string, defaultUpiVpa?: string) => {
-    if (!store) return;
-    setIsSimulatingDummyPay(true);
-    setDummyStatusText(`Connecting to ${methodName}...`);
-
-    await new Promise((r) => setTimeout(r, 450));
-    setDummyStatusText(`Verifying UPI PIN & Authorizing ₹${displayTotal}...`);
-    await new Promise((r) => setTimeout(r, 650));
-
-    try {
-      const destinationCoords = parseCoordinates(pinCoords?.lat, pinCoords?.lng);
-      if (!canPlace || !destinationCoords) {
-        toast.error("Confirm the delivery address and entrance pin first.");
-        return;
-      }
-      stopLiveLocation();
-      const { data: session } = await supabase.auth.getSession();
-      const user = session.session?.user;
-
-      const dummyPaymentId = `pay_${methodName.toLowerCase().replace(/[^a-z0-9]/g, "_")}_${Date.now()}`;
-      const dummySig = `sig_test_${Date.now()}`;
-
-      const verifyRes = await verifyRazorpayPayment({
-        data: {
-          payment_attempt_id: razorpayAttempt?.payment_attempt_id || `att_test_${Date.now()}`,
-          razorpay_order_id: razorpayAttempt?.razorpay_order_id || `order_test_${Date.now()}`,
-          razorpay_payment_id: dummyPaymentId,
-          razorpay_signature: dummySig,
-          buyer_name: user?.user_metadata?.display_name || user?.email || "Customer",
-          buyer_phone: user?.phone,
-          buyer_address: selectedAddressLine,
-          items: cart.lines.map((l) => ({ product_id: l.productId, qty: l.qty })),
-          coupon_code: couponQuote?.code,
-          customer_latitude: destinationCoords.lat,
-          customer_longitude: destinationCoords.lng,
-        },
-      });
-
-      if (verifyRes.success && verifyRes.order) {
-        cartStore.clear();
-        setTxnRef(dummyPaymentId);
-        const newOrderObj: Order = {
-          id: verifyRes.order.id,
-          code: verifyRes.order.code,
-          storeId: verifyRes.order.seller_id,
-          storeName: store.name,
-          lines: cart.lines,
-          subtotal: totals.subtotal,
-          deliveryFee: displayDeliveryFee,
-          total: verifyRes.order.total || displayTotal,
-          address: selectedAddressLine,
-          destination: destinationCoords,
-          paymentMethod: methodName,
-          createdAt: Date.now(),
-          status: "new" as const,
-          etaMin: computedEtaMin,
-          distanceKm: computedDistanceKm,
-        };
-        addPlacedOrderToCache(newOrderObj);
-        setPlacedOrder(newOrderObj);
-        playPaymentSuccessSound();
-        toast.success(
-          `Payment of ₹${verifyRes.order.total || displayTotal} verified via ${methodName}!`,
-        );
-        setShowDummyPaymentModal(false);
-        setPaymentStep("idle");
-        setShowOrderSuccess(true);
-      } else {
-        toast.error("Payment simulation verification failed.");
-      }
-    } catch (err: any) {
-      console.error("[dummy payment error]", err);
-      toast.error(err.message || "Simulated payment failed.");
-    } finally {
-      setIsSimulatingDummyPay(false);
-    }
-  };
 
   const initiateRazorpayCheckout = async () => {
     const destinationCoords = parseCoordinates(pinCoords?.lat, pinCoords?.lng);
@@ -800,7 +718,10 @@ function CheckoutPage() {
       if (isLoaded && (window as any).Razorpay) {
         const { data: session } = await supabase.auth.getSession();
         const user = session.session?.user;
-        const keyToUse = rzpOrder.key_id || "rzp_test_TZuWMII8yHQgzt";
+        const keyToUse = rzpOrder.key_id;
+        if (!keyToUse) {
+          throw new Error("Payment service key is unavailable. Please try again later.");
+        }
 
         const options: any = {
           key: keyToUse,
@@ -811,12 +732,19 @@ function CheckoutPage() {
           handler: async function (response: any) {
             setPaymentStatusText("Verifying cryptographic signature with server...");
             try {
+              if (
+                !response?.razorpay_order_id ||
+                !response?.razorpay_payment_id ||
+                !response?.razorpay_signature
+              ) {
+                throw new Error("Missing required Razorpay payment verification parameters.");
+              }
               const verifyRes = await verifyRazorpayPayment({
                 data: {
                   payment_attempt_id: rzpOrder.payment_attempt_id,
-                  razorpay_order_id: response.razorpay_order_id || rzpOrder.razorpay_order_id,
-                  razorpay_payment_id: response.razorpay_payment_id || `pay_${Date.now()}`,
-                  razorpay_signature: response.razorpay_signature || "sig_test_verified",
+                  razorpay_order_id: response.razorpay_order_id,
+                  razorpay_payment_id: response.razorpay_payment_id,
+                  razorpay_signature: response.razorpay_signature,
                   buyer_name: user?.user_metadata?.display_name || user?.email || "Customer",
                   buyer_phone: user?.phone,
                   buyer_address: selectedAddressLine,
