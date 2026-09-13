@@ -1,4 +1,4 @@
-import { calculateDistanceKm } from './geo';
+import { calculateDistanceKm } from "./geo";
 
 export interface DynamicETARequest {
   userLat?: number | null;
@@ -35,7 +35,8 @@ export function calculateDynamicETA(req: DynamicETARequest): DynamicETAResult {
 
   // 2. Dispatch lag (driver assignment + pickup)
   const currentHour = new Date().getHours();
-  const isPeakHour = (currentHour >= 12 && currentHour <= 14) || (currentHour >= 19 && currentHour <= 21);
+  const isPeakHour =
+    (currentHour >= 12 && currentHour <= 14) || (currentHour >= 19 && currentHour <= 21);
   const dispatchLagMins = isPeakHour ? 7 : 4;
 
   // 3. Distance & Transit Speed (km / speed_kmh * 60)
@@ -44,7 +45,7 @@ export function calculateDynamicETA(req: DynamicETARequest): DynamicETAResult {
 
   if (userLat != null && userLng != null && shopLat != null && shopLng != null) {
     distanceKm = calculateDistanceKm(userLat, userLng, shopLat, shopLng);
-    
+
     // Average urban speed: ~20 km/h during normal, ~15 km/h during peak
     const avgSpeedKmh = isPeakHour ? 15 : 22;
     const d = distanceKm ?? 2.0;

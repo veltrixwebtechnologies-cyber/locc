@@ -12,6 +12,7 @@ import { addressesStore, useAddresses } from "@/lib/addresses-store";
 import { DeliveryMap } from "@/components/delivery-map";
 import { DeliveryAnimation } from "@/components/delivery-animation";
 import { reverseGeocode } from "@/lib/geocoding.functions";
+import { useDeliveryLocation } from "@/lib/location-store";
 import { isValidCoordinate, haversineDistanceKm } from "@/lib/geo";
 import { AVAILABLE_COUPONS, calculateBillBreakdown, evaluateCoupon } from "@/lib/coupons";
 import { SmartLottieLoader } from "@/components/ui/smart-lottie-loader";
@@ -141,9 +142,16 @@ function CheckoutPage() {
   const navigate = useNavigate();
   const reverseGeocodeFn = useServerFn(reverseGeocode);
 
+  const [activeDeliveryLocation] = useDeliveryLocation();
   const savedAddresses = useAddresses();
-  const [addr, setAddr] = useState<string>(() => savedAddresses[0]?.id ?? CURRENT_LOCATION_ID);
-  const [pinCoords, setPinCoords] = useState<{ lat: number; lng: number } | null>(() => {
+
+  const initialPinCoords = (() => {
+    if (
+      activeDeliveryLocation &&
+      isValidCoordinate(activeDeliveryLocation.lat, activeDeliveryLocation.lng)
+    ) {
+      return { lat: activeDeliveryLocation.lat, lng: activeDeliveryLocation.lng };
+    }
     const first = savedAddresses[0];
     return first &&
       typeof first.lat === "number" &&
@@ -151,17 +159,39 @@ function CheckoutPage() {
       isValidCoordinate(first.lat, first.lng)
       ? { lat: first.lat, lng: first.lng }
       : null;
-  });
-  const [confirmedLocation, setConfirmedLocation] = useState("");
+  })();
+
+  const initialAddressStr =
+    activeDeliveryLocation?.label ||
+    activeDeliveryLocation?.area ||
+    (savedAddresses.length === 0 ? "Map pin location" : "");
+
+  const [addr, setAddr] = useState<string>(() =>
+    activeDeliveryLocation &&
+    isValidCoordinate(activeDeliveryLocation.lat, activeDeliveryLocation.lng)
+      ? CURRENT_LOCATION_ID
+      : (savedAddresses[0]?.id ?? CURRENT_LOCATION_ID),
+  );
+  const [pinCoords, setPinCoords] = useState<{ lat: number; lng: number } | null>(initialPinCoords);
+  const [currentAddress, setCurrentAddress] = useState(initialAddressStr);
+
+  const initialSignature =
+    initialPinCoords && initialAddressStr
+      ? deliveryLocationSignature(
+          addr === CURRENT_LOCATION_ID
+            ? `Current location · ${initialAddressStr}`
+            : initialAddressStr,
+          initialPinCoords,
+        )
+      : "";
+
+  const [confirmedLocation, setConfirmedLocation] = useState(initialSignature);
   const [confirmedNewAddress, setConfirmedNewAddress] = useState("");
   const acquisitionRevision = useRef(0);
   const geocodeRevision = useRef(0);
   const lastFixAt = useRef(0);
   const lastGeocodeAt = useRef(0);
   const [accuracyMeters, setAccuracyMeters] = useState<number | null>(null);
-  const [currentAddress, setCurrentAddress] = useState(() =>
-    savedAddresses.length === 0 ? "Map pin location" : "",
-  );
   const [pay, setPay] = useState<"gpay" | "online" | "upi" | "card" | "cod">("gpay");
   const [showDummyPaymentModal, setShowDummyPaymentModal] = useState(false);
   const [dummyTab, setDummyTab] = useState<"gpay" | "upi" | "qr" | "card">("gpay");
@@ -426,9 +456,8 @@ function CheckoutPage() {
     void loadRazorpaySDK();
   }, []);
 
-  // Auto-detect the user's location on first load so the map opens where they are.
   useEffect(() => {
-    if (savedAddresses.length === 0) locateUser();
+    if (!activeDeliveryLocation && savedAddresses.length === 0) locateUser();
   }, []);
 
   useEffect(() => {

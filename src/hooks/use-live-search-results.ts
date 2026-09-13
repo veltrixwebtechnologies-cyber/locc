@@ -21,7 +21,12 @@ export function useLiveSearchResults(query: string) {
   }, [trimmedQuery]);
 
   const search = useQuery({
-    queryKey: ["marketplace-search-v2", debouncedQuery, deliveryLocation?.lat, deliveryLocation?.lng],
+    queryKey: [
+      "marketplace-search-v2",
+      debouncedQuery,
+      deliveryLocation?.lat,
+      deliveryLocation?.lng,
+    ],
     staleTime: 1000 * 60 * 5,
     gcTime: 1000 * 60 * 10,
     retry: 0,
@@ -157,7 +162,9 @@ export function useLiveSearchResults(query: string) {
     metadata: row.metadata ?? undefined,
     matchScore: Number(row.match_score ?? 0),
     mlScore: row.ml_score != null ? Number(row.ml_score) : undefined,
-    explainabilityTags: Array.isArray(row.explainability_tags) ? row.explainability_tags : undefined,
+    explainabilityTags: Array.isArray(row.explainability_tags)
+      ? row.explainability_tags
+      : undefined,
   }));
 
   const resultMap = new Map<string, SearchResultItem>();
@@ -176,11 +183,7 @@ export function useLiveSearchResults(query: string) {
 
   return {
     results,
-    isLoading:
-      trimmedQuery.length > 0 &&
-      results.length === 0 &&
-      search.isLoading,
+    isLoading: trimmedQuery.length > 0 && results.length === 0 && search.isLoading,
     error: search.error,
   };
 }
-

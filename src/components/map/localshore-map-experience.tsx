@@ -23,6 +23,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useDeliveryLocation, detectCurrentGPSLocation } from "@/lib/location-store";
 import { getCategoryByIdOrSlug } from "@/lib/shop-categories";
+import { isValidCoordinate } from "@/lib/geo";
 
 // Quick category filter tabs matching the reference design
 const QUICK_FILTERS = [
@@ -42,13 +43,6 @@ interface Props {
   onCategoryChange?: (c: string) => void;
 }
 
-// Default center: Kovilmedu, Coimbatore localshore market
-const DEFAULT_LOCATION: MapLocation = {
-  lat: 11.0285,
-  lng: 76.9258,
-  label: "Kovilmedu, Coimbatore",
-};
-
 export function LocalShoreMapExperience({
   initialQuery = "",
   initialCategory = "all",
@@ -58,18 +52,18 @@ export function LocalShoreMapExperience({
   const mapRef = useRef<InteractiveMapViewRef>(null);
   const [deliveryLoc] = useDeliveryLocation();
   const [view, setView] = useState<"map" | "list">("map");
-  const [userLocation, setUserLocation] = useState<MapLocation>(() => ({
-    lat: deliveryLoc?.lat ?? DEFAULT_LOCATION.lat,
-    lng: deliveryLoc?.lng ?? DEFAULT_LOCATION.lng,
-    label: deliveryLoc?.area || deliveryLoc?.label || DEFAULT_LOCATION.label,
-  }));
+  const [userLocation, setUserLocation] = useState<MapLocation | null>(() =>
+    deliveryLoc && isValidCoordinate(deliveryLoc.lat, deliveryLoc.lng)
+      ? { lat: deliveryLoc.lat, lng: deliveryLoc.lng, label: deliveryLoc.area || deliveryLoc.label }
+      : null,
+  );
 
   useEffect(() => {
-    if (deliveryLoc && deliveryLoc.lat && deliveryLoc.lng) {
+    if (deliveryLoc && isValidCoordinate(deliveryLoc.lat, deliveryLoc.lng)) {
       setUserLocation({
         lat: deliveryLoc.lat,
         lng: deliveryLoc.lng,
-        label: deliveryLoc.area || deliveryLoc.label || DEFAULT_LOCATION.label,
+        label: deliveryLoc.area || deliveryLoc.label,
       });
       mapRef.current?.flyToLocation(deliveryLoc.lat, deliveryLoc.lng, 13.5);
     }
@@ -149,6 +143,7 @@ export function LocalShoreMapExperience({
 
   // Calculate Product-Aware Map Markers
   const markerItems: MapMarkerItem[] = useMemo(() => {
+    if (!userLocation) return [];
     return getMapMarkerItems(
       userLocation,
       filters,
@@ -203,11 +198,21 @@ export function LocalShoreMapExperience({
     onQueryChange?.(query);
   };
 
-  const activeQuickFilter = filters.category
-    ? getCategoryByIdOrSlug(filters.category).id
-    : "all";
+  const activeQuickFilter = filters.category ? getCategoryByIdOrSlug(filters.category).id : "all";
   const [showDesktopMap, setShowDesktopMap] = useState(false);
   const [isMobileMapOpen, setIsMobileMapOpen] = useState(false);
+
+  if (!userLocation) {
+    return (
+      <div className="w-full rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-8 text-center">
+        <MapPin className="mx-auto h-8 w-8 text-[#981495]" />
+        <h3 className="mt-3 text-sm font-bold text-slate-900">Set your live location</h3>
+        <p className="mt-1 text-xs font-medium text-slate-500">
+          Allow location access to discover local shops near you.
+        </p>
+      </div>
+    );
+  }
 
   // Category badge color lookup for high-contrast tag pills
   const getBadgeColor = (cat: string) => {
@@ -692,11 +697,7 @@ function NeighborhoodMapPreviewCard({
 
           {/* Green Park Polygons */}
           <path d="M 20 20 Q 90 10, 120 70 T 170 140 L 40 160 Z" fill="#d1fae5" opacity="0.65" />
-          <path
-            d="M 340 190 Q 400 170, 440 230 L 360 280 Z"
-            fill="#d1fae5"
-            opacity="0.65"
-          />
+          <path d="M 340 190 Q 400 170, 440 230 L 360 280 Z" fill="#d1fae5" opacity="0.65" />
 
           {/* Blue Water River Accent */}
           <path
@@ -717,18 +718,8 @@ function NeighborhoodMapPreviewCard({
           <path d="M 70 -10 L 340 340" fill="none" stroke="#ffffff" strokeWidth="12" />
           <path d="M 70 -10 L 340 340" fill="none" stroke="#e2e8f0" strokeWidth="6" />
 
-          <path
-            d="M 320 20 Q 260 160, 500 220"
-            fill="none"
-            stroke="#ffffff"
-            strokeWidth="14"
-          />
-          <path
-            d="M 320 20 Q 260 160, 500 220"
-            fill="none"
-            stroke="#cbd5e1"
-            strokeWidth="7"
-          />
+          <path d="M 320 20 Q 260 160, 500 220" fill="none" stroke="#ffffff" strokeWidth="14" />
+          <path d="M 320 20 Q 260 160, 500 220" fill="none" stroke="#cbd5e1" strokeWidth="7" />
         </svg>
 
         {/* Center User Location Marker ("You are here") */}

@@ -1,6 +1,14 @@
 import { useState, useEffect, useMemo, startTransition } from "react";
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
-import { ChevronLeft, X, Search as SearchIcon, SlidersHorizontal, Sparkles, Store as StoreIcon, ChevronRight } from "lucide-react";
+import {
+  ChevronLeft,
+  X,
+  Search as SearchIcon,
+  SlidersHorizontal,
+  Sparkles,
+  Store as StoreIcon,
+  ChevronRight,
+} from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { Button } from "@/components/ui/button";
 import { useMLTracker } from "@/hooks/use-ml-tracker";
@@ -23,26 +31,84 @@ export const Route = createFileRoute("/search")({
 });
 
 const PREFERRED_CATEGORIES = [
-  { id: "all", label: "All Categories", imageUrl: "https://images.unsplash.com/photo-1534723452862-4c874018d66d?auto=format&fit=crop&w=160&q=80" },
-  { id: "fresh", label: "Fresh Produce", imageUrl: "https://images.unsplash.com/photo-1610832958506-aa56368176cf?auto=format&fit=crop&w=160&q=80" },
-  { id: "meat-fish", label: "Meat & Fish", imageUrl: "https://images.unsplash.com/photo-1607623814075-e51df1bdc82f?auto=format&fit=crop&w=160&q=80" },
-  { id: "bakery", label: "Bakery & Sweets", imageUrl: "https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=160&q=80" },
-  { id: "fashion", label: "Fashion & Apparel", imageUrl: "https://images.unsplash.com/photo-1445205170230-053b83016050?auto=format&fit=crop&w=160&q=80" },
-  { id: "beauty", label: "Beauty & Care", imageUrl: "https://images.unsplash.com/photo-1596462502278-27bfdc403348?auto=format&fit=crop&w=160&q=80" },
-  { id: "electronics", label: "Electronics & Tech", imageUrl: "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?auto=format&fit=crop&w=160&q=80" },
-  { id: "home-decor", label: "Home & Kitchen", imageUrl: "https://images.unsplash.com/photo-1513519245088-0e12902e5a38?auto=format&fit=crop&w=160&q=80" },
-  { id: "pharmacy", label: "Pharmacy", imageUrl: "https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?auto=format&fit=crop&w=160&q=80" },
-  { id: "kids-sports", label: "Kids & Sports", imageUrl: "https://images.unsplash.com/photo-1517649763962-0c623266ddc0?auto=format&fit=crop&w=160&q=80" },
-  { id: "local-favorites", label: "Local Favorites ⭐", imageUrl: "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=160&q=80" },
+  {
+    id: "all",
+    label: "All Categories",
+    imageUrl:
+      "https://images.unsplash.com/photo-1534723452862-4c874018d66d?auto=format&fit=crop&w=160&q=80",
+  },
+  {
+    id: "fresh",
+    label: "Fresh Produce",
+    imageUrl:
+      "https://images.unsplash.com/photo-1610832958506-aa56368176cf?auto=format&fit=crop&w=160&q=80",
+  },
+  {
+    id: "meat-fish",
+    label: "Meat & Fish",
+    imageUrl:
+      "https://images.unsplash.com/photo-1607623814075-e51df1bdc82f?auto=format&fit=crop&w=160&q=80",
+  },
+  {
+    id: "bakery",
+    label: "Bakery & Sweets",
+    imageUrl:
+      "https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=160&q=80",
+  },
+  {
+    id: "fashion",
+    label: "Fashion & Apparel",
+    imageUrl:
+      "https://images.unsplash.com/photo-1445205170230-053b83016050?auto=format&fit=crop&w=160&q=80",
+  },
+  {
+    id: "beauty",
+    label: "Beauty & Care",
+    imageUrl:
+      "https://images.unsplash.com/photo-1596462502278-27bfdc403348?auto=format&fit=crop&w=160&q=80",
+  },
+  {
+    id: "electronics",
+    label: "Electronics & Tech",
+    imageUrl:
+      "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?auto=format&fit=crop&w=160&q=80",
+  },
+  {
+    id: "home-decor",
+    label: "Home & Kitchen",
+    imageUrl:
+      "https://images.unsplash.com/photo-1513519245088-0e12902e5a38?auto=format&fit=crop&w=160&q=80",
+  },
+  {
+    id: "pharmacy",
+    label: "Pharmacy",
+    imageUrl:
+      "https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?auto=format&fit=crop&w=160&q=80",
+  },
+  {
+    id: "kids-sports",
+    label: "Kids & Sports",
+    imageUrl:
+      "https://images.unsplash.com/photo-1517649763962-0c623266ddc0?auto=format&fit=crop&w=160&q=80",
+  },
+  {
+    id: "local-favorites",
+    label: "Local Favorites ⭐",
+    imageUrl:
+      "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=160&q=80",
+  },
 ];
 
 function getCategoryShopHeading(categorySlug?: string): string {
   const norm = (categorySlug || "").toLowerCase();
   if (norm.includes("fashion")) return "🏪 Fashion Shops Near You";
-  if (norm.includes("elec") || norm.includes("mobile")) return "🏪 Electronics & Tech Shops Near You";
+  if (norm.includes("elec") || norm.includes("mobile"))
+    return "🏪 Electronics & Tech Shops Near You";
   if (norm.includes("meat")) return "🏪 Meat & Fish Shops Near You";
-  if (norm.includes("bakery") || norm.includes("sweet")) return "🏪 Bakeries & Sweet Shops Near You";
-  if (norm.includes("home") || norm.includes("decor") || norm.includes("furniture")) return "🏪 Home & Decor Shops Near You";
+  if (norm.includes("bakery") || norm.includes("sweet"))
+    return "🏪 Bakeries & Sweet Shops Near You";
+  if (norm.includes("home") || norm.includes("decor") || norm.includes("furniture"))
+    return "🏪 Home & Decor Shops Near You";
   if (norm.includes("pharmacy")) return "🏪 Pharmacies Near You";
   if (norm.includes("fresh")) return "🏪 Fresh Produce Markets Near You";
   if (norm.includes("beauty")) return "🏪 Beauty & Care Boutiques Near You";
@@ -60,7 +126,7 @@ function SwiggySearchPage() {
 
   const { data: filterDefs = [] } = useFilterDefinitions(
     filterState.category,
-    filterState.productType
+    filterState.productType,
   );
 
   // Shop Discovery Engine (Local Shops matching search/filters)
@@ -200,8 +266,8 @@ function SwiggySearchPage() {
                 ? !filterState.category || filterState.category === "all"
                 : Boolean(
                     filterState.category &&
-                      (filterState.category.toLowerCase() === cat.id.toLowerCase() ||
-                        filterState.category.toLowerCase().includes(cat.id.toLowerCase())),
+                    (filterState.category.toLowerCase() === cat.id.toLowerCase() ||
+                      filterState.category.toLowerCase().includes(cat.id.toLowerCase())),
                   );
 
             return (
@@ -219,11 +285,7 @@ function SwiggySearchPage() {
                 }`}
               >
                 <div className="w-6 h-6 rounded-full overflow-hidden shrink-0 border border-white/50 shadow-2xs">
-                  <img
-                    src={cat.imageUrl}
-                    alt={cat.label}
-                    className="w-full h-full object-cover"
-                  />
+                  <img src={cat.imageUrl} alt={cat.label} className="w-full h-full object-cover" />
                 </div>
                 <span>{cat.label}</span>
               </button>
@@ -236,7 +298,8 @@ function SwiggySearchPage() {
           <div className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl bg-indigo-950/20 border border-indigo-500/20 text-xs text-indigo-300 mb-4">
             <Sparkles className="w-4 h-4 text-indigo-400 shrink-0" />
             <span>
-              Detected intent: <strong className="font-semibold text-foreground">{intent.category_intent}</strong>
+              Detected intent:{" "}
+              <strong className="font-semibold text-foreground">{intent.category_intent}</strong>
             </span>
           </div>
         )}
@@ -256,13 +319,21 @@ function SwiggySearchPage() {
         <div className="flex items-center justify-between gap-3 border-b border-border/80 pb-3 mb-6">
           <div>
             <h1 className="text-lg sm:text-xl font-black text-foreground">
-              {query ? `Results for "${query}"` : filterState.category ? `Local Marketplace` : "Local Marketplace"}
+              {query
+                ? `Results for "${query}"`
+                : filterState.category
+                  ? `Local Marketplace`
+                  : "Local Marketplace"}
             </h1>
             <p className="text-xs text-muted-foreground font-semibold mt-0.5">
               <span className="text-primary font-bold">{shops.length} Local Shops</span>
               {" · "}
               <span className="text-foreground font-bold">{total} Products</span>
-              {loading && <span className="animate-pulse text-primary ml-2 font-extrabold">• Updating...</span>}
+              {loading && (
+                <span className="animate-pulse text-primary ml-2 font-extrabold">
+                  • Updating...
+                </span>
+              )}
             </p>
           </div>
 
@@ -329,13 +400,18 @@ function SwiggySearchPage() {
               {shopsLoading ? (
                 <div className="flex gap-4 overflow-x-auto pb-2">
                   {[1, 2, 3].map((i) => (
-                    <div key={i} className="w-[280px] h-64 rounded-3xl bg-muted animate-pulse shrink-0 border hairline" />
+                    <div
+                      key={i}
+                      className="w-[280px] h-64 rounded-3xl bg-muted animate-pulse shrink-0 border hairline"
+                    />
                   ))}
                 </div>
               ) : shops.length === 0 ? (
                 <div className="bg-card border hairline rounded-2xl p-6 text-center">
                   <StoreIcon className="w-10 h-10 mx-auto text-muted-foreground/50 mb-2 stroke-1" />
-                  <h4 className="text-sm font-bold text-foreground">No matching local shops found</h4>
+                  <h4 className="text-sm font-bold text-foreground">
+                    No matching local shops found
+                  </h4>
                   <p className="text-xs text-muted-foreground mt-1">
                     Try expanding distance radius or clearing active shop filters.
                   </p>
@@ -345,7 +421,12 @@ function SwiggySearchPage() {
                 <div className="flex md:grid md:grid-cols-2 lg:grid-cols-3 gap-4 overflow-x-auto pb-2 md:pb-0 scrollbar-none snap-x snap-mandatory">
                   {shops.map((shop) => (
                     <div key={shop.id} className="snap-start shrink-0 md:shrink">
-                      <ShopCard shop={shop} searchQuery={query} variant="compact" className="md:w-full md:max-w-none" />
+                      <ShopCard
+                        shop={shop}
+                        searchQuery={query}
+                        variant="compact"
+                        className="md:w-full md:max-w-none"
+                      />
                     </div>
                   ))}
                 </div>
@@ -355,7 +436,10 @@ function SwiggySearchPage() {
             {/* ============================================================ */}
             {/* 2. PRODUCTS FROM LOCAL SHOPS (APPEARS AFTER SHOPS)            */}
             {/* ============================================================ */}
-            <section className="space-y-4 pt-4 border-t border-border/60" aria-label="Products From Local Shops">
+            <section
+              className="space-y-4 pt-4 border-t border-border/60"
+              aria-label="Products From Local Shops"
+            >
               <div className="flex items-center justify-between">
                 <div>
                   <h2 className="text-lg sm:text-xl font-extrabold text-foreground flex items-center gap-2">
@@ -389,7 +473,8 @@ function SwiggySearchPage() {
                       : "No products match your filters"}
                   </h3>
                   <p className="text-xs text-muted-foreground mt-1 max-w-md mx-auto">
-                    Try broadening price range or clearing attribute filters to view available local inventory.
+                    Try broadening price range or clearing attribute filters to view available local
+                    inventory.
                   </p>
                   <Button
                     type="button"

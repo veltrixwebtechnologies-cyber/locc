@@ -53,8 +53,6 @@ function CartPage() {
   const isSignedIn = !!(auth.phone || auth.email);
 
   const [deliveryLoc] = useDeliveryLocation();
-  const locLat = deliveryLoc?.lat ?? 11.0285;
-  const locLng = deliveryLoc?.lng ?? 76.9258;
 
   const knownStore =
     cart.storeId === APPROVED_STORE.id
@@ -79,9 +77,7 @@ function CartPage() {
     isValidCoordinate(deliveryLoc.lat, deliveryLoc.lng)
       ? Math.max(
           0.1,
-          Math.round(
-            haversineDistanceKm(store.lat, store.lng, locLat, locLng) * 10,
-          ) / 10,
+          Math.round(haversineDistanceKm(store.lat, store.lng, deliveryLoc!.lat, deliveryLoc!.lng) * 10) / 10,
         )
       : (store?.distanceKm ?? 1.2);
 
@@ -167,8 +163,7 @@ function CartPage() {
             Delivering to {deliveryLoc?.area || deliveryLoc?.label || "Select your location"}
           </span>
           <span className="inline-flex shrink-0 items-center gap-1.5">
-            <Zap className="h-3.5 w-3.5 text-primary" />
-            ~{computedEtaMin} min delivery
+            <Zap className="h-3.5 w-3.5 text-primary" />~{computedEtaMin} min delivery
           </span>
           <span className="inline-flex shrink-0 items-center gap-1.5">
             <ShieldCheck className="h-3.5 w-3.5 text-primary" />
@@ -326,7 +321,9 @@ function CartPage() {
                   </div>
                   <div className="flex justify-between text-muted-foreground">
                     <span>Govt. Taxes &amp; GST (5% incl.)</span>
-                    <span className="font-semibold text-foreground">₹{billBreakdown.gstAmount}</span>
+                    <span className="font-semibold text-foreground">
+                      ₹{billBreakdown.gstAmount}
+                    </span>
                   </div>
                   <div className="flex justify-between text-muted-foreground">
                     <span>Delivery fee</span>
@@ -441,8 +438,8 @@ function CartPage() {
               {/* ── Social proof ────────────────────────────── */}
               <div className="rounded-2xl border border-border bg-card px-4 py-3 text-center">
                 <p className="text-xs font-semibold text-muted-foreground">
-                  Loved by <span className="text-foreground font-bold">10,000+</span> customers in
-                  Coimbatore ❤️
+                  Loved by <span className="text-foreground font-bold">10,000+</span> happy local
+                  customers ❤️
                 </p>
                 <div className="mt-2 flex items-center justify-center gap-6 text-xs">
                   <span className="flex items-center gap-1.5 border-r border-border pr-6">

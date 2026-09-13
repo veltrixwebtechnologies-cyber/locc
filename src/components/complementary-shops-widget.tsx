@@ -1,8 +1,8 @@
-import React from 'react';
-import { Link } from '@tanstack/react-router';
-import { Store, MapPin, Star, Sparkles, ArrowRight, Lightbulb } from 'lucide-react';
-import { motion } from 'motion/react';
-import { calculateDistanceKm } from '@/lib/geo';
+import React from "react";
+import { Link } from "@tanstack/react-router";
+import { Store, MapPin, Star, Sparkles, ArrowRight, Lightbulb } from "lucide-react";
+import { motion } from "motion/react";
+import { calculateDistanceKm } from "@/lib/geo";
 
 export interface ComplementaryShop {
   id: string;
@@ -50,7 +50,7 @@ export const ComplementaryShopsWidget: React.FC<ComplementaryShopsWidgetProps> =
             <p className="text-xs text-purple-900/80 font-semibold mt-0.5">
               {currentCategory
                 ? `Shoppers interested in ${currentCategory} also visited these local stores`
-                : 'Smart contextual local recommendations'}
+                : "Smart contextual local recommendations"}
             </p>
           </div>
         </div>
@@ -89,7 +89,7 @@ export const ComplementaryShopsWidget: React.FC<ComplementaryShopsWidgetProps> =
                         {shop.business_name}
                       </h4>
                       <p className="text-[11px] font-semibold text-slate-500 truncate mt-0.5">
-                        {shop.business_type || 'Verified Local Partner'}
+                        {shop.business_type || "Verified Local Partner"}
                       </p>
                     </div>
                   </div>

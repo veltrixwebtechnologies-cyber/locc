@@ -57,6 +57,7 @@ import {
   type RewardItem,
 } from "@/lib/profile-store";
 import { supabase } from "@/integrations/supabase/client";
+import { useDeliveryLocation } from "@/lib/location-store";
 
 export const Route = createFileRoute("/profile")({
   component: ProfilePage,
@@ -69,6 +70,7 @@ function ProfilePage() {
   const orders = useOrders();
   const wishlistProducts = useWishlistProducts();
   const profileExtra = useProfileExtra();
+  const [deliveryLoc] = useDeliveryLocation();
 
   const signedIn = Boolean(auth.id || auth.phone || auth.email);
 
@@ -1141,7 +1143,11 @@ function ProfilePage() {
 
               <div className="rounded-2xl bg-purple-50/60 p-3 border border-purple-100 text-[11px] text-purple-900 flex items-center gap-2">
                 <Map className="h-4 w-4 shrink-0 text-purple-700" />
-                <span>Location coordinates (Lat: 11.00, Lng: 77.02) pinned to current hub.</span>
+                <span>
+                  {deliveryLoc
+                    ? "Using your current live delivery location."
+                    : "Set your live delivery location before saving this address."}
+                </span>
               </div>
             </div>
 
@@ -1160,11 +1166,15 @@ function ProfilePage() {
                     toast.error("Please enter address details");
                     return;
                   }
+                  if (!deliveryLoc) {
+                    toast.error("Set your live delivery location first");
+                    return;
+                  }
                   addressesStore.add({
                     label: newAddrLabel,
                     line: newAddrLine,
-                    lat: 11.002,
-                    lng: 77.025,
+                    lat: deliveryLoc.lat,
+                    lng: deliveryLoc.lng,
                   });
                   toast.success("Address added!");
                   setNewAddrLine("");

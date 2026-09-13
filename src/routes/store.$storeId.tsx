@@ -151,7 +151,9 @@ function StorePage() {
       let storeName = vendor?.shop_name;
       let storeCategory = vendor?.category;
       let storeTagline = vendor?.business_type || "Approved local vendor";
-      let storeAddress = [vendor?.address_line1, vendor?.city, vendor?.state].filter(Boolean).join(", ");
+      let storeAddress = [vendor?.address_line1, vendor?.city, vendor?.state]
+        .filter(Boolean)
+        .join(", ");
       let imageUrl = APPROVED_STORE.imageUrl;
 
       const storefrontPath = vendor?.shop_banner_path || vendor?.shop_logo_path;
@@ -175,7 +177,9 @@ function StorePage() {
           storeName = sellerData.business_name || storeName;
           storeCategory = w.category || sellerData.business_type || storeCategory;
           storeTagline = w.description || sellerData.business_name || storeTagline;
-          storeAddress = [sellerData.address_line1, sellerData.city, sellerData.state].filter(Boolean).join(", ");
+          storeAddress = [sellerData.address_line1, sellerData.city, sellerData.state]
+            .filter(Boolean)
+            .join(", ");
           imageUrl = w.documents?.shopBanner?.url || w.documents?.shopBanner?.dataUrl || imageUrl;
 
           vendor = {
@@ -207,9 +211,9 @@ function StorePage() {
   const products = (
     liveProds.length > 0
       ? liveProds
-      : (loaded.products && loaded.products.length > 0
-          ? loaded.products
-          : (productsByStore[store.id] ?? productsByStore["s_roja_mart"] ?? []))
+      : loaded.products && loaded.products.length > 0
+        ? loaded.products
+        : (productsByStore[store.id] ?? productsByStore["s_roja_mart"] ?? [])
   ) as Product[];
 
   const navigate = useNavigate();
@@ -219,7 +223,9 @@ function StorePage() {
   const [selectedCategory, setSelectedCategory] = useState<string>(searchParams.category || "all");
   const [minPrice, setMinPrice] = useState<string>("");
   const [maxPrice, setMaxPrice] = useState<string>("");
-  const [sortBy, setSortBy] = useState<"popular" | "newest" | "price-asc" | "price-desc">("popular");
+  const [sortBy, setSortBy] = useState<"popular" | "newest" | "price-asc" | "price-desc">(
+    "popular",
+  );
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [showFilters, setShowFilters] = useState(false);
 
@@ -280,10 +286,7 @@ function StorePage() {
       name,
       count,
     }));
-    return [
-      { id: "all", name: "All Products", count: products.length },
-      ...catList,
-    ];
+    return [{ id: "all", name: "All Products", count: products.length }, ...catList];
   }, [products]);
 
   // Filtered & Sorted products list
@@ -330,7 +333,10 @@ function StorePage() {
     <div className="min-h-screen bg-[#fcfbfa] pb-32 pt-3 sm:pt-5">
       <div className="mx-auto max-w-[1500px] px-3 sm:px-6 lg:px-8">
         {/* Breadcrumb Navigation */}
-        <nav aria-label="Breadcrumb" className="mb-4 flex items-center gap-2 text-xs font-semibold text-slate-500">
+        <nav
+          aria-label="Breadcrumb"
+          className="mb-4 flex items-center gap-2 text-xs font-semibold text-slate-500"
+        >
           <Link
             to="/"
             search={{ category: "all-shops", q: undefined }}
@@ -413,7 +419,8 @@ function StorePage() {
               </h1>
 
               <p className="text-xs sm:text-sm font-semibold text-slate-600 truncate mt-0.5">
-                {store.tagline || "Showrooms. Multistorey showroom for silk, smart TV's & appliances"}
+                {store.tagline ||
+                  "Showrooms. Multistorey showroom for silk, smart TV's & appliances"}
               </p>
 
               {/* Info Badges Row */}
@@ -437,7 +444,9 @@ function StorePage() {
                 </div>
 
                 <div className="flex items-center gap-1 rounded-full bg-purple-50/90 px-2.5 py-1 text-[#981495] border border-purple-200/80 shadow-2xs">
-                  <span>🚀 {computedEtaMin} mins ({computedDistanceKm} km)</span>
+                  <span>
+                    🚀 {computedEtaMin} mins ({computedDistanceKm} km)
+                  </span>
                 </div>
               </div>
             </div>
@@ -596,12 +605,11 @@ function StorePage() {
           <div className="flex flex-wrap items-center justify-between gap-3 pb-4 mb-4 border-b border-slate-200/80">
             <div>
               <h2 className="font-display text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">
-                {query.trim()
-                  ? `Products matching "${query.trim()}"`
-                  : "All Products"}
+                {query.trim() ? `Products matching "${query.trim()}"` : "All Products"}
               </h2>
               <p className="text-xs text-slate-500 font-medium mt-0.5">
-                Discover the best deals from <strong className="text-slate-900">{store.name}</strong>
+                Discover the best deals from{" "}
+                <strong className="text-slate-900">{store.name}</strong>
               </p>
             </div>
 
@@ -676,141 +684,141 @@ function StorePage() {
                   : "space-y-4"
               }
             >
-                {filteredProducts.map((p) => {
-                  const q = qtyOf(p.id);
-                  const mrp = Math.round(p.price * 1.25);
-                  const discountPct = Math.round(((mrp - p.price) / mrp) * 100);
-                  const unit = p.unit || "1 unit";
+              {filteredProducts.map((p) => {
+                const q = qtyOf(p.id);
+                const mrp = Math.round(p.price * 1.25);
+                const discountPct = Math.round(((mrp - p.price) / mrp) * 100);
+                const unit = p.unit || "1 unit";
 
-                  return (
-                    <m.div
-                      key={p.id}
-                      data-product-id={p.id}
-                      initial={{ opacity: 0, y: 10 }}
-                      whileInView={{ opacity: 1, y: 0 }}
-                      viewport={{ once: true, amount: 0.15 }}
-                      className="group relative flex flex-col justify-between overflow-hidden rounded-2xl border border-slate-200/90 bg-white p-3 shadow-xs hover:border-purple-300 hover:shadow-md transition-all duration-200"
-                    >
-                      <div>
-                        {/* Top Image Frame with floating badges */}
-                        <div className="relative aspect-square w-full overflow-hidden rounded-xl bg-slate-50/90 border border-slate-100 p-2 flex items-center justify-center">
-                          {/* Wishlist Button top-right */}
-                          <div className="absolute right-2 top-2 z-10">
-                            <WishlistButton
-                              productId={p.id}
-                              productName={p.name}
-                              item={{
-                                productId: p.id,
-                                name: p.name,
-                                shopName: store.name,
-                                category: p.category,
-                                price: p.price,
-                                imageUrl: p.imageUrl,
-                                sellerId: p.storeId,
-                              }}
-                            />
-                          </div>
-
-                          {/* Unit weight tag bottom-left inside image frame */}
-                          <div className="absolute bottom-2 left-2 z-10 rounded-md bg-slate-900/80 backdrop-blur-xs px-2 py-0.5 text-[10px] font-bold text-white shadow-xs">
-                            {unit}
-                          </div>
-
-                          <ProductThumb
-                            src={p.imageUrl}
-                            alt={p.name}
-                            category={store.category}
-                            size="lg"
+                return (
+                  <m.div
+                    key={p.id}
+                    data-product-id={p.id}
+                    initial={{ opacity: 0, y: 10 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true, amount: 0.15 }}
+                    className="group relative flex flex-col justify-between overflow-hidden rounded-2xl border border-slate-200/90 bg-white p-3 shadow-xs hover:border-purple-300 hover:shadow-md transition-all duration-200"
+                  >
+                    <div>
+                      {/* Top Image Frame with floating badges */}
+                      <div className="relative aspect-square w-full overflow-hidden rounded-xl bg-slate-50/90 border border-slate-100 p-2 flex items-center justify-center">
+                        {/* Wishlist Button top-right */}
+                        <div className="absolute right-2 top-2 z-10">
+                          <WishlistButton
+                            productId={p.id}
+                            productName={p.name}
+                            item={{
+                              productId: p.id,
+                              name: p.name,
+                              shopName: store.name,
+                              category: p.category,
+                              price: p.price,
+                              imageUrl: p.imageUrl,
+                              sellerId: p.storeId,
+                            }}
                           />
-
-                          {/* ADD Button positioned at bottom-right corner of image frame (Matching Image 2 position!) */}
-                          <div className="absolute right-2 bottom-2 z-20">
-                            {q === 0 ? (
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  void recordProductEvent(p.id, "add_to_cart");
-                                  flyProductToCart(p.id);
-                                  cartStore.add(store.id || p.storeId, store.name, p);
-                                }}
-                                className="rounded-lg bg-white border border-emerald-600 text-emerald-700 hover:bg-emerald-600 hover:text-white px-3.5 py-1 text-xs font-black uppercase tracking-wider shadow-sm transition-all active:scale-95 cursor-pointer flex items-center gap-1"
-                              >
-                                <span>ADD</span>
-                              </button>
-                            ) : (
-                              <QtyStepper
-                                qty={q}
-                                max={p.stock}
-                                onAdd={() => {
-                                  void recordProductEvent(p.id, "add_to_cart");
-                                  flyProductToCart(p.id);
-                                  cartStore.add(store.id || p.storeId, store.name, p);
-                                }}
-                                onChange={(n) => cartStore.setQty(p.id, n)}
-                                addClassName="rounded-lg bg-emerald-700 text-white px-2 py-0.5 text-xs font-bold shadow-sm"
-                              />
-                            )}
-                          </div>
                         </div>
 
-                        {/* Product details section */}
-                        <Link
-                          to="/product/$productId"
-                          params={{ productId: p.id }}
-                          onClick={() => {
-                            void recordProductEvent(p.id, "view");
-                            void recordRecentProductView(p.id);
-                          }}
-                          className="mt-2.5 block space-y-1"
-                        >
-                          {/* Price line with strikethrough MRP */}
-                          <div className="flex items-baseline gap-2">
-                            <span className="text-base font-black text-slate-900">
-                              ₹{p.price.toLocaleString("en-IN")}
-                            </span>
-                            {mrp > p.price && (
-                              <span className="text-xs font-semibold text-slate-400 line-through">
-                                ₹{mrp.toLocaleString("en-IN")}
-                              </span>
-                            )}
-                          </div>
+                        {/* Unit weight tag bottom-left inside image frame */}
+                        <div className="absolute bottom-2 left-2 z-10 rounded-md bg-slate-900/80 backdrop-blur-xs px-2 py-0.5 text-[10px] font-bold text-white shadow-xs">
+                          {unit}
+                        </div>
 
-                          {discountPct > 0 && (
-                            <p className="text-[11px] font-extrabold text-blue-600 uppercase tracking-tight">
-                              {discountPct}% OFF ON MRP
-                            </p>
+                        <ProductThumb
+                          src={p.imageUrl}
+                          alt={p.name}
+                          category={store.category}
+                          size="lg"
+                        />
+
+                        {/* ADD Button positioned at bottom-right corner of image frame (Matching Image 2 position!) */}
+                        <div className="absolute right-2 bottom-2 z-20">
+                          {q === 0 ? (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                void recordProductEvent(p.id, "add_to_cart");
+                                flyProductToCart(p.id);
+                                cartStore.add(store.id || p.storeId, store.name, p);
+                              }}
+                              className="rounded-lg bg-white border border-emerald-600 text-emerald-700 hover:bg-emerald-600 hover:text-white px-3.5 py-1 text-xs font-black uppercase tracking-wider shadow-sm transition-all active:scale-95 cursor-pointer flex items-center gap-1"
+                            >
+                              <span>ADD</span>
+                            </button>
+                          ) : (
+                            <QtyStepper
+                              qty={q}
+                              max={p.stock}
+                              onAdd={() => {
+                                void recordProductEvent(p.id, "add_to_cart");
+                                flyProductToCart(p.id);
+                                cartStore.add(store.id || p.storeId, store.name, p);
+                              }}
+                              onChange={(n) => cartStore.setQty(p.id, n)}
+                              addClassName="rounded-lg bg-emerald-700 text-white px-2 py-0.5 text-xs font-bold shadow-sm"
+                            />
                           )}
-
-                          {/* Title */}
-                          <h3 className="line-clamp-2 text-xs sm:text-sm font-bold text-slate-800 leading-snug group-hover:text-[#981495] transition-colors">
-                            {p.name}
-                          </h3>
-
-                          {/* Rating & ETA */}
-                          <div className="flex items-center gap-2 pt-0.5 text-[11px] font-bold text-slate-600">
-                            <span className="flex items-center gap-0.5 text-amber-600">
-                              <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
-                              4.8
-                            </span>
-                            <span className="text-slate-300">•</span>
-                            <span className="text-slate-500">⏱ {computedEtaMin} mins</span>
-                          </div>
-
-                          {/* Category pill with arrow */}
-                          <div className="pt-1">
-                            <span className="inline-flex items-center gap-1 rounded-md bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-600 group-hover:bg-purple-50 group-hover:text-[#981495] transition-colors">
-                              <span>All {p.category || "Item"}</span>
-                              <span className="text-[8px]">▶</span>
-                            </span>
-                          </div>
-                        </Link>
+                        </div>
                       </div>
-                    </m.div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
+
+                      {/* Product details section */}
+                      <Link
+                        to="/product/$productId"
+                        params={{ productId: p.id }}
+                        onClick={() => {
+                          void recordProductEvent(p.id, "view");
+                          void recordRecentProductView(p.id);
+                        }}
+                        className="mt-2.5 block space-y-1"
+                      >
+                        {/* Price line with strikethrough MRP */}
+                        <div className="flex items-baseline gap-2">
+                          <span className="text-base font-black text-slate-900">
+                            ₹{p.price.toLocaleString("en-IN")}
+                          </span>
+                          {mrp > p.price && (
+                            <span className="text-xs font-semibold text-slate-400 line-through">
+                              ₹{mrp.toLocaleString("en-IN")}
+                            </span>
+                          )}
+                        </div>
+
+                        {discountPct > 0 && (
+                          <p className="text-[11px] font-extrabold text-blue-600 uppercase tracking-tight">
+                            {discountPct}% OFF ON MRP
+                          </p>
+                        )}
+
+                        {/* Title */}
+                        <h3 className="line-clamp-2 text-xs sm:text-sm font-bold text-slate-800 leading-snug group-hover:text-[#981495] transition-colors">
+                          {p.name}
+                        </h3>
+
+                        {/* Rating & ETA */}
+                        <div className="flex items-center gap-2 pt-0.5 text-[11px] font-bold text-slate-600">
+                          <span className="flex items-center gap-0.5 text-amber-600">
+                            <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
+                            4.8
+                          </span>
+                          <span className="text-slate-300">•</span>
+                          <span className="text-slate-500">⏱ {computedEtaMin} mins</span>
+                        </div>
+
+                        {/* Category pill with arrow */}
+                        <div className="pt-1">
+                          <span className="inline-flex items-center gap-1 rounded-md bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-600 group-hover:bg-purple-50 group-hover:text-[#981495] transition-colors">
+                            <span>All {p.category || "Item"}</span>
+                            <span className="text-[8px]">▶</span>
+                          </span>
+                        </div>
+                      </Link>
+                    </div>
+                  </m.div>
+                );
+              })}
+            </div>
+          )}
+        </div>
 
         {/* ── STORE TRUST & ASSURANCE BANNER ── */}
         <div className="mt-12 rounded-3xl bg-gradient-to-r from-purple-900 via-indigo-900 to-[#310938] text-white p-6 sm:p-8 shadow-xl border-2 border-amber-300/80">
@@ -824,7 +832,8 @@ function StorePage() {
                 Directly from {store.name} to your doorstep
               </h3>
               <p className="text-xs sm:text-sm text-purple-200 font-medium max-w-xl">
-                Every order is fulfilled straight from verified local inventory with instant delivery, active tracking, and doorstep return support.
+                Every order is fulfilled straight from verified local inventory with instant
+                delivery, active tracking, and doorstep return support.
               </p>
             </div>
 
@@ -864,53 +873,57 @@ function StorePage() {
                   Verified merchants in your delivery neighborhood
                 </p>
               </div>
-            <Link
-              to="/"
-              search={{ category: undefined, q: undefined }}
-              className="text-xs font-bold text-[#981495] hover:underline flex items-center gap-1"
-            >
-              <span>View all shops</span>
-              <ChevronRight className="h-3.5 w-3.5" />
-            </Link>
-          </div>
+              <Link
+                to="/"
+                search={{ category: undefined, q: undefined }}
+                className="text-xs font-bold text-[#981495] hover:underline flex items-center gap-1"
+              >
+                <span>View all shops</span>
+                <ChevronRight className="h-3.5 w-3.5" />
+              </Link>
+            </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-            {stores
-              .filter((s) => s.id !== store.id)
-              .slice(0, 4)
-              .map((otherStore) => (
-                <Link
-                  key={otherStore.id}
-                  to="/store/$storeId"
-                  params={{ storeId: otherStore.id }}
-                  className="group flex flex-col justify-between overflow-hidden rounded-2xl bg-white border-2 border-amber-300/70 p-3 shadow-xs hover:border-amber-400 hover:shadow-md transition-all"
-                >
-                  <div className="relative aspect-[16/10] w-full overflow-hidden rounded-xl bg-slate-100 mb-2.5">
-                    <img
-                      src={resolveImageUrl(otherStore.imageUrl, otherStore.name, otherStore.category)}
-                      alt={otherStore.name}
-                      className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300"
-                    />
-                    <div className="absolute top-2 left-2 rounded-full bg-white/90 backdrop-blur-xs px-2 py-0.5 text-[9px] font-black text-slate-900 border border-amber-200">
-                      ★ {otherStore.rating.toFixed(1)}
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+              {stores
+                .filter((s) => s.id !== store.id)
+                .slice(0, 4)
+                .map((otherStore) => (
+                  <Link
+                    key={otherStore.id}
+                    to="/store/$storeId"
+                    params={{ storeId: otherStore.id }}
+                    className="group flex flex-col justify-between overflow-hidden rounded-2xl bg-white border-2 border-amber-300/70 p-3 shadow-xs hover:border-amber-400 hover:shadow-md transition-all"
+                  >
+                    <div className="relative aspect-[16/10] w-full overflow-hidden rounded-xl bg-slate-100 mb-2.5">
+                      <img
+                        src={resolveImageUrl(
+                          otherStore.imageUrl,
+                          otherStore.name,
+                          otherStore.category,
+                        )}
+                        alt={otherStore.name}
+                        className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      />
+                      <div className="absolute top-2 left-2 rounded-full bg-white/90 backdrop-blur-xs px-2 py-0.5 text-[9px] font-black text-slate-900 border border-amber-200">
+                        ★ {otherStore.rating.toFixed(1)}
+                      </div>
                     </div>
-                  </div>
-                  <div>
-                    <h4 className="font-bold text-xs text-slate-900 truncate group-hover:text-[#981495] transition-colors">
-                      {otherStore.name}
-                    </h4>
-                    <p className="text-[10px] font-medium text-slate-500 truncate mt-0.5">
-                      {otherStore.tagline}
-                    </p>
-                    <div className="mt-2 flex items-center justify-between text-[10px] font-extrabold text-slate-700">
-                      <span>🚀 {otherStore.etaMin} mins</span>
-                      <span className="text-[#981495]">View Shop &rarr;</span>
+                    <div>
+                      <h4 className="font-bold text-xs text-slate-900 truncate group-hover:text-[#981495] transition-colors">
+                        {otherStore.name}
+                      </h4>
+                      <p className="text-[10px] font-medium text-slate-500 truncate mt-0.5">
+                        {otherStore.tagline}
+                      </p>
+                      <div className="mt-2 flex items-center justify-between text-[10px] font-extrabold text-slate-700">
+                        <span>🚀 {otherStore.etaMin} mins</span>
+                        <span className="text-[#981495]">View Shop &rarr;</span>
+                      </div>
                     </div>
-                  </div>
-                </Link>
-              ))}
+                  </Link>
+                ))}
+            </div>
           </div>
-        </div>
         )}
 
         <NearbySimilarShopsWidget
@@ -926,8 +939,24 @@ function StorePage() {
           userLat={deliveryLoc?.lat}
           userLng={deliveryLoc?.lng}
           shops={[
-            { id: "store-2", business_name: "Nilgiris Supermarket", business_type: "Groceries & Gourmet", rating: 4.6, lat: store.lat ? store.lat + 0.008 : null, lng: store.lng ? store.lng + 0.005 : null, matching_reason: "Popular for daily organic groceries nearby" },
-            { id: "store-3", business_name: "Local Electronics Hub", business_type: "Electronics & Accessories", rating: 4.8, lat: store.lat ? store.lat - 0.005 : null, lng: store.lng ? store.lng - 0.008 : null, matching_reason: "High customer satisfaction for accessories" }
+            {
+              id: "store-2",
+              business_name: "Nilgiris Supermarket",
+              business_type: "Groceries & Gourmet",
+              rating: 4.6,
+              lat: store.lat ? store.lat + 0.008 : null,
+              lng: store.lng ? store.lng + 0.005 : null,
+              matching_reason: "Popular for daily organic groceries nearby",
+            },
+            {
+              id: "store-3",
+              business_name: "Local Electronics Hub",
+              business_type: "Electronics & Accessories",
+              rating: 4.8,
+              lat: store.lat ? store.lat - 0.005 : null,
+              lng: store.lng ? store.lng - 0.008 : null,
+              matching_reason: "High customer satisfaction for accessories",
+            },
           ]}
         />
       </div>
@@ -938,9 +967,12 @@ function StorePage() {
           <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-5 py-3.5 md:px-6">
             <div className="text-sm">
               <p className="font-mono text-[10px] uppercase tracking-widest text-purple-200 font-bold">
-                {totals.itemCount} item{totals.itemCount > 1 ? "s" : ""} · from {cart.storeName || store.name}
+                {totals.itemCount} item{totals.itemCount > 1 ? "s" : ""} · from{" "}
+                {cart.storeName || store.name}
               </p>
-              <p className="font-display text-xl font-black text-amber-300">₹{totals.subtotal.toLocaleString("en-IN")}</p>
+              <p className="font-display text-xl font-black text-amber-300">
+                ₹{totals.subtotal.toLocaleString("en-IN")}
+              </p>
             </div>
             <button
               type="button"

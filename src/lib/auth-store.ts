@@ -50,14 +50,12 @@ function ensureAuthSubscription() {
     }
     setState(fromUser(session?.user ?? null));
   });
-  void supabase.auth
-    .getSession()
-    .then(({ data }) => {
-      if (!data.session) {
-        cartStore.clear();
-      }
-      setState(fromUser(data.session?.user ?? null));
-    });
+  void supabase.auth.getSession().then(({ data }) => {
+    if (!data.session) {
+      cartStore.clear();
+    }
+    setState(fromUser(data.session?.user ?? null));
+  });
 }
 
 export const authStore = {

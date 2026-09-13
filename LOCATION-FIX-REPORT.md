@@ -4,11 +4,11 @@
 
 Work was completed on `amrs-map-patch` in locc, DeliveryHub, and VendorAdmin. The remote patch branches had been moved to the same commits as main. The original patch commits were still available locally, so the integration uses merge commits rather than resetting, rebasing, or force-pushing the branches.
 
-| Repository | Original patch retained | Latest main integrated |
-| --- | --- | --- |
-| locc | `76c67ce` | `dafb0f3` |
-| DeliveryHub | `ccbb6a3` | `49c0aed` |
-| VendorAdmin | `7ceca36` | `21d9bae` |
+| Repository  | Original patch retained | Latest main integrated |
+| ----------- | ----------------------- | ---------------------- |
+| locc        | `76c67ce`               | `dafb0f3`              |
+| DeliveryHub | `ccbb6a3`               | `49c0aed`              |
+| VendorAdmin | `7ceca36`               | `21d9bae`              |
 
 The merge retains newer main work such as checkout payment flows, shopper layouts and filters, delivery status/verification screens, seller administration, and vendor live guidance. Where main conflicted with the map patch, the location-validation, route-cancellation, and confirmed-pin behavior was restored and adapted to the newer interfaces. The original patch tests remain present.
 

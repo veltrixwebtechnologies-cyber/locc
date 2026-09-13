@@ -29,7 +29,9 @@ export function FilterChips({
   const hasRating = filterState.minRating !== undefined && filterState.minRating > 0;
   const hasBrands = filterState.brands.length > 0;
   const hasBooleans = filterState.inStock || filterState.onSale || filterState.openNow;
-  const hasAttributes = Object.values(filterState.attributes).some((vals) => vals && vals.length > 0);
+  const hasAttributes = Object.values(filterState.attributes).some(
+    (vals) => vals && vals.length > 0,
+  );
 
   const hasAnyFilter = hasPrice || hasRating || hasBrands || hasBooleans || hasAttributes;
 
@@ -170,7 +172,9 @@ export function FilterChips({
             variant="secondary"
             className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium bg-slate-100 dark:bg-slate-800 text-foreground border border-border"
           >
-            <span className="capitalize">{attrKey}: {v}</span>
+            <span className="capitalize">
+              {attrKey}: {v}
+            </span>
             <button
               type="button"
               onClick={() => onRemoveAttribute(attrKey, v)}
@@ -180,7 +184,7 @@ export function FilterChips({
               <X className="h-3 w-3 stroke-[2.5]" />
             </button>
           </Badge>
-        ))
+        )),
       )}
 
       {/* Clear All Button */}

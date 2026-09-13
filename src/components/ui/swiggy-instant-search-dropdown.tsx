@@ -51,7 +51,11 @@ export function SwiggyInstantSearchDropdown({
     const targetUrl = item.url || "";
     if (targetUrl.startsWith("/store/")) {
       const storeId = item.storeId || targetUrl.replace("/store/", "");
-      void navigate({ to: "/store/$storeId", params: { storeId }, search: { sq: query, category: undefined } });
+      void navigate({
+        to: "/store/$storeId",
+        params: { storeId },
+        search: { sq: query, category: undefined },
+      });
     } else if (targetUrl.startsWith("/product/")) {
       const productId = item.id.replace(/^prod-/, "") || targetUrl.replace("/product/", "");
       void navigate({ to: "/product/$productId", params: { productId }, search: { sq: query } });
@@ -160,7 +164,12 @@ export function SwiggyInstantSearchDropdown({
               <span>Shops ({shopsList.length})</span>
             </div>
             {shopsList.map((item) => (
-              <SearchResultRow key={item.id} item={item} query={query} onClick={() => handleResultClick(item)} />
+              <SearchResultRow
+                key={item.id}
+                item={item}
+                query={query}
+                onClick={() => handleResultClick(item)}
+              />
             ))}
           </div>
         )}
@@ -173,7 +182,12 @@ export function SwiggyInstantSearchDropdown({
               <span>Products ({productsList.length})</span>
             </div>
             {productsList.map((item) => (
-              <SearchResultRow key={item.id} item={item} query={query} onClick={() => handleResultClick(item)} />
+              <SearchResultRow
+                key={item.id}
+                item={item}
+                query={query}
+                onClick={() => handleResultClick(item)}
+              />
             ))}
           </div>
         )}
@@ -185,7 +199,12 @@ export function SwiggyInstantSearchDropdown({
               <span>🏷️ Brands ({brandsList.length})</span>
             </div>
             {brandsList.map((item) => (
-              <SearchResultRow key={item.id} item={item} query={query} onClick={() => handleResultClick(item)} />
+              <SearchResultRow
+                key={item.id}
+                item={item}
+                query={query}
+                onClick={() => handleResultClick(item)}
+              />
             ))}
           </div>
         )}
@@ -197,7 +216,12 @@ export function SwiggyInstantSearchDropdown({
               <span>📁 Categories ({categoriesList.length})</span>
             </div>
             {categoriesList.map((item) => (
-              <SearchResultRow key={item.id} item={item} query={query} onClick={() => handleResultClick(item)} />
+              <SearchResultRow
+                key={item.id}
+                item={item}
+                query={query}
+                onClick={() => handleResultClick(item)}
+              />
             ))}
           </div>
         )}

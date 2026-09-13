@@ -56,7 +56,7 @@ function runTests() {
     assert.deepStrictEqual(
       matches.map((p) => p.id),
       ["p1", "p2"],
-      "Test 1 Failed: OR logic within attribute key"
+      "Test 1 Failed: OR logic within attribute key",
     );
     console.log("✅ Test 1 Passed: OR evaluation within attribute key (Size = M OR L)");
   }
@@ -73,9 +73,11 @@ function runTests() {
     assert.deepStrictEqual(
       matches.map((p) => p.id),
       ["p1"],
-      "Test 2 Failed: AND logic across attribute keys"
+      "Test 2 Failed: AND logic across attribute keys",
     );
-    console.log("✅ Test 2 Passed: AND evaluation across distinct attribute keys (Size = M AND Color = Black)");
+    console.log(
+      "✅ Test 2 Passed: AND evaluation across distinct attribute keys (Size = M AND Color = Black)",
+    );
   }
 
   // Test 3: Price range filtering
@@ -88,7 +90,7 @@ function runTests() {
     assert.deepStrictEqual(
       matches.map((p) => p.id),
       ["p2", "p3"],
-      "Test 3 Failed: Price range filtering"
+      "Test 3 Failed: Price range filtering",
     );
     console.log("✅ Test 3 Passed: Price range filtering (1000 to 3000)");
   }
@@ -103,7 +105,7 @@ function runTests() {
     assert.deepStrictEqual(
       matches.map((p) => p.id),
       ["p1", "p3"],
-      "Test 4 Failed: Brand filtering"
+      "Test 4 Failed: Brand filtering",
     );
     console.log("✅ Test 4 Passed: Brand filtering (Brand = Puma)");
   }
@@ -129,14 +131,20 @@ function runTests() {
       },
     };
 
-    const facetResults = calculateContextAwareFacets(mockProducts as any, sizeFilterDef, activeState);
+    const facetResults = calculateContextAwareFacets(
+      mockProducts as any,
+      sizeFilterDef,
+      activeState,
+    );
     const counts = Object.fromEntries(facetResults.options.map((o) => [o.value, o.count]));
 
     assert.strictEqual(counts["M"], 1, "Facet M count mismatch");
     assert.strictEqual(counts["L"], 1, "Facet L count mismatch");
     assert.strictEqual(counts["XL"], 1, "Facet XL count mismatch");
     assert.strictEqual(counts["S"], 0, "Facet S count mismatch");
-    console.log("✅ Test 5 Passed: Context-aware facet calculation (Active key excluded during facet count)");
+    console.log(
+      "✅ Test 5 Passed: Context-aware facet calculation (Active key excluded during facet count)",
+    );
   }
 
   // Test 6: Store filtering
@@ -154,17 +162,17 @@ function runTests() {
     assert.strictEqual(
       filterStoreByState(store as any, { maxDistanceKm: 3, minRating: 4.0, openNowOnly: true }),
       true,
-      "Store matching failed"
+      "Store matching failed",
     );
     assert.strictEqual(
       filterStoreByState(store as any, { maxDistanceKm: 1.5 }),
       false,
-      "Store distance filter failed"
+      "Store distance filter failed",
     );
     assert.strictEqual(
       filterStoreByState(store as any, { minRating: 4.8 }),
       false,
-      "Store rating filter failed"
+      "Store rating filter failed",
     );
     console.log("✅ Test 6 Passed: Store filtering by distance, rating, and open status");
   }

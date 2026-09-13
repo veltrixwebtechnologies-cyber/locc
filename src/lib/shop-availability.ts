@@ -59,13 +59,12 @@ export function useShopStatus(sellerId: string | null | undefined) {
           _seller_id: sellerId,
         });
         if (error) {
-          if (error.code === "PGRST202" || String(error.message).includes("Could not find")) {
-            isGetShopStatusMissing = true;
-          }
+          isGetShopStatusMissing = true;
           return DEFAULT_OPEN_STATUS;
         }
         return dbToStatus(data);
       } catch {
+        isGetShopStatusMissing = true;
         return DEFAULT_OPEN_STATUS;
       }
     },
@@ -127,9 +126,7 @@ export function useShopsStatus(sellerIds: string[]) {
           _seller_ids: sellerIds,
         });
         if (error) {
-          if (error.code === "PGRST202" || String(error.message).includes("Could not find")) {
-            isGetShopsStatusMissing = true;
-          }
+          isGetShopsStatusMissing = true;
           return new Map();
         }
         const map = new Map<string, ShopStatus>();
@@ -138,6 +135,7 @@ export function useShopsStatus(sellerIds: string[]) {
         }
         return map;
       } catch {
+        isGetShopsStatusMissing = true;
         return new Map();
       }
     },

@@ -1,14 +1,14 @@
-import { usableGPS } from "./coordinates";
+import { MAX_LOCATION_AGE_MS, parseCoordinates } from "./coordinates";
 /**
  * LocalShore Global Delivery Location Store
- * Reactive delivery location management supporting GPS Geolocation, Nominatim Reverse Geocoding,
- * and pre-set Coimbatore hubs.
+ * Reactive delivery location state machine supporting GPS Geolocation, Nominatim Reverse Geocoding,
+ * Map Pin selection, and city-aware dynamic area presets.
  *
- * KEY DESIGN:
- *  - `activeLocation`    = the user's currently *selected* delivery destination
- *  - `gpsDetectionState` = real-time status of device GPS detection (separate concern)
- *  - The header reads `activeLocation` — it is NEVER populated with a default/preset
- *    unless the user explicitly picks one or GPS successfully detects their position.
+ * STATES:
+ *  - NO_LOCATION_SELECTED : User has not selected or detected a location yet.
+ *  - DETECTING_LOCATION   : Currently acquiring device GPS or reverse geocoding.
+ *  - LOCATION_SELECTED    : Valid location confirmed & persisted.
+ *  - LOCATION_ERROR       : GPS acquisition failed or permission denied (graceful fallback).
  */
 
 import { useState, useEffect } from "react";
@@ -27,6 +27,12 @@ export interface DeliveryLocation {
   pincode?: string;
 }
 
+export type LocationState =
+  | "NO_LOCATION_SELECTED"
+  | "DETECTING_LOCATION"
+  | "LOCATION_SELECTED"
+  | "LOCATION_ERROR";
+
 export type GPSStatus =
   | "idle" // No attempt made yet
   | "detecting" // Currently requesting GPS
@@ -37,123 +43,29 @@ export type GPSStatus =
   | "error" // Generic error
   | "unsupported"; // Browser doesn't support geolocation
 
-export const PRESET_LOCATIONS: DeliveryLocation[] = [
-  {
-    id: "kovilmedu",
-    label: "Kovilmedu, Coimbatore, TN",
-    area: "Kovilmedu",
-    city: "Coimbatore, TN",
-    lat: 11.0285,
-    lng: 76.9258,
-  },
-  {
-    id: "pappampatti",
-    label: "Pappampatti Pirivu, Coimbatore, TN",
-    area: "Pappampatti Pirivu",
-    city: "Coimbatore, TN",
-    lat: 11.0028,
-    lng: 77.0865,
-  },
-  {
-    id: "rspuram",
-    label: "RS Puram, Coimbatore, TN",
-    area: "RS Puram",
-    city: "Coimbatore, TN",
-    lat: 11.0064,
-    lng: 76.9507,
-  },
-  {
-    id: "gandhipuram",
-    label: "Gandhipuram, Coimbatore, TN",
-    area: "Gandhipuram",
-    city: "Coimbatore, TN",
-    lat: 11.0172,
-    lng: 76.9562,
-  },
-  {
-    id: "peelamedu",
-    label: "Peelamedu, Coimbatore, TN",
-    area: "Peelamedu",
-    city: "Coimbatore, TN",
-    lat: 11.0252,
-    lng: 77.0025,
-  },
-  {
-    id: "singanallur",
-    label: "Singanallur, Coimbatore, TN",
-    area: "Singanallur",
-    city: "Coimbatore, TN",
-    lat: 10.9984,
-    lng: 77.0258,
-  },
-  {
-    id: "saravanampatti",
-    label: "Saravanampatti, Coimbatore, TN",
-    area: "Saravanampatti",
-    city: "Coimbatore, TN",
-    lat: 11.0797,
-    lng: 76.9997,
-  },
-  {
-    id: "tidalpark",
-    label: "Tidal Park, Coimbatore, TN",
-    area: "Tidal Park",
-    city: "Coimbatore, TN",
-    lat: 11.0264,
-    lng: 77.018,
-  },
-];
-
 const STORAGE_KEY = "localshore_active_delivery_location";
 const CONFIRMED_KEY = "localshore_location_confirmed"; // set only when user explicitly picks
-const GPS_STATUS_KEY = "localshore_gps_status";
 const LISTENERS = new Set<() => void>();
-const GPS_LISTENERS = new Set<() => void>();
+const STATE_LISTENERS = new Set<() => void>();
 
-// ─── GPS Detection State (separate from delivery location) ───
+// ─── Location & GPS State ───
 
 let gpsStatus: GPSStatus = "idle";
 let gpsErrorMessage: string | null = null;
 
-function notifyGPSListeners() {
-  GPS_LISTENERS.forEach((listener) => listener());
+// Customer discovery can use a live network/Wi-Fi fix when satellite GPS is
+// unavailable. The accuracy is retained and shown to the user; checkout can
+// still apply its stricter entrance-pin validation independently.
+function hasFreshLiveGPSFix(position: GeolocationPosition, now = Date.now()): boolean {
+  return (
+    !!parseCoordinates(position.coords.latitude, position.coords.longitude) &&
+    Number.isFinite(position.coords.accuracy) &&
+    position.coords.accuracy >= 0 &&
+    Number.isFinite(position.timestamp) &&
+    now - position.timestamp <= MAX_LOCATION_AGE_MS &&
+    position.timestamp <= now + 1000
+  );
 }
-
-export function getGPSStatus(): { status: GPSStatus; errorMessage: string | null } {
-  return { status: gpsStatus, errorMessage: gpsErrorMessage };
-}
-
-function setGPSStatus(status: GPSStatus, errorMessage: string | null = null) {
-  gpsStatus = status;
-  gpsErrorMessage = errorMessage;
-  notifyGPSListeners();
-}
-
-/**
- * React hook to subscribe to GPS detection status changes.
- */
-export function useGPSStatus(): { status: GPSStatus; errorMessage: string | null } {
-  const [state, setState] = useState<{ status: GPSStatus; errorMessage: string | null }>({
-    status: gpsStatus,
-    errorMessage: gpsErrorMessage,
-  });
-
-  useEffect(() => {
-    const handleChange = () => {
-      setState({ status: gpsStatus, errorMessage: gpsErrorMessage });
-    };
-    GPS_LISTENERS.add(handleChange);
-    // Sync immediately in case status changed between render and effect
-    handleChange();
-    return () => {
-      GPS_LISTENERS.delete(handleChange);
-    };
-  }, []);
-
-  return state;
-}
-
-// ─── Delivery Location State ───
 
 function getStoredLocation(): DeliveryLocation | null {
   if (typeof window === "undefined") return null;
@@ -171,20 +83,6 @@ function getStoredLocation(): DeliveryLocation | null {
   return null;
 }
 
-/**
- * Returns null if no location has been explicitly chosen or GPS-detected.
- * NEVER returns a hardcoded default.
- */
-function getInitialLocation(): DeliveryLocation | null {
-  if (typeof window === "undefined") return null;
-  const stored = getStoredLocation();
-  if (stored && hasUserChosenLocation()) {
-    return stored;
-  }
-  return null;
-}
-
-/** Returns true only when the user has explicitly chosen a delivery location */
 export function hasUserChosenLocation(): boolean {
   if (typeof window === "undefined") return false;
   try {
@@ -194,14 +92,95 @@ export function hasUserChosenLocation(): boolean {
   }
 }
 
+function getInitialLocation(): DeliveryLocation | null {
+  if (typeof window === "undefined") return null;
+  const stored = getStoredLocation();
+  if (stored && hasUserChosenLocation()) {
+    return stored;
+  }
+  return null;
+}
+
 let activeLocation: DeliveryLocation | null = getInitialLocation();
+
+let currentState: LocationState = activeLocation ? "LOCATION_SELECTED" : "NO_LOCATION_SELECTED";
 
 function notifyListeners() {
   LISTENERS.forEach((listener) => listener());
+  STATE_LISTENERS.forEach((listener) => listener());
 }
 
 export function getActiveDeliveryLocation(): DeliveryLocation | null {
   return activeLocation;
+}
+
+export function getLocationState(): LocationState {
+  return currentState;
+}
+
+export function setLocationState(state: LocationState) {
+  currentState = state;
+  notifyListeners();
+}
+
+export function getGPSStatus(): { status: GPSStatus; errorMessage: string | null } {
+  return { status: gpsStatus, errorMessage: gpsErrorMessage };
+}
+
+function setGPSStatus(status: GPSStatus, errorMessage: string | null = null) {
+  gpsStatus = status;
+  gpsErrorMessage = errorMessage;
+  if (status === "detecting") {
+    currentState = "DETECTING_LOCATION";
+  } else if (status === "ok" && activeLocation) {
+    currentState = "LOCATION_SELECTED";
+  } else if (
+    status === "denied" ||
+    status === "unavailable" ||
+    status === "timeout" ||
+    status === "error" ||
+    status === "unsupported"
+  ) {
+    currentState = activeLocation ? "LOCATION_SELECTED" : "LOCATION_ERROR";
+  }
+  notifyListeners();
+}
+
+export function useGPSStatus(): { status: GPSStatus; errorMessage: string | null } {
+  const [state, setState] = useState<{ status: GPSStatus; errorMessage: string | null }>({
+    status: gpsStatus,
+    errorMessage: gpsErrorMessage,
+  });
+
+  useEffect(() => {
+    const handleChange = () => {
+      setState({ status: gpsStatus, errorMessage: gpsErrorMessage });
+    };
+    STATE_LISTENERS.add(handleChange);
+    handleChange();
+    return () => {
+      STATE_LISTENERS.delete(handleChange);
+    };
+  }, []);
+
+  return state;
+}
+
+export function useLocationState(): LocationState {
+  const [state, setState] = useState<LocationState>(currentState);
+
+  useEffect(() => {
+    const handleChange = () => {
+      setState(currentState);
+    };
+    STATE_LISTENERS.add(handleChange);
+    handleChange();
+    return () => {
+      STATE_LISTENERS.delete(handleChange);
+    };
+  }, []);
+
+  return state;
 }
 
 let locationRevision = 0;
@@ -209,6 +188,9 @@ let locationRevision = 0;
 export function setActiveDeliveryLocation(loc: DeliveryLocation) {
   locationRevision++;
   activeLocation = { ...loc };
+  currentState = "LOCATION_SELECTED";
+  gpsStatus = "idle";
+  gpsErrorMessage = null;
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(activeLocation));
     localStorage.setItem(CONFIRMED_KEY, "1"); // mark as explicitly chosen
@@ -222,11 +204,14 @@ export function setActiveDeliveryLocation(loc: DeliveryLocation) {
 }
 
 /**
- * Clear the current delivery location (used when user wants to re-detect).
+ * Clear the current delivery location (returns state to NO_LOCATION_SELECTED).
  */
 export function clearActiveDeliveryLocation() {
   locationRevision++;
   activeLocation = null;
+  currentState = "NO_LOCATION_SELECTED";
+  gpsStatus = "idle";
+  gpsErrorMessage = null;
   try {
     localStorage.removeItem(STORAGE_KEY);
     localStorage.removeItem(CONFIRMED_KEY);
@@ -261,6 +246,17 @@ export function useDeliveryLocation(): [DeliveryLocation | null, (loc: DeliveryL
   }, []);
 
   return [loc, setActiveDeliveryLocation];
+}
+
+/**
+ * Dynamically resolves popular sub-areas for a given selected location.
+ * Only returns areas AFTER a location is explicitly selected.
+ * Returns empty array when NO_LOCATION_SELECTED.
+ */
+export function getPopularAreasForLocation(location: DeliveryLocation | null): DeliveryLocation[] {
+  // Area presets must never invent coordinates. Areas are populated from the
+  // live location/search result by the backend when that feature is available.
+  return [];
 }
 
 /**
@@ -305,15 +301,14 @@ export function initAutoGPSLocation() {
         if (result.state === "granted") {
           tryDetect();
         }
-        // If "prompt" or "denied", do NOT auto-detect — wait for user action
       })
       .catch(() => {});
   }
 }
 
 /**
- * Detect Current GPS Location using Browser Geolocation API with two-stage fallback.
- * Updates both the GPS detection state AND (on success) the active delivery location.
+ * Detect Current GPS Location using Geolocation API.
+ * Updates state machine: DETECTING_LOCATION -> LOCATION_SELECTED or LOCATION_ERROR.
  */
 export async function detectCurrentGPSLocation(options?: {
   silent?: boolean;
@@ -327,15 +322,36 @@ export async function detectCurrentGPSLocation(options?: {
   const silent = options?.silent ?? false;
   setGPSStatus("detecting");
 
+  if (window.isSecureContext === false) {
+    const message = "Location requires a secure connection. Open this page using HTTPS.";
+    setGPSStatus("unsupported", message);
+    throw new Error(message);
+  }
+
+  // A failed address provider must not leave a valid GPS fix waiting indefinitely.
+  const withDeadline = async <T,>(operation: Promise<T>): Promise<T> => {
+    let timer: ReturnType<typeof setTimeout>;
+    try {
+      return await Promise.race([
+        operation,
+        new Promise<never>((_, reject) => {
+          timer = setTimeout(() => reject(new Error("Address lookup timed out")), 4000);
+        }),
+      ]);
+    } finally {
+      clearTimeout(timer!);
+    }
+  };
+
   const processPosition = async (position: GeolocationPosition): Promise<DeliveryLocation> => {
-    if (!usableGPS(position))
+    if (!hasFreshLiveGPSFix(position))
       throw new Error(
-        "Location is approximate or stale. Enable precise location or choose your destination manually.",
+        "Location is invalid or out of date. Refresh and try again.",
       );
     const { latitude: lat, longitude: lng, accuracy } = position.coords;
     let area = `GPS Location (${lat.toFixed(3)}, ${lng.toFixed(3)})`;
     let city = "";
-    let label = `Near ${lat.toFixed(4)}, ${lng.toFixed(4)}, Coimbatore, TN`;
+    let label = `Near ${lat.toFixed(4)}, ${lng.toFixed(4)}`;
     let pincode: string | undefined;
 
     try {
@@ -346,11 +362,12 @@ export async function detectCurrentGPSLocation(options?: {
         addressdetails: "1",
         zoom: "16",
       });
-      const res = await fetch(`https://nominatim.openstreetmap.org/reverse?${params.toString()}`, {
+      const res = await withDeadline(fetch(`https://nominatim.openstreetmap.org/reverse?${params.toString()}`, {
         headers: { "Accept-Language": "en" },
-      });
+        signal: AbortSignal.timeout(4000),
+      }));
       if (res.ok) {
-        const data = await res.json();
+        const data = await withDeadline(res.json());
         if (data && data.display_name) {
           const parts = data.display_name.split(",").map((s: string) => s.trim());
           const shortArea = parts[0] || "Live GPS Location";
@@ -369,8 +386,7 @@ export async function detectCurrentGPSLocation(options?: {
           if (data.address?.postcode) pincode = data.address.postcode;
         }
       } else {
-        // Fallback attempt: server function reverse geocode
-        const result = await reverseGeocode({ data: { lat, lng } });
+        const result = await withDeadline(reverseGeocode({ data: { lat, lng } }));
         if (result && result.area) {
           area = result.area;
           city = result.city || city;
@@ -379,7 +395,7 @@ export async function detectCurrentGPSLocation(options?: {
       }
     } catch (err) {
       try {
-        const result = await reverseGeocode({ data: { lat, lng } });
+        const result = await withDeadline(reverseGeocode({ data: { lat, lng } }));
         if (result && result.area) {
           area = result.area;
           city = result.city || city;
@@ -404,14 +420,15 @@ export async function detectCurrentGPSLocation(options?: {
 
     if (requestRevision !== locationRevision)
       throw new Error("Location selection changed while GPS was resolving.");
+
     setActiveDeliveryLocation(newLoc);
     setGPSStatus("ok");
 
     if (!silent) {
       const toastDesc =
         accuracy && accuracy > 100
-          ? `${area}, ${city} · Accuracy ±${Math.round(accuracy)}m — move to an open area for better precision`
-          : `${area}, ${city}`;
+          ? `${area}${city ? `, ${city}` : ""} · Accuracy ±${Math.round(accuracy)}m`
+          : `${area}${city ? `, ${city}` : ""}`;
       toast.success("Live Location Acquired", {
         id: "live-location-toast",
         description: toastDesc,
@@ -421,64 +438,50 @@ export async function detectCurrentGPSLocation(options?: {
   };
 
   return new Promise((resolve, reject) => {
-    // Try High-Accuracy GPS first (ideal for mobile devices)
-    navigator.geolocation.getCurrentPosition(
-      async (pos) => {
-        try {
-          const loc = await processPosition(pos);
-          resolve(loc);
-        } catch (err) {
-          setGPSStatus("error", "Failed to process GPS location.");
-          reject(err);
-        }
-      },
-      (firstErr) => {
-        // High accuracy failed or timed out — retry with low accuracy (WiFi / IP / coarse desktop fix)
-        navigator.geolocation.getCurrentPosition(
-          async (pos) => {
-            try {
-              const loc = await processPosition(pos);
-              resolve(loc);
-            } catch (err) {
-              setGPSStatus("error", "Failed to process GPS location.");
-              reject(err);
-            }
-          },
-          (secondErr) => {
-            let msg = "Could not fetch current GPS location.";
-            let status: GPSStatus = "error";
-            if (
-              secondErr.code === secondErr.PERMISSION_DENIED ||
-              firstErr.code === firstErr.PERMISSION_DENIED
-            ) {
-              msg =
-                "Location access denied. Please enable location permission in browser site settings.";
-              status = "denied";
-            } else if (secondErr.code === secondErr.POSITION_UNAVAILABLE) {
-              msg = "GPS signal unavailable. Please select your location manually.";
-              status = "unavailable";
-            } else if (secondErr.code === secondErr.TIMEOUT) {
-              msg = "GPS request timed out. Please select your area from the list.";
-              status = "timeout";
-            }
-            setGPSStatus(status, msg);
-            if (!silent) {
-              toast.error("Geolocation Error", { id: "live-location-toast-err", description: msg });
-            }
-            reject(new Error(msg));
-          },
-          {
-            enableHighAccuracy: true,
-            timeout: 10000,
-            maximumAge: 0,
-          },
-        );
-      },
-      {
-        enableHighAccuracy: true,
-        timeout: 6000,
-        maximumAge: 0,
-      },
+    let watchId: number | undefined;
+    let finished = false;
+    const cleanup = () => {
+      finished = true;
+      clearTimeout(deadline);
+      if (watchId !== undefined) navigator.geolocation.clearWatch(watchId);
+    };
+    const fail = (status: GPSStatus, message: string) => {
+      cleanup();
+      if (requestRevision === locationRevision) setGPSStatus(status, message);
+      reject(new Error(message));
+    };
+    const deadline = setTimeout(
+      () => fail("timeout", "GPS request timed out. Retry outdoors or choose your destination on the map."),
+      20000,
     );
+    try {
+      watchId = navigator.geolocation.watchPosition(
+        (position) => {
+          if (finished) return;
+          if (requestRevision !== locationRevision) {
+            fail("error", "Location selection changed while GPS was resolving.");
+            return;
+          }
+          if (!hasFreshLiveGPSFix(position)) return;
+          cleanup();
+          processPosition(position).then(resolve, (error) => {
+            if (requestRevision === locationRevision) {
+              setGPSStatus("error", error instanceof Error ? error.message : "Location detection failed. Please retry.");
+            }
+            reject(error);
+          });
+        },
+        (error) => {
+          if (finished) return;
+          if (error.code === 1) fail("denied", "Allow location access in your browser site settings, then retry. You can also choose a pin on the map.");
+          if (error.code === 2) fail("unavailable", "Your device could not determine its location. Turn on device location services and retry.");
+          if (error.code === 3) fail("timeout", "GPS took too long to respond. Move near a window or outdoors and retry.");
+        },
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 },
+      );
+      if (finished) navigator.geolocation.clearWatch(watchId);
+    } catch (error) {
+      fail("error", error instanceof Error ? error.message : "Location detection failed. Please retry.");
+    }
   });
 }

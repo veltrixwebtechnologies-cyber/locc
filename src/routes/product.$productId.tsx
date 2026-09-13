@@ -657,7 +657,11 @@ function ProductPage() {
 
           {/* Section 3: Suggested Shops Horizontal Strip */}
           <section className="mt-10">
-            <SuggestedShopsStrip category={item.category} searchQuery={sq} currentShopId={item.seller_id} />
+            <SuggestedShopsStrip
+              category={item.category}
+              searchQuery={sq}
+              currentShopId={item.seller_id}
+            />
           </section>
 
           {/* Customer Reviews Section */}
@@ -1016,12 +1020,7 @@ function SuggestedShopsStrip({
   const containerRef = useRef<HTMLDivElement>(null);
 
   if (searchQuery && searchQuery.trim()) {
-    return (
-      <SearchShopRecommendations
-        searchQuery={searchQuery}
-        currentShopId={currentShopId}
-      />
-    );
+    return <SearchShopRecommendations searchQuery={searchQuery} currentShopId={currentShopId} />;
   }
 
   const scroll = (direction: "left" | "right") => {

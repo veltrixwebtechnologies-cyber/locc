@@ -275,15 +275,19 @@ export function LiquidGlassCategorySelector() {
   };
 
   // Smoothly center active category horizontally without causing vertical page scroll
-  const centerActiveItem = useCallback((id: string, behavior: ScrollBehavior = "smooth") => {
-    const container = scrollContainerRef.current;
-    const activeEl = itemRefs.current[id];
-    if (container && activeEl) {
-      const scrollGoal = activeEl.offsetLeft - container.clientWidth / 2 + activeEl.clientWidth / 2;
-      container.scrollTo({ left: Math.max(0, scrollGoal), behavior });
-      setTimeout(updateScrollState, 300);
-    }
-  }, [updateScrollState]);
+  const centerActiveItem = useCallback(
+    (id: string, behavior: ScrollBehavior = "smooth") => {
+      const container = scrollContainerRef.current;
+      const activeEl = itemRefs.current[id];
+      if (container && activeEl) {
+        const scrollGoal =
+          activeEl.offsetLeft - container.clientWidth / 2 + activeEl.clientWidth / 2;
+        container.scrollTo({ left: Math.max(0, scrollGoal), behavior });
+        setTimeout(updateScrollState, 300);
+      }
+    },
+    [updateScrollState],
+  );
 
   useEffect(() => {
     centerActiveItem(activeId, "smooth");
@@ -307,7 +311,8 @@ export function LiquidGlassCategorySelector() {
   };
 
   const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (!isPointerDownRef.current || e.pointerType !== "mouse" || !scrollContainerRef.current) return;
+    if (!isPointerDownRef.current || e.pointerType !== "mouse" || !scrollContainerRef.current)
+      return;
 
     const x = e.clientX - scrollContainerRef.current.offsetLeft;
     const walk = (x - startXRef.current) * 1.4;
@@ -334,7 +339,6 @@ export function LiquidGlassCategorySelector() {
         High-Performance GPU Accelerated Glass for both Mobile & Desktop
       */}
       <div className="relative mx-auto w-full max-w-[calc(100vw-1rem)] sm:max-w-2xl md:max-w-4xl lg:max-w-6xl xl:max-w-7xl rounded-full bg-white/75 backdrop-blur-xl backdrop-saturate-[160%] border border-purple-200/60 shadow-[0_8px_32px_rgba(60,20,70,0.10),inset_0_1px_0_rgba(255,255,255,0.90)] p-1 sm:p-1.5 transition-all duration-200">
-        
         {/* Desktop Left Scroll Button */}
         {canScrollLeft && (
           <button
@@ -387,9 +391,10 @@ export function LiquidGlassCategorySelector() {
                 ? { to: cat.to, search: {} }
                 : {
                     to: currentPath.startsWith("/search") ? "/search" : "/",
-                    search: cat.searchCategory || cat.id !== "all"
-                      ? { category: cat.searchCategory || cat.id }
-                      : { category: undefined, q: undefined },
+                    search:
+                      cat.searchCategory || cat.id !== "all"
+                        ? { category: cat.searchCategory || cat.id }
+                        : { category: undefined, q: undefined },
                   };
 
               return (
@@ -439,9 +444,7 @@ export function LiquidGlassCategorySelector() {
                     {cat.badge && (
                       <span
                         className={`ml-0.5 rounded-full px-1.5 py-0.2 text-[9px] font-black uppercase tracking-wide ${
-                          isActive
-                            ? "bg-purple-900 text-white"
-                            : "bg-purple-100 text-purple-900"
+                          isActive ? "bg-purple-900 text-white" : "bg-purple-100 text-purple-900"
                         }`}
                       >
                         {cat.badge}
@@ -457,5 +460,3 @@ export function LiquidGlassCategorySelector() {
     </div>
   );
 }
-
-

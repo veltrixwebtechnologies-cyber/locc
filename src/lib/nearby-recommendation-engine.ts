@@ -31,7 +31,7 @@ export interface RecommendationQueryOptions {
 }
 
 export function getNearbyStoreRecommendations(
-  options: RecommendationQueryOptions
+  options: RecommendationQueryOptions,
 ): NearbyStoreRecommendation[] {
   const {
     userLat,
@@ -43,22 +43,17 @@ export function getNearbyStoreRecommendations(
     limit = 4,
   } = options;
 
-  // Default coordinate if GPS unavailable (Coimbatore local center)
-  const defaultLat = 11.0168;
-  const defaultLng = 76.9558;
+  if (
+    typeof userLat !== "number" ||
+    typeof userLng !== "number" ||
+    !isValidCoordinate(userLat, userLng)
+  ) {
+    return [];
+  }
+  const validUserLat = userLat;
+  const validUserLng = userLng;
 
-  const validUserLat =
-    typeof userLat === "number" && isValidCoordinate(userLat, userLng ?? 0)
-      ? userLat
-      : defaultLat;
-  const validUserLng =
-    typeof userLng === "number" && isValidCoordinate(userLat ?? 0, userLng)
-      ? userLng
-      : defaultLng;
-
-  const candidateStores = Object.values(stores).filter(
-    (s) => s.id !== currentStoreId
-  );
+  const candidateStores = Object.values(stores).filter((s) => s.id !== currentStoreId);
 
   const queryTerms = (searchQuery + " " + currentCategory)
     .toLowerCase()
@@ -67,12 +62,13 @@ export function getNearbyStoreRecommendations(
 
   const scoredStores = candidateStores.map((store) => {
     // Distance calculation
-    const storeLat = typeof store.lat === "number" ? store.lat : defaultLat;
-    const storeLng = typeof store.lng === "number" ? store.lng : defaultLng;
+    if (!isValidCoordinate(store.lat, store.lng)) return null;
+    const storeLat = store.lat;
+    const storeLng = store.lng;
 
     const distanceKm = Math.max(
       0.1,
-      Math.round(haversineDistanceKm(storeLat, storeLng, validUserLat, validUserLng) * 10) / 10
+      Math.round(haversineDistanceKm(storeLat, storeLng, validUserLat, validUserLng) * 10) / 10,
     );
 
     const etaMin = Math.max(10, Math.round(distanceKm * 5 + 10));
@@ -82,8 +78,7 @@ export function getNearbyStoreRecommendations(
 
     // Category / Keyword matching score
     const categoryMatch =
-      currentCategory &&
-      store.category.toLowerCase().includes(currentCategory.toLowerCase());
+      currentCategory && store.category.toLowerCase().includes(currentCategory.toLowerCase());
 
     const matchingProducts: Product[] = [];
     if (queryTerms.length > 0) {
@@ -91,9 +86,7 @@ export function getNearbyStoreRecommendations(
         if (p.id === currentProductId) return;
         const nameLower = p.name.toLowerCase();
         const catLower = p.category.toLowerCase();
-        const matches = queryTerms.some(
-          (t) => nameLower.includes(t) || catLower.includes(t)
-        );
+        const matches = queryTerms.some((t) => nameLower.includes(t) || catLower.includes(t));
         if (matches) matchingProducts.push(p);
       });
     }
@@ -139,7 +132,7 @@ export function getNearbyStoreRecommendations(
       })),
       totalScore,
     };
-  });
+  }).filter((store) => store !== null) as Array<NearbyStoreRecommendation & { totalScore: number }>;
 
   // Sort by highest recommendation score
   scoredStores.sort((a, b) => b.totalScore - a.totalScore);

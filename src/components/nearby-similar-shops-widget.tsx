@@ -1,6 +1,14 @@
 import React from "react";
 import { Link } from "@tanstack/react-router";
-import { Store as StoreIcon, MapPin, Star, Sparkles, ArrowRight, Zap, ShoppingBag } from "lucide-react";
+import {
+  Store as StoreIcon,
+  MapPin,
+  Star,
+  Sparkles,
+  ArrowRight,
+  Zap,
+  ShoppingBag,
+} from "lucide-react";
 import { motion } from "motion/react";
 import { getNearbyStoreRecommendations } from "@/lib/nearby-recommendation-engine";
 import { useDeliveryLocation } from "@/lib/location-store";
@@ -59,9 +67,7 @@ export const NearbySimilarShopsWidget: React.FC<NearbySimilarShopsWidgetProps> =
             <h3 className="font-display font-black text-lg sm:text-xl text-slate-900 tracking-tight flex items-center gap-2">
               {title}
             </h3>
-            <p className="text-xs text-purple-950/80 font-semibold mt-0.5">
-              {subtitle}
-            </p>
+            <p className="text-xs text-purple-950/80 font-semibold mt-0.5">{subtitle}</p>
           </div>
         </div>
 
@@ -137,9 +143,7 @@ export const NearbySimilarShopsWidget: React.FC<NearbySimilarShopsWidgetProps> =
                           {prod.name}
                         </span>
                         <div className="flex items-center gap-2 shrink-0">
-                          <span className="font-mono font-bold text-purple-900">
-                            ₹{prod.price}
-                          </span>
+                          <span className="font-mono font-bold text-purple-900">₹{prod.price}</span>
                           <button
                             type="button"
                             data-product-id={prod.id}
@@ -167,9 +171,7 @@ export const NearbySimilarShopsWidget: React.FC<NearbySimilarShopsWidgetProps> =
 
             {/* Visit Shop Action */}
             <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
-              <span className="text-[11px] font-bold text-slate-500">
-                Live Inventory Ready
-              </span>
+              <span className="text-[11px] font-bold text-slate-500">Live Inventory Ready</span>
               <Link
                 to="/store/$storeId"
                 params={{ storeId: shop.id }}

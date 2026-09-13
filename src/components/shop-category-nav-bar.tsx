@@ -451,7 +451,11 @@ export function ShopCategoryNavBar({
                         >
                           {photo ? (
                             <div className="w-10 h-10 rounded-full overflow-hidden shrink-0 border border-white/60 shadow-xs">
-                              <img src={photo} alt={cat.name} className="w-full h-full object-cover" />
+                              <img
+                                src={photo}
+                                alt={cat.name}
+                                className="w-full h-full object-cover"
+                              />
                             </div>
                           ) : (
                             <div

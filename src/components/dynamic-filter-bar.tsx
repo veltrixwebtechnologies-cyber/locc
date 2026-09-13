@@ -22,7 +22,7 @@ export function DynamicFilterBar({
   // Count total active attribute filters
   const activeAttributeCount = Object.values(activeState.selectedAttributes).reduce(
     (acc, arr) => acc + (arr ? arr.length : 0),
-    0
+    0,
   );
 
   const handleToggleOption = (filterId: string, value: string) => {
@@ -119,10 +119,7 @@ export function DynamicFilterBar({
               {/* Dropdown Popover */}
               {isOpen && (
                 <>
-                  <div
-                    className="fixed inset-0 z-30"
-                    onClick={() => setOpenDropdownId(null)}
-                  />
+                  <div className="fixed inset-0 z-30" onClick={() => setOpenDropdownId(null)} />
                   <div className="absolute left-0 top-full mt-2 z-40 w-56 rounded-2xl bg-white border border-slate-200 shadow-2xl p-3 space-y-1.5 animate-in zoom-in-95 duration-150">
                     <div className="flex items-center justify-between border-b border-slate-100 pb-2 mb-1">
                       <span className="text-[11px] font-extrabold uppercase text-slate-500 tracking-wider">
@@ -150,7 +147,9 @@ export function DynamicFilterBar({
                           <label
                             key={opt.value}
                             className={`flex items-center justify-between text-xs font-semibold p-2 rounded-xl cursor-pointer transition-colors ${
-                              checked ? "bg-purple-50 text-purple-900" : "hover:bg-slate-50 text-slate-700"
+                              checked
+                                ? "bg-purple-50 text-purple-900"
+                                : "hover:bg-slate-50 text-slate-700"
                             }`}
                           >
                             <span className="flex items-center gap-2">

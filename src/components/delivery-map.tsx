@@ -210,13 +210,12 @@ export function DeliveryMap({
         if (cancelled || !mapContainerRef.current) return;
 
         LRef.current = L;
-        const initialCenter: [number, number] = courier
-          ? [courier.lat, courier.lng]
-          : destination
-            ? [destination.lat, destination.lng]
-            : store
-              ? [store.lat, store.lng]
-              : [11.02, 76.99];
+        const initialPoint = courier ?? destination ?? store;
+        if (!initialPoint) {
+          setLoading(false);
+          return;
+        }
+        const initialCenter: [number, number] = [initialPoint.lat, initialPoint.lng];
 
         const map = L.map(mapContainerRef.current, {
           center: initialCenter,

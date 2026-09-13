@@ -21,7 +21,7 @@ export const Route = createFileRoute("/api/webhooks/razorpay")({
           console.error("[api/webhooks/razorpay] Error handling webhook:", err);
           return Response.json(
             { error: err.message || "Failed to process webhook" },
-            { status: 400 }
+            { status: 400 },
           );
         }
       },

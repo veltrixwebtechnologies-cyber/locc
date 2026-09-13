@@ -1,6 +1,16 @@
 import React, { useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { Star, MapPin, Store as StoreIcon, ShieldCheck, Truck, ShoppingBag, Clock, ChevronRight, Award } from "lucide-react";
+import {
+  Star,
+  MapPin,
+  Store as StoreIcon,
+  ShieldCheck,
+  Truck,
+  ShoppingBag,
+  Clock,
+  ChevronRight,
+  Award,
+} from "lucide-react";
 import { resolveImageUrl, getFallbackProductImage } from "@/lib/image-utils";
 import { WishlistButton } from "@/components/wishlist-button";
 import { Badge } from "@/components/ui/badge";
@@ -45,12 +55,17 @@ export function ShopCard({
 
   const isClosed = shop.isOpen === false;
   const statusText = isClosed
-    ? shop.openingTime ? `Opens ${shop.openingTime}` : "Closed"
-    : shop.closingTime ? `Closes ${shop.closingTime}` : "Open Now";
+    ? shop.openingTime
+      ? `Opens ${shop.openingTime}`
+      : "Closed"
+    : shop.closingTime
+      ? `Closes ${shop.closingTime}`
+      : "Open Now";
 
-  const resolvedImg = imgError || !shop.imageUrl
-    ? getFallbackProductImage(shop.name, shop.category)
-    : resolveImageUrl(shop.imageUrl, shop.name, shop.category);
+  const resolvedImg =
+    imgError || !shop.imageUrl
+      ? getFallbackProductImage(shop.name, shop.category)
+      : resolveImageUrl(shop.imageUrl, shop.name, shop.category);
 
   return (
     <div
@@ -107,7 +122,9 @@ export function ShopCard({
         <div className="absolute bottom-2.5 left-3 right-3 z-10 flex items-center justify-between text-white text-xs font-bold">
           <div className="flex items-center gap-1.5 bg-black/50 backdrop-blur-md px-2.5 py-1 rounded-full border border-white/20">
             <MapPin className="h-3 w-3 text-amber-400" />
-            <span>{shop.distanceKm !== undefined ? `${shop.distanceKm.toFixed(1)} km away` : "Local"}</span>
+            <span>
+              {shop.distanceKm !== undefined ? `${shop.distanceKm.toFixed(1)} km away` : "Local"}
+            </span>
           </div>
 
           <div
@@ -174,11 +191,17 @@ export function ShopCard({
             <div className="flex items-center justify-between font-bold">
               <span className="text-primary flex items-center gap-1">
                 <ShoppingBag className="h-3.5 w-3.5" />
-                <span>{shop.matchingProductCount} matching product{shop.matchingProductCount > 1 ? "s" : ""}</span>
+                <span>
+                  {shop.matchingProductCount} matching product
+                  {shop.matchingProductCount > 1 ? "s" : ""}
+                </span>
               </span>
               {shop.startingPrice !== undefined && shop.startingPrice > 0 && (
                 <span className="text-foreground">
-                  From <strong className="font-extrabold text-sm">₹{shop.startingPrice.toLocaleString("en-IN")}</strong>
+                  From{" "}
+                  <strong className="font-extrabold text-sm">
+                    ₹{shop.startingPrice.toLocaleString("en-IN")}
+                  </strong>
                 </span>
               )}
             </div>
@@ -197,7 +220,9 @@ export function ShopCard({
           <div className="flex items-center gap-3 pt-1 border-t border-border/40 text-[11px] font-extrabold text-muted-foreground">
             <span
               className={`flex items-center gap-1 ${
-                shop.deliveryAvailable !== false ? "text-emerald-600 dark:text-emerald-400" : "opacity-40"
+                shop.deliveryAvailable !== false
+                  ? "text-emerald-600 dark:text-emerald-400"
+                  : "opacity-40"
               }`}
             >
               <Truck className="h-3.5 w-3.5" />
@@ -206,7 +231,9 @@ export function ShopCard({
             <span>•</span>
             <span
               className={`flex items-center gap-1 ${
-                shop.pickupAvailable !== false ? "text-indigo-600 dark:text-indigo-400" : "opacity-40"
+                shop.pickupAvailable !== false
+                  ? "text-indigo-600 dark:text-indigo-400"
+                  : "opacity-40"
               }`}
             >
               <ShoppingBag className="h-3.5 w-3.5" />

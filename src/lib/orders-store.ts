@@ -308,7 +308,7 @@ async function loadOrders(): Promise<Order[]> {
 
     // Fetch active delivery assignments for live partner tracking
     const orderIds = ordersData.map((o: any) => o.id);
-    let assignmentsMap: Record<string, any> = {};
+    const assignmentsMap: Record<string, any> = {};
     try {
       const { data: assignments } = await (supabase as any)
         .from("delivery_assignments")

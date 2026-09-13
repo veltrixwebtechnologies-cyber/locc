@@ -64,9 +64,7 @@ export interface DeliveryFilterGroupState {
 
 /** Combined Active Filter State */
 export interface ProductFilterState
-  extends ProductFilterGroupState,
-    ShopFilterGroupState,
-    DeliveryFilterGroupState {
+  extends ProductFilterGroupState, ShopFilterGroupState, DeliveryFilterGroupState {
   query?: string;
   userLat?: number;
   userLng?: number;
@@ -143,4 +141,3 @@ export const DEFAULT_SORT_OPTIONS = [
   { value: "newest", label: "Newest Arrivals" },
   { value: "fastest_delivery", label: "Fastest Delivery" },
 ] as const;
-

@@ -184,9 +184,7 @@ export async function evaluateCoupon({
   let discountAmount = 0;
   if (matched.discountType === "percent") {
     const rawDiscount = (subtotal * matched.discountValue) / 100;
-    discountAmount = matched.maxDiscount
-      ? Math.min(rawDiscount, matched.maxDiscount)
-      : rawDiscount;
+    discountAmount = matched.maxDiscount ? Math.min(rawDiscount, matched.maxDiscount) : rawDiscount;
   } else if (matched.discountType === "flat") {
     discountAmount = Math.min(matched.discountValue, subtotal);
   } else if (matched.discountType === "free_shipping") {

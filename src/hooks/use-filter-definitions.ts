@@ -19,10 +19,7 @@ function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
   });
 }
 
-export function useFilterDefinitions(
-  categorySlug?: string,
-  productTypeSlug?: string
-) {
+export function useFilterDefinitions(categorySlug?: string, productTypeSlug?: string) {
   return useQuery<FilterDefinition[]>({
     queryKey: ["filter-definitions", categorySlug, productTypeSlug],
     staleTime: 1000 * 60 * 10,

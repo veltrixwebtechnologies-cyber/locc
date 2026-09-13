@@ -31,20 +31,24 @@
   --color-ring: var(--ring);
   --color-marigold: var(--marigold);
   --color-marigold-foreground: var(--marigold-foreground);
-  --color-gold-50: #FBF4BE;
-  --color-gold-100: #F3D053;
-  --color-gold-200: #E5C158;
-  --color-gold-500: #D4AF37;
-  --color-gold-600: #B8860B;
+  --color-gold-50: #fbf4be;
+  --color-gold-100: #f3d053;
+  --color-gold-200: #e5c158;
+  --color-gold-500: #d4af37;
+  --color-gold-600: #b8860b;
   --color-gold-700: #945700;
-  --color-gold: #D4AF37;
+  --color-gold: #d4af37;
   --color-coral: var(--coral);
   --color-sand: var(--sand);
   --color-ink: var(--ink);
   --color-teal: var(--teal);
   --color-teal-deep: var(--teal-deep);
-  --font-display: "Outfit", "Plus Jakarta Sans", "Noto Sans Tamil", ui-sans-serif, system-ui, -apple-system, sans-serif;
-  --font-sans: "Plus Jakarta Sans", "Outfit", "Noto Sans Tamil", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-display:
+    "Outfit", "Plus Jakarta Sans", "Noto Sans Tamil", ui-sans-serif, system-ui, -apple-system,
+    sans-serif;
+  --font-sans:
+    "Plus Jakarta Sans", "Outfit", "Noto Sans Tamil", ui-sans-serif, system-ui, -apple-system,
+    sans-serif;
   --font-mono: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
   --font-handwriting: "Caveat", cursive, sans-serif;
 
@@ -62,16 +66,16 @@
   --orchid-light: #c026d3;
   --sand: oklch(0.98 0.01 295); /* Clean orchid tint */
   --ink: oklch(0.22 0.05 295); /* Deep slate ink */
-  
+
   /* Gold Palette — User exact image palette */
-  --gold-50: #FBF4BE;
-  --gold-100: #F3D053;
-  --gold-200: #E5C158;
-  --gold-500: #D4AF37;
-  --gold-600: #B8860B;
+  --gold-50: #fbf4be;
+  --gold-100: #f3d053;
+  --gold-200: #e5c158;
+  --gold-500: #d4af37;
+  --gold-600: #b8860b;
   --gold-700: #945700;
-  --marigold: #D4AF37; /* Rich Gold Accent */
-  --marigold-foreground: #1E1B4B;
+  --marigold: #d4af37; /* Rich Gold Accent */
+  --marigold-foreground: #1e1b4b;
   --coral: oklch(0.72 0.14 30); /* Muted coral #E88A7A */
   --success: oklch(0.64 0.15 155);
 
@@ -111,7 +115,12 @@
     -webkit-font-smoothing: antialiased;
     touch-action: manipulation;
   }
-  button, a, input, select, textarea, [role="button"] {
+  button,
+  a,
+  input,
+  select,
+  textarea,
+  [role="button"] {
     touch-action: manipulation;
   }
   .cv-auto {
@@ -150,40 +159,69 @@
 
 /* Luxury Metallic Gold Gradient from reference image */
 @utility bg-gold-gradient {
-  background-image: linear-gradient(135deg, #B8860B 0%, #E5C158 25%, #FBF4BE 50%, #D4AF37 75%, #945700 100%);
+  background-image: linear-gradient(
+    135deg,
+    #b8860b 0%,
+    #e5c158 25%,
+    #fbf4be 50%,
+    #d4af37 75%,
+    #945700 100%
+  );
 }
 
 @utility bg-gold-metallic {
-  background-image: linear-gradient(to right, #945700 0%, #B8860B 22%, #FBF4BE 48%, #D4AF37 72%, #A9711C 100%);
+  background-image: linear-gradient(
+    to right,
+    #945700 0%,
+    #b8860b 22%,
+    #fbf4be 48%,
+    #d4af37 72%,
+    #a9711c 100%
+  );
 }
 
 @utility text-gold-gradient {
-  background-image: linear-gradient(135deg, #B8860B 0%, #E5C158 30%, #FBF4BE 50%, #D4AF37 75%, #945700 100%);
+  background-image: linear-gradient(
+    135deg,
+    #b8860b 0%,
+    #e5c158 30%,
+    #fbf4be 50%,
+    #d4af37 75%,
+    #945700 100%
+  );
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
 
 /* Gold Metallic Gradient Border Utilities (Matching reference image palette: #FBF4BE, #E5C158, #B8860B, #D4AF37, #945700) */
 .gold-metallic-border {
-  border: 2px solid #D4AF37 !important;
+  border: 2px solid #d4af37 !important;
   outline: 1px solid rgba(243, 208, 83, 0.6) !important;
   outline-offset: -3px !important;
-  box-shadow: 0 0 14px -2px rgba(212, 175, 55, 0.4), 0 4px 16px -4px rgba(0, 0, 0, 0.08) !important;
+  box-shadow:
+    0 0 14px -2px rgba(212, 175, 55, 0.4),
+    0 4px 16px -4px rgba(0, 0, 0, 0.08) !important;
 }
 
 .gold-metallic-border-dark {
-  border: 2.5px solid #D4AF37 !important;
+  border: 2.5px solid #d4af37 !important;
   outline: 1.5px solid rgba(251, 244, 190, 0.7) !important;
   outline-offset: -4px !important;
-  box-shadow: 0 0 24px -2px rgba(212, 175, 55, 0.5), 0 8px 24px -6px rgba(0, 0, 0, 0.2) !important;
+  box-shadow:
+    0 0 24px -2px rgba(212, 175, 55, 0.5),
+    0 8px 24px -6px rgba(0, 0, 0, 0.2) !important;
 }
 
 .gold-glow-sm {
-  box-shadow: 0 0 14px -2px rgba(212, 175, 55, 0.35), 0 4px 16px -4px rgba(0, 0, 0, 0.08);
+  box-shadow:
+    0 0 14px -2px rgba(212, 175, 55, 0.35),
+    0 4px 16px -4px rgba(0, 0, 0, 0.08);
 }
 
 .gold-glow-md {
-  box-shadow: 0 0 24px -2px rgba(212, 175, 55, 0.45), 0 8px 24px -6px rgba(0, 0, 0, 0.15);
+  box-shadow:
+    0 0 24px -2px rgba(212, 175, 55, 0.45),
+    0 8px 24px -6px rgba(0, 0, 0, 0.15);
 }
 
 /* Hand-stamped verified badge */
@@ -277,8 +315,13 @@
 }
 
 @keyframes delivery-pulse {
-  0%, 100% { box-shadow: 0 0 0 0 color-mix(in oklab, var(--coral) 34%, transparent); }
-  55% { box-shadow: 0 0 0 12px transparent; }
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 color-mix(in oklab, var(--coral) 34%, transparent);
+  }
+  55% {
+    box-shadow: 0 0 0 12px transparent;
+  }
 }
 
 .delivery-pulse {
@@ -296,17 +339,37 @@
 }
 
 @keyframes success-check {
-  0% { transform: scale(0.3) rotate(-25deg); opacity: 0; }
-  60% { transform: scale(1.18) rotate(6deg); opacity: 1; }
-  100% { transform: scale(1) rotate(0); opacity: 1; }
+  0% {
+    transform: scale(0.3) rotate(-25deg);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.18) rotate(6deg);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1) rotate(0);
+    opacity: 1;
+  }
 }
 
-.success-check { animation: success-check 550ms cubic-bezier(.22, 1, .36, 1) both; }
+.success-check {
+  animation: success-check 550ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
 
 @keyframes confetti-fall {
-  0% { transform: translate3d(0, -20px, 0) rotate(0deg) scale(0.5); opacity: 0; }
-  20% { opacity: 1; transform: translate3d(var(--cx, 0px), 40px, 0) rotate(120deg) scale(1.1); }
-  100% { transform: translate3d(var(--cx, 0px), 360px, 0) rotate(720deg) scale(0.5); opacity: 0; }
+  0% {
+    transform: translate3d(0, -20px, 0) rotate(0deg) scale(0.5);
+    opacity: 0;
+  }
+  20% {
+    opacity: 1;
+    transform: translate3d(var(--cx, 0px), 40px, 0) rotate(120deg) scale(1.1);
+  }
+  100% {
+    transform: translate3d(var(--cx, 0px), 360px, 0) rotate(720deg) scale(0.5);
+    opacity: 0;
+  }
 }
 
 .confetti {
@@ -315,7 +378,7 @@
   width: 9px;
   height: 15px;
   border-radius: 3px;
-  animation: confetti-fall 1600ms cubic-bezier(.22, 1, .36, 1) forwards;
+  animation: confetti-fall 1600ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
 
 .premium-button {
@@ -346,13 +409,18 @@
 .premium-button:active::after {
   opacity: 0.12;
   transform: translate(-50%, -50%) scale(18);
-  transition: transform 360ms ease-out, opacity 420ms ease-out;
+  transition:
+    transform 360ms ease-out,
+    opacity 420ms ease-out;
 }
 
 input,
 textarea,
 select {
-  transition: border-color 180ms ease, box-shadow 180ms ease, background-color 180ms ease;
+  transition:
+    border-color 180ms ease,
+    box-shadow 180ms ease,
+    background-color 180ms ease;
 }
 
 input:focus-visible,
@@ -474,4 +542,3 @@ body {
   overflow-x: hidden;
   max-width: 100vw;
 }
-

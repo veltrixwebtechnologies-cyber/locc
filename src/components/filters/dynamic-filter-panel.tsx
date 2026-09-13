@@ -13,7 +13,17 @@ import {
   type ProductFilterState,
   type FacetResult,
 } from "@/lib/filter-types";
-import { Star, RotateCcw, Check, Search, ShieldCheck, MapPin, Store, Truck, ShoppingBag } from "lucide-react";
+import {
+  Star,
+  RotateCcw,
+  Check,
+  Search,
+  ShieldCheck,
+  MapPin,
+  Store,
+  Truck,
+  ShoppingBag,
+} from "lucide-react";
 
 interface DynamicFilterPanelProps {
   filterDefinitions: FilterDefinition[];
@@ -38,9 +48,7 @@ export function DynamicFilterPanel({
   const toggleAttributeOption = (key: string, value: string) => {
     const currentVals = filterState.attributes[key] || [];
     const exists = currentVals.includes(value);
-    const updated = exists
-      ? currentVals.filter((v) => v !== value)
-      : [...currentVals, value];
+    const updated = exists ? currentVals.filter((v) => v !== value) : [...currentVals, value];
 
     const nextAttributes = { ...filterState.attributes };
     if (updated.length > 0) {
@@ -65,7 +73,7 @@ export function DynamicFilterPanel({
   // Count total active filters
   const activeAttributeCount = Object.values(filterState.attributes).reduce(
     (acc, arr) => acc + (arr ? arr.length : 0),
-    0
+    0,
   );
   const totalActiveCount =
     (filterState.brands.length || 0) +
@@ -87,11 +95,13 @@ export function DynamicFilterPanel({
   ].concat(filterDefinitions.map((d) => d.key));
 
   const filteredBrandFacets = (facets.brand_facets || []).filter((b) =>
-    b.label.toLowerCase().includes(brandSearch.toLowerCase().trim())
+    b.label.toLowerCase().includes(brandSearch.toLowerCase().trim()),
   );
 
   return (
-    <div className={`bg-card/95 backdrop-blur-md border border-primary/10 rounded-2xl p-4 shadow-lg shadow-black/5 space-y-4 ${className}`}>
+    <div
+      className={`bg-card/95 backdrop-blur-md border border-primary/10 rounded-2xl p-4 shadow-lg shadow-black/5 space-y-4 ${className}`}
+    >
       <div className="flex items-center justify-between border-b border-border/60 pb-3">
         <div className="flex items-center gap-2">
           <h3 className="text-base font-bold text-foreground">Filters</h3>
@@ -122,7 +132,11 @@ export function DynamicFilterPanel({
             <span>Product Filters</span>
           </div>
 
-          <Accordion type="multiple" defaultValue={activeAccordionKeys} className="w-full divide-y divide-border/60">
+          <Accordion
+            type="multiple"
+            defaultValue={activeAccordionKeys}
+            className="w-full divide-y divide-border/60"
+          >
             {/* Price Range */}
             <AccordionItem value="price" className="border-b-0 py-1">
               <AccordionTrigger className="text-xs font-bold text-foreground py-2 hover:no-underline">
@@ -134,7 +148,9 @@ export function DynamicFilterPanel({
                   max={facets.max_price || 10000}
                   currentMin={filterState.minPrice}
                   currentMax={filterState.maxPrice}
-                  onChange={(minP, maxP) => onUpdateState({ minPrice: minP, maxPrice: maxP, page: 1 })}
+                  onChange={(minP, maxP) =>
+                    onUpdateState({ minPrice: minP, maxPrice: maxP, page: 1 })
+                  }
                 />
               </AccordionContent>
             </AccordionItem>
@@ -207,7 +223,9 @@ export function DynamicFilterPanel({
               const selectedValues = filterState.attributes[def.key] || [];
 
               const optionsToRender = (def.options || []).map((opt) => {
-                const foundFacet = facetOptions.find((f) => f.value.toLowerCase() === opt.value.toLowerCase());
+                const foundFacet = facetOptions.find(
+                  (f) => f.value.toLowerCase() === opt.value.toLowerCase(),
+                );
                 return {
                   ...opt,
                   count: foundFacet ? foundFacet.count : 0,
@@ -215,7 +233,11 @@ export function DynamicFilterPanel({
               });
 
               for (const facetOpt of facetOptions) {
-                if (!optionsToRender.some((o) => o.value.toLowerCase() === facetOpt.value.toLowerCase())) {
+                if (
+                  !optionsToRender.some(
+                    (o) => o.value.toLowerCase() === facetOpt.value.toLowerCase(),
+                  )
+                ) {
                   optionsToRender.push({
                     id: `opt-${def.key}-${facetOpt.value}`,
                     value: facetOpt.value,
@@ -243,7 +265,9 @@ export function DynamicFilterPanel({
                 <AccordionItem key={def.id} value={def.key} className="border-b-0 py-1">
                   <AccordionTrigger className="text-xs font-bold text-foreground py-2 hover:no-underline capitalize">
                     <div className="flex items-center gap-2">
-                      <span>{def.label} {def.unit ? `(${def.unit})` : ""}</span>
+                      <span>
+                        {def.label} {def.unit ? `(${def.unit})` : ""}
+                      </span>
                       {selectedValues.length > 0 && (
                         <span className="px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-primary/20 text-primary">
                           {selectedValues.length}
@@ -301,7 +325,9 @@ export function DynamicFilterPanel({
                             >
                               <span>{opt.label}</span>
                               {opt.count !== undefined && (
-                                <span className={`text-[10px] font-mono ${isSelected ? "text-white/80" : "text-muted-foreground"}`}>
+                                <span
+                                  className={`text-[10px] font-mono ${isSelected ? "text-white/80" : "text-muted-foreground"}`}
+                                >
                                   ({opt.count})
                                 </span>
                               )}
@@ -328,7 +354,9 @@ export function DynamicFilterPanel({
                                   disabled={disabled}
                                   onCheckedChange={() => toggleAttributeOption(def.key, opt.value)}
                                 />
-                                <span className="truncate font-medium text-foreground">{opt.label}</span>
+                                <span className="truncate font-medium text-foreground">
+                                  {opt.label}
+                                </span>
                               </label>
                               <span className="text-[11px] text-muted-foreground font-mono shrink-0 ml-2">
                                 ({opt.count ?? 0})
@@ -352,7 +380,11 @@ export function DynamicFilterPanel({
             <span>Shop &amp; Location Filters</span>
           </div>
 
-          <Accordion type="multiple" defaultValue={["distance", "shop_trust"]} className="w-full divide-y divide-border/60">
+          <Accordion
+            type="multiple"
+            defaultValue={["distance", "shop_trust"]}
+            className="w-full divide-y divide-border/60"
+          >
             {/* Distance Radius */}
             <AccordionItem value="distance" className="border-b-0 py-1">
               <AccordionTrigger className="text-xs font-bold text-foreground py-2 hover:no-underline">
@@ -459,7 +491,6 @@ export function DynamicFilterPanel({
     </div>
   );
 }
-
 
 function getColorHex(colorName: string): string {
   const name = colorName.toLowerCase();

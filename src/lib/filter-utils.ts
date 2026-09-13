@@ -27,17 +27,30 @@ export const KNOWN_URL_PARAMS = new Set([
 
 function cleanString(val: unknown): string | undefined {
   if (val === undefined || val === null) return undefined;
-  const str = String(val).trim().replace(/^["']|["']$/g, "").trim();
+  const str = String(val)
+    .trim()
+    .replace(/^["']|["']$/g, "")
+    .trim();
   return str.length > 0 ? str : undefined;
 }
 
 export function parseFilterParams(searchParams: Record<string, unknown>): ProductFilterState {
   const brandRaw = cleanString(searchParams.brand);
-  const brands = brandRaw ? brandRaw.split(",").map((b) => b.trim()).filter(Boolean) : [];
+  const brands = brandRaw
+    ? brandRaw
+        .split(",")
+        .map((b) => b.trim())
+        .filter(Boolean)
+    : [];
 
   const shopRaw = cleanString(searchParams.shop);
-  const shopIds = shopRaw ? shopRaw.split(",").map((s) => s.trim()).filter(Boolean) : [];
-  
+  const shopIds = shopRaw
+    ? shopRaw
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean)
+    : [];
+
   const attributes: Record<string, string[]> = {};
 
   for (const [key, rawVal] of Object.entries(searchParams)) {
@@ -45,24 +58,32 @@ export function parseFilterParams(searchParams: Record<string, unknown>): Produc
     if (!KNOWN_URL_PARAMS.has(cleanedKey) && rawVal !== undefined && rawVal !== null) {
       const valStr = cleanString(rawVal);
       if (valStr) {
-        attributes[cleanedKey] = valStr.split(",").map((v) => v.trim()).filter(Boolean);
+        attributes[cleanedKey] = valStr
+          .split(",")
+          .map((v) => v.trim())
+          .filter(Boolean);
       }
     }
   }
 
   const category = cleanString(searchParams.category);
-  const subcategory = cleanString(searchParams.subcategory) || cleanString(searchParams.sub_category);
-  const productType = cleanString(searchParams.productType) || cleanString(searchParams.product_type);
+  const subcategory =
+    cleanString(searchParams.subcategory) || cleanString(searchParams.sub_category);
+  const productType =
+    cleanString(searchParams.productType) || cleanString(searchParams.product_type);
   const query = cleanString(searchParams.q);
 
   const minPriceStr = cleanString(searchParams.minPrice) || cleanString(searchParams.min_price);
-  const minPrice = minPriceStr !== undefined && !isNaN(Number(minPriceStr)) ? Number(minPriceStr) : undefined;
+  const minPrice =
+    minPriceStr !== undefined && !isNaN(Number(minPriceStr)) ? Number(minPriceStr) : undefined;
 
   const maxPriceStr = cleanString(searchParams.maxPrice) || cleanString(searchParams.max_price);
-  const maxPrice = maxPriceStr !== undefined && !isNaN(Number(maxPriceStr)) ? Number(maxPriceStr) : undefined;
+  const maxPrice =
+    maxPriceStr !== undefined && !isNaN(Number(maxPriceStr)) ? Number(maxPriceStr) : undefined;
 
   const ratingStr = cleanString(searchParams.rating) || cleanString(searchParams.min_rating);
-  const minRating = ratingStr !== undefined && !isNaN(Number(ratingStr)) ? Number(ratingStr) : undefined;
+  const minRating =
+    ratingStr !== undefined && !isNaN(Number(ratingStr)) ? Number(ratingStr) : undefined;
 
   const inStockStr = cleanString(searchParams.inStock) || cleanString(searchParams.in_stock);
   const inStock = inStockStr === "true";
@@ -93,11 +114,18 @@ export function parseFilterParams(searchParams: Record<string, unknown>): Produc
     shopTypes: [],
     attributes,
     sortBy: typeof searchParams.sort === "string" ? searchParams.sort : "relevance",
-    page: typeof searchParams.page === "string" ? Number(searchParams.page) : typeof searchParams.page === "number" ? searchParams.page : 1,
+    page:
+      typeof searchParams.page === "string"
+        ? Number(searchParams.page)
+        : typeof searchParams.page === "number"
+          ? searchParams.page
+          : 1,
   };
 }
 
-export function serializeFilterParams(state: ProductFilterState): Record<string, string | undefined> {
+export function serializeFilterParams(
+  state: ProductFilterState,
+): Record<string, string | undefined> {
   const result: Record<string, string | undefined> = {};
 
   if (state.category && state.category !== "all" && state.category !== "all-shops") {

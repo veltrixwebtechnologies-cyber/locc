@@ -275,8 +275,6 @@ export function SwiggyShopRow({
 
   return (
     <section className="mt-8 px-5 md:px-8" aria-label={title}>
-
-
       {/* Header row */}
       <div className="mb-4 flex items-center justify-between">
         <div>
@@ -507,7 +505,10 @@ function CategoryCircle({
     <div className="shrink-0">
       <Link
         to="/"
-        search={{ category: cat.id === "all" || cat.id === "all-shops" ? undefined : cat.id, q: undefined }}
+        search={{
+          category: cat.id === "all" || cat.id === "all-shops" ? undefined : cat.id,
+          q: undefined,
+        }}
         resetScroll={false}
         onClick={scrollToShops}
         className="group flex flex-col items-center gap-1.5"

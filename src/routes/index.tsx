@@ -28,6 +28,7 @@ import {
 } from "@/components/swiggy-inspiration-sections";
 import { HeroSection } from "@/components/hero-section";
 import { LocalShoreMapExperience } from "@/components/map/localshore-map-experience";
+import { isValidCoordinate } from "@/lib/geo";
 import {
   FlipkartCategoryStrip,
   FlipkartBannerRow,
@@ -74,8 +75,8 @@ function Home() {
   }, [search, navigate]);
 
   const [deliveryLoc] = useDeliveryLocation();
-  const locLat = deliveryLoc?.lat ?? 11.0285;
-  const locLng = deliveryLoc?.lng ?? 76.9258;
+  const locLat = deliveryLoc?.lat;
+  const locLng = deliveryLoc?.lng;
   const [query, setQuery] = useState(search.q ?? "");
   const [cat, setCat] = useState<string>(search.category ?? "all");
   const approvedProducts = useQuery({
@@ -176,14 +177,18 @@ function Home() {
   }, [cat]);
 
   const filtered = useMemo(() => {
+    if (typeof locLat !== "number" || typeof locLng !== "number" || !isValidCoordinate(locLat, locLng)) {
+      return [];
+    }
     const liveProducts = approvedProducts.data ?? [];
     const normalizedQuery = query.trim().toLowerCase();
     const liveSellerIds = new Set(liveProducts.map((product: any) => product.seller_id));
     const liveVendorStores = (approvedVendors.data ?? [])
       .filter((vendor: any) => liveSellerIds.has(vendor.id))
       .map((vendor: any, index: number) => {
-        const vLat = Number(vendor.lat) || locLat + index * 0.005;
-        const vLng = Number(vendor.lng) || locLng + index * 0.005;
+        const vLat = Number(vendor.lat);
+        const vLng = Number(vendor.lng);
+        if (!isValidCoordinate(vLat, vLng)) return null;
         const dKm = calculateHaversineDistanceKm(locLat, locLng, vLat, vLng);
         return {
           ...APPROVED_STORE,
@@ -199,9 +204,10 @@ function Home() {
           etaMin: Math.max(10, Math.round(dKm * 5 + 10)),
         };
       });
-    const baseStores = stores.map((s, idx) => {
-      const sLat = Number(s.lat) || locLat + idx * 0.006;
-      const sLng = Number(s.lng) || locLng + idx * 0.006;
+    const baseStores = stores.map((s) => {
+      const sLat = Number(s.lat);
+      const sLng = Number(s.lng);
+      if (!isValidCoordinate(sLat, sLng)) return null;
       const dKm = calculateHaversineDistanceKm(locLat, locLng, sLat, sLng);
       return {
         ...s,
@@ -209,8 +215,8 @@ function Home() {
         etaMin: Math.max(10, Math.round(dKm * 5 + 10)),
       };
     });
-    const allStores =
-      liveVendorStores.length > 0 ? [...liveVendorStores, ...baseStores] : baseStores;
+    const allStores = (liveVendorStores.length > 0 ? [...liveVendorStores, ...baseStores] : baseStores)
+      .filter((store): store is NonNullable<typeof store> => store !== null);
     const filteredList = allStores.filter((s) => {
       if (activeFilter && !isStoreInCategory(s.category, activeFilter, s.rating)) return false;
       if (
@@ -241,7 +247,7 @@ function Home() {
       })),
       locLat,
       locLng,
-      query
+      query,
     );
 
     const mlScoreById = new Map(mlRanked.map((r) => [r.id, r.total_ml_score]));

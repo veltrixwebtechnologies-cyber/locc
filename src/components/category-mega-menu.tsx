@@ -18,49 +18,56 @@ const categoryPromos: Record<string, CategoryPromo> = {
     subtitle: "Farm-fresh vegetables, organic fruits & fresh greens delivered in 20-30 mins",
     ctaText: "Shop Fresh Produce Now",
     badge: "FARM HARVEST",
-    imageUrl: "https://images.unsplash.com/photo-1610832958506-aa56368176cf?auto=format&fit=crop&w=600&q=80",
+    imageUrl:
+      "https://images.unsplash.com/photo-1610832958506-aa56368176cf?auto=format&fit=crop&w=600&q=80",
   },
   meat_fish: {
     headline: "Fresh Meat, Sea Fish & Country Poultry",
     subtitle: "Tender mutton, country chicken (nattu kozhi), Vanjaram fish & farm eggs",
     ctaText: "Explore Butchery & Seafood",
     badge: "FRESH CATCH",
-    imageUrl: "https://images.unsplash.com/photo-1607623814075-e51df1bdc82f?auto=format&fit=crop&w=600&q=80",
+    imageUrl:
+      "https://images.unsplash.com/photo-1607623814075-e51df1bdc82f?auto=format&fit=crop&w=600&q=80",
   },
   bakery_sweets: {
     headline: "Fresh Bakes & Authentic Sweets",
     subtitle: "Hot puffs, birthday cakes, melt-in-mouth Mysurpa & traditional savories",
     ctaText: "Shop Bakes & Sweets",
     badge: "LOCAL BAKERY & MITHAI",
-    imageUrl: "https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=600&q=80",
+    imageUrl:
+      "https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=600&q=80",
   },
   fashion: {
     headline: "Trending Local Fashion & Ethnic Wear",
     subtitle: "Readymade shirts, cotton dhotis, designer silk sarees & quality footwear",
     ctaText: "Explore Fashion & Boutiques",
     badge: "NEW STYLES",
-    imageUrl: "https://images.unsplash.com/photo-1445205170230-053b83016050?auto=format&fit=crop&w=600&q=80",
+    imageUrl:
+      "https://images.unsplash.com/photo-1445205170230-053b83016050?auto=format&fit=crop&w=600&q=80",
   },
   beauty: {
     headline: "Beauty & Personal Grooming Care",
     subtitle: "Skincare, cosmetics, herbal hair oils, perfumes & daily grooming items",
     ctaText: "Shop Beauty Care",
     badge: "PERSONAL CARE",
-    imageUrl: "https://images.unsplash.com/photo-1596462502278-27bfdc403348?auto=format&fit=crop&w=600&q=80",
+    imageUrl:
+      "https://images.unsplash.com/photo-1596462502278-27bfdc403348?auto=format&fit=crop&w=600&q=80",
   },
   electronics: {
     headline: "Smart Electronics & Mobile Accessories",
     subtitle: "Smartphones, chargers, bluetooth earphones, TVs & home appliances",
     ctaText: "Explore Tech & Gadgets",
     badge: "SMART TECH",
-    imageUrl: "https://images.unsplash.com/photo-1498049794561-7780e7231661?auto=format&fit=crop&w=600&q=80",
+    imageUrl:
+      "https://images.unsplash.com/photo-1498049794561-7780e7231661?auto=format&fit=crop&w=600&q=80",
   },
   home_kitchen: {
     headline: "Home Decor, Kitchen & Hardware Essentials",
     subtitle: "Stainless steel utensils, pressure cookers, brass lamps & hardware tools",
     ctaText: "Shop Home & Kitchen",
     badge: "HOME ESSENTIALS",
-    imageUrl: "https://images.unsplash.com/photo-1556911220-e15b29be8c8f?auto=format&fit=crop&w=600&q=80",
+    imageUrl:
+      "https://images.unsplash.com/photo-1556911220-e15b29be8c8f?auto=format&fit=crop&w=600&q=80",
   },
   pharmacy: {
     headline: "24/7 Pharmacy & Wellness Care",
@@ -74,14 +81,16 @@ const categoryPromos: Record<string, CategoryPromo> = {
     subtitle: "Educational toys, baby diapers, cricket bats, badminton rackets & gym wear",
     ctaText: "Shop Kids & Sports",
     badge: "KIDS & FITNESS",
-    imageUrl: "https://images.unsplash.com/photo-1515488042361-ee00e0ddd4e4?auto=format&fit=crop&w=600&q=80",
+    imageUrl:
+      "https://images.unsplash.com/photo-1515488042361-ee00e0ddd4e4?auto=format&fit=crop&w=600&q=80",
   },
   local_favorites: {
     headline: "Top-Rated Community Favorites",
     subtitle: "Curated local shops with highest customer ratings, repeat buyers & community trust",
     ctaText: "Explore Local Favorites",
     badge: "COMMUNITY CHOICE",
-    imageUrl: "https://images.unsplash.com/photo-1582510003544-4d00b7f74220?auto=format&fit=crop&w=600&q=80",
+    imageUrl:
+      "https://images.unsplash.com/photo-1582510003544-4d00b7f74220?auto=format&fit=crop&w=600&q=80",
   },
 };
 
@@ -123,7 +132,13 @@ export const menuGroups = [
     columns: [
       {
         heading: "Fresh Bakes",
-        items: ["Bread & Buns", "Hot Chicken/Veg Puffs", "Birthday Cakes", "Pastries", "Butter Biscuits"],
+        items: [
+          "Bread & Buns",
+          "Hot Chicken/Veg Puffs",
+          "Birthday Cakes",
+          "Pastries",
+          "Butter Biscuits",
+        ],
       },
       {
         heading: "Traditional Sweets",
@@ -146,7 +161,13 @@ export const menuGroups = [
       },
       {
         heading: "Boutiques & Shoes",
-        items: ["Kanchipuram Silk Sarees", "Custom Stitching", "Leather Shoes", "Sandals", "Ethnic Footwear"],
+        items: [
+          "Kanchipuram Silk Sarees",
+          "Custom Stitching",
+          "Leather Shoes",
+          "Sandals",
+          "Ethnic Footwear",
+        ],
       },
     ],
   },
@@ -191,7 +212,13 @@ export const menuGroups = [
       },
       {
         heading: "Decor & Hardware",
-        items: ["Brass Agal Lamps", "Designer Curtains", "Furniture", "Electrical Fittings", "Hardware Tools"],
+        items: [
+          "Brass Agal Lamps",
+          "Designer Curtains",
+          "Furniture",
+          "Electrical Fittings",
+          "Hardware Tools",
+        ],
       },
     ],
   },
@@ -206,7 +233,12 @@ export const menuGroups = [
       },
       {
         heading: "Wellness & Devices",
-        items: ["Vitamins & Supplements", "Medical Devices", "Masks & Sanitizers", "Health Equipment"],
+        items: [
+          "Vitamins & Supplements",
+          "Medical Devices",
+          "Masks & Sanitizers",
+          "Health Equipment",
+        ],
       },
     ],
   },
@@ -343,126 +375,127 @@ export function CategoryMegaMenu() {
         </div>
 
         {/* Mega Menu Popover Dropdown Overlay */}
-        {activeGroup && (() => {
-          const groupIndex = menuGroups.findIndex((g) => g.id === activeGroup);
-          const group = menuGroups[groupIndex] ?? menuGroups[0];
-          const promo = categoryPromos[group.id] ?? categoryPromos.fresh!;
-          const isRightSide = groupIndex >= 5;
+        {activeGroup &&
+          (() => {
+            const groupIndex = menuGroups.findIndex((g) => g.id === activeGroup);
+            const group = menuGroups[groupIndex] ?? menuGroups[0];
+            const promo = categoryPromos[group.id] ?? categoryPromos.fresh!;
+            const isRightSide = groupIndex >= 5;
 
-          return (
-            <div
-              className={`absolute top-full z-50 pt-2 transition-all duration-200 ${
-                isRightSide ? "right-4 md:right-12 lg:right-24" : "left-4 md:left-12 lg:left-24"
-              }`}
-              onMouseEnter={() => setActiveGroup(group.id)}
-              onMouseLeave={() => setActiveGroup(null)}
-            >
-              <div className="relative w-[min(760px,calc(100vw-2rem))]">
-                <div
-                  className={`absolute -top-1.5 h-3.5 w-3.5 rotate-45 border-l border-t border-slate-200 bg-amber-50 z-20 shadow-xs ${
-                    isRightSide ? "right-12" : "left-12"
-                  }`}
-                />
+            return (
+              <div
+                className={`absolute top-full z-50 pt-2 transition-all duration-200 ${
+                  isRightSide ? "right-4 md:right-12 lg:right-24" : "left-4 md:left-12 lg:left-24"
+                }`}
+                onMouseEnter={() => setActiveGroup(group.id)}
+                onMouseLeave={() => setActiveGroup(null)}
+              >
+                <div className="relative w-[min(760px,calc(100vw-2rem))]">
+                  <div
+                    className={`absolute -top-1.5 h-3.5 w-3.5 rotate-45 border-l border-t border-slate-200 bg-amber-50 z-20 shadow-xs ${
+                      isRightSide ? "right-12" : "left-12"
+                    }`}
+                  />
 
-                <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white text-slate-900 shadow-[0_20px_50px_-10px_rgba(0,0,0,0.25)]">
-                  <div className="grid grid-cols-1 sm:grid-cols-[1fr_1.2fr]">
-                    <div className="flex flex-col justify-between bg-gradient-to-br from-amber-50/90 via-orange-50/40 to-amber-100/60 p-5 border-r border-slate-100">
-                      <div>
-                        <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/15 px-2.5 py-0.5 text-[10px] font-extrabold uppercase tracking-widest text-amber-900">
-                          <Tag className="h-3 w-3 text-amber-700" />
-                          {promo.badge}
-                        </span>
-                        <h3 className="mt-2.5 font-display text-lg font-extrabold leading-snug tracking-tight text-slate-900">
-                          {promo.headline}
-                        </h3>
-                        <p className="mt-1.5 text-xs leading-relaxed text-slate-600">
-                          {promo.subtitle}
-                        </p>
-                      </div>
+                  <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white text-slate-900 shadow-[0_20px_50px_-10px_rgba(0,0,0,0.25)]">
+                    <div className="grid grid-cols-1 sm:grid-cols-[1fr_1.2fr]">
+                      <div className="flex flex-col justify-between bg-gradient-to-br from-amber-50/90 via-orange-50/40 to-amber-100/60 p-5 border-r border-slate-100">
+                        <div>
+                          <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/15 px-2.5 py-0.5 text-[10px] font-extrabold uppercase tracking-widest text-amber-900">
+                            <Tag className="h-3 w-3 text-amber-700" />
+                            {promo.badge}
+                          </span>
+                          <h3 className="mt-2.5 font-display text-lg font-extrabold leading-snug tracking-tight text-slate-900">
+                            {promo.headline}
+                          </h3>
+                          <p className="mt-1.5 text-xs leading-relaxed text-slate-600">
+                            {promo.subtitle}
+                          </p>
+                        </div>
 
-                      <div className="my-3 relative h-32 w-full overflow-hidden rounded-xl shadow-xs border border-black/5">
-                        <img
-                          src={promo.imageUrl}
-                          alt={group.label}
-                          className="h-full w-full object-cover transition-transform duration-500 hover:scale-105"
-                        />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
-                      </div>
+                        <div className="my-3 relative h-32 w-full overflow-hidden rounded-xl shadow-xs border border-black/5">
+                          <img
+                            src={promo.imageUrl}
+                            alt={group.label}
+                            className="h-full w-full object-cover transition-transform duration-500 hover:scale-105"
+                          />
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
+                        </div>
 
-                      <div>
-                        <Link
-                          to="/search"
-                          search={{ category: group.categoryId }}
-                          onClick={() => setActiveGroup(null)}
-                          className="flex w-full items-center justify-center rounded-full bg-[#ffd814] hover:bg-[#f7ca00] px-4 py-2 text-center text-xs font-extrabold text-slate-900 shadow-xs transition-all hover:shadow active:scale-[0.99]"
-                        >
-                          {promo.ctaText}
-                        </Link>
-                        <p className="mt-1.5 text-center font-mono text-[9px] uppercase tracking-widest text-slate-400">
-                          Local Shore Offers
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="p-5 bg-white flex flex-col justify-between">
-                      <div>
-                        <div className="flex items-center justify-between border-b border-slate-100 pb-2.5 mb-3">
-                          <h4 className="font-display text-xs font-bold text-slate-900 uppercase tracking-wider">
-                            Top Categories in {group.label}
-                          </h4>
+                        <div>
                           <Link
                             to="/search"
                             search={{ category: group.categoryId }}
                             onClick={() => setActiveGroup(null)}
-                            className="text-xs font-bold text-purple-700 hover:underline"
+                            className="flex w-full items-center justify-center rounded-full bg-[#ffd814] hover:bg-[#f7ca00] px-4 py-2 text-center text-xs font-extrabold text-slate-900 shadow-xs transition-all hover:shadow active:scale-[0.99]"
                           >
-                            View all &rarr;
+                            {promo.ctaText}
                           </Link>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-x-4 gap-y-3">
-                          {group.columns.map((column) => (
-                            <div key={column.heading}>
-                              <Link
-                                to="/search"
-                                search={{ category: group.categoryId, q: column.heading }}
-                                onClick={() => setActiveGroup(null)}
-                                className="text-xs font-bold text-slate-900 hover:text-purple-700 hover:underline"
-                              >
-                                {column.heading}
-                              </Link>
-                              <ul className="mt-1.5 space-y-1">
-                                {column.items.map((item) => (
-                                  <li key={item}>
-                                    <Link
-                                      to="/search"
-                                      search={{ category: group.categoryId, q: item }}
-                                      onClick={() => setActiveGroup(null)}
-                                      className="flex items-center gap-1 text-xs text-slate-600 hover:text-purple-700 hover:underline"
-                                    >
-                                      <ChevronRight className="h-3 w-3 shrink-0 text-slate-400" />
-                                      {item}
-                                    </Link>
-                                  </li>
-                                ))}
-                              </ul>
-                            </div>
-                          ))}
+                          <p className="mt-1.5 text-center font-mono text-[9px] uppercase tracking-widest text-slate-400">
+                            Local Shore Offers
+                          </p>
                         </div>
                       </div>
 
-                      <div className="mt-3 pt-2 border-t border-slate-100 text-right">
-                        <span className="text-[10px] font-semibold text-slate-400">
-                          Verified Neighborhood Shops
-                        </span>
+                      <div className="p-5 bg-white flex flex-col justify-between">
+                        <div>
+                          <div className="flex items-center justify-between border-b border-slate-100 pb-2.5 mb-3">
+                            <h4 className="font-display text-xs font-bold text-slate-900 uppercase tracking-wider">
+                              Top Categories in {group.label}
+                            </h4>
+                            <Link
+                              to="/search"
+                              search={{ category: group.categoryId }}
+                              onClick={() => setActiveGroup(null)}
+                              className="text-xs font-bold text-purple-700 hover:underline"
+                            >
+                              View all &rarr;
+                            </Link>
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-x-4 gap-y-3">
+                            {group.columns.map((column) => (
+                              <div key={column.heading}>
+                                <Link
+                                  to="/search"
+                                  search={{ category: group.categoryId, q: column.heading }}
+                                  onClick={() => setActiveGroup(null)}
+                                  className="text-xs font-bold text-slate-900 hover:text-purple-700 hover:underline"
+                                >
+                                  {column.heading}
+                                </Link>
+                                <ul className="mt-1.5 space-y-1">
+                                  {column.items.map((item) => (
+                                    <li key={item}>
+                                      <Link
+                                        to="/search"
+                                        search={{ category: group.categoryId, q: item }}
+                                        onClick={() => setActiveGroup(null)}
+                                        className="flex items-center gap-1 text-xs text-slate-600 hover:text-purple-700 hover:underline"
+                                      >
+                                        <ChevronRight className="h-3 w-3 shrink-0 text-slate-400" />
+                                        {item}
+                                      </Link>
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
+                        <div className="mt-3 pt-2 border-t border-slate-100 text-right">
+                          <span className="text-[10px] font-semibold text-slate-400">
+                            Verified Neighborhood Shops
+                          </span>
+                        </div>
                       </div>
                     </div>
                   </div>
                 </div>
               </div>
-            </div>
-          );
-        })()}
+            );
+          })()}
       </div>
 
       {/* Complete 31-Category All Categories Drawer */}
@@ -479,8 +512,12 @@ export function CategoryMegaMenu() {
               <div className="flex items-center gap-2.5">
                 <Menu className="h-5 w-5 text-[#F3D053]" />
                 <div>
-                  <h3 className="font-display text-lg font-bold text-white">All 31 Shop Categories</h3>
-                  <p className="text-[11px] text-purple-200">Complete neighborhood marketplace directory</p>
+                  <h3 className="font-display text-lg font-bold text-white">
+                    All 31 Shop Categories
+                  </h3>
+                  <p className="text-[11px] text-purple-200">
+                    Complete neighborhood marketplace directory
+                  </p>
                 </div>
               </div>
               <button
@@ -495,50 +532,166 @@ export function CategoryMegaMenu() {
 
             <div className="flex-1 divide-y divide-border overflow-y-auto">
               <DrawerSection title="🛒 Essentials & Daily Provisions">
-                <DrawerLink label="Kirana & Grocery" category="kirana-grocery" onClick={() => setDrawerOpen(false)} />
-                <DrawerLink label="Supermarkets" category="supermarkets" onClick={() => setDrawerOpen(false)} />
-                <DrawerLink label="Pharmacies & Medicals" category="pharmacies" onClick={() => setDrawerOpen(false)} />
-                <DrawerLink label="Fruits & Vegetables" category="fruits-vegetables" onClick={() => setDrawerOpen(false)} />
-                <DrawerLink label="Meat & Fish" category="meat-fish" onClick={() => setDrawerOpen(false)} />
+                <DrawerLink
+                  label="Kirana & Grocery"
+                  category="kirana-grocery"
+                  onClick={() => setDrawerOpen(false)}
+                />
+                <DrawerLink
+                  label="Supermarkets"
+                  category="supermarkets"
+                  onClick={() => setDrawerOpen(false)}
+                />
+                <DrawerLink
+                  label="Pharmacies & Medicals"
+                  category="pharmacies"
+                  onClick={() => setDrawerOpen(false)}
+                />
+                <DrawerLink
+                  label="Fruits & Vegetables"
+                  category="fruits-vegetables"
+                  onClick={() => setDrawerOpen(false)}
+                />
+                <DrawerLink
+                  label="Meat & Fish"
+                  category="meat-fish"
+                  onClick={() => setDrawerOpen(false)}
+                />
               </DrawerSection>
 
               <DrawerSection title="🍽️ Food, Dining & Sweets">
-                <DrawerLink label="Bakeries" category="bakeries" onClick={() => setDrawerOpen(false)} />
-                <DrawerLink label="Sweet Shops" category="sweet-shops" onClick={() => setDrawerOpen(false)} />
-                <DrawerLink label="Restaurants" category="restaurants" onClick={() => setDrawerOpen(false)} />
-                <DrawerLink label="Cafés & Tea Shops" category="cafes-tea-shops" onClick={() => setDrawerOpen(false)} />
+                <DrawerLink
+                  label="Bakeries"
+                  category="bakeries"
+                  onClick={() => setDrawerOpen(false)}
+                />
+                <DrawerLink
+                  label="Sweet Shops"
+                  category="sweet-shops"
+                  onClick={() => setDrawerOpen(false)}
+                />
+                <DrawerLink
+                  label="Restaurants"
+                  category="restaurants"
+                  onClick={() => setDrawerOpen(false)}
+                />
+                <DrawerLink
+                  label="Cafés & Tea Shops"
+                  category="cafes-tea-shops"
+                  onClick={() => setDrawerOpen(false)}
+                />
               </DrawerSection>
 
               <DrawerSection title="👗 Fashion, Beauty & Accessories">
-                <DrawerLink label="Fashion & Clothing" category="fashion-clothing" onClick={() => setDrawerOpen(false)} />
-                <DrawerLink label="Boutiques" category="boutiques" onClick={() => setDrawerOpen(false)} />
-                <DrawerLink label="Footwear" category="footwear" onClick={() => setDrawerOpen(false)} />
-                <DrawerLink label="Jewellery & Watches" category="jewellery-watches" onClick={() => setDrawerOpen(false)} />
-                <DrawerLink label="Beauty & Care" category="beauty-care" onClick={() => setDrawerOpen(false)} />
+                <DrawerLink
+                  label="Fashion & Clothing"
+                  category="fashion-clothing"
+                  onClick={() => setDrawerOpen(false)}
+                />
+                <DrawerLink
+                  label="Boutiques"
+                  category="boutiques"
+                  onClick={() => setDrawerOpen(false)}
+                />
+                <DrawerLink
+                  label="Footwear"
+                  category="footwear"
+                  onClick={() => setDrawerOpen(false)}
+                />
+                <DrawerLink
+                  label="Jewellery & Watches"
+                  category="jewellery-watches"
+                  onClick={() => setDrawerOpen(false)}
+                />
+                <DrawerLink
+                  label="Beauty & Care"
+                  category="beauty-care"
+                  onClick={() => setDrawerOpen(false)}
+                />
               </DrawerSection>
 
               <DrawerSection title="📱 Electronics & Devices">
-                <DrawerLink label="Electronics" category="electronics" onClick={() => setDrawerOpen(false)} />
-                <DrawerLink label="Mobile & Accessories" category="mobile-accessories" onClick={() => setDrawerOpen(false)} />
+                <DrawerLink
+                  label="Electronics"
+                  category="electronics"
+                  onClick={() => setDrawerOpen(false)}
+                />
+                <DrawerLink
+                  label="Mobile & Accessories"
+                  category="mobile-accessories"
+                  onClick={() => setDrawerOpen(false)}
+                />
               </DrawerSection>
 
               <DrawerSection title="🏠 Home, Living & Hardware">
-                <DrawerLink label="Home & Kitchen" category="home-kitchen" onClick={() => setDrawerOpen(false)} />
-                <DrawerLink label="Furniture & Home Decor" category="furniture-home-decor" onClick={() => setDrawerOpen(false)} />
-                <DrawerLink label="Home & Hardware" category="hardware-electrical" onClick={() => setDrawerOpen(false)} />
-                <DrawerLink label="Pooja Stores" category="pooja-stores" onClick={() => setDrawerOpen(false)} />
+                <DrawerLink
+                  label="Home & Kitchen"
+                  category="home-kitchen"
+                  onClick={() => setDrawerOpen(false)}
+                />
+                <DrawerLink
+                  label="Furniture & Home Decor"
+                  category="furniture-home-decor"
+                  onClick={() => setDrawerOpen(false)}
+                />
+                <DrawerLink
+                  label="Home & Hardware"
+                  category="hardware-electrical"
+                  onClick={() => setDrawerOpen(false)}
+                />
+                <DrawerLink
+                  label="Pooja Stores"
+                  category="pooja-stores"
+                  onClick={() => setDrawerOpen(false)}
+                />
               </DrawerSection>
 
               <DrawerSection title="⚽ Lifestyle, Kids & Services">
-                <DrawerLink label="Books & Stationery" category="books-stationery" onClick={() => setDrawerOpen(false)} />
-                <DrawerLink label="Sports & Fitness" category="sports-fitness" onClick={() => setDrawerOpen(false)} />
-                <DrawerLink label="Toys & Baby" category="toys-baby" onClick={() => setDrawerOpen(false)} />
-                <DrawerLink label="Gift Shops" category="gift-shops" onClick={() => setDrawerOpen(false)} />
-                <DrawerLink label="Flower Shops" category="flower-shops" onClick={() => setDrawerOpen(false)} />
-                <DrawerLink label="Pet Shops" category="pet-shops" onClick={() => setDrawerOpen(false)} />
-                <DrawerLink label="Auto & Bike" category="auto-bike" onClick={() => setDrawerOpen(false)} />
-                <DrawerLink label="Repair Shops" category="repair-shops" onClick={() => setDrawerOpen(false)} />
-                <DrawerLink label="Local Services" category="local-services" onClick={() => setDrawerOpen(false)} />
+                <DrawerLink
+                  label="Books & Stationery"
+                  category="books-stationery"
+                  onClick={() => setDrawerOpen(false)}
+                />
+                <DrawerLink
+                  label="Sports & Fitness"
+                  category="sports-fitness"
+                  onClick={() => setDrawerOpen(false)}
+                />
+                <DrawerLink
+                  label="Toys & Baby"
+                  category="toys-baby"
+                  onClick={() => setDrawerOpen(false)}
+                />
+                <DrawerLink
+                  label="Gift Shops"
+                  category="gift-shops"
+                  onClick={() => setDrawerOpen(false)}
+                />
+                <DrawerLink
+                  label="Flower Shops"
+                  category="flower-shops"
+                  onClick={() => setDrawerOpen(false)}
+                />
+                <DrawerLink
+                  label="Pet Shops"
+                  category="pet-shops"
+                  onClick={() => setDrawerOpen(false)}
+                />
+                <DrawerLink
+                  label="Auto & Bike"
+                  category="auto-bike"
+                  onClick={() => setDrawerOpen(false)}
+                />
+                <DrawerLink
+                  label="Repair Shops"
+                  category="repair-shops"
+                  onClick={() => setDrawerOpen(false)}
+                />
+                <DrawerLink
+                  label="Local Services"
+                  category="local-services"
+                  onClick={() => setDrawerOpen(false)}
+                />
               </DrawerSection>
             </div>
           </aside>
@@ -691,8 +844,12 @@ export function MobileCategoryStrip() {
               <div className="flex items-center gap-2.5">
                 <Menu className="h-5 w-5 text-[#F3D053]" />
                 <div>
-                  <h3 className="font-display text-lg font-bold text-white">All 31 Shop Categories</h3>
-                  <p className="text-[11px] text-purple-200">Complete neighborhood marketplace directory</p>
+                  <h3 className="font-display text-lg font-bold text-white">
+                    All 31 Shop Categories
+                  </h3>
+                  <p className="text-[11px] text-purple-200">
+                    Complete neighborhood marketplace directory
+                  </p>
                 </div>
               </div>
               <button
@@ -707,50 +864,166 @@ export function MobileCategoryStrip() {
 
             <div className="flex-1 divide-y divide-border overflow-y-auto">
               <DrawerSection title="🛒 Essentials & Daily Provisions">
-                <DrawerLink label="Kirana & Grocery" category="kirana-grocery" onClick={() => setDrawerOpen(false)} />
-                <DrawerLink label="Supermarkets" category="supermarkets" onClick={() => setDrawerOpen(false)} />
-                <DrawerLink label="Pharmacies & Medicals" category="pharmacies" onClick={() => setDrawerOpen(false)} />
-                <DrawerLink label="Fruits & Vegetables" category="fruits-vegetables" onClick={() => setDrawerOpen(false)} />
-                <DrawerLink label="Meat & Fish" category="meat-fish" onClick={() => setDrawerOpen(false)} />
+                <DrawerLink
+                  label="Kirana & Grocery"
+                  category="kirana-grocery"
+                  onClick={() => setDrawerOpen(false)}
+                />
+                <DrawerLink
+                  label="Supermarkets"
+                  category="supermarkets"
+                  onClick={() => setDrawerOpen(false)}
+                />
+                <DrawerLink
+                  label="Pharmacies & Medicals"
+                  category="pharmacies"
+                  onClick={() => setDrawerOpen(false)}
+                />
+                <DrawerLink
+                  label="Fruits & Vegetables"
+                  category="fruits-vegetables"
+                  onClick={() => setDrawerOpen(false)}
+                />
+                <DrawerLink
+                  label="Meat & Fish"
+                  category="meat-fish"
+                  onClick={() => setDrawerOpen(false)}
+                />
               </DrawerSection>
 
               <DrawerSection title="🍽️ Food, Dining & Sweets">
-                <DrawerLink label="Bakeries" category="bakeries" onClick={() => setDrawerOpen(false)} />
-                <DrawerLink label="Sweet Shops" category="sweet-shops" onClick={() => setDrawerOpen(false)} />
-                <DrawerLink label="Restaurants" category="restaurants" onClick={() => setDrawerOpen(false)} />
-                <DrawerLink label="Cafés & Tea Shops" category="cafes-tea-shops" onClick={() => setDrawerOpen(false)} />
+                <DrawerLink
+                  label="Bakeries"
+                  category="bakeries"
+                  onClick={() => setDrawerOpen(false)}
+                />
+                <DrawerLink
+                  label="Sweet Shops"
+                  category="sweet-shops"
+                  onClick={() => setDrawerOpen(false)}
+                />
+                <DrawerLink
+                  label="Restaurants"
+                  category="restaurants"
+                  onClick={() => setDrawerOpen(false)}
+                />
+                <DrawerLink
+                  label="Cafés & Tea Shops"
+                  category="cafes-tea-shops"
+                  onClick={() => setDrawerOpen(false)}
+                />
               </DrawerSection>
 
               <DrawerSection title="👗 Fashion, Beauty & Accessories">
-                <DrawerLink label="Fashion & Clothing" category="fashion-clothing" onClick={() => setDrawerOpen(false)} />
-                <DrawerLink label="Boutiques" category="boutiques" onClick={() => setDrawerOpen(false)} />
-                <DrawerLink label="Footwear" category="footwear" onClick={() => setDrawerOpen(false)} />
-                <DrawerLink label="Jewellery & Watches" category="jewellery-watches" onClick={() => setDrawerOpen(false)} />
-                <DrawerLink label="Beauty & Care" category="beauty-care" onClick={() => setDrawerOpen(false)} />
+                <DrawerLink
+                  label="Fashion & Clothing"
+                  category="fashion-clothing"
+                  onClick={() => setDrawerOpen(false)}
+                />
+                <DrawerLink
+                  label="Boutiques"
+                  category="boutiques"
+                  onClick={() => setDrawerOpen(false)}
+                />
+                <DrawerLink
+                  label="Footwear"
+                  category="footwear"
+                  onClick={() => setDrawerOpen(false)}
+                />
+                <DrawerLink
+                  label="Jewellery & Watches"
+                  category="jewellery-watches"
+                  onClick={() => setDrawerOpen(false)}
+                />
+                <DrawerLink
+                  label="Beauty & Care"
+                  category="beauty-care"
+                  onClick={() => setDrawerOpen(false)}
+                />
               </DrawerSection>
 
               <DrawerSection title="📱 Electronics & Devices">
-                <DrawerLink label="Electronics" category="electronics" onClick={() => setDrawerOpen(false)} />
-                <DrawerLink label="Mobile & Accessories" category="mobile-accessories" onClick={() => setDrawerOpen(false)} />
+                <DrawerLink
+                  label="Electronics"
+                  category="electronics"
+                  onClick={() => setDrawerOpen(false)}
+                />
+                <DrawerLink
+                  label="Mobile & Accessories"
+                  category="mobile-accessories"
+                  onClick={() => setDrawerOpen(false)}
+                />
               </DrawerSection>
 
               <DrawerSection title="🏠 Home, Living & Hardware">
-                <DrawerLink label="Home & Kitchen" category="home-kitchen" onClick={() => setDrawerOpen(false)} />
-                <DrawerLink label="Furniture & Home Decor" category="furniture-home-decor" onClick={() => setDrawerOpen(false)} />
-                <DrawerLink label="Home & Hardware" category="hardware-electrical" onClick={() => setDrawerOpen(false)} />
-                <DrawerLink label="Pooja Stores" category="pooja-stores" onClick={() => setDrawerOpen(false)} />
+                <DrawerLink
+                  label="Home & Kitchen"
+                  category="home-kitchen"
+                  onClick={() => setDrawerOpen(false)}
+                />
+                <DrawerLink
+                  label="Furniture & Home Decor"
+                  category="furniture-home-decor"
+                  onClick={() => setDrawerOpen(false)}
+                />
+                <DrawerLink
+                  label="Home & Hardware"
+                  category="hardware-electrical"
+                  onClick={() => setDrawerOpen(false)}
+                />
+                <DrawerLink
+                  label="Pooja Stores"
+                  category="pooja-stores"
+                  onClick={() => setDrawerOpen(false)}
+                />
               </DrawerSection>
 
               <DrawerSection title="⚽ Lifestyle, Kids & Services">
-                <DrawerLink label="Books & Stationery" category="books-stationery" onClick={() => setDrawerOpen(false)} />
-                <DrawerLink label="Sports & Fitness" category="sports-fitness" onClick={() => setDrawerOpen(false)} />
-                <DrawerLink label="Toys & Baby" category="toys-baby" onClick={() => setDrawerOpen(false)} />
-                <DrawerLink label="Gift Shops" category="gift-shops" onClick={() => setDrawerOpen(false)} />
-                <DrawerLink label="Flower Shops" category="flower-shops" onClick={() => setDrawerOpen(false)} />
-                <DrawerLink label="Pet Shops" category="pet-shops" onClick={() => setDrawerOpen(false)} />
-                <DrawerLink label="Auto & Bike" category="auto-bike" onClick={() => setDrawerOpen(false)} />
-                <DrawerLink label="Repair Shops" category="repair-shops" onClick={() => setDrawerOpen(false)} />
-                <DrawerLink label="Local Services" category="local-services" onClick={() => setDrawerOpen(false)} />
+                <DrawerLink
+                  label="Books & Stationery"
+                  category="books-stationery"
+                  onClick={() => setDrawerOpen(false)}
+                />
+                <DrawerLink
+                  label="Sports & Fitness"
+                  category="sports-fitness"
+                  onClick={() => setDrawerOpen(false)}
+                />
+                <DrawerLink
+                  label="Toys & Baby"
+                  category="toys-baby"
+                  onClick={() => setDrawerOpen(false)}
+                />
+                <DrawerLink
+                  label="Gift Shops"
+                  category="gift-shops"
+                  onClick={() => setDrawerOpen(false)}
+                />
+                <DrawerLink
+                  label="Flower Shops"
+                  category="flower-shops"
+                  onClick={() => setDrawerOpen(false)}
+                />
+                <DrawerLink
+                  label="Pet Shops"
+                  category="pet-shops"
+                  onClick={() => setDrawerOpen(false)}
+                />
+                <DrawerLink
+                  label="Auto & Bike"
+                  category="auto-bike"
+                  onClick={() => setDrawerOpen(false)}
+                />
+                <DrawerLink
+                  label="Repair Shops"
+                  category="repair-shops"
+                  onClick={() => setDrawerOpen(false)}
+                />
+                <DrawerLink
+                  label="Local Services"
+                  category="local-services"
+                  onClick={() => setDrawerOpen(false)}
+                />
               </DrawerSection>
             </div>
           </aside>

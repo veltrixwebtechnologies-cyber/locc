@@ -30,6 +30,7 @@ import {
 } from "@/lib/shop-categories";
 import { ShopCategoryNavBar } from "@/components/shop-category-nav-bar";
 import { calculateHaversineDistanceKm } from "@/lib/map-service/providers";
+import { isValidCoordinate } from "@/lib/geo";
 import {
   getSubcategoriesForCategory,
   getProductTypesForSubcategory,
@@ -51,13 +52,14 @@ export function CategoryDiscoveryView({
 }) {
   const navigate = useNavigate();
   const [deliveryLoc] = useDeliveryLocation();
-  const locLat = deliveryLoc?.lat ?? 11.0285;
-  const locLng = deliveryLoc?.lng ?? 76.9258;
+  const locLat = deliveryLoc?.lat;
+  const locLng = deliveryLoc?.lng;
 
   // Active filter state
   const [activeSubcategoryId, setActiveSubcategoryId] = useState<string>("all");
   const [activeProductTypeId, setActiveProductTypeId] = useState<string>("all");
-  const [activeFilterState, setActiveFilterState] = useState<ActiveFilterState>(INITIAL_FILTER_STATE);
+  const [activeFilterState, setActiveFilterState] =
+    useState<ActiveFilterState>(INITIAL_FILTER_STATE);
 
   const [selectedSort, setSelectedSort] = useState<"popular" | "rating" | "distance" | "fast">(
     "distance",
@@ -118,11 +120,7 @@ export function CategoryDiscoveryView({
 
   // Dynamic Attribute Filters available for current Category + Subcategory + ProductType
   const dynamicAttributeFilters = useMemo(() => {
-    return getActiveAttributeFilters(
-      categoryConfig.id,
-      activeSubcategoryId,
-      activeProductTypeId
-    );
+    return getActiveAttributeFilters(categoryConfig.id, activeSubcategoryId, activeProductTypeId);
   }, [categoryConfig.id, activeSubcategoryId, activeProductTypeId]);
 
   const handleCategorySelect = (category: ShopCategoryConfig) => {
@@ -158,15 +156,13 @@ export function CategoryDiscoveryView({
 
   // Filtered & Distance-Calculated Shops List
   const filteredStores = useMemo(() => {
-    let result = stores.map((s, idx) => {
-      const storeLat = Number(s.lat) || locLat + idx * 0.005;
-      const storeLng = Number(s.lng) || locLng + idx * 0.005;
-      const computedDistanceKm = calculateHaversineDistanceKm(
-        locLat,
-        locLng,
-        storeLat,
-        storeLng,
-      );
+    if (typeof locLat !== "number" || typeof locLng !== "number" || !isValidCoordinate(locLat, locLng)) {
+      return [];
+    }
+    let result = stores.filter((s) => isValidCoordinate(s.lat, s.lng)).map((s) => {
+      const storeLat = Number(s.lat);
+      const storeLng = Number(s.lng);
+      const computedDistanceKm = calculateHaversineDistanceKm(locLat, locLng, storeLat, storeLng);
       const computedEta = Math.max(10, Math.round(computedDistanceKm * 5 + 10));
 
       return {
@@ -533,8 +529,8 @@ export function CategoryDiscoveryView({
               Don't see your favorite neighborhood shop listed?
             </h4>
             <p className="text-xs sm:text-sm text-purple-200 mt-0.5 max-w-xl">
-              Submit a shop request! Our LocalShoree ground operations team will onboard your trusted
-              local store so you can order delivery.
+              Submit a shop request! Our LocalShoree ground operations team will onboard your
+              trusted local store so you can order delivery.
             </p>
           </div>
         </div>

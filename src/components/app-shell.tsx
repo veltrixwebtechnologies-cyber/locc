@@ -22,7 +22,13 @@ import { Fragment, type ReactNode, useEffect, useState, useRef } from "react";
 import { useWishlist, useWishlistProducts } from "@/lib/merchandising";
 import { AnimatePresence, m } from "motion/react";
 import { SwiggyInstantSearchDropdown } from "@/components/ui/swiggy-instant-search-dropdown";
-import { useDeliveryLocation, initAutoGPSLocation, hasUserChosenLocation, useGPSStatus, detectCurrentGPSLocation } from "@/lib/location-store";
+import {
+  useDeliveryLocation,
+  initAutoGPSLocation,
+  hasUserChosenLocation,
+  useGPSStatus,
+  detectCurrentGPSLocation,
+} from "@/lib/location-store";
 import { LocationModal } from "@/components/ui/location-modal";
 import { LiquidGlassCategorySelector } from "@/components/liquid-glass-category-selector";
 
@@ -47,9 +53,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const hasLocation = mounted && deliveryLocation !== null;
 
   const showFloatingCart =
-    itemCount > 0 &&
-    !pathname.startsWith("/cart") &&
-    !pathname.startsWith("/checkout");
+    itemCount > 0 && !pathname.startsWith("/cart") && !pathname.startsWith("/checkout");
 
   useEffect(() => {
     setMounted(true);
@@ -58,6 +62,16 @@ export function AppShell({ children }: { children: ReactNode }) {
     if (!hasUserChosenLocation()) {
       setIsLocationModalOpen(true);
     }
+
+    const handleOpenModal = () => setIsLocationModalOpen(true);
+    if (typeof window !== "undefined") {
+      window.addEventListener("localshore_open_location_modal", handleOpenModal);
+    }
+    return () => {
+      if (typeof window !== "undefined") {
+        window.removeEventListener("localshore_open_location_modal", handleOpenModal);
+      }
+    };
   }, []);
 
   useEffect(() => {
@@ -161,7 +175,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               {gpsState.status === "detecting"
                 ? "Detecting..."
                 : hasLocation
-                  ? (deliveryLocation!.area || deliveryLocation!.label.split(",")[0])
+                  ? deliveryLocation!.area || deliveryLocation!.label.split(",")[0]
                   : "Select location"}
             </span>
           </button>
@@ -403,7 +417,9 @@ export function AppShell({ children }: { children: ReactNode }) {
         <LiquidGlassCategorySelector />
       </div>
 
-      <main className="mx-auto w-full max-w-[1600px] xl:max-w-[1800px] px-3 sm:px-4 md:px-6 lg:px-10 xl:px-12">{children}</main>
+      <main className="mx-auto w-full max-w-[1600px] xl:max-w-[1800px] px-3 sm:px-4 md:px-6 lg:px-10 xl:px-12">
+        {children}
+      </main>
 
       <ShopperFooter />
 
@@ -485,46 +501,46 @@ export function AppShell({ children }: { children: ReactNode }) {
             transition={{ type: "spring", stiffness: 380, damping: 26 }}
             className="fixed bottom-[calc(3.8rem+env(safe-area-inset-bottom,0px))] inset-x-3 z-[45] md:bottom-6 md:right-8 md:inset-x-auto md:w-96 pointer-events-auto"
           >
-              <div className="flex items-center justify-between gap-2.5 rounded-2xl bg-gradient-to-r from-[#4c1074] via-[#6b1fa0] to-[#125c52] p-3 text-white shadow-[0_12px_36px_rgba(0,0,0,0.4)] ring-1 ring-white/20 backdrop-blur-xl">
-                <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                  <div className="relative grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-white/20 text-white shadow-inner">
-                    <ShoppingBag className="h-5 w-5 text-amber-300" />
-                    <span className="absolute -right-1 -top-1 grid h-4 min-w-[16px] place-items-center rounded-full bg-[var(--marigold)] px-1 font-mono text-[9px] font-extrabold text-ink shadow-xs">
-                      {itemCount}
-                    </span>
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-xs font-bold text-white leading-tight truncate">
-                      {itemCount} {itemCount === 1 ? "item" : "items"}{" "}
-                      {cart.storeName ? `· ${cart.storeName}` : ""}
-                    </p>
-                    <p className="font-mono text-sm font-extrabold text-[#ffe566] tracking-wide">
-                      ₹{subtotal}
-                    </p>
-                  </div>
+            <div className="flex items-center justify-between gap-2.5 rounded-2xl bg-gradient-to-r from-[#4c1074] via-[#6b1fa0] to-[#125c52] p-3 text-white shadow-[0_12px_36px_rgba(0,0,0,0.4)] ring-1 ring-white/20 backdrop-blur-xl">
+              <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                <div className="relative grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-white/20 text-white shadow-inner">
+                  <ShoppingBag className="h-5 w-5 text-amber-300" />
+                  <span className="absolute -right-1 -top-1 grid h-4 min-w-[16px] place-items-center rounded-full bg-[var(--marigold)] px-1 font-mono text-[9px] font-extrabold text-ink shadow-xs">
+                    {itemCount}
+                  </span>
                 </div>
-
-                <div className="flex items-center gap-1.5 shrink-0">
-                  <Link
-                    to="/cart"
-                    className="inline-flex shrink-0 items-center gap-1.5 rounded-xl bg-[var(--marigold)] px-3.5 py-2 text-xs font-extrabold text-ink shadow-md hover:brightness-105 active:scale-95 transition-all"
-                  >
-                    View Cart
-                    <ArrowRight className="h-4 w-4" />
-                  </Link>
-
-                  <button
-                    type="button"
-                    onClick={() => setIsCartBarMinimized(true)}
-                    className="grid h-7 w-7 place-items-center rounded-full bg-black/20 hover:bg-black/40 text-white/80 hover:text-white transition-colors cursor-pointer"
-                    title="Minimize cart bar"
-                    aria-label="Minimize cart summary bar"
-                  >
-                    <X className="h-3.5 w-3.5" />
-                  </button>
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs font-bold text-white leading-tight truncate">
+                    {itemCount} {itemCount === 1 ? "item" : "items"}{" "}
+                    {cart.storeName ? `· ${cart.storeName}` : ""}
+                  </p>
+                  <p className="font-mono text-sm font-extrabold text-[#ffe566] tracking-wide">
+                    ₹{subtotal}
+                  </p>
                 </div>
               </div>
-            </m.div>
+
+              <div className="flex items-center gap-1.5 shrink-0">
+                <Link
+                  to="/cart"
+                  className="inline-flex shrink-0 items-center gap-1.5 rounded-xl bg-[var(--marigold)] px-3.5 py-2 text-xs font-extrabold text-ink shadow-md hover:brightness-105 active:scale-95 transition-all"
+                >
+                  View Cart
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
+
+                <button
+                  type="button"
+                  onClick={() => setIsCartBarMinimized(true)}
+                  className="grid h-7 w-7 place-items-center rounded-full bg-black/20 hover:bg-black/40 text-white/80 hover:text-white transition-colors cursor-pointer"
+                  title="Minimize cart bar"
+                  aria-label="Minimize cart summary bar"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            </div>
+          </m.div>
         )}
       </AnimatePresence>
 

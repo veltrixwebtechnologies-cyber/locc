@@ -247,12 +247,18 @@ export function HeroSection() {
               {/* Location Selector */}
               <button
                 type="button"
-                onClick={() => setIsLocationModalOpen(true)}
+                onClick={() => {
+                  if (typeof window !== "undefined") {
+                    window.dispatchEvent(new CustomEvent("localshore_open_location_modal"));
+                  }
+                }}
                 className="flex items-center gap-2 px-3 sm:px-4 py-2 text-slate-700 border-b sm:border-b-0 sm:border-r border-slate-200 w-full sm:w-auto shrink-0 group cursor-pointer hover:bg-purple-50/50 transition-colors rounded-2xl sm:rounded-l-full text-left"
               >
                 <MapPin className="h-4 w-4 text-[#981495] shrink-0" />
                 <span className="text-xs sm:text-sm font-bold text-slate-900 w-full sm:w-[170px] truncate">
-                  {deliveryLocation?.area || deliveryLocation?.label?.split(",")?.[0] || "Select location"}
+                  {deliveryLocation?.area ||
+                    deliveryLocation?.label?.split(",")?.[0] ||
+                    "Select location"}
                 </span>
                 <ChevronDown className="h-3.5 w-3.5 text-slate-400 shrink-0 group-hover:text-[#981495] transition-colors" />
               </button>
@@ -541,8 +547,6 @@ export function HeroSection() {
           </div>
         </div>
       </div>
-
-      <LocationModal isOpen={isLocationModalOpen} onClose={() => setIsLocationModalOpen(false)} />
     </section>
   );
 }

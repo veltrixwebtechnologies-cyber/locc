@@ -38,7 +38,10 @@ export function CategoryDynamicIsland() {
                 <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-500 shadow-[0_0_8px_#10b981]" />
               </div>
 
-              <m.span layoutId="category-island-title" className="text-xs font-black text-white truncate flex items-center gap-1.5">
+              <m.span
+                layoutId="category-island-title"
+                className="text-xs font-black text-white truncate flex items-center gap-1.5"
+              >
                 {currentCategoryName ? (
                   <>
                     <span className="text-slate-400 font-medium text-[10px] uppercase tracking-wider">
@@ -58,9 +61,21 @@ export function CategoryDynamicIsland() {
             {/* Right side: Apple Waveform bars & Chevron */}
             <div className="flex items-center gap-2 shrink-0">
               <div className="flex items-end gap-0.5 h-3">
-                <m.span animate={{ height: [4, 12, 6, 12, 4] }} transition={{ repeat: Infinity, duration: 1.2 }} className="w-0.5 bg-amber-400 rounded-full" />
-                <m.span animate={{ height: [10, 4, 12, 4, 10] }} transition={{ repeat: Infinity, duration: 1.4 }} className="w-0.5 bg-amber-300 rounded-full" />
-                <m.span animate={{ height: [6, 12, 4, 12, 6] }} transition={{ repeat: Infinity, duration: 1.1 }} className="w-0.5 bg-amber-400 rounded-full" />
+                <m.span
+                  animate={{ height: [4, 12, 6, 12, 4] }}
+                  transition={{ repeat: Infinity, duration: 1.2 }}
+                  className="w-0.5 bg-amber-400 rounded-full"
+                />
+                <m.span
+                  animate={{ height: [10, 4, 12, 4, 10] }}
+                  transition={{ repeat: Infinity, duration: 1.4 }}
+                  className="w-0.5 bg-amber-300 rounded-full"
+                />
+                <m.span
+                  animate={{ height: [6, 12, 4, 12, 6] }}
+                  transition={{ repeat: Infinity, duration: 1.1 }}
+                  className="w-0.5 bg-amber-400 rounded-full"
+                />
               </div>
 
               <span className="grid h-4 w-4 place-items-center rounded-full bg-white/20 text-slate-200">
@@ -115,7 +130,10 @@ export function CategoryDynamicIsland() {
                   className="w-full bg-transparent text-xs font-medium text-white outline-none placeholder:text-slate-500"
                 />
                 {filterQuery && (
-                  <button onClick={() => setFilterQuery("")} className="text-slate-400 hover:text-white text-xs">
+                  <button
+                    onClick={() => setFilterQuery("")}
+                    className="text-slate-400 hover:text-white text-xs"
+                  >
                     ×
                   </button>
                 )}
@@ -136,7 +154,9 @@ export function CategoryDynamicIsland() {
                   }`}
                 >
                   <span className="truncate">🛍️ All Categories</span>
-                  {!currentCategorySlug && <Check className="h-3.5 w-3.5 text-amber-300 shrink-0" />}
+                  {!currentCategorySlug && (
+                    <Check className="h-3.5 w-3.5 text-amber-300 shrink-0" />
+                  )}
                 </Link>
 
                 {filteredGroups.map((group) => {

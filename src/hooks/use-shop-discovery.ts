@@ -10,7 +10,8 @@ const MOCK_LOCAL_SHOPS: ShopCardData[] = [
     id: "seller-fashion-1",
     name: "Trendz Fashion & Readymades Hub",
     category: "Fashion & Clothing",
-    imageUrl: "https://images.unsplash.com/photo-1441986300917-64674bd600d8?auto=format&fit=crop&w=600&q=75",
+    imageUrl:
+      "https://images.unsplash.com/photo-1441986300917-64674bd600d8?auto=format&fit=crop&w=600&q=75",
     rating: 4.8,
     reviewCount: 124,
     distanceKm: 0.8,
@@ -29,7 +30,8 @@ const MOCK_LOCAL_SHOPS: ShopCardData[] = [
     id: "seller-fashion-2",
     name: "Urban Style Menswear & Streetwear",
     category: "Fashion & Clothing",
-    imageUrl: "https://images.unsplash.com/photo-1503342217505-b0a15ec3261c?auto=format&fit=crop&w=600&q=75",
+    imageUrl:
+      "https://images.unsplash.com/photo-1503342217505-b0a15ec3261c?auto=format&fit=crop&w=600&q=75",
     rating: 4.7,
     reviewCount: 89,
     distanceKm: 1.5,
@@ -48,7 +50,8 @@ const MOCK_LOCAL_SHOPS: ShopCardData[] = [
     id: "seller-decor-1",
     name: "Royal Brass & Home Decor Emporium",
     category: "Furniture & Home Decor",
-    imageUrl: "https://images.unsplash.com/photo-1513519245088-0e12902e5a38?auto=format&fit=crop&w=600&q=75",
+    imageUrl:
+      "https://images.unsplash.com/photo-1513519245088-0e12902e5a38?auto=format&fit=crop&w=600&q=75",
     rating: 4.9,
     reviewCount: 156,
     distanceKm: 1.2,
@@ -67,7 +70,8 @@ const MOCK_LOCAL_SHOPS: ShopCardData[] = [
     id: "seller-decor-2",
     name: "Sri Vinayaga Furniture World",
     category: "Furniture & Home Decor",
-    imageUrl: "https://images.unsplash.com/photo-1555041469-a586c61ea9bc?auto=format&fit=crop&w=600&q=75",
+    imageUrl:
+      "https://images.unsplash.com/photo-1555041469-a586c61ea9bc?auto=format&fit=crop&w=600&q=75",
     rating: 4.8,
     reviewCount: 94,
     distanceKm: 2.4,
@@ -86,7 +90,8 @@ const MOCK_LOCAL_SHOPS: ShopCardData[] = [
     id: "seller-elec-1",
     name: "Premier Mobile & Tech World",
     category: "Mobile & Accessories",
-    imageUrl: "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?auto=format&fit=crop&w=600&q=75",
+    imageUrl:
+      "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?auto=format&fit=crop&w=600&q=75",
     rating: 4.8,
     reviewCount: 210,
     distanceKm: 1.1,
@@ -105,7 +110,8 @@ const MOCK_LOCAL_SHOPS: ShopCardData[] = [
     id: "seller-groc-1",
     name: "Roja Organic Supermarket & Kirana",
     category: "Grocery",
-    imageUrl: "https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=600&q=75",
+    imageUrl:
+      "https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=600&q=75",
     rating: 4.9,
     reviewCount: 184,
     distanceKm: 0.5,
@@ -124,7 +130,8 @@ const MOCK_LOCAL_SHOPS: ShopCardData[] = [
     id: "seller-bakery-1",
     name: "Roja Bakes & Oven Fresh Sweets",
     category: "Bakery & Sweets",
-    imageUrl: "https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=600&q=75",
+    imageUrl:
+      "https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=600&q=75",
     rating: 4.9,
     reviewCount: 310,
     distanceKm: 0.4,
@@ -143,7 +150,8 @@ const MOCK_LOCAL_SHOPS: ShopCardData[] = [
     id: "seller-food-1",
     name: "Haribhavanam Chettinad Restaurant",
     category: "Food & Restaurants",
-    imageUrl: "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=600&q=75",
+    imageUrl:
+      "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=600&q=75",
     rating: 4.9,
     reviewCount: 420,
     distanceKm: 0.8,
@@ -189,7 +197,9 @@ export function useShopDiscovery(filterState: ProductFilterState) {
       try {
         const { data: sellersData } = await (supabase as any)
           .from("sellers")
-          .select("id, business_name, business_type, city, status, lat, lng, is_active, accepts_orders")
+          .select(
+            "id, business_name, business_type, city, status, lat, lng, is_active, accepts_orders",
+          )
           .in("status", ["approved", "active"]);
 
         if (sellersData && sellersData.length > 0) {
@@ -217,7 +227,7 @@ export function useShopDiscovery(filterState: ProductFilterState) {
               pickupAvailable: true,
               isVerified: s.status === "approved",
               isCommunityFavorite: true,
-              city: s.city || "Coimbatore",
+              city: s.city || "",
             };
           });
         }
@@ -226,8 +236,27 @@ export function useShopDiscovery(filterState: ProductFilterState) {
       }
 
       // Merge DB sellers with mock catalog sellers without duplicates
+      const processedMockShops = MOCK_LOCAL_SHOPS.map((s) => {
+        let dist = s.distanceKm;
+        const mockCoords: Record<string, { lat: number; lng: number }> = {
+          "seller-fashion-1": { lat: 11.0172, lng: 76.9562 },
+          "seller-fashion-2": { lat: 11.0064, lng: 76.9507 },
+          "seller-decor-1": { lat: 11.0252, lng: 77.0025 },
+          "seller-decor-2": { lat: 11.04, lng: 76.945 },
+          "seller-elec-1": { lat: 11.02, lng: 76.96 },
+          "seller-groc-1": { lat: 11.0028, lng: 77.0865 },
+          "seller-bakery-1": { lat: 11.0028, lng: 77.0865 },
+          "seller-food-1": { lat: 11.0252, lng: 77.0025 },
+        };
+        const coords = mockCoords[s.id];
+        if (coords && deliveryLoc?.lat && deliveryLoc?.lng) {
+          dist = calculateDistanceKm(deliveryLoc.lat, deliveryLoc.lng, coords.lat, coords.lng);
+        }
+        return { ...s, distanceKm: dist };
+      });
+
       const shopMap = new Map<string, ShopCardData>();
-      for (const s of [...dbShops, ...MOCK_LOCAL_SHOPS]) {
+      for (const s of [...dbShops, ...processedMockShops]) {
         if (!shopMap.has(s.id)) {
           shopMap.set(s.id, s);
         }
@@ -244,14 +273,26 @@ export function useShopDiscovery(filterState: ProductFilterState) {
           return (
             catLower.includes(normCat) ||
             normCat.includes(catLower) ||
-            (normCat.includes("fashion") && (catLower.includes("fashion") || catLower.includes("boutique"))) ||
-            ((normCat.includes("mobile") || normCat.includes("electronic")) && (catLower.includes("mobile") || catLower.includes("electronic") || catLower.includes("tech"))) ||
+            (normCat.includes("fashion") &&
+              (catLower.includes("fashion") || catLower.includes("boutique"))) ||
+            ((normCat.includes("mobile") || normCat.includes("electronic")) &&
+              (catLower.includes("mobile") ||
+                catLower.includes("electronic") ||
+                catLower.includes("tech"))) ||
             (normCat.includes("grocery") && catLower.includes("grocery")) ||
-            (normCat.includes("bakery") && (catLower.includes("bakery") || catLower.includes("sweet"))) ||
-            (normCat.includes("food") && (catLower.includes("food") || catLower.includes("restaurant"))) ||
+            (normCat.includes("bakery") &&
+              (catLower.includes("bakery") || catLower.includes("sweet"))) ||
+            (normCat.includes("food") &&
+              (catLower.includes("food") || catLower.includes("restaurant"))) ||
             (normCat.includes("footwear") && catLower.includes("footwear")) ||
-            ((normCat.includes("home") || normCat.includes("decor") || normCat.includes("furniture") || normCat.includes("kitchen")) &&
-              (catLower.includes("home") || catLower.includes("decor") || catLower.includes("furniture") || catLower.includes("kitchen")))
+            ((normCat.includes("home") ||
+              normCat.includes("decor") ||
+              normCat.includes("furniture") ||
+              normCat.includes("kitchen")) &&
+              (catLower.includes("home") ||
+                catLower.includes("decor") ||
+                catLower.includes("furniture") ||
+                catLower.includes("kitchen")))
           );
         });
       }
@@ -259,8 +300,12 @@ export function useShopDiscovery(filterState: ProductFilterState) {
       // Query matching
       if (rawQ) {
         list = list.filter((s) => {
-          const shopText = `${s.name} ${s.category} ${s.address || ""} ${s.city || ""}`.toLowerCase();
-          return shopText.includes(rawQ) || rawQ.split(" ").some((t) => t.length > 2 && shopText.includes(t));
+          const shopText =
+            `${s.name} ${s.category} ${s.address || ""} ${s.city || ""}`.toLowerCase();
+          return (
+            shopText.includes(rawQ) ||
+            rawQ.split(" ").some((t) => t.length > 2 && shopText.includes(t))
+          );
         });
       }
 

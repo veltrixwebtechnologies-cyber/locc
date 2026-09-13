@@ -86,7 +86,11 @@ export const AppDownloadBanner: React.FC<AppDownloadBannerProps> = ({
         if (!error && data && data.image_url) {
           try {
             const parsed = JSON.parse(data.image_url);
-            const merged = { ...DEFAULT_APP_BANNER_CONFIG, ...parsed, is_active: data.is_active ?? true };
+            const merged = {
+              ...DEFAULT_APP_BANNER_CONFIG,
+              ...parsed,
+              is_active: data.is_active ?? true,
+            };
             setConfig(merged);
             localStorage.setItem(APP_BANNER_CONFIG_KEY, JSON.stringify(merged));
           } catch {}
@@ -129,9 +133,7 @@ export const AppDownloadBanner: React.FC<AppDownloadBannerProps> = ({
     <div className={`mx-4 my-6 sm:mx-6 sm:my-8 md:mx-8 ${className}`}>
       <div
         className={`relative overflow-hidden rounded-3xl transition-all duration-300 shadow-2xl ${
-          isOrchid
-            ? "bg-[#0f0618] border border-[#3b1254]"
-            : "bg-[#070a16] border border-[#1d2642]"
+          isOrchid ? "bg-[#0f0618] border border-[#3b1254]" : "bg-[#070a16] border border-[#1d2642]"
         }`}
       >
         {/* Subtle Ambient Background Gradient */}
@@ -192,7 +194,10 @@ export const AppDownloadBanner: React.FC<AppDownloadBannerProps> = ({
             </p>
 
             {/* Mobile Number SMS Link Form */}
-            <form onSubmit={handleSendLink} className="pt-2 flex flex-col sm:flex-row gap-2.5 max-w-md">
+            <form
+              onSubmit={handleSendLink}
+              className="pt-2 flex flex-col sm:flex-row gap-2.5 max-w-md"
+            >
               <div className="relative flex-1">
                 <div className="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-slate-400 text-xs font-bold font-mono">
                   +91
@@ -234,9 +239,7 @@ export const AppDownloadBanner: React.FC<AppDownloadBannerProps> = ({
           <div className="w-full lg:w-auto shrink-0">
             <div
               className={`relative rounded-2xl border backdrop-blur-md p-5 sm:p-6 shadow-2xl flex flex-col sm:flex-row items-center gap-5 ${
-                isOrchid
-                  ? "bg-[#1d0933]/80 border-[#3d1663]"
-                  : "bg-[#11162b]/80 border-[#232c4a]"
+                isOrchid ? "bg-[#1d0933]/80 border-[#3d1663]" : "bg-[#11162b]/80 border-[#232c4a]"
               }`}
             >
               {/* Store Download Buttons Column */}
@@ -255,12 +258,20 @@ export const AppDownloadBanner: React.FC<AppDownloadBannerProps> = ({
                   }`}
                 >
                   <div className="flex items-center gap-2.5 min-w-0">
-                    <svg className="h-6 w-6 text-white shrink-0" viewBox="0 0 24 24" fill="currentColor">
+                    <svg
+                      className="h-6 w-6 text-white shrink-0"
+                      viewBox="0 0 24 24"
+                      fill="currentColor"
+                    >
                       <path d="M3.609 1.814L13.792 12 3.61 22.186a.996.996 0 0 1-.61-.92V2.734c0-.39.227-.743.609-.920zM15.207 13.414l2.56 2.56-11.892 6.84 9.332-9.4zM15.207 10.586L5.875 1.186l11.892 6.84-2.56 2.560zM16.62 12l2.99-1.725c.52-.3.52-.8 0-1.1L16.62 12z" />
                     </svg>
                     <div className="min-w-0 text-left">
-                      <div className="text-[8px] font-bold tracking-wider uppercase text-slate-400">GET IT ON</div>
-                      <div className="text-xs font-black text-white group-hover:text-[#facc15] transition-colors leading-tight">Google Play</div>
+                      <div className="text-[8px] font-bold tracking-wider uppercase text-slate-400">
+                        GET IT ON
+                      </div>
+                      <div className="text-xs font-black text-white group-hover:text-[#facc15] transition-colors leading-tight">
+                        Google Play
+                      </div>
                     </div>
                   </div>
                   <div className="text-right border-l border-white/10 pl-2.5 shrink-0">
@@ -268,7 +279,9 @@ export const AppDownloadBanner: React.FC<AppDownloadBannerProps> = ({
                       <Star className="h-3 w-3 fill-[#facc15] mr-0.5" />
                       {config.google_play_rating}
                     </div>
-                    <div className="text-[9px] text-slate-400 whitespace-nowrap">{config.google_play_downloads}</div>
+                    <div className="text-[9px] text-slate-400 whitespace-nowrap">
+                      {config.google_play_downloads}
+                    </div>
                   </div>
                 </a>
 
@@ -286,12 +299,20 @@ export const AppDownloadBanner: React.FC<AppDownloadBannerProps> = ({
                   }`}
                 >
                   <div className="flex items-center gap-2.5 min-w-0">
-                    <svg className="h-6 w-6 text-white shrink-0" viewBox="0 0 24 24" fill="currentColor">
+                    <svg
+                      className="h-6 w-6 text-white shrink-0"
+                      viewBox="0 0 24 24"
+                      fill="currentColor"
+                    >
                       <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M15.97 6.09c.66-.82 1.1-1.96.98-3.09-1 .04-2.17.67-2.88 1.49-.6.69-1.12 1.83-.98 2.94 1.12.09 2.22-.52 2.88-1.34z" />
                     </svg>
                     <div className="min-w-0 text-left">
-                      <div className="text-[8px] font-bold tracking-wider uppercase text-slate-400">DOWNLOAD ON THE</div>
-                      <div className="text-xs font-black text-white group-hover:text-[#facc15] transition-colors leading-tight">App Store</div>
+                      <div className="text-[8px] font-bold tracking-wider uppercase text-slate-400">
+                        DOWNLOAD ON THE
+                      </div>
+                      <div className="text-xs font-black text-white group-hover:text-[#facc15] transition-colors leading-tight">
+                        App Store
+                      </div>
                     </div>
                   </div>
                   <div className="text-right border-l border-white/10 pl-2.5 shrink-0">
@@ -299,7 +320,9 @@ export const AppDownloadBanner: React.FC<AppDownloadBannerProps> = ({
                       <Star className="h-3 w-3 fill-[#facc15] mr-0.5" />
                       {config.app_store_rating}
                     </div>
-                    <div className="text-[9px] text-slate-400 whitespace-nowrap">{config.app_store_downloads}</div>
+                    <div className="text-[9px] text-slate-400 whitespace-nowrap">
+                      {config.app_store_downloads}
+                    </div>
                   </div>
                 </a>
               </div>
@@ -312,7 +335,12 @@ export const AppDownloadBanner: React.FC<AppDownloadBannerProps> = ({
                 title="Click to expand QR Code"
               >
                 <div className="relative p-1 rounded-lg bg-slate-50 border border-slate-200">
-                  <svg className="w-24 h-24" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <svg
+                    className="w-24 h-24"
+                    viewBox="0 0 100 100"
+                    fill="none"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
                     {/* Background */}
                     <rect width="100" height="100" fill="white" rx="6" />
 
@@ -388,7 +416,12 @@ export const AppDownloadBanner: React.FC<AppDownloadBannerProps> = ({
               </button>
             </div>
             <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 flex justify-center">
-              <svg className="w-56 h-56" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <svg
+                className="w-56 h-56"
+                viewBox="0 0 100 100"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+              >
                 <rect width="100" height="100" fill="white" rx="6" />
                 <rect x="8" y="8" width="28" height="28" fill="black" rx="4" />
                 <rect x="14" y="14" width="16" height="16" fill="white" rx="2" />
@@ -432,4 +465,3 @@ export const AppDownloadBanner: React.FC<AppDownloadBannerProps> = ({
     </div>
   );
 };
-

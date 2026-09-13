@@ -1,6 +1,14 @@
 import { useRef } from "react";
 import { Link } from "@tanstack/react-router";
-import { Star, MapPin, ChevronRight, ChevronLeft, Store as StoreIcon, Sparkles, Tag } from "lucide-react";
+import {
+  Star,
+  MapPin,
+  ChevronRight,
+  ChevronLeft,
+  Store as StoreIcon,
+  Sparkles,
+  Tag,
+} from "lucide-react";
 import { useSearchShopRecommendations } from "@/hooks/use-search-shop-recommendations";
 import { resolveImageUrl } from "@/lib/image-utils";
 import { m } from "motion/react";
@@ -48,7 +56,8 @@ export function SearchShopRecommendations({
           </h3>
 
           <p className="text-xs sm:text-sm text-slate-500 font-medium mt-1">
-            Compare nearby local stores matching <strong className="text-purple-900">"{formattedQuery}"</strong>
+            Compare nearby local stores matching{" "}
+            <strong className="text-purple-900">"{formattedQuery}"</strong>
             {currentShopName ? ` besides ${currentShopName}` : ""}
           </p>
         </div>
@@ -122,7 +131,9 @@ export function SearchShopRecommendations({
                   <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
                   <span>{rec.rating.toFixed(1)}</span>
                   {rec.reviewCount ? (
-                    <span className="text-slate-400 font-normal text-[10px]">({rec.reviewCount})</span>
+                    <span className="text-slate-400 font-normal text-[10px]">
+                      ({rec.reviewCount})
+                    </span>
                   ) : null}
                 </div>
 
@@ -149,7 +160,10 @@ export function SearchShopRecommendations({
                 <div className="flex items-center justify-between rounded-xl bg-purple-50 px-3 py-2 border border-purple-200/80">
                   <span className="flex items-center gap-1.5 text-xs font-black text-[#981495]">
                     <Sparkles className="h-3.5 w-3.5 text-amber-500 fill-amber-400" />
-                    <span>{rec.matchingProductCount} matching product{rec.matchingProductCount > 1 ? "s" : ""}</span>
+                    <span>
+                      {rec.matchingProductCount} matching product
+                      {rec.matchingProductCount > 1 ? "s" : ""}
+                    </span>
                   </span>
                   <span className="text-[10px] font-bold uppercase tracking-wider text-purple-700 bg-purple-100/80 px-2 py-0.5 rounded-md">
                     In Stock

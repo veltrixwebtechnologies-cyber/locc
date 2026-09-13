@@ -5,10 +5,7 @@ import {
   type ShopRecommendation,
 } from "@/lib/search-recommendations";
 
-export function useSearchShopRecommendations(
-  searchQuery: string,
-  currentShopId?: string,
-) {
+export function useSearchShopRecommendations(searchQuery: string, currentShopId?: string) {
   const trimmed = (searchQuery || "").trim();
   const { results, isLoading, error } = useLiveSearchResults(trimmed);
 

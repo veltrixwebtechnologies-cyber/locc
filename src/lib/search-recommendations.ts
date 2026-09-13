@@ -75,17 +75,19 @@ export function rankAndGroupShopsBySearchQuery(
     const meta = shopMetaMap.get(shopId) || {};
 
     const shopName = meta.storeName || mockStore?.name || "Local Shop";
-    const shopTagline = meta.subtitle || mockStore?.tagline || mockStore?.category || "Verified merchant";
-    const imageUrl = mockStore?.imageUrl || meta.imageUrl || "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=400&q=75";
+    const shopTagline =
+      meta.subtitle || mockStore?.tagline || mockStore?.category || "Verified merchant";
+    const imageUrl =
+      mockStore?.imageUrl ||
+      meta.imageUrl ||
+      "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=400&q=75";
     const rating = meta.rating ?? mockStore?.rating ?? 4.5;
     const reviewCount = meta.reviewCount ?? (mockStore ? Math.floor(mockStore.rating * 35) : 42);
     const distanceKm = meta.distanceKm ?? mockStore?.distanceKm ?? 1.4;
     const isOpen = meta.isOpen ?? mockStore?.isOpen ?? true;
 
     // Filter valid prices
-    const validPrices = products
-      .map((p) => p.discountPrice ?? p.price ?? 0)
-      .filter((p) => p > 0);
+    const validPrices = products.map((p) => p.discountPrice ?? p.price ?? 0).filter((p) => p > 0);
     const startingPrice = validPrices.length > 0 ? Math.min(...validPrices) : 299;
 
     const maxProductScore = Math.max(...products.map((p) => p.matchScore ?? 0));
