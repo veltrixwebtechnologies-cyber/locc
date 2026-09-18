@@ -16,6 +16,13 @@ import {
   Sparkles,
   ShieldCheck,
   Package,
+  Info,
+  X,
+  CheckCircle2,
+  Truck,
+  PhoneCall,
+  Tag,
+  Percent,
 } from "lucide-react";
 import {
   getStore,
@@ -50,8 +57,6 @@ const isUuid = (value: string) =>
 import { toStoreCategory } from "@/lib/shop-categories";
 import { isTestEntity } from "@/lib/map-service/store-engine";
 import { LottieLoading } from "@/components/ui/lottie-loading";
-import { RelatedProductsSection } from "@/components/related-products-section";
-import { adaptMockProduct } from "@/lib/recommendations/recommendation-engine";
 
 export const Route = createFileRoute("/store/$storeId")({
   validateSearch: (search: Record<string, unknown>): { sq?: string; category?: string } => ({
@@ -84,8 +89,20 @@ export const Route = createFileRoute("/store/$storeId")({
   ),
 });
 
-function getCategoryIcon(_catName: string) {
-  return <Package className="h-4 w-4 text-slate-400" />;
+function getCategoryEmoji(catName: string) {
+  const c = (catName || "").toLowerCase();
+  if (c.includes("all")) return "🏪";
+  if (c.includes("fruit") || c.includes("veg") || c.includes("produce")) return "🍎";
+  if (c.includes("dairy") || c.includes("milk") || c.includes("egg") || c.includes("breakfast")) return "🥛";
+  if (c.includes("snack") || c.includes("munch") || c.includes("biscuit") || c.includes("chip")) return "🍿";
+  if (c.includes("beverage") || c.includes("drink") || c.includes("juice") || c.includes("tea") || c.includes("coffee")) return "🧃";
+  if (c.includes("electr") || c.includes("mobile") || c.includes("tv") || c.includes("gadget")) return "📱";
+  if (c.includes("fashion") || c.includes("cloth") || c.includes("wear") || c.includes("silk") || c.includes("saree")) return "👗";
+  if (c.includes("beauty") || c.includes("personal") || c.includes("care") || c.includes("skin")) return "💄";
+  if (c.includes("home") || c.includes("clean") || c.includes("pantry") || c.includes("staple") || c.includes("rice")) return "🌾";
+  if (c.includes("sweet") || c.includes("bakery") || c.includes("cake")) return "🍰";
+  if (c.includes("meat") || c.includes("fish") || c.includes("chicken")) return "🍗";
+  return "📦";
 }
 
 function StorePage() {
@@ -153,9 +170,7 @@ function StorePage() {
       let storeName = vendor?.shop_name;
       let storeCategory = vendor?.category;
       let storeTagline = vendor?.business_type || "Approved local vendor";
-      let storeAddress = [vendor?.address_line1, vendor?.city, vendor?.state]
-        .filter(Boolean)
-        .join(", ");
+      let storeAddress = [vendor?.address_line1, vendor?.city, vendor?.state].filter(Boolean).join(", ");
       let imageUrl = APPROVED_STORE.imageUrl;
 
       const storefrontPath = vendor?.shop_banner_path || vendor?.shop_logo_path;
@@ -179,9 +194,7 @@ function StorePage() {
           storeName = sellerData.business_name || storeName;
           storeCategory = w.category || sellerData.business_type || storeCategory;
           storeTagline = w.description || sellerData.business_name || storeTagline;
-          storeAddress = [sellerData.address_line1, sellerData.city, sellerData.state]
-            .filter(Boolean)
-            .join(", ");
+          storeAddress = [sellerData.address_line1, sellerData.city, sellerData.state].filter(Boolean).join(", ");
           imageUrl = w.documents?.shopBanner?.url || w.documents?.shopBanner?.dataUrl || imageUrl;
 
           vendor = {
@@ -213,9 +226,9 @@ function StorePage() {
   const products = (
     liveProds.length > 0
       ? liveProds
-      : loaded.products && loaded.products.length > 0
-        ? loaded.products
-        : (productsByStore[store.id] ?? productsByStore["s_roja_mart"] ?? [])
+      : (loaded.products && loaded.products.length > 0
+          ? loaded.products
+          : (productsByStore[store.id] ?? productsByStore["s_roja_mart"] ?? []))
   ) as Product[];
 
   const navigate = useNavigate();
@@ -225,9 +238,10 @@ function StorePage() {
   const [selectedCategory, setSelectedCategory] = useState<string>(searchParams.category || "all");
   const [minPrice, setMinPrice] = useState<string>("");
   const [maxPrice, setMaxPrice] = useState<string>("");
-  const [sortBy, setSortBy] = useState<"popular" | "newest" | "price-asc" | "price-desc">(
-    "popular",
-  );
+  const [sortBy, setSortBy] = useState<"popular" | "newest" | "price-asc" | "price-desc">("popular");
+  const [inStockOnly, setInStockOnly] = useState(false);
+  const [offersOnly, setOffersOnly] = useState(false);
+  const [showStoreInfo, setShowStoreInfo] = useState(false);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [showFilters, setShowFilters] = useState(false);
 
@@ -256,7 +270,7 @@ function StorePage() {
             haversineDistanceKm(store.lat, store.lng, deliveryLoc.lat, deliveryLoc.lng) * 10,
           ) / 10,
         )
-      : undefined;
+      : (store.distanceKm ?? 1.2);
 
   const { trackShopView } = useMLTracker();
 
@@ -288,7 +302,10 @@ function StorePage() {
       name,
       count,
     }));
-    return [{ id: "all", name: "All Products", count: products.length }, ...catList];
+    return [
+      { id: "all", name: "All Products", count: products.length },
+      ...catList,
+    ];
   }, [products]);
 
   // Filtered & Sorted products list
@@ -318,6 +335,17 @@ function StorePage() {
       if (!isNaN(max)) list = list.filter((p) => p.price <= max);
     }
 
+    if (inStockOnly) {
+      list = list.filter((p) => (p.stock ?? 20) > 0);
+    }
+
+    if (offersOnly) {
+      list = list.filter((p) => {
+        const mrp = Math.round(p.price * 1.25);
+        return mrp > p.price;
+      });
+    }
+
     if (sortBy === "price-asc") {
       list.sort((a, b) => a.price - b.price);
     } else if (sortBy === "price-desc") {
@@ -327,24 +355,15 @@ function StorePage() {
     }
 
     return list;
-  }, [products, selectedCategory, query, minPrice, maxPrice, sortBy]);
+  }, [products, selectedCategory, query, minPrice, maxPrice, inStockOnly, offersOnly, sortBy]);
 
   const qtyOf = (id: string) => cart.lines.find((l) => l.productId === id)?.qty ?? 0;
 
-  const recommendationCandidates = useMemo(
-    () => products.map((product) => adaptMockProduct(product)),
-    [products],
-  );
-  const recommendationSource = recommendationCandidates[0];
-
   return (
-    <div className="min-h-screen bg-[#f3edf5] pb-32 pt-3 sm:pt-5">
+    <div className="min-h-screen bg-[#fcfbfa] pb-32 pt-3 sm:pt-5">
       <div className="mx-auto max-w-[1500px] px-3 sm:px-6 lg:px-8">
         {/* Breadcrumb Navigation */}
-        <nav
-          aria-label="Breadcrumb"
-          className="mb-4 flex items-center gap-2 text-xs font-semibold text-slate-500"
-        >
+        <nav aria-label="Breadcrumb" className="mb-4 flex items-center gap-2 text-xs font-semibold text-slate-500">
           <Link
             to="/"
             search={{ category: "all-shops", q: undefined }}
@@ -361,7 +380,7 @@ function StorePage() {
         </nav>
 
         {/* ── STORE HERO BANNER (Horizontal Full-Width Design matching Image 2) ── */}
-        <div className="relative overflow-hidden rounded-3xl bg-slate-900 border-2 border-[#981495]/70 shadow-[0_0_24px_rgba(152,20,149,0.18)] shadow-xl mb-6 min-h-[210px] sm:min-h-[230px] flex items-center group">
+        <div className="relative overflow-hidden rounded-3xl bg-slate-900 gold-metallic-border-dark gold-glow-md shadow-xl mb-6 min-h-[210px] sm:min-h-[230px] flex items-center group">
           {/* Full-width Background Image */}
           <img
             src={resolveImageUrl(store.imageUrl, store.name, store.category)}
@@ -370,12 +389,21 @@ function StorePage() {
           />
 
           {/* Smooth Light Fade Gradient on Left (Zero blank white space) */}
-          <div className="absolute inset-0 bg-gradient-to-r from-[#f3edf5] via-[#f3edf5]/95 via-80% to-transparent w-full md:w-[62%] z-10" />
+          <div className="absolute inset-0 bg-gradient-to-r from-[#fdfbf9] via-[#fdfbf9]/95 via-80% to-transparent w-full md:w-[62%] z-10" />
           <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-black/30 z-10 md:hidden" />
 
-          {/* Verified Store Top-Right Badge */}
-          <div className="absolute top-4 right-4 z-20">
-            <div className="inline-flex items-center gap-1.5 rounded-full bg-[#fffafd]/95 backdrop-blur-md px-3.5 py-1.5 text-xs font-black text-slate-900 shadow-xl border border-[#f0abfc]/80">
+          {/* Verified Store Top-Right Badge & Store Info button */}
+          <div className="absolute top-4 right-4 z-20 flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setShowStoreInfo(true)}
+              className="inline-flex items-center gap-1.5 rounded-full bg-slate-900/90 text-amber-300 hover:bg-slate-950 backdrop-blur-md px-3 py-1.5 text-xs font-bold transition-all shadow-md border border-amber-300/40 cursor-pointer"
+            >
+              <Info className="h-3.5 w-3.5 text-amber-400" />
+              <span className="hidden sm:inline">Store Info</span>
+            </button>
+
+            <div className="inline-flex items-center gap-1.5 rounded-full bg-white/95 backdrop-blur-md px-3.5 py-1.5 text-xs font-black text-slate-900 shadow-xl border border-amber-300/80">
               <ShieldCheck className="h-4 w-4 text-[#981495] fill-[#981495]/20" />
               <span>Verified Store</span>
             </div>
@@ -388,7 +416,7 @@ function StorePage() {
             onClick={() => {
               scrollToShops();
             }}
-            className="absolute top-4 left-4 z-40 pointer-events-auto inline-flex items-center gap-1.5 rounded-full bg-[#fffafd]/95 hover:bg-[#fffafd] text-slate-900 backdrop-blur-md px-3.5 py-1.5 text-xs font-bold transition-all shadow-md border border-[#f0abfc]/80 cursor-pointer"
+            className="absolute top-4 left-4 z-40 pointer-events-auto inline-flex items-center gap-1.5 rounded-full bg-white/95 hover:bg-white text-slate-900 backdrop-blur-md px-3.5 py-1.5 text-xs font-bold transition-all shadow-md border border-amber-300/80 cursor-pointer"
           >
             <ArrowLeft className="h-3.5 w-3.5" />
             <span>All shops</span>
@@ -407,7 +435,7 @@ function StorePage() {
           {/* Left Content Area (Logo Box + Store Details) */}
           <div className="relative z-20 p-5 sm:p-7 md:p-8 max-w-3xl flex flex-col sm:flex-row items-start sm:items-center gap-4.5 pt-12 sm:pt-7">
             {/* Store Brand Emblem Logo Box */}
-            <div className="h-20 w-20 sm:h-24 sm:w-24 rounded-2xl bg-[#310938] text-[#f5d061] flex flex-col items-center justify-center border-2 border-[#981495]/70 shadow-[0_0_18px_rgba(152,20,149,0.16)] shrink-0">
+            <div className="h-20 w-20 sm:h-24 sm:w-24 rounded-2xl bg-[#310938] text-[#f5d061] flex flex-col items-center justify-center gold-metallic-border-dark gold-glow-sm shrink-0">
               <Sparkles className="h-7 w-7 text-amber-400 fill-amber-400/30 mb-0.5" />
               <span className="font-display font-black text-[9px] uppercase tracking-widest text-amber-200">
                 STORE
@@ -417,7 +445,7 @@ function StorePage() {
             {/* Store Info & Ratings */}
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2 mb-1">
-                <span className="inline-flex items-center gap-1 rounded-full bg-[var(--sand)]/90 px-2.5 py-0.5 text-[10px] font-bold text-[#981495] border border-[#f0abfc]">
+                <span className="inline-flex items-center gap-1 rounded-full bg-purple-100/90 px-2.5 py-0.5 text-[10px] font-bold text-[#981495] border border-purple-200">
                   Verified Shoreline Merchant
                 </span>
               </div>
@@ -427,46 +455,70 @@ function StorePage() {
               </h1>
 
               <p className="text-xs sm:text-sm font-semibold text-slate-600 truncate mt-0.5">
-                {store.tagline ||
-                  "Showrooms. Multistorey showroom for silk, smart TV's & appliances"}
+                {store.tagline || "Showrooms. Multistorey showroom for silk, smart TV's & appliances"}
               </p>
 
               {/* Info Badges Row */}
               <div className="mt-3 flex flex-wrap items-center gap-2 text-xs font-bold text-slate-700">
-                <div className="flex items-center gap-1 text-slate-600 bg-[#fffafd]/80 backdrop-blur-xs px-2.5 py-1 rounded-full border border-slate-200/80 shadow-2xs">
+                <button
+                  type="button"
+                  onClick={() => setShowStoreInfo(true)}
+                  className="flex items-center gap-1 text-slate-600 bg-white/80 backdrop-blur-xs px-2.5 py-1 rounded-full border border-slate-200/80 shadow-2xs hover:border-purple-300 transition-colors cursor-pointer"
+                >
                   <MapPin className="h-3.5 w-3.5 text-[#981495] shrink-0" />
                   <span className="truncate max-w-[200px] sm:max-w-[280px]">{store.address}</span>
-                </div>
+                </button>
 
                 <div className="flex items-center gap-1 rounded-full bg-emerald-50/90 px-2.5 py-1 text-emerald-800 border border-emerald-200/70 shadow-2xs">
                   <Clock className="h-3.5 w-3.5 text-emerald-600" />
                   <span>{store.isOpen ? "Open now · 9:00 AM – 9:30 PM" : "Closed"}</span>
                 </div>
 
-                <div className="flex items-center gap-1 rounded-full bg-[var(--sand)]/90 px-2.5 py-1 text-[#700b6e] border border-[#f0abfc]/70 shadow-2xs">
+                <div className="flex items-center gap-1 rounded-full bg-amber-50/90 px-2.5 py-1 text-amber-900 border border-amber-200/80 shadow-2xs">
                   <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
                   <span>{store.rating.toFixed(1)}</span>
-                  <span className="text-[#981495]/80 font-normal">
+                  <span className="text-amber-700/80 font-normal">
                     ({Math.floor(store.rating * 240)} reviews)
                   </span>
                 </div>
 
-                {deliveryLoc && computedDistanceKm !== undefined && (
-                  <div className="flex items-center gap-1 rounded-full bg-[var(--sand)]/90 px-2.5 py-1 text-[#981495] border border-[#f0abfc]/80 shadow-2xs">
-                    <span>
-                      {computedDistanceKm} km · {computedEtaMin} mins
-                    </span>
-                  </div>
-                )}
+                <div className="flex items-center gap-1 rounded-full bg-purple-50/90 px-2.5 py-1 text-[#981495] border border-purple-200/80 shadow-2xs">
+                  <span>🚀 {computedEtaMin} mins ({computedDistanceKm} km)</span>
+                </div>
               </div>
             </div>
           </div>
         </div>
 
+        {/* ── STORE OFFERS & PROMO BANNER ── */}
+        <div className="mb-4 rounded-2xl bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500 p-3.5 shadow-sm border border-amber-300 flex items-center justify-between gap-3 text-slate-950">
+          <div className="flex items-center gap-3">
+            <div className="h-9 w-9 rounded-xl bg-slate-950 text-amber-300 flex items-center justify-center font-bold text-sm shrink-0 shadow-sm">
+              🏷️
+            </div>
+            <div>
+              <p className="text-xs font-black tracking-tight leading-tight">
+                SPECIAL NEIGHBORHOOD OFFER: Get ₹50 OFF on orders above ₹299 from {store.name}
+              </p>
+              <p className="text-[10px] font-bold text-slate-900 mt-0.5">
+                Use coupon code <strong className="font-mono bg-slate-950 text-amber-300 px-1.5 py-0.5 rounded text-[10px]">LOCAL50</strong> at checkout
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => setShowStoreInfo(true)}
+            className="hidden md:inline-flex items-center gap-1 rounded-full bg-slate-950 text-white hover:bg-slate-800 px-3.5 py-1.5 text-xs font-bold transition-all shrink-0 cursor-pointer"
+          >
+            <Info className="h-3.5 w-3.5 text-amber-400" />
+            <span>Store Info & License</span>
+          </button>
+        </div>
+
         {/* ── FULL-WIDTH SEARCH + CATEGORIES + COMPACT FILTER TOOLBAR ── */}
         <div className="mb-4 space-y-2.5">
           {/* Search bar + Filter Toggle */}
-          <div className="relative z-10 rounded-2xl bg-[#fffafd] border-2 border-[#f0abfc]/70 p-2.5 shadow-sm shadow-amber-500/5 flex items-center gap-3">
+          <div className="relative z-10 rounded-2xl bg-white border-2 border-amber-300/70 p-2.5 shadow-sm shadow-amber-500/5 flex items-center gap-3">
             <div className="flex-1 flex items-center gap-2.5 px-3 py-1">
               <Search className="h-5 w-5 text-slate-400 shrink-0" />
               <input
@@ -489,14 +541,14 @@ function StorePage() {
               type="button"
               onClick={() => setShowFilters((f) => !f)}
               className={`relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-all cursor-pointer border ${
-                showFilters || minPrice || maxPrice || sortBy !== "popular"
+                showFilters || minPrice || maxPrice || inStockOnly || offersOnly || sortBy !== "popular"
                   ? "bg-[#981495] text-white border-[#981495]"
-                  : "bg-[var(--sand)] text-[#981495] hover:bg-[#981495] hover:text-white border-[#f0abfc]/60"
+                  : "bg-purple-50 text-[#981495] hover:bg-[#981495] hover:text-white border-purple-200/60"
               }`}
               title="Toggle filters"
             >
               <SlidersHorizontal className="h-4 w-4" />
-              {(minPrice || maxPrice || sortBy !== "popular") && (
+              {(minPrice || maxPrice || inStockOnly || offersOnly || sortBy !== "popular") && (
                 <span className="absolute -top-1 -right-1 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-amber-400 text-[9px] font-black text-slate-900 ring-2 ring-white">
                   !
                 </span>
@@ -504,7 +556,7 @@ function StorePage() {
             </button>
           </div>
 
-          {/* Horizontal Scrollable Category Chips for fast mobile browsing */}
+          {/* Horizontal Scrollable Category Chips with Emojis */}
           {productCategories.length > 1 && (
             <div className="flex items-center gap-2 overflow-x-auto pb-1 pt-1 no-scrollbar">
               {productCategories.map((cat) => {
@@ -519,13 +571,14 @@ function StorePage() {
                     className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-bold transition-all cursor-pointer border ${
                       active
                         ? "bg-[#981495] text-white border-[#981495] shadow-xs"
-                        : "bg-[#fffafd] text-slate-700 hover:bg-[var(--sand)] border-slate-200/80 hover:border-[#f0abfc]"
+                        : "bg-white text-slate-700 hover:bg-purple-50 border-slate-200/80 hover:border-purple-200"
                     }`}
                   >
+                    <span>{getCategoryEmoji(cat.name)}</span>
                     <span>{cat.name}</span>
                     <span
                       className={`rounded-full px-1.5 py-0.2 text-[10px] font-extrabold ${
-                        active ? "bg-[#fffafd]/20 text-white" : "bg-[var(--sand)] text-[#981495]"
+                        active ? "bg-white/20 text-white" : "bg-purple-100 text-[#981495]"
                       }`}
                     >
                       {cat.count}
@@ -538,7 +591,7 @@ function StorePage() {
 
           {/* Collapsible compact inline filters */}
           {showFilters && (
-            <div className="rounded-2xl bg-[#fffafd] border-2 border-[#f0abfc]/70 p-4 shadow-md shadow-[#700b6e]/5 flex flex-wrap items-end gap-4">
+            <div className="rounded-2xl bg-white border-2 border-amber-300/70 p-4 shadow-md shadow-purple-950/5 flex flex-wrap items-end gap-4">
               {/* Price Range */}
               <div className="flex items-end gap-2">
                 <div>
@@ -548,7 +601,7 @@ function StorePage() {
                     placeholder="Min"
                     value={minPrice}
                     onChange={(e) => setMinPrice(e.target.value)}
-                    className="w-24 rounded-xl border border-[#f0abfc]/70 px-3 py-1.5 text-xs font-bold text-slate-900 outline-none focus:border-[#981495] bg-slate-50/50"
+                    className="w-24 rounded-xl border border-amber-300/70 px-3 py-1.5 text-xs font-bold text-slate-900 outline-none focus:border-[#981495] bg-slate-50/50"
                   />
                 </div>
                 <span className="text-slate-400 font-bold text-sm mb-1.5">–</span>
@@ -559,9 +612,36 @@ function StorePage() {
                     placeholder="Max"
                     value={maxPrice}
                     onChange={(e) => setMaxPrice(e.target.value)}
-                    className="w-24 rounded-xl border border-[#f0abfc]/70 px-3 py-1.5 text-xs font-bold text-slate-900 outline-none focus:border-[#981495] bg-slate-50/50"
+                    className="w-24 rounded-xl border border-amber-300/70 px-3 py-1.5 text-xs font-bold text-slate-900 outline-none focus:border-[#981495] bg-slate-50/50"
                   />
                 </div>
+              </div>
+
+              {/* Quick Toggle Buttons */}
+              <div className="flex flex-wrap gap-2 items-center">
+                <button
+                  type="button"
+                  onClick={() => setInStockOnly((v) => !v)}
+                  className={`rounded-full px-3 py-1.5 text-xs font-bold transition-all border cursor-pointer ${
+                    inStockOnly
+                      ? "bg-emerald-600 text-white border-emerald-600 shadow-xs"
+                      : "bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100"
+                  }`}
+                >
+                  ⚡ In Stock Only
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setOffersOnly((v) => !v)}
+                  className={`rounded-full px-3 py-1.5 text-xs font-bold transition-all border cursor-pointer ${
+                    offersOnly
+                      ? "bg-[#981495] text-white border-[#981495] shadow-xs"
+                      : "bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100"
+                  }`}
+                >
+                  🏷️ Discounts & Offers
+                </button>
               </div>
 
               {/* Sort By */}
@@ -615,11 +695,12 @@ function StorePage() {
           <div className="flex flex-wrap items-center justify-between gap-3 pb-4 mb-4 border-b border-slate-200/80">
             <div>
               <h2 className="font-display text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">
-                {query.trim() ? `Products matching "${query.trim()}"` : "All Products"}
+                {query.trim()
+                  ? `Products matching "${query.trim()}"`
+                  : "All Products"}
               </h2>
               <p className="text-xs text-slate-500 font-medium mt-0.5">
-                Discover the best deals from{" "}
-                <strong className="text-slate-900">{store.name}</strong>
+                Discover the best deals from <strong className="text-slate-900">{store.name}</strong>
               </p>
             </div>
 
@@ -635,7 +716,7 @@ function StorePage() {
                   onClick={() => setViewMode("grid")}
                   className={`p-1.5 rounded-lg text-xs font-bold transition-all ${
                     viewMode === "grid"
-                      ? "bg-[#fffafd] text-[#981495] shadow-xs"
+                      ? "bg-white text-purple-900 shadow-xs"
                       : "text-slate-500 hover:text-slate-900"
                   }`}
                 >
@@ -646,7 +727,7 @@ function StorePage() {
                   onClick={() => setViewMode("list")}
                   className={`p-1.5 rounded-lg text-xs font-bold transition-all ${
                     viewMode === "list"
-                      ? "bg-[#fffafd] text-[#981495] shadow-xs"
+                      ? "bg-white text-purple-900 shadow-xs"
                       : "text-slate-500 hover:text-slate-900"
                   }`}
                 >
@@ -658,7 +739,7 @@ function StorePage() {
 
           {/* Product List Loading / Empty State */}
           {approved.isLoading ? (
-            <div className="rounded-3xl border border-[var(--sand)] bg-[#fffafd] p-12 text-center flex justify-center">
+            <div className="rounded-3xl border border-purple-100 bg-white p-12 text-center flex justify-center">
               <LottieLoading
                 message={`Loading catalog for ${store.name}...`}
                 subtext="Fetching live inventory & neighborhood prices"
@@ -666,7 +747,7 @@ function StorePage() {
               />
             </div>
           ) : filteredProducts.length === 0 ? (
-            <div className="rounded-3xl border-2 border-dashed border-[#f0abfc]/80 bg-[#fffafd] p-12 text-center">
+            <div className="rounded-3xl border-2 border-dashed border-amber-300/80 bg-white p-12 text-center">
               <div className="mx-auto text-4xl mb-3">🔍</div>
               <p className="font-bold text-slate-900 text-base">No products found</p>
               <p className="mt-1 text-xs text-slate-500">
@@ -680,7 +761,7 @@ function StorePage() {
                   setMaxPrice("");
                   setSortBy("popular");
                 }}
-                className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-[#981495] px-4 py-2 text-xs font-bold text-white shadow-md hover:bg-[#981495]"
+                className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-[#981495] px-4 py-2 text-xs font-bold text-white shadow-md hover:bg-purple-800"
               >
                 Reset all filters
               </button>
@@ -694,183 +775,184 @@ function StorePage() {
                   : "space-y-4"
               }
             >
-              {filteredProducts.map((p) => {
-                const q = qtyOf(p.id);
-                const mrp = Math.round(p.price * 1.25);
-                const discountPct = Math.round(((mrp - p.price) / mrp) * 100);
-                const unit = p.unit || "1 unit";
+                {filteredProducts.map((p) => {
+                  const q = qtyOf(p.id);
+                  const mrp = Math.round(p.price * 1.25);
+                  const savings = Math.max(0, mrp - p.price);
+                  const discountPct = mrp > p.price ? Math.round((savings / mrp) * 100) : 0;
+                  const unit = p.unit || "1 unit";
+                  const stockNum = p.stock ?? 20;
+                  const isLowStock = stockNum > 0 && stockNum <= 5;
 
-                return (
-                  <m.div
-                    key={p.id}
-                    data-product-id={p.id}
-                    initial={{ opacity: 0, y: 10 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true, amount: 0.15 }}
-                    className="group relative flex flex-col justify-between overflow-hidden rounded-2xl border border-slate-200/90 bg-[#fffafd] p-3 shadow-xs hover:border-[#f0abfc] hover:shadow-md transition-all duration-200"
-                  >
-                    <div>
-                      {/* Top Image Frame with floating badges */}
-                      <div className="relative aspect-square w-full overflow-hidden rounded-xl bg-slate-50/90 border border-slate-100 p-2 flex items-center justify-center">
-                        {/* Wishlist Button top-right */}
-                        <div className="absolute right-2 top-2 z-10">
-                          <WishlistButton
-                            productId={p.id}
-                            productName={p.name}
-                            item={{
-                              productId: p.id,
-                              name: p.name,
-                              shopName: store.name,
-                              category: p.category,
-                              price: p.price,
-                              imageUrl: p.imageUrl,
-                              sellerId: p.storeId,
-                            }}
-                          />
-                        </div>
+                  return (
+                    <m.div
+                      key={p.id}
+                      data-product-id={p.id}
+                      initial={{ opacity: 0, y: 10 }}
+                      whileInView={{ opacity: 1, y: 0 }}
+                      viewport={{ once: true, amount: 0.15 }}
+                      className="group relative flex flex-col justify-between overflow-hidden rounded-2xl border border-slate-200/90 bg-white p-3 shadow-xs hover:border-purple-300 hover:shadow-lg transition-all duration-200"
+                    >
+                      <div>
+                        {/* Top Image Frame with floating badges */}
+                        <div className="relative aspect-square w-full overflow-hidden rounded-xl bg-slate-50/90 border border-slate-100 p-2 flex items-center justify-center">
+                          {/* Top Left Badges: Discount & Low Stock */}
+                          <div className="absolute left-2 top-2 z-10 flex flex-col gap-1 items-start">
+                            {discountPct > 0 && (
+                              <span className="rounded-md bg-[#981495] text-amber-200 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider shadow-sm">
+                                {discountPct}% OFF
+                              </span>
+                            )}
+                            {isLowStock && (
+                              <span className="rounded-md bg-amber-500 text-slate-950 px-2 py-0.5 text-[9px] font-black shadow-sm">
+                                Only {stockNum} left!
+                              </span>
+                            )}
+                          </div>
 
-                        {/* Unit weight tag bottom-left inside image frame */}
-                        <div className="absolute bottom-2 left-2 z-10 rounded-md bg-slate-900/80 backdrop-blur-xs px-2 py-0.5 text-[10px] font-bold text-white shadow-xs">
-                          {unit}
-                        </div>
-
-                        <ProductThumb
-                          src={p.imageUrl}
-                          alt={p.name}
-                          category={store.category}
-                          size="lg"
-                        />
-
-                        {/* ADD Button positioned at bottom-right corner of image frame (Matching Image 2 position!) */}
-                        <div className="absolute right-2 bottom-2 z-20">
-                          {q === 0 ? (
-                            <button
-                              type="button"
-                              onClick={() => {
-                                void recordProductEvent(p.id, "add_to_cart");
-                                flyProductToCart(p.id);
-                                cartStore.add(store.id || p.storeId, store.name, p);
+                          {/* Wishlist Button top-right */}
+                          <div className="absolute right-2 top-2 z-10">
+                            <WishlistButton
+                              productId={p.id}
+                              productName={p.name}
+                              item={{
+                                productId: p.id,
+                                name: p.name,
+                                shopName: store.name,
+                                category: p.category,
+                                price: p.price,
+                                imageUrl: p.imageUrl,
+                                sellerId: p.storeId,
                               }}
-                              className="rounded-lg bg-[#fffafd] border border-emerald-600 text-emerald-700 hover:bg-emerald-600 hover:text-white px-3.5 py-1 text-xs font-black uppercase tracking-wider shadow-sm transition-all active:scale-95 cursor-pointer flex items-center gap-1"
-                            >
-                              <span>ADD</span>
-                            </button>
-                          ) : (
-                            <QtyStepper
-                              qty={q}
-                              max={p.stock}
-                              onAdd={() => {
-                                void recordProductEvent(p.id, "add_to_cart");
-                                flyProductToCart(p.id);
-                                cartStore.add(store.id || p.storeId, store.name, p);
-                              }}
-                              onChange={(n) => cartStore.setQty(p.id, n)}
-                              addClassName="rounded-lg bg-emerald-700 text-white px-2 py-0.5 text-xs font-bold shadow-sm"
                             />
-                          )}
-                        </div>
-                      </div>
+                          </div>
 
-                      {/* Product details section */}
-                      <Link
-                        to="/product/$productId"
-                        params={{ productId: p.id }}
-                        onClick={() => {
-                          void recordProductEvent(p.id, "view");
-                          void recordRecentProductView(p.id);
-                        }}
-                        className="mt-2.5 block space-y-1"
-                      >
-                        {/* Price line with strikethrough MRP */}
-                        <div className="flex items-baseline gap-2">
-                          <span className="text-base font-black text-slate-900">
-                            ₹{p.price.toLocaleString("en-IN")}
-                          </span>
-                          {mrp > p.price && (
-                            <span className="text-xs font-semibold text-slate-400 line-through">
-                              ₹{mrp.toLocaleString("en-IN")}
+                          {/* Unit weight tag bottom-left inside image frame */}
+                          <div className="absolute bottom-2 left-2 z-10 rounded-md bg-slate-900/80 backdrop-blur-xs px-2 py-0.5 text-[10px] font-bold text-white shadow-xs">
+                            {unit}
+                          </div>
+
+                          <ProductThumb
+                            src={p.imageUrl}
+                            alt={p.name}
+                            category={store.category}
+                            size="lg"
+                          />
+
+                          {/* ADD Button positioned at bottom-right corner of image frame */}
+                          <div className="absolute right-2 bottom-2 z-20">
+                            {q === 0 ? (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  void recordProductEvent(p.id, "add_to_cart");
+                                  flyProductToCart(p.id);
+                                  cartStore.add(store.id || p.storeId, store.name, p);
+                                }}
+                                className="rounded-xl bg-white border-2 border-emerald-600 text-emerald-700 hover:bg-emerald-600 hover:text-white px-3 py-1 text-xs font-black uppercase tracking-wider shadow-md hover:shadow-emerald-600/20 transition-all active:scale-95 cursor-pointer flex items-center gap-1"
+                              >
+                                <span>+ ADD</span>
+                              </button>
+                            ) : (
+                              <QtyStepper
+                                qty={q}
+                                max={p.stock}
+                                onAdd={() => {
+                                  void recordProductEvent(p.id, "add_to_cart");
+                                  flyProductToCart(p.id);
+                                  cartStore.add(store.id || p.storeId, store.name, p);
+                                }}
+                                onChange={(n) => cartStore.setQty(p.id, n)}
+                                addClassName="rounded-xl bg-emerald-700 text-white px-2 py-0.5 text-xs font-bold shadow-md"
+                              />
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Product details section */}
+                        <Link
+                          to="/product/$productId"
+                          params={{ productId: p.id }}
+                          onClick={() => {
+                            void recordProductEvent(p.id, "view");
+                            void recordRecentProductView(p.id);
+                          }}
+                          className="mt-2.5 block space-y-1"
+                        >
+                          {/* Price line with strikethrough MRP & Savings callout */}
+                          <div className="flex items-baseline gap-2 flex-wrap">
+                            <span className="text-base font-black text-slate-900">
+                              ₹{p.price.toLocaleString("en-IN")}
                             </span>
-                          )}
-                        </div>
+                            {mrp > p.price && (
+                              <span className="text-xs font-semibold text-slate-400 line-through">
+                                ₹{mrp.toLocaleString("en-IN")}
+                              </span>
+                            )}
+                            {savings > 0 && (
+                              <span className="text-[10px] font-extrabold text-emerald-700 bg-emerald-50 px-1.5 py-0.2 rounded border border-emerald-200">
+                                Save ₹{savings}
+                              </span>
+                            )}
+                          </div>
 
-                        {discountPct > 0 && (
-                          <p className="text-[11px] font-extrabold text-blue-600 uppercase tracking-tight">
-                            {discountPct}% OFF ON MRP
-                          </p>
-                        )}
+                          {/* Title */}
+                          <h3 className="line-clamp-2 text-xs sm:text-sm font-bold text-slate-800 leading-snug group-hover:text-[#981495] transition-colors">
+                            {p.name}
+                          </h3>
 
-                        {/* Title */}
-                        <h3 className="line-clamp-2 text-xs sm:text-sm font-bold text-slate-800 leading-snug group-hover:text-[#981495] transition-colors">
-                          {p.name}
-                        </h3>
+                          {/* Rating & ETA */}
+                          <div className="flex items-center gap-2 pt-0.5 text-[11px] font-bold text-slate-600">
+                            <span className="flex items-center gap-0.5 text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200/60">
+                              <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
+                              4.8
+                            </span>
+                            <span className="text-slate-300">•</span>
+                            <span className="text-slate-500 font-medium">⚡ {computedEtaMin} mins</span>
+                          </div>
 
-                        {/* Rating & ETA */}
-                        <div className="flex items-center gap-2 pt-0.5 text-[11px] font-bold text-slate-600">
-                          <span className="flex items-center gap-0.5 text-amber-600">
-                            <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
-                            4.8
-                          </span>
-                          <span className="text-slate-300">•</span>
-                          {deliveryLoc && (
-                            <span className="text-slate-500">⏱ {computedEtaMin} mins</span>
-                          )}
-                        </div>
-
-                        {/* Category pill with arrow */}
-                        <div className="pt-1">
-                          <span className="inline-flex items-center gap-1 rounded-md bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-600 group-hover:bg-[var(--sand)] group-hover:text-[#981495] transition-colors">
-                            <span>All {p.category || "Item"}</span>
-                            <span className="text-[8px]">▶</span>
-                          </span>
-                        </div>
-                      </Link>
-                    </div>
-                  </m.div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-
-        {recommendationSource && recommendationCandidates.length > 1 && (
-          <section className="mt-8" aria-label="Complete your purchase">
-            <RelatedProductsSection
-              sourceProduct={recommendationSource}
-              candidates={recommendationCandidates}
-              selectedShopId={store.id}
-              selectedShopName={store.name}
-              queryLabel={query.trim() || store.name}
-            />
-          </section>
-        )}
+                          {/* Category pill */}
+                          <div className="pt-1">
+                            <span className="inline-flex items-center gap-1 rounded-md bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-600 group-hover:bg-purple-50 group-hover:text-[#981495] transition-colors">
+                              <span>{getCategoryEmoji(p.category || "")} {p.category || "Item"}</span>
+                              <span className="text-[8px]">▶</span>
+                            </span>
+                          </div>
+                        </Link>
+                      </div>
+                    </m.div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
 
         {/* ── STORE TRUST & ASSURANCE BANNER ── */}
-        <div className="mt-12 rounded-3xl bg-gradient-to-r from-[#981495] via-[#700b6e] to-[#310938] text-white p-6 sm:p-8 shadow-xl border-2 border-[#f0abfc]/80">
+        <div className="mt-12 rounded-3xl bg-gradient-to-r from-purple-900 via-indigo-900 to-[#310938] text-white p-6 sm:p-8 shadow-xl border-2 border-amber-300/80">
           <div className="flex flex-col md:flex-row items-center justify-between gap-6">
             <div className="space-y-1 text-center md:text-left">
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-400/20 px-3 py-1 text-xs font-black text-amber-300 border border-[#f0abfc]/40">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-400/20 px-3 py-1 text-xs font-black text-amber-300 border border-amber-300/40">
                 <ShieldCheck className="h-4 w-4" />
                 <span>LocalShore Shoreline Protection</span>
               </span>
               <h3 className="font-display text-xl sm:text-2xl font-black tracking-tight text-white mt-1">
                 Directly from {store.name} to your doorstep
               </h3>
-              <p className="text-xs sm:text-sm text-[#f0abfc] font-medium max-w-xl">
-                Every order is fulfilled straight from verified local inventory with instant
-                delivery, active tracking, and doorstep return support.
+              <p className="text-xs sm:text-sm text-purple-200 font-medium max-w-xl">
+                Every order is fulfilled straight from verified local inventory with instant delivery, active tracking, and doorstep return support.
               </p>
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 w-full md:w-auto shrink-0">
-              <div className="rounded-2xl bg-[#fffafd]/10 backdrop-blur-md p-3 border border-white/10 text-center">
+              <div className="rounded-2xl bg-white/10 backdrop-blur-md p-3 border border-white/10 text-center">
                 <p className="text-lg font-black text-amber-300">⚡ 30 MIN</p>
                 <p className="text-[10px] font-bold text-slate-200">Express Delivery</p>
               </div>
-              <div className="rounded-2xl bg-[#fffafd]/10 backdrop-blur-md p-3 border border-white/10 text-center">
+              <div className="rounded-2xl bg-white/10 backdrop-blur-md p-3 border border-white/10 text-center">
                 <p className="text-lg font-black text-amber-300">💯 GENUINE</p>
                 <p className="text-[10px] font-bold text-slate-200">Physical Store Shelf</p>
               </div>
-              <div className="rounded-2xl bg-[#fffafd]/10 backdrop-blur-md p-3 border border-white/10 text-center col-span-2 sm:col-span-1">
+              <div className="rounded-2xl bg-white/10 backdrop-blur-md p-3 border border-white/10 text-center col-span-2 sm:col-span-1">
                 <p className="text-lg font-black text-amber-300">🔄 EASY</p>
                 <p className="text-[10px] font-bold text-slate-200">Doorstep Returns</p>
               </div>
@@ -886,7 +968,7 @@ function StorePage() {
         />
 
         {/* ── NEARBY RECOMMENDED SHOPS ── */}
-        {deliveryLoc && !(query || sq).trim() && (
+        {!(query || sq).trim() && (
           <div className="mt-12 mb-6">
             <div className="flex items-center justify-between mb-4">
               <div>
@@ -897,108 +979,156 @@ function StorePage() {
                   Verified merchants in your delivery neighborhood
                 </p>
               </div>
-              <Link
-                to="/"
-                search={{ category: undefined, q: undefined }}
-                className="text-xs font-bold text-[#981495] hover:underline flex items-center gap-1"
-              >
-                <span>View all shops</span>
-                <ChevronRight className="h-3.5 w-3.5" />
-              </Link>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-              {stores
-                .filter((s) => s.id !== store.id)
-                .slice(0, 4)
-                .map((otherStore) => (
-                  <Link
-                    key={otherStore.id}
-                    to="/store/$storeId"
-                    params={{ storeId: otherStore.id }}
-                    className="group flex flex-col justify-between overflow-hidden rounded-2xl bg-[#fffafd] border-2 border-[#f0abfc]/70 p-3 shadow-xs hover:border-[#c026d3] hover:shadow-md transition-all"
-                  >
-                    <div className="relative aspect-[16/10] w-full overflow-hidden rounded-xl bg-slate-100 mb-2.5">
-                      <img
-                        src={resolveImageUrl(
-                          otherStore.imageUrl,
-                          otherStore.name,
-                          otherStore.category,
-                        )}
-                        alt={otherStore.name}
-                        className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300"
-                      />
-                      <div className="absolute top-2 left-2 rounded-full bg-[#fffafd]/90 backdrop-blur-xs px-2 py-0.5 text-[9px] font-black text-slate-900 border border-[#f0abfc]/70">
-                        ★ {otherStore.rating.toFixed(1)}
-                      </div>
-                    </div>
-                    <div>
-                      <h4 className="font-bold text-xs text-slate-900 truncate group-hover:text-[#981495] transition-colors">
-                        {otherStore.name}
-                      </h4>
-                      <p className="text-[10px] font-medium text-slate-500 truncate mt-0.5">
-                        {otherStore.tagline}
-                      </p>
-                      <div className="mt-2 flex items-center justify-between text-[10px] font-extrabold text-slate-700">
-                        <span>🚀 {otherStore.etaMin} mins</span>
-                        <span className="text-[#981495]">View Shop &rarr;</span>
-                      </div>
-                    </div>
-                  </Link>
-                ))}
-            </div>
+            <Link
+              to="/"
+              search={{ category: undefined, q: undefined }}
+              className="text-xs font-bold text-[#981495] hover:underline flex items-center gap-1"
+            >
+              <span>View all shops</span>
+              <ChevronRight className="h-3.5 w-3.5" />
+            </Link>
           </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+            {stores
+              .filter((s) => s.id !== store.id)
+              .slice(0, 4)
+              .map((otherStore) => (
+                <Link
+                  key={otherStore.id}
+                  to="/store/$storeId"
+                  params={{ storeId: otherStore.id }}
+                  className="group flex flex-col justify-between overflow-hidden rounded-2xl bg-white border-2 border-amber-300/70 p-3 shadow-xs hover:border-amber-400 hover:shadow-md transition-all"
+                >
+                  <div className="relative aspect-[16/10] w-full overflow-hidden rounded-xl bg-slate-100 mb-2.5">
+                    <img
+                      src={resolveImageUrl(otherStore.imageUrl, otherStore.name, otherStore.category)}
+                      alt={otherStore.name}
+                      className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    />
+                    <div className="absolute top-2 left-2 rounded-full bg-white/90 backdrop-blur-xs px-2 py-0.5 text-[9px] font-black text-slate-900 border border-amber-200">
+                      ★ {otherStore.rating.toFixed(1)}
+                    </div>
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-xs text-slate-900 truncate group-hover:text-[#981495] transition-colors">
+                      {otherStore.name}
+                    </h4>
+                    <p className="text-[10px] font-medium text-slate-500 truncate mt-0.5">
+                      {otherStore.tagline}
+                    </p>
+                    <div className="mt-2 flex items-center justify-between text-[10px] font-extrabold text-slate-700">
+                      <span>🚀 {otherStore.etaMin} mins</span>
+                      <span className="text-[#981495]">View Shop &rarr;</span>
+                    </div>
+                  </div>
+                </Link>
+              ))}
+          </div>
+        </div>
         )}
 
-        {deliveryLoc && (
-          <NearbySimilarShopsWidget
-            currentCategory={store.category}
-            currentStoreId={store.id}
-            searchQuery={query || sq}
-            title="Shops & Products Near Your Home"
-            subtitle={`Verified local merchants near your address with matching products in ${store.category}`}
-          />
-        )}
+        <NearbySimilarShopsWidget
+          currentCategory={store.category}
+          currentStoreId={store.id}
+          searchQuery={query || sq}
+          title="Shops & Products Near Your Home"
+          subtitle={`Verified local merchants near your address with matching products in ${store.category}`}
+        />
 
         <ComplementaryShopsWidget
           currentCategory={store.category}
           userLat={deliveryLoc?.lat}
           userLng={deliveryLoc?.lng}
           shops={[
-            {
-              id: "store-2",
-              business_name: "Nilgiris Supermarket",
-              business_type: "Groceries & Gourmet",
-              rating: 4.6,
-              lat: store.lat ? store.lat + 0.008 : null,
-              lng: store.lng ? store.lng + 0.005 : null,
-              matching_reason: "Popular for daily organic groceries nearby",
-            },
-            {
-              id: "store-3",
-              business_name: "Local Electronics Hub",
-              business_type: "Electronics & Accessories",
-              rating: 4.8,
-              lat: store.lat ? store.lat - 0.005 : null,
-              lng: store.lng ? store.lng - 0.008 : null,
-              matching_reason: "High customer satisfaction for accessories",
-            },
+            { id: "store-2", business_name: "Nilgiris Supermarket", business_type: "Groceries & Gourmet", rating: 4.6, lat: store.lat ? store.lat + 0.008 : null, lng: store.lng ? store.lng + 0.005 : null, matching_reason: "Popular for daily organic groceries nearby" },
+            { id: "store-3", business_name: "Local Electronics Hub", business_type: "Electronics & Accessories", rating: 4.8, lat: store.lat ? store.lat - 0.005 : null, lng: store.lng ? store.lng - 0.008 : null, matching_reason: "High customer satisfaction for accessories" }
           ]}
         />
       </div>
 
+      {/* Interactive Store Info Modal */}
+      {showStoreInfo && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="relative w-full max-w-lg overflow-hidden rounded-3xl bg-white p-6 shadow-2xl border-2 border-amber-300">
+            <button
+              type="button"
+              onClick={() => setShowStoreInfo(false)}
+              className="absolute top-4 right-4 h-9 w-9 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 hover:bg-slate-200 hover:text-slate-900 transition-colors cursor-pointer"
+            >
+              <X className="h-5 w-5" />
+            </button>
+
+            <div className="flex items-center gap-3.5 mb-5">
+              <div className="h-14 w-14 rounded-2xl bg-[#310938] text-[#f5d061] flex items-center justify-center font-bold text-2xl shrink-0 shadow-md border border-amber-300/40">
+                🏪
+              </div>
+              <div>
+                <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                  <CheckCircle2 className="h-3 w-3 text-emerald-600" /> FSSAI & Govt Verified Store
+                </span>
+                <h3 className="text-xl font-extrabold text-slate-900 leading-tight mt-0.5">{store.name}</h3>
+                <p className="text-xs font-medium text-slate-500">{store.category} · {store.tagline || "Verified Local Merchant"}</p>
+              </div>
+            </div>
+
+            <div className="space-y-3.5 divide-y divide-slate-100 text-xs">
+              <div className="pt-2 flex items-start gap-3">
+                <MapPin className="h-4 w-4 text-[#981495] shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-bold text-slate-900">Physical Store Address</p>
+                  <p className="text-slate-600 font-medium">{store.address}</p>
+                </div>
+              </div>
+
+              <div className="pt-3 flex items-start gap-3">
+                <Clock className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-bold text-slate-900">Operating Hours & Live Status</p>
+                  <p className="text-emerald-700 font-bold">Open Today · 9:00 AM – 9:30 PM</p>
+                  <p className="text-slate-500 font-medium">Orders placed now dispatch within 10 minutes</p>
+                </div>
+              </div>
+
+              <div className="pt-3 flex items-start gap-3">
+                <Truck className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-bold text-slate-900">Delivery & Returns Policy</p>
+                  <p className="text-slate-600 font-medium">🚀 Instant delivery in ~{computedEtaMin} mins ({computedDistanceKm} km)</p>
+                  <p className="text-slate-600 font-medium">🔄 Doorstep return & replacement support within 2 hours</p>
+                </div>
+              </div>
+
+              <div className="pt-3 flex items-start gap-3">
+                <ShieldCheck className="h-4 w-4 text-[#981495] shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-bold text-slate-900">Merchant Verification & License</p>
+                  <p className="text-slate-600 font-mono text-[11px]">Lic. No: 10824001009122</p>
+                  <p className="text-slate-500 font-medium">Verified local shoreline partner merchant</p>
+                </div>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setShowStoreInfo(false)}
+              className="mt-6 w-full rounded-2xl bg-[#981495] hover:bg-purple-800 text-white font-bold py-3 text-sm shadow-md transition-all cursor-pointer"
+            >
+              Got it, back to store
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Sticky Cart Footer Bar when items are present */}
       {totals.itemCount > 0 && (
-        <div className="fixed inset-x-0 bottom-0 z-[60] border-t-2 border-[#f0abfc]/80 bg-[#981495] text-white shadow-[0_-8px_30px_rgba(0,0,0,0.35)] backdrop-blur-md">
+        <div className="fixed inset-x-0 bottom-0 z-[60] border-t-2 border-amber-300/80 bg-[#981495] text-white shadow-[0_-8px_30px_rgba(0,0,0,0.35)] backdrop-blur-md">
           <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-5 py-3.5 md:px-6">
             <div className="text-sm">
-              <p className="font-mono text-[10px] uppercase tracking-widest text-[#f0abfc] font-bold">
-                {totals.itemCount} item{totals.itemCount > 1 ? "s" : ""} · from{" "}
-                {cart.storeName || store.name}
+              <p className="font-mono text-[10px] uppercase tracking-widest text-purple-200 font-bold">
+                {totals.itemCount} item{totals.itemCount > 1 ? "s" : ""} · from {cart.storeName || store.name}
               </p>
-              <p className="font-display text-xl font-black text-amber-300">
-                ₹{totals.subtotal.toLocaleString("en-IN")}
-              </p>
+              <p className="font-display text-xl font-black text-amber-300">₹{totals.subtotal.toLocaleString("en-IN")}</p>
             </div>
             <button
               type="button"
