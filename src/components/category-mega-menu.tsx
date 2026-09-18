@@ -3,6 +3,7 @@ import { useState, type ReactNode } from "react";
 import { ChevronDown, ChevronRight, Menu, PackageSearch, X, Tag, Headphones } from "lucide-react";
 import { deliveryCategories } from "@/lib/mock-data";
 import { scrollToShops } from "@/lib/scroll-utils";
+import { LOCALSHORE_MENU_GROUPS } from "@/lib/localshore-category-menu";
 
 type CategoryPromo = {
   headline: string;
@@ -94,7 +95,7 @@ const categoryPromos: Record<string, CategoryPromo> = {
   },
 };
 
-export const menuGroups = [
+const legacyMenuGroups = [
   {
     id: "fresh",
     label: "Fresh",
@@ -271,6 +272,8 @@ export const menuGroups = [
   },
 ];
 
+export const menuGroups = LOCALSHORE_MENU_GROUPS;
+
 const imageFor = (categoryId: string) =>
   deliveryCategories.find((category) => category.id === categoryId)?.imageUrl ??
   deliveryCategories[0]?.imageUrl;
@@ -287,7 +290,7 @@ export function CategoryMegaMenu() {
   return (
     <>
       <div
-        className="relative z-40 w-full border-b border-purple-100/90 bg-white/95 text-slate-800 shadow-2xs backdrop-blur-md"
+        className="relative z-40 hidden w-full border-b border-[var(--sand)]/90 bg-white/95 text-slate-800 shadow-2xs backdrop-blur-md md:block"
         onMouseLeave={() => setActiveGroup(null)}
       >
         <div className="flex h-11 w-full items-center gap-1.5 px-4 md:px-6 lg:px-10 xl:px-12">
@@ -296,7 +299,7 @@ export function CategoryMegaMenu() {
             type="button"
             onClick={() => setDrawerOpen(true)}
             aria-expanded={drawerOpen}
-            className="inline-flex shrink-0 items-center gap-2 rounded-full bg-purple-900 text-white hover:bg-purple-950 border border-purple-900 px-3.5 py-1.5 text-xs font-bold transition-all shadow-xs cursor-pointer"
+            className="inline-flex shrink-0 items-center gap-2 rounded-full bg-[#981495] text-white hover:bg-[#700b6e] border border-[#981495] px-3.5 py-1.5 text-xs font-bold transition-all shadow-xs cursor-pointer"
           >
             <Menu className="h-4 w-4 text-[#F3D053]" />
             <span>All Categories</span>
@@ -326,15 +329,15 @@ export function CategoryMegaMenu() {
                     }}
                     className={`inline-flex items-center gap-1 rounded-md px-2.5 py-1.5 text-xs font-semibold whitespace-nowrap transition-all ${
                       isOpen
-                        ? "bg-purple-50 text-purple-900 font-bold"
-                        : "text-slate-700 hover:bg-purple-50/70 hover:text-purple-900"
+                        ? "bg-[var(--sand)] text-[#981495] font-bold"
+                        : "text-slate-700 hover:bg-[var(--sand)]/70 hover:text-[#981495]"
                     }`}
                   >
                     {group.isFavorite && <span className="text-amber-500 mr-0.5">⭐</span>}
                     <span>{group.label}</span>
                     <ChevronDown
                       className={`h-3 w-3 opacity-60 transition-transform duration-200 ${
-                        isOpen ? "rotate-180 opacity-100 text-purple-700" : ""
+                        isOpen ? "rotate-180 opacity-100 text-[#981495]" : ""
                       }`}
                     />
                   </Link>
@@ -344,31 +347,30 @@ export function CategoryMegaMenu() {
           </nav>
 
           {/* Right-aligned marketplace links */}
-          <div className="hidden lg:flex items-center gap-4 text-xs text-slate-600 shrink-0 ml-2">
-            <div className="h-4 w-px bg-slate-200 shrink-0" />
+          <div className="hidden lg:flex h-8 shrink-0 items-center gap-3 rounded-l-xl border-l-2 border-[#981495]/20 bg-[#faf7ff] pl-4 pr-1 text-xs text-slate-600 shadow-[inset_8px_0_18px_-18px_rgba(152,20,149,0.35)]">
             <Link
               to="/best-shops"
-              className="inline-flex items-center gap-1.5 hover:text-purple-900 font-semibold text-slate-700 transition"
+              className="inline-flex items-center gap-1.5 hover:text-[#981495] font-semibold text-slate-700 transition"
             >
               <span>🏆</span> Best Shops
             </Link>
             <Link
               to="/brands"
-              className="inline-flex items-center gap-1.5 hover:text-purple-900 font-semibold text-slate-700 transition"
+              className="inline-flex items-center gap-1.5 hover:text-[#981495] font-semibold text-slate-700 transition"
             >
               <span>🛍️</span> Brands
             </Link>
             <Link
               to="/explore"
-              className="inline-flex items-center gap-1.5 hover:text-purple-900 font-semibold text-slate-700 transition"
+              className="inline-flex items-center gap-1.5 hover:text-[#981495] font-semibold text-slate-700 transition"
             >
               <span>✈️</span> Explore
             </Link>
             <Link
               to="/customer-care"
-              className="inline-flex items-center gap-1.5 hover:text-purple-900 font-medium transition"
+              className="inline-flex items-center gap-1.5 hover:text-[#981495] font-medium transition"
             >
-              <Headphones className="h-3.5 w-3.5 text-purple-700" />
+              <Headphones className="h-3.5 w-3.5 text-[#981495]" />
               Customer Care
             </Link>
           </div>
@@ -377,27 +379,27 @@ export function CategoryMegaMenu() {
         {/* Mega Menu Popover Dropdown Overlay */}
         {activeGroup &&
           (() => {
-            const groupIndex = menuGroups.findIndex((g) => g.id === activeGroup);
-            const group = menuGroups[groupIndex] ?? menuGroups[0];
-            const promo = categoryPromos[group.id] ?? categoryPromos.fresh!;
-            const isRightSide = groupIndex >= 5;
+            const group = menuGroups.find((item) => item.id === activeGroup) ?? menuGroups[0];
+            const promo =
+              categoryPromos[group.id] ??
+              ({
+                headline: `Explore ${group.label}`,
+                subtitle: `Discover trusted local shops, products and services in ${group.label}.`,
+                ctaText: `Explore ${group.label}`,
+                badge: "LOCAL SHOPS",
+                imageUrl: imageFor(group.categoryId),
+              } satisfies CategoryPromo);
 
             return (
               <div
-                className={`absolute top-full z-50 pt-2 transition-all duration-200 ${
-                  isRightSide ? "right-4 md:right-12 lg:right-24" : "left-4 md:left-12 lg:left-24"
-                }`}
+                className="absolute left-1/2 top-full z-50 w-full -translate-x-1/2 pt-2 transition-all duration-200"
                 onMouseEnter={() => setActiveGroup(group.id)}
                 onMouseLeave={() => setActiveGroup(null)}
               >
-                <div className="relative w-[min(760px,calc(100vw-2rem))]">
-                  <div
-                    className={`absolute -top-1.5 h-3.5 w-3.5 rotate-45 border-l border-t border-slate-200 bg-amber-50 z-20 shadow-xs ${
-                      isRightSide ? "right-12" : "left-12"
-                    }`}
-                  />
+                <div className="relative mx-auto w-[min(1100px,calc(100vw-1rem))]">
+                  <div className="absolute left-1/2 top-[-5px] z-20 h-3.5 w-3.5 -translate-x-1/2 rotate-45 border-l border-t border-slate-200 bg-white shadow-xs" />
 
-                  <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white text-slate-900 shadow-[0_20px_50px_-10px_rgba(0,0,0,0.25)]">
+                  <div className="max-h-[min(70vh,620px)] overflow-y-auto overflow-x-hidden rounded-2xl border border-[#eadff0] bg-white text-slate-900 shadow-[0_20px_50px_-10px_rgba(30,10,50,0.25)]">
                     <div className="grid grid-cols-1 sm:grid-cols-[1fr_1.2fr]">
                       <div className="flex flex-col justify-between bg-gradient-to-br from-amber-50/90 via-orange-50/40 to-amber-100/60 p-5 border-r border-slate-100">
                         <div>
@@ -447,7 +449,7 @@ export function CategoryMegaMenu() {
                               to="/search"
                               search={{ category: group.categoryId }}
                               onClick={() => setActiveGroup(null)}
-                              className="text-xs font-bold text-purple-700 hover:underline"
+                              className="text-xs font-bold text-[#981495] hover:underline"
                             >
                               View all &rarr;
                             </Link>
@@ -460,7 +462,7 @@ export function CategoryMegaMenu() {
                                   to="/search"
                                   search={{ category: group.categoryId, q: column.heading }}
                                   onClick={() => setActiveGroup(null)}
-                                  className="text-xs font-bold text-slate-900 hover:text-purple-700 hover:underline"
+                                  className="text-xs font-bold text-slate-900 hover:text-[#981495] hover:underline"
                                 >
                                   {column.heading}
                                 </Link>
@@ -471,7 +473,7 @@ export function CategoryMegaMenu() {
                                         to="/search"
                                         search={{ category: group.categoryId, q: item }}
                                         onClick={() => setActiveGroup(null)}
-                                        className="flex items-center gap-1 text-xs text-slate-600 hover:text-purple-700 hover:underline"
+                                        className="flex items-center gap-1 text-xs text-slate-600 hover:text-[#981495] hover:underline"
                                       >
                                         <ChevronRight className="h-3 w-3 shrink-0 text-slate-400" />
                                         {item}
@@ -508,14 +510,14 @@ export function CategoryMegaMenu() {
             className="absolute inset-0 cursor-default bg-black/60 backdrop-blur-xs"
           />
           <aside className="relative flex h-full w-[min(420px,90vw)] flex-col overflow-y-auto bg-background text-foreground shadow-2xl">
-            <div className="flex items-center justify-between bg-gradient-to-r from-purple-900 via-indigo-900 to-purple-950 px-5 py-5 text-white">
+            <div className="flex items-center justify-between bg-gradient-to-r from-[#981495] via-[#700b6e] to-[#700b6e] px-5 py-5 text-white">
               <div className="flex items-center gap-2.5">
                 <Menu className="h-5 w-5 text-[#F3D053]" />
                 <div>
                   <h3 className="font-display text-lg font-bold text-white">
                     All 31 Shop Categories
                   </h3>
-                  <p className="text-[11px] text-purple-200">
+                  <p className="text-[11px] text-[#f0abfc]">
                     Complete neighborhood marketplace directory
                   </p>
                 </div>
@@ -790,27 +792,28 @@ export function MobileCategoryStrip() {
 
   return (
     <>
-      <div className="sticky top-[53px] z-40 border-b border-purple-100/90 bg-white/95 text-slate-800 shadow-2xs backdrop-blur-md md:hidden">
+      <div className="sticky top-[53px] z-40 border-b border-[var(--sand)]/90 bg-white/95 text-slate-800 shadow-2xs backdrop-blur-md md:hidden">
         <div className="flex items-center gap-1.5 px-3 py-2 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {/* 1. All Categories Button (Amazon style) */}
           <button
             type="button"
             onClick={() => setDrawerOpen(true)}
-            className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-gradient-to-r from-purple-900 to-indigo-900 text-white border border-purple-950 px-3 py-1 text-xs font-black shadow-xs active:scale-95 transition-all cursor-pointer"
+            className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-gradient-to-r from-[#981495] to-[#700b6e] text-white border border-[#700b6e] px-3 py-1 text-xs font-black shadow-xs active:scale-95 transition-all cursor-pointer"
           >
             <Menu className="h-3.5 w-3.5 text-[#F3D053]" />
-            <span>All</span>
+            <span>All Categories</span>
           </button>
 
           <div className="h-4 w-px bg-slate-200 shrink-0 mx-0.5" />
 
           {/* Quick Amazon-Style Category Pills */}
           {[
-            { label: "🔥 Deals", searchParams: { q: "deals" } },
-            { label: "🥦 Fresh", searchParams: { category: "fruits_veg" } },
-            { label: "🥩 Meat & Fish", searchParams: { category: "meat_fish" } },
-            { label: "🥐 Bakery", searchParams: { category: "bakery" } },
-            { label: "👗 Fashion", searchParams: { category: "fashion" } },
+            { label: "Fresh Produce", searchParams: { category: "fruits_veg" } },
+            { label: "Meat & Fish", searchParams: { category: "meat_fish" } },
+            { label: "Bakery & Sweets", searchParams: { category: "bakery" } },
+            { label: "Kirana & Grocery", searchParams: { category: "grocery" } },
+            { label: "Pharmacy & Care", searchParams: { category: "pharmacy" } },
+            { label: "Fashion & Apparel", searchParams: { category: "fashion" } },
             { label: "💄 Beauty", searchParams: { category: "beauty" } },
             { label: "📱 Electronics", searchParams: { category: "electronics" } },
             { label: "🍳 Home & Kitchen", searchParams: { category: "home_kitchen" } },
@@ -822,7 +825,7 @@ export function MobileCategoryStrip() {
               key={idx}
               to={(item.to as any) || "/search"}
               search={item.searchParams as any}
-              className="inline-flex shrink-0 items-center gap-1 rounded-full bg-slate-100 hover:bg-purple-50 text-slate-700 hover:text-purple-900 border border-slate-200/80 px-3 py-1 text-xs font-extrabold whitespace-nowrap active:scale-95 transition-all"
+              className="inline-flex shrink-0 items-center gap-1 rounded-full bg-slate-100 hover:bg-[var(--sand)] text-slate-700 hover:text-[#981495] border border-slate-200/80 px-3 py-1 text-xs font-extrabold whitespace-nowrap active:scale-95 transition-all"
             >
               <span>{item.label}</span>
             </Link>
@@ -840,14 +843,14 @@ export function MobileCategoryStrip() {
             className="absolute inset-0 cursor-default bg-black/60 backdrop-blur-xs"
           />
           <aside className="relative flex h-full w-[min(420px,90vw)] flex-col overflow-y-auto bg-background text-foreground shadow-2xl">
-            <div className="flex items-center justify-between bg-gradient-to-r from-purple-900 via-indigo-900 to-purple-950 px-5 py-5 text-white">
+            <div className="flex items-center justify-between bg-gradient-to-r from-[#981495] via-[#700b6e] to-[#700b6e] px-5 py-5 text-white">
               <div className="flex items-center gap-2.5">
                 <Menu className="h-5 w-5 text-[#F3D053]" />
                 <div>
                   <h3 className="font-display text-lg font-bold text-white">
                     All 31 Shop Categories
                   </h3>
-                  <p className="text-[11px] text-purple-200">
+                  <p className="text-[11px] text-[#f0abfc]">
                     Complete neighborhood marketplace directory
                   </p>
                 </div>

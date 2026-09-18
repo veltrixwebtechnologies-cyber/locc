@@ -38,7 +38,7 @@ const tierIcon = (tier: string) => {
 
 const txColor = (type: RewardTransaction["type"]) => {
   if (type === "earned" || type === "bonus" || type === "referral") return "text-emerald-600";
-  if (type === "redeemed") return "text-purple-700";
+  if (type === "redeemed") return "text-[#981495]";
   return "text-slate-400";
 };
 
@@ -85,20 +85,20 @@ function RewardsPage() {
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4 }}
-          className="mt-5 overflow-hidden rounded-3xl bg-gradient-to-br from-purple-900 via-purple-800 to-fuchsia-900 p-6 text-white shadow-xl sm:p-8"
+          className="mt-5 overflow-hidden rounded-3xl bg-gradient-to-br from-[#981495] via-[#981495] to-fuchsia-900 p-6 text-white shadow-xl sm:p-8"
         >
           <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
             <div>
               <div className="flex items-center gap-2">
                 <Sparkles className="h-5 w-5 text-amber-300" />
-                <span className="text-xs font-bold uppercase tracking-widest text-purple-200">
+                <span className="text-xs font-bold uppercase tracking-widest text-[#f0abfc]">
                   LocalShore Rewards
                 </span>
               </div>
               <p className="mt-3 font-display text-4xl font-extrabold sm:text-5xl">
                 🪙 {s.currentPoints.toLocaleString()}
               </p>
-              <p className="mt-1 text-sm font-semibold text-purple-200">Shore Points</p>
+              <p className="mt-1 text-sm font-semibold text-[#f0abfc]">Shore Points</p>
 
               <div className="mt-4 flex flex-wrap gap-3">
                 <span className="rounded-full bg-white/15 px-3 py-1 text-xs font-bold">
@@ -111,7 +111,7 @@ function RewardsPage() {
             </div>
 
             <div className="min-w-[200px] rounded-2xl bg-white/10 p-4 backdrop-blur-sm sm:text-right">
-              <p className="text-xs font-bold uppercase text-purple-200">Next: {nextTier.name}</p>
+              <p className="text-xs font-bold uppercase text-[#f0abfc]">Next: {nextTier.name}</p>
               <p className="mt-1 text-sm font-bold">{s.pointsToNextTier} points away</p>
               <div className="mt-3 h-2 overflow-hidden rounded-full bg-white/20">
                 <m.div
@@ -137,7 +137,7 @@ function RewardsPage() {
               label: "Current Points",
               value: s.currentPoints.toLocaleString(),
               icon: Sparkles,
-              color: "text-purple-700 bg-purple-50",
+              color: "text-[#981495] bg-[var(--sand)]",
             },
             {
               label: "This Month",
@@ -186,7 +186,7 @@ function RewardsPage() {
                   key={tier.id}
                   className={`rounded-2xl border p-4 transition ${
                     isActive
-                      ? "border-purple-300 bg-purple-50 ring-2 ring-purple-200"
+                      ? "border-[#f0abfc] bg-[var(--sand)] ring-2 ring-[#f0abfc]"
                       : "border-slate-200 bg-white"
                   }`}
                 >
@@ -194,7 +194,7 @@ function RewardsPage() {
                     <span className="text-lg">{tierIcon(tier.id)}</span>
                     <span className="text-sm font-bold text-slate-900">{tier.name}</span>
                     {isActive && (
-                      <span className="rounded-full bg-purple-700 px-2 py-0.5 text-[9px] font-bold text-white">
+                      <span className="rounded-full bg-[#981495] px-2 py-0.5 text-[9px] font-bold text-white">
                         You
                       </span>
                     )}
@@ -224,7 +224,7 @@ function RewardsPage() {
               {visibleActions.map((action) => (
                 <div
                   key={action.id}
-                  className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white p-3.5 transition hover:border-purple-200 hover:shadow-xs"
+                  className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white p-3.5 transition hover:border-[#f0abfc] hover:shadow-xs"
                 >
                   <span className="text-xl">{action.icon}</span>
                   <div className="flex-1 min-w-0">
@@ -239,7 +239,7 @@ function RewardsPage() {
               {!showAllActions && REWARD_ACTIONS.length > 4 && (
                 <button
                   onClick={() => setShowAllActions(true)}
-                  className="w-full rounded-xl bg-slate-50 py-2.5 text-xs font-bold text-purple-700 hover:bg-purple-50 transition"
+                  className="w-full rounded-xl bg-slate-50 py-2.5 text-xs font-bold text-[#981495] hover:bg-[var(--sand)] transition"
                 >
                   Show all {REWARD_ACTIONS.length} ways to earn →
                 </button>
@@ -255,7 +255,7 @@ function RewardsPage() {
               {REDEEM_OPTIONS.map((opt) => (
                 <div
                   key={opt.id}
-                  className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white p-3.5 transition hover:border-purple-200 hover:shadow-xs"
+                  className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white p-3.5 transition hover:border-[#f0abfc] hover:shadow-xs"
                 >
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-bold text-slate-900">{opt.title}</p>
@@ -263,7 +263,7 @@ function RewardsPage() {
                   </div>
                   <button
                     disabled={s.currentPoints < opt.pointsCost}
-                    className="shrink-0 rounded-xl bg-purple-700 px-3 py-2 text-xs font-bold text-white shadow-xs transition hover:bg-purple-800 disabled:opacity-40 disabled:cursor-not-allowed"
+                    className="shrink-0 rounded-xl bg-[#981495] px-3 py-2 text-xs font-bold text-white shadow-xs transition hover:bg-[#981495] disabled:opacity-40 disabled:cursor-not-allowed"
                   >
                     {opt.pointsCost} pts
                   </button>
@@ -285,8 +285,8 @@ function RewardsPage() {
                 onClick={() => setHistoryFilter(f)}
                 className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-bold capitalize transition ${
                   historyFilter === f
-                    ? "bg-purple-700 text-white"
-                    : "bg-slate-100 text-slate-600 hover:bg-purple-50"
+                    ? "bg-[#981495] text-white"
+                    : "bg-slate-100 text-slate-600 hover:bg-[var(--sand)]"
                 }`}
               >
                 {f}

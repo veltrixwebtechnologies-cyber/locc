@@ -1,11 +1,10 @@
-import { useRef, useEffect, useCallback, useState } from "react";
+import { useState } from "react";
 import { Link, useRouterState } from "@tanstack/react-router";
 import {
   Grid,
   Apple,
   Drumstick,
   Cake,
-  Candy,
   Utensils,
   Coffee,
   Pill,
@@ -30,17 +29,17 @@ import {
   Wrench,
   Briefcase,
   Star,
-  ChevronLeft,
   ChevronRight,
   Store,
   type LucideIcon,
 } from "lucide-react";
-import { m, LayoutGroup } from "motion/react";
+import { LayoutGroup } from "motion/react";
 
 export type LiquidCategory = {
   id: string;
   label: string;
   icon: LucideIcon;
+  imageUrl: string;
   searchCategory?: string;
   to?: string;
   badge?: string;
@@ -51,179 +50,238 @@ export const LIQUID_CATEGORIES: LiquidCategory[] = [
     id: "all",
     label: "All Categories",
     icon: Grid,
+    imageUrl:
+      "https://images.unsplash.com/photo-1534723452862-4c874018d66d?auto=format&fit=crop&w=240&q=80",
   },
   {
     id: "fresh",
     label: "Fresh Produce",
     icon: Apple,
+    imageUrl:
+      "https://images.unsplash.com/photo-1610832958506-aa56368176cf?auto=format&fit=crop&w=240&q=80",
     searchCategory: "fruits_veg",
   },
   {
     id: "meat_fish",
     label: "Meat & Fish",
     icon: Drumstick,
+    imageUrl:
+      "https://images.unsplash.com/photo-1607623814075-e51df1bdc82f?auto=format&fit=crop&w=240&q=80",
     searchCategory: "meat_fish",
   },
   {
     id: "bakery_sweets",
     label: "Bakery & Sweets",
     icon: Cake,
+    imageUrl:
+      "https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=240&q=80",
     searchCategory: "bakery",
   },
   {
     id: "grocery",
     label: "Kirana & Grocery",
     icon: Store,
+    imageUrl:
+      "https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=240&q=80",
     searchCategory: "grocery",
   },
   {
     id: "pharmacy",
     label: "Pharmacy & Care",
     icon: Pill,
+    imageUrl:
+      "https://images.unsplash.com/photo-1587854692152-cbe660dbde88?auto=format&fit=crop&w=240&q=80",
     searchCategory: "pharmacy",
   },
   {
     id: "restaurants",
     label: "Restaurants & Dining",
     icon: Utensils,
+    imageUrl:
+      "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=240&q=80",
     searchCategory: "restaurants",
   },
   {
     id: "cafes",
     label: "Cafés & Tea",
     icon: Coffee,
+    imageUrl:
+      "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?auto=format&fit=crop&w=240&q=80",
     searchCategory: "cafes",
   },
   {
     id: "fashion",
     label: "Fashion & Apparel",
     icon: Shirt,
+    imageUrl:
+      "https://images.unsplash.com/photo-1445205170230-053b83016050?auto=format&fit=crop&w=240&q=80",
     searchCategory: "fashion",
   },
   {
     id: "boutiques",
     label: "Boutiques",
     icon: Sparkles,
+    imageUrl:
+      "https://images.unsplash.com/photo-1558769132-cb1aea458c5e?auto=format&fit=crop&w=240&q=80",
     searchCategory: "boutiques",
   },
   {
     id: "footwear",
     label: "Footwear",
     icon: Footprints,
+    imageUrl:
+      "https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=240&q=80",
     searchCategory: "footwear",
   },
   {
     id: "jewellery",
     label: "Jewellery & Gifts",
     icon: Gem,
+    imageUrl:
+      "https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?auto=format&fit=crop&w=240&q=80",
     searchCategory: "jewellery",
   },
   {
     id: "electronics",
     label: "Electronics",
     icon: Tv,
+    imageUrl:
+      "https://images.unsplash.com/photo-1496181133206-80ce9b88a853?auto=format&fit=crop&w=240&q=80",
     searchCategory: "electronics",
   },
   {
     id: "mobile",
     label: "Mobile & Accessories",
     icon: Smartphone,
+    imageUrl:
+      "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?auto=format&fit=crop&w=240&q=80",
     searchCategory: "mobile",
   },
   {
     id: "beauty",
     label: "Beauty & Personal Care",
     icon: Heart,
+    imageUrl:
+      "https://images.unsplash.com/photo-1596462502278-27bfdc403348?auto=format&fit=crop&w=240&q=80",
     searchCategory: "beauty",
   },
   {
     id: "home_kitchen",
     label: "Home & Kitchen",
     icon: CookingPot,
+    imageUrl:
+      "https://images.unsplash.com/photo-1556911220-e15b29be8c8f?auto=format&fit=crop&w=240&q=80",
     searchCategory: "home_kitchen",
   },
   {
     id: "furniture",
     label: "Furniture & Decor",
     icon: Armchair,
+    imageUrl:
+      "https://images.unsplash.com/photo-1513519245088-0e12902e5a38?auto=format&fit=crop&w=240&q=80",
     searchCategory: "furniture",
   },
   {
     id: "hardware",
     label: "Home & Hardware",
     icon: Hammer,
+    imageUrl:
+      "https://images.unsplash.com/photo-1504148455328-c376907d081c?auto=format&fit=crop&w=240&q=80",
     searchCategory: "hardware",
   },
   {
     id: "books_stationery",
     label: "Books & Stationery",
     icon: BookOpen,
+    imageUrl:
+      "https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?auto=format&fit=crop&w=240&q=80",
     searchCategory: "books_stationery",
   },
   {
     id: "sports",
     label: "Sports & Fitness",
     icon: Dumbbell,
+    imageUrl:
+      "https://images.unsplash.com/photo-1517836357463-d25dfeac3438?auto=format&fit=crop&w=240&q=80",
     searchCategory: "sports",
   },
   {
     id: "kids_sports",
     label: "Toys & Baby Care",
     icon: Baby,
+    imageUrl:
+      "https://images.unsplash.com/photo-1596461404969-9ae70f2830c1?auto=format&fit=crop&w=240&q=80",
     searchCategory: "toys",
   },
   {
     id: "gifts",
     label: "Gift Shops",
     icon: Gift,
+    imageUrl:
+      "https://images.unsplash.com/photo-1512909006721-3d6018887383?auto=format&fit=crop&w=240&q=80",
     searchCategory: "gifts",
   },
   {
     id: "flowers",
     label: "Flower Shops",
     icon: Flower2,
+    imageUrl:
+      "https://images.unsplash.com/photo-1490750967868-88aa4486c946?auto=format&fit=crop&w=240&q=80",
     searchCategory: "flowers",
   },
   {
     id: "pet_shops",
     label: "Pet Care & Shops",
     icon: Dog,
+    imageUrl:
+      "https://images.unsplash.com/photo-1543466835-00a7907e9de1?auto=format&fit=crop&w=240&q=80",
     searchCategory: "pet_shops",
   },
   {
     id: "pooja",
     label: "Pooja & Divine",
     icon: Flame,
+    imageUrl:
+      "https://images.unsplash.com/photo-1604608672516-f1b9f2f8f7f8?auto=format&fit=crop&w=240&q=80",
     searchCategory: "pooja",
   },
   {
     id: "auto",
     label: "Auto & Bike Spares",
     icon: Bike,
+    imageUrl:
+      "https://images.unsplash.com/photo-1558981806-ec527fa84c39?auto=format&fit=crop&w=240&q=80",
     searchCategory: "auto",
   },
   {
     id: "repair",
     label: "Repair Shops",
     icon: Wrench,
+    imageUrl:
+      "https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&w=240&q=80",
     searchCategory: "repair",
   },
   {
     id: "local_services",
     label: "Local Services",
     icon: Briefcase,
+    imageUrl:
+      "https://images.unsplash.com/photo-1450101499163-c8848c66ca85?auto=format&fit=crop&w=240&q=80",
     searchCategory: "local_services",
   },
   {
     id: "local_favorites",
     label: "Local Favorites",
     icon: Star,
+    imageUrl:
+      "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=240&q=80",
     to: "/best-shops",
     badge: "TOP",
   },
 ];
 
-export function LiquidGlassCategorySelector() {
+export function LiquidGlassCategorySelector({ variant = "image" }: { variant?: "image" | "pill" }) {
+  const isPillLayout = variant === "pill";
   const routerLocation = useRouterState({
     select: (s) => ({
       pathname: s.location.pathname,
@@ -231,18 +289,7 @@ export function LiquidGlassCategorySelector() {
     }),
   });
 
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const itemRefs = useRef<Record<string, HTMLAnchorElement | null>>({});
-
-  const [canScrollLeft, setCanScrollLeft] = useState(false);
-  const [canScrollRight, setCanScrollRight] = useState(true);
-
-  // Non-rendering Refs for Mouse Drag tracking
-  const isPointerDownRef = useRef(false);
-  const startXRef = useRef(0);
-  const scrollLeftRef = useRef(0);
-  const isDraggingRef = useRef(false);
-
+  const [showAll, setShowAll] = useState(false);
   // Determine active category based on URL
   const currentCategoryParam = routerLocation.search?.category;
   const currentPath = routerLocation.pathname;
@@ -259,108 +306,35 @@ export function LiquidGlassCategorySelector() {
     }
   }
 
-  const updateScrollState = useCallback(() => {
-    const el = scrollContainerRef.current;
-    if (!el) return;
-    setCanScrollLeft(el.scrollLeft > 6);
-    setCanScrollRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 6);
-  }, []);
-
-  const scrollByAmount = (amount: number) => {
-    const container = scrollContainerRef.current;
-    if (container) {
-      container.scrollBy({ left: amount, behavior: "smooth" });
-      setTimeout(updateScrollState, 300);
-    }
-  };
-
-  // Smoothly center active category horizontally without causing vertical page scroll
-  const centerActiveItem = useCallback(
-    (id: string, behavior: ScrollBehavior = "smooth") => {
-      const container = scrollContainerRef.current;
-      const activeEl = itemRefs.current[id];
-      if (container && activeEl) {
-        const scrollGoal =
-          activeEl.offsetLeft - container.clientWidth / 2 + activeEl.clientWidth / 2;
-        container.scrollTo({ left: Math.max(0, scrollGoal), behavior });
-        setTimeout(updateScrollState, 300);
-      }
-    },
-    [updateScrollState],
-  );
-
-  useEffect(() => {
-    centerActiveItem(activeId, "smooth");
-  }, [activeId, centerActiveItem]);
-
-  useEffect(() => {
-    updateScrollState();
-    window.addEventListener("resize", updateScrollState);
-    return () => window.removeEventListener("resize", updateScrollState);
-  }, [updateScrollState]);
-
-  // Pointer event handlers for desktop mouse dragging
-  const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (e.pointerType !== "mouse") return;
-    if (!scrollContainerRef.current) return;
-
-    isPointerDownRef.current = true;
-    isDraggingRef.current = false;
-    startXRef.current = e.clientX - scrollContainerRef.current.offsetLeft;
-    scrollLeftRef.current = scrollContainerRef.current.scrollLeft;
-  };
-
-  const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (!isPointerDownRef.current || e.pointerType !== "mouse" || !scrollContainerRef.current)
-      return;
-
-    const x = e.clientX - scrollContainerRef.current.offsetLeft;
-    const walk = (x - startXRef.current) * 1.4;
-
-    if (Math.abs(walk) > 8) {
-      isDraggingRef.current = true;
-    }
-    scrollContainerRef.current.scrollLeft = scrollLeftRef.current - walk;
-    updateScrollState();
-  };
-
-  const handlePointerUpOrLeave = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (e.pointerType !== "mouse") return;
-    isPointerDownRef.current = false;
-    setTimeout(() => {
-      isDraggingRef.current = false;
-    }, 80);
-  };
+  const visibleCategories = isPillLayout
+    ? showAll
+      ? LIQUID_CATEGORIES
+      : LIQUID_CATEGORIES.slice(0, 20)
+    : showAll
+      ? LIQUID_CATEGORIES.slice(1)
+      : LIQUID_CATEGORIES.slice(1, 13);
 
   return (
-    <div className="sticky top-[53px] md:top-[74px] z-40 my-1.5 px-2 sm:px-4 lg:px-6 transform-gpu">
-      {/* 
-        Single Floating Translucent Frosted Liquid-Glass Surface
-        High-Performance GPU Accelerated Glass for both Mobile & Desktop
-      */}
-      <div className="relative mx-auto w-full max-w-[calc(100vw-1rem)] sm:max-w-2xl md:max-w-4xl lg:max-w-6xl xl:max-w-7xl rounded-full bg-white/75 backdrop-blur-xl backdrop-saturate-[160%] border border-purple-200/60 shadow-[0_8px_32px_rgba(60,20,70,0.10),inset_0_1px_0_rgba(255,255,255,0.90)] p-1 sm:p-1.5 transition-all duration-200">
-        {/* Desktop Left Scroll Button */}
-        {canScrollLeft && (
-          <button
-            type="button"
-            onClick={() => scrollByAmount(-280)}
-            className="absolute left-2 top-1/2 -translate-y-1/2 z-20 hidden md:flex h-7 w-7 items-center justify-center rounded-full bg-purple-900/90 text-white shadow-md hover:bg-purple-950 transition-transform active:scale-95"
-            aria-label="Scroll categories left"
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </button>
-        )}
-
-        {/* Desktop Right Scroll Button */}
-        {canScrollRight && (
-          <button
-            type="button"
-            onClick={() => scrollByAmount(280)}
-            className="absolute right-2 top-1/2 -translate-y-1/2 z-20 hidden md:flex h-7 w-7 items-center justify-center rounded-full bg-purple-900/90 text-white shadow-md hover:bg-purple-950 transition-transform active:scale-95"
-            aria-label="Scroll categories right"
-          >
-            <ChevronRight className="h-4 w-4" />
-          </button>
+    <div
+      className={`${isPillLayout ? "sticky top-[53px] md:top-[74px] my-1.5" : "relative my-7"} z-40 px-3 transform-gpu sm:px-6 lg:px-8`}
+    >
+      <div
+        className={`relative mx-auto w-full ${isPillLayout ? "max-w-[calc(100vw-1rem)] rounded-full border border-[#f0abfc]/60 bg-white/75 p-1 shadow-[0_8px_32px_rgba(60,20,70,0.10)] backdrop-blur-xl sm:p-1.5" : "max-w-[1710px]"}`}
+      >
+        {!isPillLayout && (
+          <div className="mb-3 flex items-center justify-between px-1">
+            <h2 className="font-display text-xl font-black tracking-tight text-[#211735] sm:text-3xl">
+              Shop by category
+            </h2>
+            <button
+              type="button"
+              onClick={() => setShowAll((value) => !value)}
+              className="inline-flex items-center gap-1 text-xs font-bold text-[#981495] transition-colors hover:text-[#700b6e] sm:text-sm"
+            >
+              {showAll ? "Show less" : "View all"}
+              <ChevronRight className="h-4 w-4" />
+            </button>
+          </div>
         )}
 
         <LayoutGroup id="liquid-glass-category-bar">
@@ -368,22 +342,13 @@ export function LiquidGlassCategorySelector() {
             Swipeable Track with Edge Fade Mask & Native Touch/Mouse Drag Scrolling
           */}
           <div
-            ref={scrollContainerRef}
-            onScroll={updateScrollState}
-            onPointerDown={handlePointerDown}
-            onPointerMove={handlePointerMove}
-            onPointerUp={handlePointerUpOrLeave}
-            onPointerLeave={handlePointerUpOrLeave}
-            className="flex items-center gap-1.5 overflow-x-auto select-none py-0.5 px-3 md:px-7 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden touch-pan-x cursor-grab active:cursor-grabbing transform-gpu"
-            style={{
-              WebkitOverflowScrolling: "touch",
-              maskImage:
-                "linear-gradient(to right, transparent 0px, black 16px, black calc(100% - 16px), transparent 100%)",
-              WebkitMaskImage:
-                "linear-gradient(to right, transparent 0px, black 16px, black calc(100% - 16px), transparent 100%)",
-            }}
+            className={
+              isPillLayout
+                ? "flex items-center gap-1.5 overflow-x-auto select-none px-3 py-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:gap-2 md:px-7"
+                : "grid grid-cols-2 gap-3 select-none px-1 py-1 sm:grid-cols-3 sm:gap-4 lg:grid-cols-6"
+            }
           >
-            {LIQUID_CATEGORIES.map((cat) => {
+            {visibleCategories.map((cat) => {
               const isActive = activeId === cat.id;
               const Icon = cat.icon;
 
@@ -400,62 +365,51 @@ export function LiquidGlassCategorySelector() {
               return (
                 <Link
                   key={cat.id}
-                  ref={(el) => {
-                    itemRefs.current[cat.id] = el;
-                  }}
                   to={targetLink.to as any}
                   search={targetLink.search as any}
-                  onClick={(e) => {
-                    if (isDraggingRef.current) {
-                      e.preventDefault();
-                      e.stopPropagation();
-                    }
-                  }}
-                  className={`relative inline-flex shrink-0 items-center gap-1.5 sm:gap-2 rounded-full px-3 sm:px-3.5 py-1.5 text-xs font-semibold transition-all duration-150 outline-none touch-manipulation ${
+                  className={`group relative inline-flex ${isPillLayout ? "h-auto min-w-max flex-row rounded-full border-0 px-3 py-1.5 text-xs sm:px-3.5" : "h-[104px] w-full flex-col rounded-xl border px-2 py-2 text-[11px] sm:h-[156px] sm:rounded-[18px] sm:px-2.5"} items-center justify-center gap-1.5 text-center font-semibold transition-all duration-200 outline-none touch-manipulation ${
                     isActive
-                      ? "text-purple-950 font-extrabold z-10"
-                      : "text-slate-700 hover:text-purple-900 opacity-85 hover:opacity-100"
+                      ? isPillLayout
+                        ? "z-10 bg-[#981495]/15 text-[#700b6e] font-extrabold shadow-[0_2px_12px_rgba(76,16,116,0.18)]"
+                        : "z-10 border-[#d6af3d] bg-[#fbf2ff] text-[#700b6e] font-extrabold shadow-[0_4px_16px_rgba(214,175,61,0.25)]"
+                      : isPillLayout
+                        ? "text-slate-700 hover:text-[#981495]"
+                        : "border-transparent bg-white text-slate-700 hover:-translate-y-0.5 hover:border-[#d6af3d] hover:text-[#981495] hover:shadow-[0_4px_16px_rgba(214,175,61,0.16)]"
                   }`}
                 >
-                  {/* Active Category Translucent Purple Glass Highlight */}
-                  {isActive && (
-                    <m.span
-                      layoutId="liquidGlassActiveHighlight"
-                      className="absolute inset-0 rounded-full bg-purple-900/15 border border-purple-800/30 shadow-[0_2px_12px_rgba(76,16,116,0.18)] z-0"
-                      transition={{
-                        type: "spring",
-                        stiffness: 500,
-                        damping: 35,
-                        mass: 0.8,
-                      }}
-                    />
-                  )}
-
-                  {/* Category Icon & Label */}
-                  <span className="relative z-10 flex items-center gap-1.5 sm:gap-2 whitespace-nowrap">
-                    <Icon
-                      className={`h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0 transition-transform duration-150 ${
-                        isActive
-                          ? "text-purple-900 scale-110"
-                          : "text-purple-700/70 group-hover:scale-105"
-                      }`}
-                    />
-                    <span className="text-xs sm:text-[13px]">{cat.label}</span>
-                    {cat.badge && (
-                      <span
-                        className={`ml-0.5 rounded-full px-1.5 py-0.2 text-[9px] font-black uppercase tracking-wide ${
-                          isActive ? "bg-purple-900 text-white" : "bg-purple-100 text-purple-900"
-                        }`}
-                      >
-                        {cat.badge}
+                  {isPillLayout ? (
+                    <>
+                      <Icon className="relative z-10 h-4 w-4 shrink-0 text-[#981495]/70" />
+                      <span className="relative z-10 whitespace-nowrap">{cat.label}</span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="absolute inset-0 overflow-hidden rounded-[inherit] bg-[#f8f3fb] shadow-inner">
+                        <img
+                          src={cat.imageUrl}
+                          alt=""
+                          loading="lazy"
+                          decoding="async"
+                          className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                        />
+                        <span className="absolute inset-0 bg-gradient-to-b from-black/15 via-transparent to-black/20" />
                       </span>
-                    )}
-                  </span>
+                      <span className="absolute left-3 top-2.5 z-10 max-w-[86%] text-left text-sm font-bold leading-[1.05] text-white drop-shadow-md sm:left-4 sm:top-3 sm:text-xl">
+                        {cat.label}
+                      </span>
+                    </>
+                  )}
+                  {cat.badge && (
+                    <span className="absolute right-1 top-1 z-10 rounded-full bg-[#981495] px-1 text-[7px] font-black uppercase tracking-wide text-white">
+                      {cat.badge}
+                    </span>
+                  )}
                 </Link>
               );
             })}
           </div>
         </LayoutGroup>
+        {isPillLayout && null}
       </div>
     </div>
   );

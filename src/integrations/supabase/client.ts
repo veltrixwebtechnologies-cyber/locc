@@ -16,11 +16,15 @@ function createSupabaseFetch(supabaseKey: string): typeof fetch {
       new Headers(init.headers).forEach((value, key) => headers.set(key, value));
     }
 
-    headers.set("apikey", supabaseKey);
-    const authVal = headers.get("authorization") || headers.get("Authorization");
-    if (!authVal) {
-      headers.set("Authorization", `Bearer ${supabaseKey}`);
+    // Opaque keys (sb_publishable_...) are passed via apikey, not Bearer JWTs
+    if (
+      isNewSupabaseApiKey(supabaseKey) &&
+      headers.get("Authorization") === `Bearer ${supabaseKey}`
+    ) {
+      headers.delete("Authorization");
     }
+
+    headers.set("apikey", supabaseKey);
 
     try {
       return await fetch(input, { ...init, headers });

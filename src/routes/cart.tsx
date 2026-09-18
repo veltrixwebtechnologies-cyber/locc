@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { AppShell } from "@/components/app-shell";
 import { cartStore, useCart, cartTotals } from "@/lib/cart-store";
 import { QtyStepper } from "@/components/qty-stepper";
-import { getStore, APPROVED_STORE } from "@/lib/mock-data";
+import { getStore, APPROVED_STORE, productsByStore } from "@/lib/mock-data";
 import { useAuth } from "@/lib/auth-store";
 import { useDeliveryLocation } from "@/lib/location-store";
 import { isValidCoordinate, haversineDistanceKm } from "@/lib/geo";
@@ -18,7 +18,6 @@ import {
   ShieldCheck,
   ShoppingBag,
   ShoppingCart,
-  Sparkles,
   Star,
   Tag,
   TicketPercent,
@@ -27,19 +26,14 @@ import {
   Zap,
 } from "lucide-react";
 import { m, AnimatePresence } from "motion/react";
+import { CartRelatedProducts } from "@/components/related-products-section";
+import { ProductThumb } from "@/components/product-thumb";
+
+const cartCatalog = Object.values(productsByStore).flat();
 
 export const Route = createFileRoute("/cart")({
   component: CartPage,
 });
-
-// ─── Suggested add-ons (simulated from store catalog) ───────────────────────
-const SUGGESTIONS = [
-  { id: "s1", name: "Turmeric Powder", unit: "250 g", price: 45, emoji: "🌿" },
-  { id: "s2", name: "Red Chilli Powder", unit: "250 g", price: 55, emoji: "🌶️" },
-  { id: "s3", name: "Cumin Seeds", unit: "200 g", price: 60, emoji: "🌾" },
-  { id: "s4", name: "Mustard Seeds", unit: "200 g", price: 35, emoji: "⚫" },
-  { id: "s5", name: "Coriander Seeds", unit: "200 g", price: 40, emoji: "🟢" },
-];
 
 function CartPage() {
   useEffect(() => {
@@ -77,7 +71,9 @@ function CartPage() {
     isValidCoordinate(deliveryLoc.lat, deliveryLoc.lng)
       ? Math.max(
           0.1,
-          Math.round(haversineDistanceKm(store.lat, store.lng, deliveryLoc!.lat, deliveryLoc!.lng) * 10) / 10,
+          Math.round(
+            haversineDistanceKm(store.lat, store.lng, deliveryLoc!.lat, deliveryLoc!.lng) * 10,
+          ) / 10,
         )
       : (store?.distanceKm ?? 1.2);
 
@@ -111,42 +107,34 @@ function CartPage() {
   const effectiveDelivery = billBreakdown.deliveryFee;
   const total = billBreakdown.total;
 
-  // Filter out suggestions that are already in cart
-  const cartIds = new Set(cart.lines.map((l) => l.productId));
-  const visibleSuggestions = SUGGESTIONS.filter((s) => !cartIds.has(s.id));
-
   return (
     <AppShell>
-      {/* ── Purple gradient hero banner ─────────────────────────── */}
-      <div className="bg-gradient-to-br from-[#6b1fa0] via-[#8b1fa8] to-[#981495] px-5 py-8 md:px-8">
+      {/* ── Local basket summary ────────────────────────────────── */}
+      <div className="border-b border-primary/15 bg-gradient-to-r from-primary/[0.08] via-card to-primary/[0.03] px-5 py-7 md:px-8">
         <div className="mx-auto max-w-6xl">
           <div className="flex items-center gap-5">
-            {/* Basket illustration placeholder */}
             <div className="hidden shrink-0 sm:block">
-              <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-white/15 text-4xl backdrop-blur-sm">
+              <div className="flex h-16 w-16 items-center justify-center rounded-2xl border border-primary/15 bg-primary/10 text-3xl">
                 🛒
               </div>
             </div>
             <div className="flex-1">
-              <p className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-widest text-white/70">
-                <Sparkles className="h-3.5 w-3.5" />
-                Your local basket
-                <Sparkles className="h-3.5 w-3.5" />
+              <p className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-widest text-primary">
+                <ShoppingBag className="h-3.5 w-3.5" /> Your local basket
               </p>
-              <h1 className="mt-1 font-display text-2xl font-bold text-white md:text-3xl">
-                All good choices! 😊
+              <h1 className="mt-1 font-display text-2xl font-bold text-foreground md:text-3xl">
+                Review your basket
               </h1>
-              <p className="mt-1 text-sm text-white/75">
-                You're supporting local shops and getting the best from around you.
+              <p className="mt-1 text-sm text-muted-foreground">
+                Fresh picks from your local shop, ready for checkout.
               </p>
             </div>
-            {/* Basket total pill */}
             {cart.lines.length > 0 && (
-              <div className="shrink-0 rounded-2xl border border-white/25 bg-white/15 px-5 py-3 text-right backdrop-blur-sm">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-white/65">
+              <div className="shrink-0 rounded-xl border border-primary/20 bg-card px-4 py-2.5 text-right shadow-sm">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                   Basket Total
                 </p>
-                <p className="mt-0.5 font-mono text-2xl font-bold text-[#ffe566]">
+                <p className="mt-0.5 font-mono text-2xl font-bold text-primary">
                   ₹{totals.subtotal}
                 </p>
               </div>
@@ -199,9 +187,9 @@ function CartPage() {
             </Link>
           </m.div>
         ) : (
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-[1fr_340px] pb-44 md:pb-0">
+          <div className="grid min-w-0 grid-cols-1 items-start gap-6 md:grid-cols-[minmax(0,1fr)_300px] lg:grid-cols-[minmax(0,1fr)_340px] pb-44 md:pb-0">
             {/* ── LEFT COLUMN ─────────────────────────────────── */}
-            <div className="space-y-4">
+            <div className="min-w-0 space-y-4">
               {/* Store info card */}
               {store && (
                 <div className="rounded-2xl border border-border bg-card p-4 shadow-sm">
@@ -238,18 +226,22 @@ function CartPage() {
                       animate={{ opacity: 1, height: "auto" }}
                       exit={{ opacity: 0, height: 0 }}
                       transition={{ duration: 0.2 }}
-                      className={`flex items-center gap-3 px-4 py-4 ${idx > 0 ? "border-t border-border/60" : ""}`}
+                      className={`grid grid-cols-[56px_minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 px-3 py-3 sm:flex sm:gap-3 sm:px-4 sm:py-4 ${idx > 0 ? "border-t border-border/60" : ""}`}
                     >
                       {/* Product thumbnail */}
                       <div className="h-14 w-14 sm:h-16 sm:w-16 shrink-0 overflow-hidden rounded-xl bg-muted">
-                        <div className="flex h-full w-full items-center justify-center text-2xl bg-gradient-to-br from-orange-50 to-amber-50">
-                          🌿
-                        </div>
+                        <ProductThumb
+                          src={cartCatalog.find((product) => product.id === l.productId)?.imageUrl}
+                          alt={l.name}
+                          category="grocery"
+                          fit="contain"
+                          className="h-full w-full rounded-xl bg-gradient-to-br from-orange-50 to-amber-50"
+                        />
                       </div>
 
                       {/* Product info */}
-                      <div className="flex-1 min-w-0">
-                        <p className="font-semibold text-sm text-foreground line-clamp-1">
+                      <div className="min-w-0">
+                        <p className="font-semibold text-sm leading-tight text-foreground line-clamp-2 sm:line-clamp-1">
                           {l.name}
                         </p>
                         <p className="text-xs text-muted-foreground mt-0.5">
@@ -260,27 +252,24 @@ function CartPage() {
                         </span>
                       </div>
 
-                      {/* Item Price Total */}
-                      <span className="font-bold text-sm sm:text-base text-foreground shrink-0">
-                        ₹{l.qty * l.price}
-                      </span>
-
-                      {/* Qty stepper */}
-                      <QtyStepper
-                        qty={l.qty}
-                        onAdd={() => {}}
-                        onChange={(n) => cartStore.setQty(l.productId, n)}
-                        max={l.availableStock}
-                      />
-
-                      {/* Delete */}
-                      <button
-                        onClick={() => cartStore.setQty(l.productId, 0)}
-                        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-slate-400 hover:bg-red-50 hover:text-red-500 transition-colors"
-                        aria-label="Remove item"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
+                      <div className="col-start-3 row-span-2 flex flex-col items-end gap-1.5 sm:ml-auto sm:flex-row sm:items-center sm:gap-3">
+                        <span className="font-bold text-sm sm:text-base text-foreground">
+                          ₹{l.qty * l.price}
+                        </span>
+                        <QtyStepper
+                          qty={l.qty}
+                          onAdd={() => {}}
+                          onChange={(n) => cartStore.setQty(l.productId, n)}
+                          max={l.availableStock}
+                        />
+                        <button
+                          onClick={() => cartStore.setQty(l.productId, 0)}
+                          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-slate-400 hover:bg-red-50 hover:text-red-500 transition-colors"
+                          aria-label="Remove item"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
                     </m.div>
                   ))}
                 </AnimatePresence>
@@ -350,49 +339,8 @@ function CartPage() {
                 </div>
               </div>
 
-              {/* ── You might also need ─────────────────────── */}
-              {visibleSuggestions.length > 0 && (
-                <div className="rounded-2xl border border-border bg-card p-4 shadow-sm">
-                  <p className="flex items-center gap-1.5 text-sm font-bold text-foreground">
-                    You might also need
-                    <span className="text-primary">✨</span>
-                  </p>
-                  <div className="mt-3 flex gap-3 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                    {visibleSuggestions.map((s) => (
-                      <div
-                        key={s.id}
-                        className="flex shrink-0 flex-col items-center gap-2 rounded-xl border border-border bg-background p-3 w-[110px]"
-                      >
-                        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-amber-50 text-2xl">
-                          {s.emoji}
-                        </div>
-                        <div className="text-center">
-                          <p className="text-[11px] font-semibold text-foreground leading-tight line-clamp-2">
-                            {s.name}
-                          </p>
-                          <p className="text-[10px] text-muted-foreground">{s.unit}</p>
-                        </div>
-                        <p className="font-bold text-sm text-foreground">₹{s.price}</p>
-                        <button
-                          onClick={() => {
-                            if (store) {
-                              cartStore.add(store.id, store.name, {
-                                id: s.id,
-                                name: s.name,
-                                unit: s.unit,
-                                price: s.price,
-                              });
-                            }
-                          }}
-                          className="w-full rounded-lg bg-primary/10 px-2 py-1 text-[11px] font-bold text-primary hover:bg-primary hover:text-primary-foreground transition-colors"
-                        >
-                          + Add
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
+              {/* ── Cart-aware contextual add-ons ───────────────── */}
+              <CartRelatedProducts />
 
               {/* ── Trust badges strip ──────────────────────── */}
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -441,7 +389,7 @@ function CartPage() {
                   Loved by <span className="text-foreground font-bold">10,000+</span> happy local
                   customers ❤️
                 </p>
-                <div className="mt-2 flex items-center justify-center gap-6 text-xs">
+                <div className="mt-2 flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-xs">
                   <span className="flex items-center gap-1.5 border-r border-border pr-6">
                     <span className="text-[#4285F4] font-bold">G</span>
                     <span className="font-bold">4.6</span>
@@ -466,7 +414,7 @@ function CartPage() {
             </div>
 
             {/* ── RIGHT SIDEBAR (Desktop) ───────────────────────── */}
-            <aside className="hidden md:block space-y-3 md:sticky md:top-24 md:self-start">
+            <aside className="hidden min-w-0 md:block space-y-3 md:sticky md:top-24 md:self-start">
               {/* Free delivery progress */}
               <div className="rounded-2xl border border-border bg-card p-4 shadow-sm">
                 <div className="flex items-center gap-2">

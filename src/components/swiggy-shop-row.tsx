@@ -152,7 +152,9 @@ function SwiggyShopCard({
                 {offers.overlayTag}
               </p>
               <p className="text-[11px] font-semibold text-white/80">
-                {store.etaMin} MINS · {store.distanceKm.toFixed(1)} km
+                {store.distanceKm !== undefined
+                  ? `${store.etaMin} MINS · ${store.distanceKm.toFixed(1)} km`
+                  : "Explore this shop"}
               </p>
             </div>
 
@@ -220,7 +222,7 @@ function SwiggyShopCard({
 /* ─── main shop row ────────────────────────────────────────────────────── */
 export function SwiggyShopRow({
   stores,
-  title = "Top shops near you",
+  title = "Recommended Shops",
   activeCategory,
   onSelectCategory,
 }: {

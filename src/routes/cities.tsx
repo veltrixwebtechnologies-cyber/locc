@@ -69,8 +69,8 @@ function CitiesPage() {
               onClick={() => setFilter(f)}
               className={`rounded-full px-4 py-2 text-xs font-bold transition ${
                 filter === f
-                  ? "bg-purple-700 text-white"
-                  : "bg-slate-100 text-slate-600 hover:bg-purple-50"
+                  ? "bg-[#981495] text-white"
+                  : "bg-slate-100 text-slate-600 hover:bg-[var(--sand)]"
               }`}
             >
               {f === "all" ? "All Cities" : f === "active" ? "Active" : "Coming Soon"}
@@ -143,7 +143,7 @@ function CitiesPage() {
                           )}
                         </>
                       ) : (
-                        <button className="mt-1 flex items-center gap-1.5 rounded-xl border border-purple-200 bg-purple-50 px-4 py-2 text-xs font-bold text-purple-700 hover:bg-purple-100 transition w-full justify-center">
+                        <button className="mt-1 flex items-center gap-1.5 rounded-xl border border-[#f0abfc] bg-[var(--sand)] px-4 py-2 text-xs font-bold text-[#981495] hover:bg-[var(--sand)] transition w-full justify-center">
                           <Bell className="h-3.5 w-3.5" /> Notify me when available
                         </button>
                       )}

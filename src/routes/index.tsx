@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState, startTransition } from "react";
 import { Search } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { AwningCard } from "@/components/awning-card";
+import { ShopCard } from "@/components/shop-card";
 import {
   stores,
   deliveryCategories,
@@ -26,7 +27,7 @@ import {
   SwiggyFeaturedBanner,
   Swiggy99StoreSection,
 } from "@/components/swiggy-inspiration-sections";
-import { HeroSection } from "@/components/hero-section";
+import { ReferenceHomeHero } from "@/components/reference-home-hero";
 import { LocalShoreMapExperience } from "@/components/map/localshore-map-experience";
 import { isValidCoordinate } from "@/lib/geo";
 import {
@@ -42,7 +43,9 @@ import { useDeliveryLocation } from "@/lib/location-store";
 import { getCategoryByIdOrSlug, toStoreCategory, isStoreInCategory } from "@/lib/shop-categories";
 import { calculateHaversineDistanceKm } from "@/lib/map-service/providers";
 import { rankShopsWithML } from "@/lib/ml-shop-ranker";
-import { AppDownloadBanner } from "@/components/app-download-banner";
+import { LocalShoreOffers } from "@/components/localshore-offers";
+import { LiquidGlassCategorySelector } from "@/components/liquid-glass-category-selector";
+import { PopularBrandsCarousel } from "@/components/popular-brands-carousel";
 
 const getCategoryDisplayName = (catName?: string | null): string => {
   if (!catName || catName === "all") return "";
@@ -77,6 +80,8 @@ function Home() {
   const [deliveryLoc] = useDeliveryLocation();
   const locLat = deliveryLoc?.lat;
   const locLng = deliveryLoc?.lng;
+  const hasConfirmedLocation =
+    typeof locLat === "number" && typeof locLng === "number" && isValidCoordinate(locLat, locLng);
   const [query, setQuery] = useState(search.q ?? "");
   const [cat, setCat] = useState<string>(search.category ?? "all");
   const approvedProducts = useQuery({
@@ -177,8 +182,22 @@ function Home() {
   }, [cat]);
 
   const filtered = useMemo(() => {
-    if (typeof locLat !== "number" || typeof locLng !== "number" || !isValidCoordinate(locLat, locLng)) {
-      return [];
+    // Stage 1: browse without a customer location. Keep this deliberately
+    // limited and never attach distance/ETA values from seed data.
+    if (!hasConfirmedLocation) {
+      const normalizedQuery = query.trim().toLowerCase();
+      return stores
+        .slice(0, 8)
+        .filter((store) => {
+          if (activeFilter && !isStoreInCategory(store.category, activeFilter, store.rating)) {
+            return false;
+          }
+          if (!normalizedQuery) return true;
+          return `${store.name} ${store.tagline} ${store.category}`
+            .toLowerCase()
+            .includes(normalizedQuery);
+        })
+        .map((store) => ({ ...store, distanceKm: undefined }));
     }
     const liveProducts = approvedProducts.data ?? [];
     const normalizedQuery = query.trim().toLowerCase();
@@ -215,8 +234,9 @@ function Home() {
         etaMin: Math.max(10, Math.round(dKm * 5 + 10)),
       };
     });
-    const allStores = (liveVendorStores.length > 0 ? [...liveVendorStores, ...baseStores] : baseStores)
-      .filter((store): store is NonNullable<typeof store> => store !== null);
+    const allStores = (
+      liveVendorStores.length > 0 ? [...liveVendorStores, ...baseStores] : baseStores
+    ).filter((store): store is NonNullable<typeof store> => store !== null);
     const filteredList = allStores.filter((s) => {
       if (activeFilter && !isStoreInCategory(s.category, activeFilter, s.rating)) return false;
       if (
@@ -258,7 +278,14 @@ function Home() {
       if (scoreB !== scoreA) return scoreB - scoreA;
       return a.distanceKm - b.distanceKm;
     });
-  }, [activeFilter, query, approvedProducts.data, approvedVendors.data, deliveryLoc]);
+  }, [
+    activeFilter,
+    query,
+    approvedProducts.data,
+    approvedVendors.data,
+    deliveryLoc,
+    hasConfirmedLocation,
+  ]);
 
   const homepageProducts = useMemo<MerchandisingProduct[]>(() => {
     const liveProducts = (approvedProducts.data ?? []).map((product: any) => ({
@@ -380,21 +407,19 @@ function Home() {
   return (
     <AppShell>
       {/* Swiggy-Style Hero Landing Section */}
-      <HeroSection />
+      <ReferenceHomeHero />
 
-      {/* Main Promo Carousel (Swiggy / Local Shore Banners) */}
+      {/* Image-led category navigation sits directly beneath the Orchid hero. */}
+      <LiquidGlassCategorySelector />
+
+      {/* Existing promotional ads restored below the coded reference-style front page. */}
       <PromoCarousel />
-
-      {/* 1. Swiggy Top Yellow Deals Carousel Strip */}
-      <SwiggyTopDealsStrip />
-
-      {/* 2. Swiggy Featured Merchant Ad Banner */}
       <SwiggyFeaturedBanner />
+      <PopularBrandsCarousel />
 
-      {/* RedBus-Style App Download & Offer Banner */}
-      <AppDownloadBanner />
+      <LocalShoreOffers />
 
-      {/* Shops section — full-width split view matching reference design */}
+      {/* The map is the core nearby-shopping discovery experience. */}
       <div id="shops-section" className="scroll-mt-24 px-5 pt-6 md:px-8">
         <LocalShoreMapExperience
           initialQuery={query}
@@ -418,205 +443,83 @@ function Home() {
         />
       </div>
 
-      {/* Swiggy-style shop row */}
-
-      <SwiggyShopRow
-        stores={filtered}
-        activeCategory={activeFilter || "all"}
-        onSelectCategory={(catId) => {
-          startTransition(() => {
-            navigate({
-              search: (prev) => ({
-                category: catId === "all" || catId === "all-shops" ? undefined : catId,
-                q: prev.q,
-              }),
-              resetScroll: false,
-            });
-            scrollToShops();
-          });
-        }}
-      />
-
-      <div className="px-5 md:px-8">
-        {/* Active category filter bar */}
-        {((cat && cat !== "all" && cat !== "all-shops") || query) && (
-          <div className="mx-5 mb-4 flex items-center justify-between rounded-xl border border-primary/20 bg-primary/5 px-4 py-2.5 md:mx-8">
-            <div className="flex items-center gap-2 text-xs font-semibold text-foreground md:text-sm">
-              <span className="h-2 w-2 rounded-full bg-primary" />
-              <span>
-                {cat && cat !== "all" && cat !== "all-shops" ? (
-                  <>
-                    Filtering by: <strong className="text-primary">{displayCategoryName}</strong>
-                  </>
-                ) : null}
-                {query ? (
-                  <>
-                    {cat && cat !== "all" && cat !== "all-shops" ? " · " : ""}Matching:{" "}
-                    <strong className="text-primary">"{query}"</strong>
-                  </>
-                ) : null}
-              </span>
+      <section className="px-5 pb-8 md:px-8">
+        <h2 className="mb-4 font-display text-xl font-bold text-foreground">
+          {hasConfirmedLocation ? "Shops near you" : "Recommended Shops"}
+        </h2>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {filtered.slice(0, 8).map((store) => (
+            <ShopCard
+              key={store.id}
+              shop={{
+                id: store.id,
+                name: store.name,
+                category: categoryLabel[store.category] ?? store.category,
+                imageUrl: store.imageUrl,
+                rating: store.rating,
+                distanceKm: store.distanceKm,
+                isOpen: store.isOpen,
+                address: store.address,
+                description: store.tagline,
+              }}
+              variant="wide"
+              className="h-full max-w-none"
+            />
+          ))}
+          {filtered.length === 0 && (
+            <div className="col-span-full">
+              <EmptyState />
             </div>
-            <Link
-              to="/"
-              search={{ category: undefined, q: undefined }}
-              className="rounded-lg bg-background px-3 py-1 text-xs font-bold text-primary shadow-xs hover:bg-muted"
-            >
-              Clear filter ×
-            </Link>
-          </div>
-        )}
-
-        {/* 3. Comprehensive Category Discovery & Shop Grid View matching UI design */}
-        <CategoryDiscoveryView
-          stores={stores}
-          activeCategory={activeFilter || "all"}
-          onCategoryChange={(catId) => {
-            startTransition(() => {
-              navigate({
-                search: (prev) => ({
-                  category: catId === "all" || catId === "all-shops" ? undefined : catId,
-                  q: prev.q,
-                }),
-                resetScroll: false,
-              });
-              scrollToShops();
-            });
-          }}
-        />
-
-        {/* 4. Swiggy ₹99 Store / Budget Meals Section */}
-        <Swiggy99StoreSection products={homepageProducts} />
-
-        {/* Flipkart-Style Signature "Best Deals on..." Container */}
-        <FlipkartBestDealsShowcase
-          products={homepageProducts}
-          title={
-            activeFilter ? `Best Deals on ${displayCategoryName}` : "Best Deals on Local Shore"
-          }
-        />
-
-        {/* Category Products Grid */}
-        <div className="mx-5 my-6 md:mx-8 md:my-8">
-          <div className="mb-4 flex items-center justify-between">
-            <div>
-              <h2 className="font-display text-base font-bold text-foreground md:text-xl">
-                {activeFilter
-                  ? `Products in ${displayCategoryName}`
-                  : query.trim()
-                    ? `Products matching "${query}"`
-                    : "Popular products near you"}
-              </h2>
-              <p className="mt-0.5 text-xs text-muted-foreground">
-                {homepageProducts.length} item{homepageProducts.length === 1 ? "" : "s"} available
-                for instant 20-40 min delivery
-              </p>
-            </div>
-            {activeFilter && (
-              <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-bold text-primary">
-                {homepageProducts.length} items
-              </span>
-            )}
-          </div>
-
-          {homepageProducts.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-border p-6 text-center">
-              <p className="text-sm font-medium text-foreground">
-                No products found in this category.
-              </p>
-              <p className="mt-1 text-xs text-muted-foreground">
-                Try selecting a different category or clearing search filters.
-              </p>
-            </div>
-          ) : (
-            <>
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
-                {homepageProducts.slice(0, visibleProductLimit).map((product) => (
-                  <ProductCard key={product.id} product={product} />
-                ))}
-              </div>
-              {homepageProducts.length > visibleProductLimit && (
-                <div className="mt-5 flex justify-center">
-                  <button
-                    onClick={() => setVisibleProductLimit((prev) => prev + 20)}
-                    className="inline-flex items-center gap-2 rounded-full border border-amber-500/40 bg-card px-6 py-2.5 text-xs font-bold text-foreground shadow-sm transition hover:bg-amber-500/10 active:scale-95"
-                  >
-                    <span>
-                      Show more products ({homepageProducts.length - visibleProductLimit} remaining)
-                    </span>
-                  </button>
-                </div>
-              )}
-            </>
           )}
         </div>
-      </div>
+      </section>
 
-      <MarketplaceDiscovery products={homepageProducts} />
-
-      {/* Mobile search — floats below the hero, not sticky */}
-      <div className="px-5 pb-2 pt-1 md:hidden">
-        <label className="flex items-center gap-2 rounded-xl bg-card px-3 py-2.5 ring-1 ring-black/[0.04]">
-          <Search className="h-4 w-4 text-muted-foreground" />
-          <input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search products, categories or shops"
-            className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
-          />
-        </label>
-      </div>
-
-      <MerchandisingSections fallbackProducts={homepageProducts} />
-
-      {/* Ecosystem Merchandising Strips (Rewards, Brands, Best Shops, Travel, Cities, News) */}
-      <div className="px-5 md:px-8">
-        <EcosystemMerchandisingStrips />
-      </div>
-
-      {/* App Download Promo Banner */}
-      <AppDownloadBanner />
-
-      {/* All shops grid — shown below the Swiggy row as secondary listing */}
-      <div className="mt-6 flex items-center justify-between px-5 pt-2 md:mt-8 md:px-8">
-        <h2 className="font-display text-base font-bold text-foreground md:text-xl">
-          All verified shops
+      {/* Keep the yellow deal rail as the final homepage content before the footer. */}
+      <section aria-labelledby="highlighted-deals-heading" className="mt-2 pb-6 pt-2">
+        <h2
+          id="highlighted-deals-heading"
+          className="px-5 pb-1 font-display text-lg font-bold text-foreground md:px-8 md:text-2xl"
+        >
+          Highlighted deals
         </h2>
-        <span className="font-mono text-[10px] uppercase text-muted-foreground md:text-xs">
-          {filtered.length} shops
-        </span>
-      </div>
+        <SwiggyTopDealsStrip />
+      </section>
 
-      <div className="mt-3 grid grid-cols-1 gap-3 px-5 pb-8 md:mt-4 md:grid-cols-2 md:gap-5 md:px-8 lg:grid-cols-3">
-        {filtered.length === 0 ? (
-          <div className="md:col-span-2 lg:col-span-3">
-            <EmptyState />
+      <section aria-labelledby="local-products-heading" className="px-5 pb-8 md:px-8">
+        <div className="flex items-end justify-between gap-3">
+          <div>
+            <h2
+              id="local-products-heading"
+              className="font-display text-xl font-bold text-foreground"
+            >
+              Popular picks from local shops
+            </h2>
+            <p className="mt-1 text-xs font-medium text-muted-foreground">
+              Fresh products available from different neighborhood sellers
+            </p>
           </div>
-        ) : (
-          filtered.map((s) => <AwningCard key={s.id} store={s} />)
-        )}
-      </div>
-
-      <p className="px-5 pb-6 text-center font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
-        · Local Shore · Coastal India ·
-      </p>
-
-      {/* Auth CTA (mock) */}
-      <div className="px-5 pb-4">
-        <Link
-          to="/auth"
-          search={{ redirect: undefined }}
-          className="block text-center text-xs text-muted-foreground underline-offset-4 hover:underline"
-        >
-          Sign in with phone number
-        </Link>
-        <a
-          href={import.meta.env.VITE_SELLER_HUB_URL || "/seller"}
-          className="mt-2 block text-center text-xs text-primary underline-offset-4 hover:underline"
-        >
-          Become a seller
-        </a>
-      </div>
+          <Link
+            to="/search"
+            search={{ q: undefined, category: undefined }}
+            className="shrink-0 text-xs font-bold text-primary hover:underline"
+          >
+            View all →
+          </Link>
+        </div>
+        <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+          {Array.from(
+            new Map(
+              homepageProducts
+                .filter((product) => product.stock > 0)
+                .map((product) => [product.seller_id, product]),
+            ).values(),
+          )
+            .slice(0, 8)
+            .map((product) => (
+              <ProductCard key={product.id} product={product} compact />
+            ))}
+        </div>
+      </section>
     </AppShell>
   );
 }

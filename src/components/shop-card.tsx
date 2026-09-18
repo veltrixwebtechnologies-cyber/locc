@@ -220,7 +220,7 @@ export function ShopCard({
           <div className="flex items-center gap-3 pt-1 border-t border-border/40 text-[11px] font-extrabold text-muted-foreground">
             <span
               className={`flex items-center gap-1 ${
-                shop.deliveryAvailable !== false
+                shop.deliveryAvailable === true
                   ? "text-emerald-600 dark:text-emerald-400"
                   : "opacity-40"
               }`}
@@ -231,9 +231,7 @@ export function ShopCard({
             <span>•</span>
             <span
               className={`flex items-center gap-1 ${
-                shop.pickupAvailable !== false
-                  ? "text-indigo-600 dark:text-indigo-400"
-                  : "opacity-40"
+                shop.pickupAvailable === true ? "text-[#c026d3] dark:text-[#c026d3]" : "opacity-40"
               }`}
             >
               <ShoppingBag className="h-3.5 w-3.5" />

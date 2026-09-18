@@ -39,7 +39,7 @@ export function ShopStatusBadge({
     open_override: "bg-blue-50 text-blue-700 border border-blue-200",
     closed: "bg-red-50 text-red-600 border border-red-200",
     closed_override: "bg-amber-50 text-amber-700 border border-amber-200",
-    holiday: "bg-purple-50 text-purple-700 border border-purple-200",
+    holiday: "bg-[var(--sand)] text-[#981495] border border-[#f0abfc]",
   };
   const Icon =
     kind === "open" || kind === "open_override"

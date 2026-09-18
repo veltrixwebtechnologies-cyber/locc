@@ -54,25 +54,25 @@ function CustomerCarePage() {
         <m.div
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mt-5 rounded-3xl bg-gradient-to-br from-purple-800 to-indigo-900 p-6 text-white shadow-xl sm:p-8"
+          className="mt-5 rounded-3xl bg-gradient-to-br from-[#981495] to-[#700b6e] p-6 text-white shadow-xl sm:p-8"
         >
-          <LifeBuoy className="h-8 w-8 text-purple-300" />
+          <LifeBuoy className="h-8 w-8 text-[#f0abfc]" />
           <h1 className="mt-3 font-display text-3xl font-extrabold sm:text-4xl">
             How can we help you?
           </h1>
-          <p className="mt-2 max-w-lg text-sm text-purple-200">
+          <p className="mt-2 max-w-lg text-sm text-[#f0abfc]">
             Search for answers, browse categories, or raise a support ticket.
           </p>
 
           {/* Search */}
           <div className="mt-4 flex items-center gap-2 rounded-2xl bg-white/10 px-4 py-3 backdrop-blur-sm">
-            <Search className="h-4 w-4 text-purple-300" />
+            <Search className="h-4 w-4 text-[#f0abfc]" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search help topics..."
-              className="w-full bg-transparent text-sm text-white outline-none placeholder:text-purple-300"
+              className="w-full bg-transparent text-sm text-white outline-none placeholder:text-[#f0abfc]"
             />
           </div>
         </m.div>
@@ -88,9 +88,9 @@ function CustomerCarePage() {
                   setSelectedCategory(cat);
                   setShowTicketForm(true);
                 }}
-                className={`rounded-2xl border p-3.5 text-left transition hover:border-purple-300 hover:shadow-xs ${
+                className={`rounded-2xl border p-3.5 text-left transition hover:border-[#f0abfc] hover:shadow-xs ${
                   selectedCategory?.id === cat.id
-                    ? "border-purple-300 bg-purple-50 ring-1 ring-purple-200"
+                    ? "border-[#f0abfc] bg-[var(--sand)] ring-1 ring-[#f0abfc]"
                     : "border-slate-200 bg-white"
                 }`}
               >
@@ -116,7 +116,7 @@ function CustomerCarePage() {
                     onClick={() => setFaqOpen(faqOpen === i ? null : i)}
                     className="flex w-full items-center gap-3 p-4 text-left"
                   >
-                    <HelpCircle className="h-4 w-4 shrink-0 text-purple-600" />
+                    <HelpCircle className="h-4 w-4 shrink-0 text-[#c026d3]" />
                     <span className="flex-1 text-sm font-semibold text-slate-900">{faq.q}</span>
                     <ChevronDown
                       className={`h-4 w-4 text-slate-400 transition-transform ${faqOpen === i ? "rotate-180" : ""}`}
@@ -137,7 +137,7 @@ function CustomerCarePage() {
                       setShowTicketForm(true);
                       setSearchQuery("");
                     }}
-                    className="mt-2 text-xs font-bold text-purple-700 underline"
+                    className="mt-2 text-xs font-bold text-[#981495] underline"
                   >
                     Raise a support ticket instead
                   </button>
@@ -150,9 +150,9 @@ function CustomerCarePage() {
           <section className="lg:col-span-2">
             <div className="sticky top-28 space-y-4">
               {showTicketForm ? (
-                <div className="rounded-2xl border border-purple-200 bg-white p-5 shadow-xs">
+                <div className="rounded-2xl border border-[#f0abfc] bg-white p-5 shadow-xs">
                   <div className="flex items-center gap-2">
-                    <MessageSquare className="h-4 w-4 text-purple-700" />
+                    <MessageSquare className="h-4 w-4 text-[#981495]" />
                     <h3 className="text-sm font-bold text-slate-900">Raise a Ticket</h3>
                   </div>
                   {selectedCategory && (
@@ -180,7 +180,7 @@ function CustomerCarePage() {
                         <Paperclip className="h-3.5 w-3.5" /> Attach image
                       </button>
                     </div>
-                    <button className="w-full rounded-xl bg-purple-700 py-3 text-sm font-bold text-white shadow-md transition hover:bg-purple-800 flex items-center justify-center gap-2">
+                    <button className="w-full rounded-xl bg-[#981495] py-3 text-sm font-bold text-white shadow-md transition hover:bg-[#981495] flex items-center justify-center gap-2">
                       <Send className="h-4 w-4" /> Submit Ticket
                     </button>
                   </div>
@@ -191,14 +191,14 @@ function CustomerCarePage() {
                 </div>
               ) : (
                 <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs text-center">
-                  <LifeBuoy className="mx-auto h-8 w-8 text-purple-600" />
+                  <LifeBuoy className="mx-auto h-8 w-8 text-[#c026d3]" />
                   <p className="mt-3 text-sm font-bold text-slate-900">Need more help?</p>
                   <p className="mt-1 text-xs text-slate-500">
                     Select a category or raise a ticket.
                   </p>
                   <button
                     onClick={() => setShowTicketForm(true)}
-                    className="mt-4 rounded-xl bg-purple-700 px-5 py-2.5 text-xs font-bold text-white"
+                    className="mt-4 rounded-xl bg-[#981495] px-5 py-2.5 text-xs font-bold text-white"
                   >
                     Contact Support
                   </button>
@@ -207,9 +207,9 @@ function CustomerCarePage() {
 
               <Link
                 to="/support"
-                className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white p-4 transition hover:border-purple-300"
+                className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white p-4 transition hover:border-[#f0abfc]"
               >
-                <Package className="h-5 w-5 text-purple-700" />
+                <Package className="h-5 w-5 text-[#981495]" />
                 <div>
                   <p className="text-xs font-bold text-slate-900">View Support Tickets</p>
                   <p className="text-[11px] text-slate-500">Track your open requests</p>

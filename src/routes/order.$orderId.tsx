@@ -246,17 +246,9 @@ function OrderPage() {
     if (order?.partner?.lat && order?.partner?.lng && destination) {
       return { lat: order.partner.lat, lng: order.partner.lng, label: order.partner.name };
     }
-    const storeLoc =
-      order?.storeCoordinates ?? (store ? { lat: store.lat, lng: store.lng } : undefined);
-    if (!storeLoc || !status || !destination) return undefined;
-    const steps = Math.max(1, orderStatusFlow.length - 1);
-    const validIndex = Math.max(0, currentIndex);
-    const t = Math.min(0.95, Math.max(0.05, validIndex / steps));
-    if (status === "delivered" || status === "new" || status === "accepted") return undefined;
-    return {
-      lat: storeLoc.lat + (destination.lat - storeLoc.lat) * t,
-      lng: storeLoc.lng + (destination.lng - storeLoc.lng) * t,
-    };
+    // Never interpolate a fake rider position from order status. The map gets
+    // the authoritative live position from delivery_assignments.
+    return undefined;
   }, [order?.partner, order?.storeCoordinates, store, destination, currentIndex, status]);
 
   if (isLoading) {
@@ -535,7 +527,10 @@ function CancelOrderModal({
 
     setIsSubmitting(true);
     try {
-      await cancelOrder(order.id, finalReason);
+      const cancelled = await cancelOrder(order.id, finalReason);
+      if (!cancelled) {
+        throw new Error("This order can no longer be cancelled or was not found.");
+      }
       toast.success(`Order #${order.code} cancelled successfully`);
       onCancelled();
     } catch (err: any) {

@@ -52,7 +52,7 @@ export const NearbySimilarShopsWidget: React.FC<NearbySimilarShopsWidgetProps> =
   if (recommendations.length === 0) return null;
 
   return (
-    <div className="my-8 rounded-3xl bg-gradient-to-br from-[#fcf7fe] via-[#f7eafd] to-[#f2dcfa] p-5 sm:p-7 border-2 border-purple-300/60 shadow-xl shadow-purple-950/5 relative overflow-hidden group">
+    <div className="my-8 rounded-3xl bg-gradient-to-br from-[#fcf7fe] via-[#f7eafd] to-[#f2dcfa] p-5 sm:p-7 border-2 border-[#f0abfc]/60 shadow-xl shadow-[#700b6e]/5 relative overflow-hidden group">
       {/* Decorative Blur Backgrounds */}
       <div className="absolute -top-12 -right-12 h-40 w-40 rounded-full bg-[#981495]/10 blur-2xl pointer-events-none" />
       <div className="absolute -bottom-12 -left-12 h-40 w-40 rounded-full bg-amber-400/15 blur-2xl pointer-events-none" />
@@ -60,19 +60,19 @@ export const NearbySimilarShopsWidget: React.FC<NearbySimilarShopsWidgetProps> =
       {/* Header Bar */}
       <div className="flex flex-wrap items-center justify-between gap-3 mb-5 relative z-10">
         <div className="flex items-center space-x-3">
-          <div className="p-2.5 rounded-2xl bg-[#981495] text-white shadow-md shadow-purple-900/20 shrink-0">
+          <div className="p-2.5 rounded-2xl bg-[#981495] text-white shadow-md shadow-[#981495]/20 shrink-0">
             <Sparkles className="h-5 w-5 animate-pulse text-amber-300" />
           </div>
           <div>
             <h3 className="font-display font-black text-lg sm:text-xl text-slate-900 tracking-tight flex items-center gap-2">
               {title}
             </h3>
-            <p className="text-xs text-purple-950/80 font-semibold mt-0.5">{subtitle}</p>
+            <p className="text-xs text-[#700b6e]/80 font-semibold mt-0.5">{subtitle}</p>
           </div>
         </div>
 
         {/* Location badge pill */}
-        <span className="inline-flex items-center gap-1.5 rounded-full bg-white/90 border border-purple-300/80 px-3.5 py-1 text-xs font-bold text-[#981495] shadow-xs backdrop-blur-xs">
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-white/90 border border-[#f0abfc]/80 px-3.5 py-1 text-xs font-bold text-[#981495] shadow-xs backdrop-blur-xs">
           <MapPin className="h-3.5 w-3.5 text-[#981495]" />
           <span>Near {areaLabel}</span>
         </span>
@@ -86,7 +86,7 @@ export const NearbySimilarShopsWidget: React.FC<NearbySimilarShopsWidgetProps> =
             initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: idx * 0.1, duration: 0.3 }}
-            className="group/card rounded-2xl border-2 border-purple-200/80 bg-white p-4 shadow-sm hover:border-[#981495] hover:shadow-xl hover:shadow-purple-950/10 transition-all duration-300 flex flex-col justify-between"
+            className="group/card rounded-2xl border-2 border-[#f0abfc]/80 bg-white p-4 shadow-sm hover:border-[#981495] hover:shadow-xl hover:shadow-[#700b6e]/10 transition-all duration-300 flex flex-col justify-between"
           >
             <div>
               {/* Store Identity Row */}
@@ -123,7 +123,7 @@ export const NearbySimilarShopsWidget: React.FC<NearbySimilarShopsWidgetProps> =
               </div>
 
               {/* Matching Reason Pill */}
-              <p className="text-[11px] font-semibold text-[#570954] bg-purple-50 border border-purple-200/80 p-2 rounded-xl mb-3">
+              <p className="text-[11px] font-semibold text-[#570954] bg-[var(--sand)] border border-[#f0abfc]/80 p-2 rounded-xl mb-3">
                 {shop.matchingReason}
               </p>
 
@@ -137,13 +137,13 @@ export const NearbySimilarShopsWidget: React.FC<NearbySimilarShopsWidgetProps> =
                     {shop.matchingProducts.map((prod) => (
                       <div
                         key={prod.id}
-                        className="flex items-center justify-between text-xs p-1.5 rounded-lg bg-slate-50 hover:bg-purple-50/60 border border-slate-200/60 transition-colors"
+                        className="flex items-center justify-between text-xs p-1.5 rounded-lg bg-slate-50 hover:bg-[var(--sand)]/60 border border-slate-200/60 transition-colors"
                       >
                         <span className="font-semibold text-slate-800 truncate max-w-[140px]">
                           {prod.name}
                         </span>
                         <div className="flex items-center gap-2 shrink-0">
-                          <span className="font-mono font-bold text-purple-900">₹{prod.price}</span>
+                          <span className="font-mono font-bold text-[#981495]">₹{prod.price}</span>
                           <button
                             type="button"
                             data-product-id={prod.id}
@@ -157,7 +157,7 @@ export const NearbySimilarShopsWidget: React.FC<NearbySimilarShopsWidgetProps> =
                               });
                               toast.success(`Added ${prod.name} to cart`);
                             }}
-                            className="rounded-md bg-[#981495] hover:bg-purple-900 text-white px-2 py-0.5 text-[10px] font-bold transition-all cursor-pointer shadow-2xs"
+                            className="rounded-md bg-[#981495] hover:bg-[#981495] text-white px-2 py-0.5 text-[10px] font-bold transition-all cursor-pointer shadow-2xs"
                           >
                             + Add
                           </button>
@@ -175,7 +175,7 @@ export const NearbySimilarShopsWidget: React.FC<NearbySimilarShopsWidgetProps> =
               <Link
                 to="/store/$storeId"
                 params={{ storeId: shop.id }}
-                className="inline-flex items-center gap-1.5 rounded-xl bg-[#981495] hover:bg-purple-900 text-white px-3.5 py-1.5 text-xs font-extrabold transition-all shadow-xs cursor-pointer"
+                className="inline-flex items-center gap-1.5 rounded-xl bg-[#981495] hover:bg-[#981495] text-white px-3.5 py-1.5 text-xs font-extrabold transition-all shadow-xs cursor-pointer"
               >
                 <span>Visit Shop</span>
                 <ArrowRight className="h-3.5 w-3.5" />

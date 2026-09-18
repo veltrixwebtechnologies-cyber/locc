@@ -3,170 +3,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useDeliveryLocation } from "@/lib/location-store";
 import { type ProductFilterState } from "@/lib/filter-types";
 import { type ShopCardData } from "@/components/shop-card";
-
-// MOCK LOCAL SHOPS CATALOG to complement real DB sellers and ensure rich shop discovery
-const MOCK_LOCAL_SHOPS: ShopCardData[] = [
-  {
-    id: "seller-fashion-1",
-    name: "Trendz Fashion & Readymades Hub",
-    category: "Fashion & Clothing",
-    imageUrl:
-      "https://images.unsplash.com/photo-1441986300917-64674bd600d8?auto=format&fit=crop&w=600&q=75",
-    rating: 4.8,
-    reviewCount: 124,
-    distanceKm: 0.8,
-    isOpen: true,
-    closingTime: "9:30 PM",
-    matchingProductCount: 12,
-    startingPrice: 699,
-    deliveryAvailable: true,
-    pickupAvailable: true,
-    isVerified: true,
-    isCommunityFavorite: true,
-    address: "Crosscut Road, Gandhipuram",
-    city: "Coimbatore",
-  },
-  {
-    id: "seller-fashion-2",
-    name: "Urban Style Menswear & Streetwear",
-    category: "Fashion & Clothing",
-    imageUrl:
-      "https://images.unsplash.com/photo-1503342217505-b0a15ec3261c?auto=format&fit=crop&w=600&q=75",
-    rating: 4.7,
-    reviewCount: 89,
-    distanceKm: 1.5,
-    isOpen: true,
-    closingTime: "10:00 PM",
-    matchingProductCount: 8,
-    startingPrice: 799,
-    deliveryAvailable: true,
-    pickupAvailable: true,
-    isVerified: true,
-    isCommunityFavorite: false,
-    address: "DB Road, RS Puram",
-    city: "Coimbatore",
-  },
-  {
-    id: "seller-decor-1",
-    name: "Royal Brass & Home Decor Emporium",
-    category: "Furniture & Home Decor",
-    imageUrl:
-      "https://images.unsplash.com/photo-1513519245088-0e12902e5a38?auto=format&fit=crop&w=600&q=75",
-    rating: 4.9,
-    reviewCount: 156,
-    distanceKm: 1.2,
-    isOpen: true,
-    closingTime: "9:00 PM",
-    matchingProductCount: 32,
-    startingPrice: 1299,
-    deliveryAvailable: true,
-    pickupAvailable: true,
-    isVerified: true,
-    isCommunityFavorite: true,
-    address: "Avinashi Road, Peelamedu",
-    city: "Coimbatore",
-  },
-  {
-    id: "seller-decor-2",
-    name: "Sri Vinayaga Furniture World",
-    category: "Furniture & Home Decor",
-    imageUrl:
-      "https://images.unsplash.com/photo-1555041469-a586c61ea9bc?auto=format&fit=crop&w=600&q=75",
-    rating: 4.8,
-    reviewCount: 94,
-    distanceKm: 2.4,
-    isOpen: true,
-    closingTime: "8:30 PM",
-    matchingProductCount: 18,
-    startingPrice: 2499,
-    deliveryAvailable: true,
-    pickupAvailable: true,
-    isVerified: true,
-    isCommunityFavorite: true,
-    address: "Mettupalayam Road",
-    city: "Coimbatore",
-  },
-  {
-    id: "seller-elec-1",
-    name: "Premier Mobile & Tech World",
-    category: "Mobile & Accessories",
-    imageUrl:
-      "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?auto=format&fit=crop&w=600&q=75",
-    rating: 4.8,
-    reviewCount: 210,
-    distanceKm: 1.1,
-    isOpen: true,
-    closingTime: "9:30 PM",
-    matchingProductCount: 15,
-    startingPrice: 1499,
-    deliveryAvailable: true,
-    pickupAvailable: true,
-    isVerified: true,
-    isCommunityFavorite: true,
-    address: "100 Feet Road, Tatabad",
-    city: "Coimbatore",
-  },
-  {
-    id: "seller-groc-1",
-    name: "Roja Organic Supermarket & Kirana",
-    category: "Grocery",
-    imageUrl:
-      "https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=600&q=75",
-    rating: 4.9,
-    reviewCount: 184,
-    distanceKm: 0.5,
-    isOpen: true,
-    closingTime: "10:00 PM",
-    matchingProductCount: 45,
-    startingPrice: 40,
-    deliveryAvailable: true,
-    pickupAvailable: true,
-    isVerified: true,
-    isCommunityFavorite: true,
-    address: "Papampatti Pirivu, Trichy Road",
-    city: "Coimbatore",
-  },
-  {
-    id: "seller-bakery-1",
-    name: "Roja Bakes & Oven Fresh Sweets",
-    category: "Bakery & Sweets",
-    imageUrl:
-      "https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=600&q=75",
-    rating: 4.9,
-    reviewCount: 310,
-    distanceKm: 0.4,
-    isOpen: true,
-    closingTime: "10:30 PM",
-    matchingProductCount: 28,
-    startingPrice: 30,
-    deliveryAvailable: true,
-    pickupAvailable: true,
-    isVerified: true,
-    isCommunityFavorite: true,
-    address: "Papampatti Pirivu",
-    city: "Coimbatore",
-  },
-  {
-    id: "seller-food-1",
-    name: "Haribhavanam Chettinad Restaurant",
-    category: "Food & Restaurants",
-    imageUrl:
-      "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=600&q=75",
-    rating: 4.9,
-    reviewCount: 420,
-    distanceKm: 0.8,
-    isOpen: true,
-    closingTime: "11:00 PM",
-    matchingProductCount: 22,
-    startingPrice: 120,
-    deliveryAvailable: true,
-    pickupAvailable: true,
-    isVerified: true,
-    isCommunityFavorite: true,
-    address: "Hope College, Peelamedu",
-    city: "Coimbatore",
-  },
-];
+import { stores, type Store } from "@/lib/mock-data";
+import { isStoreInCategory } from "@/lib/shop-categories";
 
 export function useShopDiscovery(filterState: ProductFilterState) {
   const [deliveryLoc] = useDeliveryLocation();
@@ -207,8 +45,6 @@ export function useShopDiscovery(filterState: ProductFilterState) {
             let dist: number | undefined = undefined;
             if (s.lat && s.lng && deliveryLoc?.lat && deliveryLoc?.lng) {
               dist = calculateDistanceKm(deliveryLoc.lat, deliveryLoc.lng, s.lat, s.lng);
-            } else {
-              dist = 1.2;
             }
 
             return {
@@ -216,52 +52,44 @@ export function useShopDiscovery(filterState: ProductFilterState) {
               name: s.business_name || "Local Shop",
               category: s.business_type || "General Store",
               imageUrl: null,
-              rating: 4.8,
-              reviewCount: 45,
+              // Do not invent trust or pricing signals when the seller row does
+              // not contain them. Undefined distance must not pass a radius filter.
+              rating: 0,
               distanceKm: dist,
               isOpen: s.accepts_orders !== false,
-              closingTime: "9:00 PM",
               matchingProductCount: 0,
-              startingPrice: 99,
-              deliveryAvailable: true,
-              pickupAvailable: true,
               isVerified: s.status === "approved",
-              isCommunityFavorite: true,
               city: s.city || "",
             };
           });
         }
       } catch (err) {
-        console.warn("Sellers DB query fallback:", err);
+        console.warn("Sellers DB query notice:", err);
       }
 
-      // Merge DB sellers with mock catalog sellers without duplicates
-      const processedMockShops = MOCK_LOCAL_SHOPS.map((s) => {
-        let dist = s.distanceKm;
-        const mockCoords: Record<string, { lat: number; lng: number }> = {
-          "seller-fashion-1": { lat: 11.0172, lng: 76.9562 },
-          "seller-fashion-2": { lat: 11.0064, lng: 76.9507 },
-          "seller-decor-1": { lat: 11.0252, lng: 77.0025 },
-          "seller-decor-2": { lat: 11.04, lng: 76.945 },
-          "seller-elec-1": { lat: 11.02, lng: 76.96 },
-          "seller-groc-1": { lat: 11.0028, lng: 77.0865 },
-          "seller-bakery-1": { lat: 11.0028, lng: 77.0865 },
-          "seller-food-1": { lat: 11.0252, lng: 77.0025 },
-        };
-        const coords = mockCoords[s.id];
-        if (coords && deliveryLoc?.lat && deliveryLoc?.lng) {
-          dist = calculateDistanceKm(deliveryLoc.lat, deliveryLoc.lng, coords.lat, coords.lng);
-        }
-        return { ...s, distanceKm: dist };
-      });
+      const hasConfirmedLocation =
+        typeof deliveryLoc?.lat === "number" && typeof deliveryLoc?.lng === "number";
+      const catalogShops: ShopCardData[] = stores.map((store: Store) => ({
+        id: store.id,
+        name: store.name,
+        category: store.category,
+        imageUrl: store.imageUrl,
+        rating: store.rating,
+        distanceKm: hasConfirmedLocation
+          ? calculateDistanceKm(deliveryLoc!.lat, deliveryLoc!.lng, store.lat, store.lng)
+          : undefined,
+        isOpen: store.isOpen,
+        address: store.address,
+        city: "Coimbatore",
+        isVerified: true,
+      }));
 
-      const shopMap = new Map<string, ShopCardData>();
-      for (const s of [...dbShops, ...processedMockShops]) {
-        if (!shopMap.has(s.id)) {
-          shopMap.set(s.id, s);
-        }
-      }
-      let list = Array.from(shopMap.values());
+      // Live approved sellers take precedence by id; the local catalog keeps
+      // category/search pages useful when the database has no matching rows.
+      const shopsById = new Map<string, ShopCardData>();
+      catalogShops.forEach((shop) => shopsById.set(shop.id, shop));
+      dbShops.forEach((shop) => shopsById.set(shop.id, shop));
+      let list = Array.from(shopsById.values());
 
       const rawQ = (filterState.query || "").trim().toLowerCase();
       const normCat = (filterState.category || "").toLowerCase().replace(/[^a-z0-9]+/g, "");
@@ -310,8 +138,14 @@ export function useShopDiscovery(filterState: ProductFilterState) {
       }
 
       // Filter: Distance
-      if (filterState.maxDistanceKm !== undefined && filterState.maxDistanceKm > 0) {
-        list = list.filter((s) => (s.distanceKm ?? 0) <= filterState.maxDistanceKm!);
+      if (
+        hasConfirmedLocation &&
+        filterState.maxDistanceKm !== undefined &&
+        filterState.maxDistanceKm > 0
+      ) {
+        list = list.filter(
+          (s) => s.distanceKm !== undefined && s.distanceKm <= filterState.maxDistanceKm!,
+        );
       }
 
       // Filter: Verified
@@ -321,7 +155,7 @@ export function useShopDiscovery(filterState: ProductFilterState) {
 
       // Filter: Community Favorite
       if (filterState.localFavoriteOnly) {
-        list = list.filter((s) => s.isCommunityFavorite || s.rating >= 4.8);
+        list = list.filter((s) => s.isCommunityFavorite === true);
       }
 
       // Filter: Open Now
@@ -344,11 +178,8 @@ export function useShopDiscovery(filterState: ProductFilterState) {
         list = list.filter((s) => s.rating >= filterState.minRating!);
       }
 
-      // Multi-factor Shop Relevance Ranking:
-      // 1. Search query match
-      // 2. Open status
-      // 3. Distance (closer first)
-      // 4. Rating & Community Favorite
+      // Unknown-location results are general recommendations. Confirmed
+      // results use distance buckets first, then availability/relevance.
       list.sort((a, b) => {
         let scoreA = 0;
         let scoreB = 0;
@@ -361,8 +192,15 @@ export function useShopDiscovery(filterState: ProductFilterState) {
         if (a.isOpen !== false) scoreA += 20;
         if (b.isOpen !== false) scoreB += 20;
 
-        scoreA += Math.max(0, 30 - (a.distanceKm || 0) * 3);
-        scoreB += Math.max(0, 30 - (b.distanceKm || 0) * 3);
+        if (hasConfirmedLocation) {
+          const bucketA =
+            a.distanceKm === undefined ? 3 : a.distanceKm <= 2 ? 0 : a.distanceKm <= 5 ? 1 : 2;
+          const bucketB =
+            b.distanceKm === undefined ? 3 : b.distanceKm <= 2 ? 0 : b.distanceKm <= 5 ? 1 : 2;
+          if (bucketA !== bucketB) return bucketA - bucketB;
+          scoreA += Math.max(0, 30 - (a.distanceKm ?? 30) * 3);
+          scoreB += Math.max(0, 30 - (b.distanceKm ?? 30) * 3);
+        }
 
         scoreA += (a.rating || 4.5) * 5;
         scoreB += (b.rating || 4.5) * 5;

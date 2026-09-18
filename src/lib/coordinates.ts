@@ -20,6 +20,9 @@ export function parseCoordinates(lat: unknown, lng: unknown): Coordinates | null
 }
 
 export const MAX_NAVIGATION_ACCURACY_M = 100;
+// Automatic customer delivery locations must be close enough to identify the
+// correct neighbourhood. Exact delivery entrance placement is confirmed by pin.
+export const MAX_CUSTOMER_DELIVERY_ACCURACY_M = 50;
 export const MAX_LOCATION_AGE_MS = 30_000;
 
 export function freshPartnerCoordinates(partner: any): [number, number] | null {

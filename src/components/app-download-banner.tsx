@@ -23,7 +23,7 @@ export interface AppDownloadBannerConfig {
 
 export const DEFAULT_APP_BANNER_CONFIG: AppDownloadBannerConfig = {
   is_active: true,
-  theme_variant: "dark-navy",
+  theme_variant: "signature-orchid",
   badge1_text: "Special App Offer",
   badge2_text: "Exclusive Deals",
   headline_prefix: "Grab ",
@@ -110,7 +110,7 @@ export const AppDownloadBanner: React.FC<AppDownloadBannerProps> = ({
     return null;
   }
 
-  const activeVariant = propVariant || config.theme_variant || "dark-navy";
+  const activeVariant = propVariant || config.theme_variant || "signature-orchid";
 
   const handleSendLink = (e: React.FormEvent) => {
     e.preventDefault();
@@ -133,7 +133,9 @@ export const AppDownloadBanner: React.FC<AppDownloadBannerProps> = ({
     <div className={`mx-4 my-6 sm:mx-6 sm:my-8 md:mx-8 ${className}`}>
       <div
         className={`relative overflow-hidden rounded-3xl transition-all duration-300 shadow-2xl ${
-          isOrchid ? "bg-[#0f0618] border border-[#3b1254]" : "bg-[#070a16] border border-[#1d2642]"
+          isOrchid
+            ? "bg-gradient-to-br from-[#5a0e62] via-[#981495] to-[#3a164f] border border-[#e3a4ea]/50"
+            : "bg-gradient-to-br from-[#4b185d] via-[#72206f] to-[#35204f] border border-[#d78be2]/40"
         }`}
       >
         {/* Subtle Ambient Background Gradient */}
@@ -141,19 +143,19 @@ export const AppDownloadBanner: React.FC<AppDownloadBannerProps> = ({
           className={`absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] ${
             isOrchid
               ? "from-[#38094d]/50 via-[#140624] to-[#080210]"
-              : "from-[#182348]/40 via-[#0a0e21] to-[#060813]"
+              : "from-[#b83ec4]/20 via-[#351547]/20 to-[#160e2b]/30"
           } opacity-95`}
         />
 
         {/* Ambient Glow Effects */}
         <div
           className={`absolute -top-20 -left-20 h-64 w-64 rounded-full blur-3xl ${
-            isOrchid ? "bg-purple-600/20" : "bg-amber-500/10"
+            isOrchid ? "bg-[#c026d3]/20" : "bg-[#f3d053]/10"
           }`}
         />
         <div
           className={`absolute -bottom-20 -right-20 h-64 w-64 rounded-full blur-3xl ${
-            isOrchid ? "bg-[#981495]/25" : "bg-indigo-600/15"
+            isOrchid ? "bg-[#981495]/25" : "bg-[#f0abfc]/15"
           }`}
         />
 
@@ -165,7 +167,7 @@ export const AppDownloadBanner: React.FC<AppDownloadBannerProps> = ({
                 className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold ${
                   isOrchid
                     ? "bg-[#2d093e] text-[#facc15] border border-[#6b1693]"
-                    : "bg-[#2a2208]/90 text-[#facc15] border border-[#52410a]"
+                    : "bg-[#3f1750]/70 text-[#facc15] border border-[#d48ce0]/40"
                 }`}
               >
                 <Sparkles className="h-3.5 w-3.5 text-[#facc15] animate-pulse" />
@@ -211,7 +213,7 @@ export const AppDownloadBanner: React.FC<AppDownloadBannerProps> = ({
                   className={`w-full rounded-xl py-2.5 pl-12 pr-4 text-xs text-white placeholder-slate-500 outline-none transition-all font-mono shadow-inner ${
                     isOrchid
                       ? "bg-[#180a2b] border border-[#3b1763] focus:border-[#facc15] focus:ring-1 focus:ring-[#facc15]"
-                      : "bg-[#0e1428] border border-[#232c48] focus:border-[#facc15] focus:ring-1 focus:ring-[#facc15]"
+                      : "bg-[#351446]/70 border border-[#d98be0]/30 focus:border-[#facc15] focus:ring-1 focus:ring-[#facc15]"
                   }`}
                 />
               </div>
@@ -239,7 +241,9 @@ export const AppDownloadBanner: React.FC<AppDownloadBannerProps> = ({
           <div className="w-full lg:w-auto shrink-0">
             <div
               className={`relative rounded-2xl border backdrop-blur-md p-5 sm:p-6 shadow-2xl flex flex-col sm:flex-row items-center gap-5 ${
-                isOrchid ? "bg-[#1d0933]/80 border-[#3d1663]" : "bg-[#11162b]/80 border-[#232c4a]"
+                isOrchid
+                  ? "bg-[#3d124e]/75 border-[#e3a4ea]/40"
+                  : "bg-[#321743]/75 border-[#d98be0]/30"
               }`}
             >
               {/* Store Download Buttons Column */}
@@ -254,7 +258,7 @@ export const AppDownloadBanner: React.FC<AppDownloadBannerProps> = ({
                   className={`group flex items-center justify-between gap-3 rounded-xl p-2.5 transition-all shadow-md active:scale-98 border ${
                     isOrchid
                       ? "bg-[#140624] hover:bg-[#1d0933] border-[#311152] hover:border-[#5a1e94]"
-                      : "bg-[#0a0e1c] hover:bg-[#0f152a] border-[#1f2845] hover:border-[#35436e]"
+                      : "bg-[#271236]/80 hover:bg-[#3d174d] border-[#b76bc4]/25 hover:border-[#e3a4ea]/50"
                   }`}
                 >
                   <div className="flex items-center gap-2.5 min-w-0">
@@ -295,7 +299,7 @@ export const AppDownloadBanner: React.FC<AppDownloadBannerProps> = ({
                   className={`group flex items-center justify-between gap-3 rounded-xl p-2.5 transition-all shadow-md active:scale-98 border ${
                     isOrchid
                       ? "bg-[#140624] hover:bg-[#1d0933] border-[#311152] hover:border-[#5a1e94]"
-                      : "bg-[#0a0e1c] hover:bg-[#0f152a] border-[#1f2845] hover:border-[#35436e]"
+                      : "bg-[#271236]/80 hover:bg-[#3d174d] border-[#b76bc4]/25 hover:border-[#e3a4ea]/50"
                   }`}
                 >
                   <div className="flex items-center gap-2.5 min-w-0">
@@ -383,7 +387,7 @@ export const AppDownloadBanner: React.FC<AppDownloadBannerProps> = ({
                     <rect x="72" y="84" width="12" height="6" fill="black" rx="1" />
 
                     {/* Center Accent Dot */}
-                    <circle cx="50" cy="50" r="7" fill={isOrchid ? "#981495" : "#b91c1c"} />
+                    <circle cx="50" cy="50" r="7" fill="#981495" />
                   </svg>
                 </div>
                 <div className="mt-1 flex items-center gap-1 text-[9px] font-black text-slate-800 uppercase tracking-wider group-hover:text-primary transition-colors">

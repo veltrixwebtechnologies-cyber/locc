@@ -319,7 +319,7 @@ export function DynamicFilterPanel({
                               onClick={() => toggleAttributeOption(def.key, opt.value)}
                               className={`px-2.5 py-1 rounded-xl text-xs font-bold transition-all flex items-center gap-1 border ${
                                 isSelected
-                                  ? "bg-gradient-to-r from-primary to-indigo-600 text-white border-primary shadow-xs"
+                                  ? "bg-gradient-to-r from-primary to-[#c026d3] text-white border-primary shadow-xs"
                                   : "bg-muted/60 text-foreground border-border/80 hover:bg-muted"
                               }`}
                             >
@@ -375,7 +375,7 @@ export function DynamicFilterPanel({
 
         {/* 🏪 GROUP 2: SHOP FILTERS */}
         <div className="pt-2 border-t border-border/60">
-          <div className="flex items-center gap-1.5 text-xs font-extrabold uppercase tracking-wider text-purple-600 mb-1.5 px-1">
+          <div className="flex items-center gap-1.5 text-xs font-extrabold uppercase tracking-wider text-[#c026d3] mb-1.5 px-1">
             <Store className="h-3.5 w-3.5" />
             <span>Shop &amp; Location Filters</span>
           </div>

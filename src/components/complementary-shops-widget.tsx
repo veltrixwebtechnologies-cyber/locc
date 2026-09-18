@@ -32,7 +32,7 @@ export const ComplementaryShopsWidget: React.FC<ComplementaryShopsWidgetProps> =
   if (!shops || shops.length === 0) return null;
 
   return (
-    <div className="my-8 rounded-3xl bg-gradient-to-br from-[#fcf7fe] via-[#f7eafd] to-[#f2dcfa] p-5 sm:p-7 border-2 border-purple-300/60 shadow-xl shadow-purple-950/5 relative overflow-hidden group">
+    <div className="my-8 rounded-3xl bg-gradient-to-br from-[#fcf7fe] via-[#f7eafd] to-[#f2dcfa] p-5 sm:p-7 border-2 border-[#f0abfc]/60 shadow-xl shadow-[#700b6e]/5 relative overflow-hidden group">
       {/* Decorative Subtle Orchid Watermark Pattern */}
       <div className="absolute -top-12 -right-12 h-40 w-40 rounded-full bg-[#981495]/5 blur-2xl pointer-events-none" />
       <div className="absolute -bottom-12 -left-12 h-40 w-40 rounded-full bg-amber-400/10 blur-2xl pointer-events-none" />
@@ -40,14 +40,14 @@ export const ComplementaryShopsWidget: React.FC<ComplementaryShopsWidgetProps> =
       {/* Header Bar */}
       <div className="flex flex-wrap items-center justify-between gap-3 mb-5 relative z-10">
         <div className="flex items-center space-x-3">
-          <div className="p-2.5 rounded-2xl bg-[#981495] text-white shadow-md shadow-purple-900/20 shrink-0">
+          <div className="p-2.5 rounded-2xl bg-[#981495] text-white shadow-md shadow-[#981495]/20 shrink-0">
             <Sparkles className="h-5 w-5 animate-pulse text-amber-300" />
           </div>
           <div>
             <h3 className="font-display font-extrabold text-lg sm:text-xl text-slate-900 tracking-tight flex items-center gap-2">
               Complementary Nearby Shops
             </h3>
-            <p className="text-xs text-purple-900/80 font-semibold mt-0.5">
+            <p className="text-xs text-[#981495]/80 font-semibold mt-0.5">
               {currentCategory
                 ? `Shoppers interested in ${currentCategory} also visited these local stores`
                 : "Smart contextual local recommendations"}
@@ -55,7 +55,7 @@ export const ComplementaryShopsWidget: React.FC<ComplementaryShopsWidgetProps> =
           </div>
         </div>
 
-        <span className="inline-flex items-center gap-1.5 rounded-full bg-white/90 border border-purple-300/80 px-3.5 py-1 text-[10px] font-black uppercase tracking-wider text-[#981495] shadow-xs backdrop-blur-xs">
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-white/90 border border-[#f0abfc]/80 px-3.5 py-1 text-[10px] font-black uppercase tracking-wider text-[#981495] shadow-xs backdrop-blur-xs">
           <span className="h-2 w-2 rounded-full bg-[#981495] animate-ping" />
           AI Smart Match
         </span>
@@ -75,7 +75,7 @@ export const ComplementaryShopsWidget: React.FC<ComplementaryShopsWidgetProps> =
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: idx * 0.08, duration: 0.3 }}
-              className="group/card rounded-2xl border-2 border-purple-200/70 bg-white p-4 shadow-sm hover:border-[#981495] hover:shadow-xl hover:shadow-purple-950/10 transition-all duration-300 flex flex-col justify-between"
+              className="group/card rounded-2xl border-2 border-[#f0abfc]/70 bg-white p-4 shadow-sm hover:border-[#981495] hover:shadow-xl hover:shadow-[#700b6e]/10 transition-all duration-300 flex flex-col justify-between"
             >
               <div>
                 {/* Store Header */}
@@ -104,7 +104,7 @@ export const ComplementaryShopsWidget: React.FC<ComplementaryShopsWidgetProps> =
 
                 {/* AI Matching Reason Pill (Vibrant Orchid Theme) */}
                 {shop.matching_reason && (
-                  <div className="mt-3 rounded-xl bg-purple-50/90 border border-purple-200/80 p-2.5 text-xs text-purple-950 flex items-start gap-2 shadow-2xs">
+                  <div className="mt-3 rounded-xl bg-[var(--sand)]/90 border border-[#f0abfc]/80 p-2.5 text-xs text-[#700b6e] flex items-start gap-2 shadow-2xs">
                     <Lightbulb className="h-4 w-4 text-amber-500 shrink-0 mt-0.5 fill-amber-400/20" />
                     <p className="font-semibold text-[11px] leading-snug text-[#570954]">
                       {shop.matching_reason}
@@ -130,7 +130,7 @@ export const ComplementaryShopsWidget: React.FC<ComplementaryShopsWidgetProps> =
                 <Link
                   to="/store/$storeId"
                   params={{ storeId: shop.id }}
-                  className="inline-flex items-center gap-1 rounded-xl bg-purple-50 hover:bg-[#981495] text-[#981495] hover:text-white border border-purple-200/80 px-3 py-1.5 text-xs font-extrabold transition-all duration-200 shadow-2xs cursor-pointer"
+                  className="inline-flex items-center gap-1 rounded-xl bg-[var(--sand)] hover:bg-[#981495] text-[#981495] hover:text-white border border-[#f0abfc]/80 px-3 py-1.5 text-xs font-extrabold transition-all duration-200 shadow-2xs cursor-pointer"
                 >
                   <span>Visit Shop</span>
                   <ArrowRight className="h-3.5 w-3.5" />

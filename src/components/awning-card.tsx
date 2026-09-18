@@ -15,7 +15,7 @@ export function AwningCard({ store }: { store: Store }) {
       <Link
         to="/store/$storeId"
         params={{ storeId: store.id }}
-        className="group block overflow-hidden rounded-xl border border-purple-200 bg-card transition-all duration-300 hover:border-purple-400 hover:shadow-lg"
+        className="group block overflow-hidden rounded-xl border border-[#f0abfc] bg-card transition-all duration-300 hover:border-[#c026d3] hover:shadow-lg"
       >
         <div className="relative aspect-[16/10] w-full overflow-hidden bg-[var(--sand)]">
           <img
@@ -54,10 +54,14 @@ export function AwningCard({ store }: { store: Store }) {
               />
               <span className="font-mono">{store.rating.toFixed(1)}</span>
             </span>
-            <span aria-hidden>·</span>
-            <span className="font-mono">{store.distanceKm.toFixed(1)} km</span>
-            <span aria-hidden>·</span>
-            <span className="font-mono">~{store.etaMin} min</span>
+            {store.distanceKm !== undefined && (
+              <>
+                <span aria-hidden>·</span>
+                <span className="font-mono">{store.distanceKm.toFixed(1)} km</span>
+                <span aria-hidden>·</span>
+                <span className="font-mono">~{store.etaMin} min</span>
+              </>
+            )}
           </div>
         </div>
       </Link>

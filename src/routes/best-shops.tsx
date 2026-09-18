@@ -20,7 +20,7 @@ export const Route = createFileRoute("/best-shops")({ component: BestShopsPage }
 
 const badgeColor: Record<ShopMetrics["badge"], string> = {
   top_rated: "bg-amber-100 text-amber-800",
-  rising_star: "bg-purple-100 text-purple-800",
+  rising_star: "bg-[var(--sand)] text-[#981495]",
   most_loved: "bg-rose-100 text-rose-800",
   fastest: "bg-sky-100 text-sky-800",
   best_value: "bg-emerald-100 text-emerald-800",
@@ -70,7 +70,7 @@ function BestShopsPage() {
               key={t.id}
               onClick={() => setTab(t.id)}
               className={`flex items-center gap-1.5 rounded-xl px-4 py-2 text-xs font-bold transition ${
-                tab === t.id ? "bg-purple-700 text-white" : "text-slate-600 hover:bg-purple-50"
+                tab === t.id ? "bg-[#981495] text-white" : "text-slate-600 hover:bg-[var(--sand)]"
               }`}
             >
               <t.icon className="h-3.5 w-3.5" /> {t.label}
@@ -151,7 +151,7 @@ function BestShopsPage() {
                       <Link
                         to="/store/$storeId"
                         params={{ storeId: shop.shopId }}
-                        className="rounded-xl bg-purple-700 px-4 py-2 text-xs font-bold text-white hover:bg-purple-800 transition"
+                        className="rounded-xl bg-[#981495] px-4 py-2 text-xs font-bold text-white hover:bg-[#981495] transition"
                       >
                         Visit Shop →
                       </Link>

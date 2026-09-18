@@ -2,6 +2,8 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import { AppShell } from "@/components/app-shell";
 import { ChevronLeft } from "lucide-react";
+import { useAuth } from "@/lib/auth-store";
+import { useNotifications } from "@/lib/notifications-store";
 
 const KEY = "localshore.notifs.v1";
 interface Prefs {
@@ -14,6 +16,8 @@ const DEFAULT: Prefs = { orders: true, offers: true, nearby: false };
 export const Route = createFileRoute("/notifications")({ component: NotificationsPage });
 
 function NotificationsPage() {
+  const auth = useAuth();
+  const notificationFeed = useNotifications(auth.id);
   const [prefs, setPrefs] = useState<Prefs>(DEFAULT);
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -73,6 +77,40 @@ function NotificationsPage() {
           </li>
         ))}
       </ul>
+      {auth.id && (
+        <section className="mx-5 mt-6 rounded-xl bg-card p-4 ring-1 ring-black/[0.04]">
+          <div className="flex items-center justify-between">
+            <h2 className="font-display text-lg">Recent notifications</h2>
+            <span className="text-xs text-muted-foreground">
+              {notificationFeed.unreadCount} unread
+            </span>
+          </div>
+          {notificationFeed.loading ? (
+            <p className="mt-3 text-sm text-muted-foreground">Loading notifications…</p>
+          ) : notificationFeed.notifications.length === 0 ? (
+            <p className="mt-3 text-sm text-muted-foreground">No notifications yet.</p>
+          ) : (
+            <ul className="mt-3 divide-y divide-border">
+              {notificationFeed.notifications.map((notification) => (
+                <li key={notification.id} className="py-3 first:pt-0 last:pb-0">
+                  <button
+                    type="button"
+                    onClick={() => void notificationFeed.markRead(notification.id)}
+                    className="w-full text-left"
+                  >
+                    <p
+                      className={`text-sm font-semibold ${notification.read_at ? "" : "text-primary"}`}
+                    >
+                      {notification.title}
+                    </p>
+                    <p className="mt-1 text-xs text-muted-foreground">{notification.body}</p>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      )}
     </AppShell>
   );
 }

@@ -134,7 +134,7 @@ export function FilterChips({
       {filterState.openNow && (
         <Badge
           variant="secondary"
-          className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium bg-purple-500/10 text-purple-800 dark:text-purple-300 border border-purple-500/20"
+          className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium bg-[#c026d3]/10 text-[#981495] dark:text-[#f0abfc] border border-[#c026d3]/20"
         >
           <span>Open Now</span>
           <button

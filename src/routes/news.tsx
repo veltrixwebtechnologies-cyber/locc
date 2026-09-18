@@ -10,10 +10,10 @@ export const Route = createFileRoute("/news")({ component: NewsPage });
 const catColor: Record<NewsArticle["category"], string> = {
   launch: "bg-emerald-100 text-emerald-800",
   seller_story: "bg-amber-100 text-amber-800",
-  brand: "bg-purple-100 text-purple-800",
+  brand: "bg-[var(--sand)] text-[#981495]",
   guide: "bg-sky-100 text-sky-800",
   community: "bg-rose-100 text-rose-800",
-  update: "bg-indigo-100 text-indigo-800",
+  update: "bg-[var(--sand)] text-[#981495]",
   travel: "bg-teal-100 text-teal-800",
 };
 
@@ -66,8 +66,8 @@ function NewsPage() {
           className="mt-5 rounded-3xl bg-gradient-to-br from-slate-800 to-slate-900 p-6 text-white shadow-xl sm:p-8"
         >
           <div className="flex items-center gap-2">
-            <Newspaper className="h-5 w-5 text-purple-400" />
-            <span className="text-xs font-bold uppercase tracking-widest text-purple-300">
+            <Newspaper className="h-5 w-5 text-[#c026d3]" />
+            <span className="text-xs font-bold uppercase tracking-widest text-[#f0abfc]">
               LocalShore Stories
             </span>
           </div>
@@ -88,8 +88,8 @@ function NewsPage() {
               onClick={() => setFilter(c)}
               className={`shrink-0 rounded-full px-4 py-2 text-xs font-bold capitalize transition ${
                 filter === c
-                  ? "bg-purple-700 text-white"
-                  : "bg-slate-100 text-slate-600 hover:bg-purple-50"
+                  ? "bg-[#981495] text-white"
+                  : "bg-slate-100 text-slate-600 hover:bg-[var(--sand)]"
               }`}
             >
               {c === "all" ? "All" : catLabel[c]}
@@ -139,7 +139,7 @@ function NewsPage() {
                     })}
                   </span>
                 </div>
-                <button className="mt-4 flex items-center gap-1 text-sm font-bold text-purple-700 hover:underline">
+                <button className="mt-4 flex items-center gap-1 text-sm font-bold text-[#981495] hover:underline">
                   Read more <ArrowRight className="h-3.5 w-3.5" />
                 </button>
               </div>
@@ -170,7 +170,7 @@ function NewsPage() {
                 >
                   {catLabel[article.category]}
                 </span>
-                <h3 className="mt-2 text-sm font-bold text-slate-900 line-clamp-2 group-hover:text-purple-700 transition-colors">
+                <h3 className="mt-2 text-sm font-bold text-slate-900 line-clamp-2 group-hover:text-[#981495] transition-colors">
                   {article.title}
                 </h3>
                 <p className="mt-1 text-xs text-slate-500 line-clamp-2">{article.excerpt}</p>

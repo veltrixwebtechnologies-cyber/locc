@@ -43,7 +43,7 @@ export interface Store {
   name: string;
   category: StoreCategory;
   tagline: string;
-  distanceKm: number;
+  distanceKm?: number;
   rating: number;
   isOpen: boolean;
   etaMin: number;
@@ -64,6 +64,29 @@ const catImg = (id: string) => `https://images.unsplash.com/${id}?auto=format&fi
 const storeImg = (id: string) =>
   `https://images.unsplash.com/${id}?auto=format&fit=crop&w=800&q=75`;
 const img = (id: string) => `https://images.unsplash.com/${id}?auto=format&fit=crop&w=300&q=75`;
+
+const generatedProductImages = [
+  img("photo-1542838132-92c53300491e"),
+  img("photo-1578916171728-46686eac8d58"),
+  img("photo-1601598851547-4302969d2b56"),
+  img("photo-1547592180-85f173990554"),
+  img("photo-1556911220-e15b29be8c8f"),
+  img("photo-1490481651871-ab68de25d43d"),
+  img("photo-1445205170230-053b83016050"),
+  img("photo-1542291026-7eec264c27ff"),
+  img("photo-1496181133206-80ce9b88a853"),
+  img("photo-1511707171634-5f897ff02aa9"),
+  img("photo-1584308666744-24d5c474f2ae"),
+  img("photo-1509440159596-0249088772ff"),
+  img("photo-1555396273-367ea4eb4db5"),
+  img("photo-1495474472287-4d71bcdd2085"),
+  img("photo-1535632066927-ab7c9ab60908"),
+  img("photo-1513519245088-0e12902e5a38"),
+  img("photo-1504148455328-c376907d081c"),
+  img("photo-1596462502278-27bfdc403348"),
+  img("photo-1596461404969-9ae70f2830c1"),
+  img("photo-1517836357463-d25dfeac3438"),
+];
 
 export const APPROVED_STORE: Store = {
   id: "approved-catalog",
@@ -1543,8 +1566,85 @@ const starterStores: Store[] = [
   },
 ];
 
-// Combine all Kovilmedu, legacy, and starter shops into the main store list
-export const stores: Store[] = [...kovilmeduStores, ...legacyStores, ...starterStores];
+// Keep the primary category rail useful in the local/demo catalog. These are
+// stable shop records, not recommendation aliases.
+const categoryCoverageSeeds: Array<{
+  category: StoreCategory;
+  names: [string, string, string];
+  tagline: string;
+  imageUrl: string;
+}> = [
+  [
+    "fruits_veg",
+    ["Pappampatti Fresh Farm", "Green Basket Fruits", "Morning Harvest Veggies"],
+    "Farm-fresh fruits, vegetables and daily greens",
+    "photo-1542838132-92c53300491e",
+  ],
+  [
+    "meat_fish",
+    ["Coastal Catch Fish Market", "Nattu Kozhi Fresh Cuts", "SeaFresh Meat Corner"],
+    "Fresh fish, chicken, mutton and country eggs",
+    "photo-1607623814075-e51df1bdc82f",
+  ],
+  [
+    "bakery",
+    ["Morning Oven Bakers", "Sweet Street Bakes", "Cocoa Crust Bakery"],
+    "Fresh bread, cakes, puffs and evening snacks",
+    "photo-1509440159596-0249088772ff",
+  ],
+  [
+    "grocery",
+    ["Namma Kirana Store", "Daily Needs Supermart", "Shoreline Provision Hub"],
+    "Everyday groceries, staples and household essentials",
+    "photo-1604719312566-8912e9227c6a",
+  ],
+  [
+    "pharmacy",
+    ["CarePlus Pharmacy", "Wellness Medicos", "Green Cross Pharmacy"],
+    "Everyday medicines, wellness and personal care",
+    "photo-1587854692152-cbe660dbde88",
+  ],
+  [
+    "restaurants",
+    ["Annapoorna Meals", "Spice Route Kitchen", "Trichy Road Tiffin House"],
+    "Local meals, tiffin, biryani and family dining",
+    "photo-1555396273-367ea4eb4db5",
+  ],
+  [
+    "cafes",
+    ["Filter Coffee Club", "Tea Kadai Corner", "Coconut Grove Café"],
+    "Filter coffee, tea, juices and quick bites",
+    "photo-1501339847302-ac426a4a7cbb",
+  ],
+].map(([category, names, tagline, imageId]) => ({
+  category: category as StoreCategory,
+  names: names as [string, string, string],
+  tagline,
+  imageUrl: storeImg(imageId),
+}));
+
+const categoryCoverageStores: Store[] = categoryCoverageSeeds.flatMap((seed, categoryIndex) =>
+  seed.names.map((name, index) => ({
+    id: `coverage-${seed.category}-${index + 1}`,
+    name,
+    category: seed.category,
+    tagline: seed.tagline,
+    rating: 4.5 + (index % 3) * 0.1,
+    isOpen: true,
+    etaMin: 18 + index * 3,
+    address: "Pappampatti Pirivu, Coimbatore",
+    lat: 11.0028 + categoryIndex * 0.0007 + index * 0.0002,
+    lng: 77.0865 + categoryIndex * 0.0005 - index * 0.0002,
+    imageUrl: seed.imageUrl,
+  })),
+);
+
+export const stores: Store[] = [
+  ...kovilmeduStores,
+  ...legacyStores,
+  ...starterStores,
+  ...categoryCoverageStores,
+];
 
 const seedProducts = (storeId: string, cat: StoreCategory): Product[] => {
   const catalogs: Record<StoreCategory, Array<Omit<Product, "id" | "storeId">>> = {
@@ -1923,35 +2023,35 @@ const seedProducts = (storeId: string, cat: StoreCategory): Product[] => {
         unit: "1 Litre",
         price: 240,
         category: "Oils",
-        imageUrl: img("photo-1604719312566-8912e9227c6a"),
+        imageUrl: img("photo-1474979266404-7eaacbcd87c5"),
       },
       {
         name: "Organic Unpolished Toor Dal (துவரம் பருப்பு)",
         unit: "1 kg",
         price: 145,
         category: "Pulses",
-        imageUrl: img("photo-1586201375761-83865001e31c"),
+        imageUrl: img("photo-1515543904379-3d757afe72e4"),
       },
       {
         name: "Premium Whole Urad Dal (உளுந்தம் பருப்பு)",
         unit: "1 kg",
         price: 135,
         category: "Pulses",
-        imageUrl: img("photo-1586201375761-83865001e31c"),
+        imageUrl: img("photo-1604329760661-e71dc83f8f26"),
       },
       {
         name: "Natural Country Jaggery Powder (நாட்டுச் சர்க்கரை)",
         unit: "1 kg",
         price: 90,
         category: "Staples",
-        imageUrl: img("photo-1615485290382-441e4d049cb5"),
+        imageUrl: img("photo-1601050690597-df0568f70950"),
       },
       {
         name: "Pure Farm Cow Ghee (பசும் நெய்)",
         unit: "500 ml",
         price: 320,
         category: "Dairy & Ghee",
-        imageUrl: img("photo-1604719312566-8912e9227c6a"),
+        imageUrl: img("photo-1628088062854-d1870b4553da"),
       },
     ],
     restaurants: [
@@ -2367,7 +2467,79 @@ const seedProducts = (storeId: string, cat: StoreCategory): Product[] => {
       },
     ],
   };
-  return (catalogs[cat] || catalogs.palamuthir).map((p, i) => ({
+  const relatedLocalEssentials: Partial<
+    Record<StoreCategory, Array<Omit<Product, "id" | "storeId">>>
+  > = {
+    meat_fish: [
+      {
+        name: "Chicken Masala Powder",
+        unit: "100 g",
+        price: 55,
+        category: "Masala",
+        imageUrl: img("photo-1596040033229-a9821ebd058d"),
+      },
+      {
+        name: "Ginger Garlic Paste",
+        unit: "200 g",
+        price: 48,
+        category: "Masala",
+        imageUrl: img("photo-1615485290382-441e4d049cb5"),
+      },
+      {
+        name: "Fresh Country Onions",
+        unit: "1 kg",
+        price: 42,
+        category: "Vegetables",
+        imageUrl: img("photo-1518977676810-b53f82aba655"),
+      },
+      {
+        name: "Fresh Lemons",
+        unit: "250 g",
+        price: 35,
+        category: "Vegetables",
+        imageUrl: img("photo-1590502593747-42a996133562"),
+      },
+      {
+        name: "Red Chilli Powder",
+        unit: "250 g",
+        price: 75,
+        category: "Masala",
+        imageUrl: img("photo-1596040033229-a9821ebd058d"),
+      },
+      {
+        name: "Cooking Oil",
+        unit: "1 Litre",
+        price: 145,
+        category: "Grocery",
+        imageUrl: img("photo-1610832958506-aa56368176cf"),
+      },
+    ],
+  };
+  const baseCatalog = [
+    ...(catalogs[cat] || catalogs.palamuthir),
+    ...(relatedLocalEssentials[cat] ?? []),
+  ];
+  const catalog = [...baseCatalog];
+  const usedImages = new Set(catalog.map((product) => product.imageUrl).filter(Boolean));
+
+  // Keep every mock shop useful as a browsable storefront with a compact,
+  // unique catalog instead of showing only the category seed examples.
+  while (catalog.length < 10) {
+    const productNumber = catalog.length + 1;
+    const imageUrl =
+      generatedProductImages.find((candidate) => !usedImages.has(candidate)) ??
+      generatedProductImages[(productNumber - 1) % generatedProductImages.length];
+    catalog.push({
+      name: `${cat.replace(/_/g, " ")} local pick ${productNumber}`,
+      unit: "1 pc",
+      price: 75 + productNumber * 15,
+      category: cat.replace(/_/g, " "),
+      imageUrl,
+    });
+    usedImages.add(imageUrl);
+  }
+
+  return catalog.slice(0, 12).map((p, i) => ({
     ...p,
     id: `${storeId}-p${i}`,
     storeId,

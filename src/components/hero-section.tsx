@@ -12,7 +12,7 @@
  *
  * Respects prefers-reduced-motion, mobile responsiveness, zero layout shift, and 100% LocalShore branding.
  */
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useRef, useMemo } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { motion, AnimatePresence, useReducedMotion, useScroll, useTransform } from "framer-motion";
 import {
@@ -33,6 +33,7 @@ import { useDeliveryLocation } from "@/lib/location-store";
 import { LocationModal } from "@/components/ui/location-modal";
 import { type SearchResultItem } from "@/lib/search-service";
 import { useLiveSearchResults } from "@/hooks/use-live-search-results";
+import { AnimatedSearchPlaceholder } from "@/components/ui/animated-search-placeholder";
 
 interface SwiggyFeatureCard {
   id: string;
@@ -78,21 +79,25 @@ const FEATURE_CARDS: SwiggyFeatureCard[] = [
   },
 ];
 
-const SEARCH_SUGGESTIONS = [
-  "Fresh Vegetables & Organic Produce",
-  "Sri Krishna Mysurpa & Bakery",
-  "Idli & Dosa Batter (24 Hours Fresh)",
-  "Paracetamol & Chemist Essentials",
-  "Handloom Silk Sarees & Kurtis",
+const SEARCH_PLACEHOLDERS = [
+  "Search for shops, products and more",
+  "Search for fresh vegetables",
+  "Search for nearby bakeries",
+  "Search for fashion stores",
+  "Search for electronics shops",
+  "Search for pharmacies",
+  "Search for local favorites",
 ];
 
 const POPULAR_TAGS = [
-  { label: "Groceries", query: "grocery", icon: "🛒" },
-  { label: "Idli Batter", query: "batter", icon: "🥣" },
-  { label: "Sweets", query: "sweets", icon: "🍬" },
-  { label: "Chicken", query: "chicken", icon: "🍗" },
-  { label: "Medicines", query: "pharmacy", icon: "💊" },
-  { label: "Bakery", query: "bakery", icon: "🥐" },
+  { label: "Nearby Shops", query: "nearby shops", icon: "🏪" },
+  { label: "Bakeries", query: "bakeries", icon: "🥐" },
+  { label: "Clothing Stores", query: "clothing stores", icon: "👗" },
+  { label: "Mobile Shops", query: "mobile shops", icon: "📱" },
+  { label: "Salons", query: "salons", icon: "💇" },
+  { label: "Meat & Fish", query: "meat fish", icon: "🥩" },
+  { label: "Home & Kitchen", query: "home kitchen", icon: "🏠" },
+  { label: "Local Favorites", query: "local favorites", icon: "⭐" },
 ];
 
 export function HeroSection() {
@@ -100,29 +105,12 @@ export function HeroSection() {
   const shouldReduceMotion = useReducedMotion();
 
   const containerRef = useRef<HTMLDivElement>(null);
-  const videoRef = useRef<HTMLVideoElement>(null);
 
   const [deliveryLocation] = useDeliveryLocation();
   const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [suggestionIdx, setSuggestionIdx] = useState(0);
   const [isFocused, setIsFocused] = useState(false);
   const [activeSlide, setActiveSlide] = useState(0);
-
-  const handleReplayVideo = () => {
-    if (videoRef.current) {
-      videoRef.current.currentTime = 0;
-      videoRef.current.play().catch(() => {});
-    }
-  };
-
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setSuggestionIdx((prev) => (prev + 1) % SEARCH_SUGGESTIONS.length);
-    }, 2400);
-    return () => clearInterval(timer);
-  }, []);
-
   const handleSearchSubmit = (e?: React.FormEvent, customQuery?: string) => {
     if (e) e.preventDefault();
     const queryToUse = customQuery ?? searchQuery;
@@ -162,11 +150,11 @@ export function HeroSection() {
       className="mx-auto max-w-7xl px-3 pt-2 pb-5 sm:px-6 sm:pt-4 md:px-8 md:pt-5"
     >
       {/* ── Scene 1: Camera Push-In Hero Card ── */}
-      <div className="relative rounded-3xl sm:rounded-[36px] bg-[#981495] p-5 sm:p-8 lg:p-12 text-white shadow-2xl transition-all">
+      <div className="relative overflow-x-hidden rounded-3xl sm:rounded-[36px] bg-[#981495] p-5 sm:p-8 lg:p-12 text-white shadow-2xl transition-all">
         {/* Isolated Overflow-Hidden Layer for Background Glows (Prevents search dropdown clipping) */}
         <div className="absolute inset-0 overflow-hidden rounded-3xl sm:rounded-[36px] pointer-events-none z-0">
-          <div className="absolute -top-24 -right-24 h-80 w-80 rounded-full bg-radial from-purple-400/30 to-transparent blur-2xl" />
-          <div className="absolute -bottom-24 -left-24 h-80 w-80 rounded-full bg-radial from-purple-900/40 to-transparent blur-2xl" />
+          <div className="absolute -top-24 -right-24 h-80 w-80 rounded-full bg-radial from-[#c026d3]/30 to-transparent blur-2xl" />
+          <div className="absolute -bottom-24 -left-24 h-80 w-80 rounded-full bg-radial from-[#981495]/40 to-transparent blur-2xl" />
         </div>
 
         <div className="relative z-10 space-y-5 sm:space-y-7">
@@ -188,9 +176,9 @@ export function HeroSection() {
             {/* Motion Typography Commercial Headline */}
             <div className="lg:col-span-7 space-y-2 sm:space-y-3">
               <h1 className="font-display text-2xl font-black tracking-tight sm:text-4xl lg:text-[52px] text-white leading-[1.1]">
-                <span className="block">Order food &amp; groceries.</span>
+                <span className="block">Shop everything local.</span>
 
-                <span className="block">Discover best shops.</span>
+                <span className="block">From fashion to fresh produce.</span>
 
                 <span className="block pt-0.5">
                   <span className="text-gold-gradient font-black inline-block drop-shadow-md">
@@ -200,41 +188,60 @@ export function HeroSection() {
                 </span>
               </h1>
 
-              <p className="text-xs sm:text-sm font-semibold text-purple-100/90 max-w-lg leading-relaxed pt-0.5 sm:pt-1">
+              <p className="text-xs sm:text-sm font-semibold text-[var(--sand)]/90 max-w-lg leading-relaxed pt-0.5 sm:pt-1">
                 Support neighborhood vendors with instant fulfillment across Shoreline City.
               </p>
             </div>
 
             {/* Delivery Rider Card */}
-            <div
-              onClick={handleReplayVideo}
-              title="Click to replay animation"
-              className="flex lg:col-span-5 justify-center lg:justify-end items-center relative my-2 sm:my-4 lg:my-0 w-full cursor-pointer group"
-            >
-              <div className="relative w-full max-w-[320px] sm:max-w-sm lg:max-w-none lg:w-96 aspect-[16/9] lg:h-72 mx-auto rounded-2xl lg:rounded-3xl p-[3.5px] bg-gradient-to-r from-[#F3D053] via-amber-300 to-[#F3D053] shadow-[0_0_30px_rgba(243,208,83,0.55)] border border-amber-200/80 transition-transform duration-300 group-hover:scale-[1.02]">
-                <div className="relative w-full h-full overflow-hidden rounded-[13px] lg:rounded-[21px]">
-                  {/* Eager high-priority poster image to ensure instant <0.3s LCP paint */}
-                  <img
-                    src="/assets/delivery-rider-final.png"
-                    alt="LocalShore Instant Delivery"
-                    loading="eager"
-                    decoding="sync"
-                    {...({ fetchPriority: "high" } as Record<string, string>)}
-                    className="absolute inset-0 w-full h-full object-cover pointer-events-none z-0"
-                  />
-                  <video
-                    ref={videoRef}
-                    src="/assets/delivery-rider-loop.mp4"
-                    poster="/assets/delivery-rider-final.png"
-                    preload="auto"
-                    autoPlay
-                    muted
-                    playsInline
-                    {...({ fetchPriority: "high" } as Record<string, string>)}
-                    className="relative z-10 w-full h-full object-cover pointer-events-none"
-                  />
+            <div className="flex min-w-0 lg:col-span-5 justify-center lg:justify-end items-center relative my-2 sm:my-4 lg:my-0 w-full max-w-full group">
+              <motion.div
+                initial={shouldReduceMotion ? false : { y: -80, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{
+                  y: { type: "spring", stiffness: 85, damping: 20, mass: 0.8, delay: 0.08 },
+                  opacity: { duration: 0.45, ease: "easeOut", delay: 0.08 },
+                }}
+                className="relative min-w-0 w-full max-w-[320px] sm:max-w-sm lg:max-w-full pt-7 sm:pt-8"
+              >
+                {/* The full suspension assembly enters together; the board floats after settling. */}
+                <div className="pointer-events-none absolute left-[19%] top-0 h-8 w-[2px] bg-gradient-to-b from-[#fff6bf] via-[#F3D053] to-[#9f7b13] opacity-95" />
+                <div className="pointer-events-none absolute right-[19%] top-0 h-8 w-[2px] bg-gradient-to-b from-[#fff6bf] via-[#F3D053] to-[#9f7b13] opacity-95" />
+                <div className="pointer-events-none absolute left-[calc(19%-4px)] -top-1 h-2.5 w-2.5 rounded-full border border-[#fff1a8] bg-[#d7a92e] shadow-[0_0_10px_rgba(243,208,83,0.8)]" />
+                <div className="pointer-events-none absolute right-[calc(19%-4px)] -top-1 h-2.5 w-2.5 rounded-full border border-[#fff1a8] bg-[#d7a92e] shadow-[0_0_10px_rgba(243,208,83,0.8)]" />
+
+                <div>
+                  <motion.div
+                    animate={
+                      shouldReduceMotion
+                        ? { y: 0, rotate: 0 }
+                        : { y: [0, -2, 0, 2, 0], rotate: [-0.45, 0.35, -0.45] }
+                    }
+                    transition={{
+                      duration: 6,
+                      repeat: Infinity,
+                      repeatType: "mirror",
+                      ease: "easeInOut",
+                    }}
+                    className="relative mx-auto aspect-[16/9] w-full max-w-full transform-gpu rounded-2xl border border-[#F3D053]/90 bg-gradient-to-r from-[#F3D053] via-amber-300 to-[#F3D053] p-[3.5px] shadow-[0_0_30px_rgba(243,208,83,0.45),0_18px_28px_rgba(20,10,48,0.28)] transition-transform duration-300 group-hover:scale-[1.02] lg:h-72 lg:rounded-3xl"
+                  >
+                    {/* These lower mounts travel with the suspended board. */}
+                    <div className="pointer-events-none absolute -top-2 left-[calc(19%-5px)] z-20 h-3.5 w-3.5 rounded-full border-2 border-[#fff1a8] bg-[#c8951f] shadow-[0_0_12px_rgba(243,208,83,0.85)]" />
+                    <div className="pointer-events-none absolute -top-2 right-[calc(19%-5px)] z-20 h-3.5 w-3.5 rounded-full border-2 border-[#fff1a8] bg-[#c8951f] shadow-[0_0_12px_rgba(243,208,83,0.85)]" />
+                    <div className="relative h-full w-full overflow-hidden rounded-[13px] lg:rounded-[21px] bg-[#160a2b] ring-1 ring-white/15">
+                      {/* Static hero artwork replaces the animated rider video. */}
+                      <img
+                        src="/assets/shoreline-hero-reference.png"
+                        alt="LocalShore marketplace delivery scene"
+                        loading="eager"
+                        decoding="async"
+                        {...({ fetchPriority: "high" } as Record<string, string>)}
+                        className="absolute inset-0 h-full w-full object-cover pointer-events-none"
+                      />
+                    </div>
+                  </motion.div>
                 </div>
-              </div>
+              </motion.div>
             </div>
           </div>
 
@@ -252,7 +259,7 @@ export function HeroSection() {
                     window.dispatchEvent(new CustomEvent("localshore_open_location_modal"));
                   }
                 }}
-                className="flex items-center gap-2 px-3 sm:px-4 py-2 text-slate-700 border-b sm:border-b-0 sm:border-r border-slate-200 w-full sm:w-auto shrink-0 group cursor-pointer hover:bg-purple-50/50 transition-colors rounded-2xl sm:rounded-l-full text-left"
+                className="flex items-center gap-2 px-3 sm:px-4 py-2 text-slate-700 border-b sm:border-b-0 sm:border-r border-slate-200 w-full sm:w-auto shrink-0 group cursor-pointer hover:bg-[var(--sand)]/50 transition-colors rounded-2xl sm:rounded-l-full text-left"
               >
                 <MapPin className="h-4 w-4 text-[#981495] shrink-0" />
                 <span className="text-xs sm:text-sm font-bold text-slate-900 w-full sm:w-[170px] truncate">
@@ -267,6 +274,11 @@ export function HeroSection() {
               <div className="relative flex items-center gap-2 px-3 py-1.5 sm:py-2 w-full flex-1 min-h-[44px]">
                 <Search className="h-4 w-4 text-[#981495] shrink-0" />
                 <div className="relative w-full flex items-center">
+                  <AnimatedSearchPlaceholder
+                    phrases={SEARCH_PLACEHOLDERS}
+                    active={!isFocused && !searchQuery}
+                    className="right-0 text-xs font-semibold text-slate-400 sm:text-sm"
+                  />
                   <input
                     type="text"
                     value={searchQuery}
@@ -277,9 +289,7 @@ export function HeroSection() {
                       setSearchQuery(val);
                       setIsFocused(true);
                     }}
-                    placeholder={
-                      isFocused ? "" : `Search "${SEARCH_SUGGESTIONS[suggestionIdx]}"...`
-                    }
+                    placeholder=""
                     className="relative z-10 text-xs sm:text-sm font-semibold text-slate-900 bg-transparent outline-none border-none w-full"
                   />
                 </div>
@@ -313,7 +323,7 @@ export function HeroSection() {
                   animate={{ opacity: 1, y: 4 }}
                   exit={{ opacity: 0, y: -4 }}
                   transition={{ duration: 0.15 }}
-                  className="absolute left-0 right-0 top-full z-30 mt-2 rounded-2xl bg-white p-3 sm:p-4 shadow-2xl border border-purple-100/80 text-slate-900 max-h-[440px] overflow-y-auto"
+                  className="absolute left-0 right-0 top-full z-30 mt-2 rounded-2xl bg-white p-3 sm:p-4 shadow-2xl border border-[var(--sand)]/80 text-slate-900 max-h-[440px] overflow-y-auto"
                 >
                   {!searchQuery.trim() ? (
                     <div>
@@ -332,7 +342,7 @@ export function HeroSection() {
                             type="button"
                             onMouseDown={(e) => e.preventDefault()}
                             onClick={() => handleTagClick(tag.query)}
-                            className="inline-flex items-center gap-1.5 rounded-xl bg-purple-50 hover:bg-[#981495] hover:text-white px-3 py-2 text-xs font-bold text-[#981495] transition-all cursor-pointer min-h-[38px]"
+                            className="inline-flex items-center gap-1.5 rounded-xl bg-[var(--sand)] hover:bg-[#981495] hover:text-white px-3 py-2 text-xs font-bold text-[#981495] transition-all cursor-pointer min-h-[38px]"
                           >
                             <span>{tag.icon}</span>
                             <span>{tag.label}</span>
@@ -369,10 +379,10 @@ export function HeroSection() {
                             <div>
                               <div className="flex items-center justify-between pb-1.5 border-b border-slate-100 mb-2">
                                 <span className="flex items-center gap-1.5 text-xs font-extrabold text-slate-800 uppercase tracking-wider">
-                                  <ShoppingBag className="h-3.5 w-3.5 text-purple-600" />
+                                  <ShoppingBag className="h-3.5 w-3.5 text-[#c026d3]" />
                                   Products in local shops ({productResults.length})
                                 </span>
-                                <span className="text-[10px] font-bold text-purple-700">
+                                <span className="text-[10px] font-bold text-[#981495]">
                                   Instant Delivery
                                 </span>
                               </div>
@@ -387,7 +397,7 @@ export function HeroSection() {
                                       setIsFocused(false);
                                       navigate({ to: item.url as any });
                                     }}
-                                    className="w-full flex items-center gap-3 p-2 rounded-xl hover:bg-purple-50/80 transition-colors text-left group"
+                                    className="w-full flex items-center gap-3 p-2 rounded-xl hover:bg-[var(--sand)]/80 transition-colors text-left group"
                                   >
                                     <img
                                       src={item.imageUrl}
@@ -395,7 +405,7 @@ export function HeroSection() {
                                       className="w-10 h-10 rounded-lg object-cover border border-slate-200 shrink-0"
                                     />
                                     <div className="flex-1 min-w-0">
-                                      <h4 className="text-xs font-bold text-slate-900 group-hover:text-purple-700 truncate">
+                                      <h4 className="text-xs font-bold text-slate-900 group-hover:text-[#981495] truncate">
                                         {item.title}
                                       </h4>
                                       <div className="flex items-center gap-2 text-[11px] text-slate-500 mt-0.5">
@@ -407,7 +417,7 @@ export function HeroSection() {
                                         </span>
                                       </div>
                                     </div>
-                                    <ChevronRight className="h-4 w-4 text-slate-300 group-hover:text-purple-600 shrink-0" />
+                                    <ChevronRight className="h-4 w-4 text-slate-300 group-hover:text-[#c026d3] shrink-0" />
                                   </button>
                                 ))}
                               </div>
@@ -419,7 +429,7 @@ export function HeroSection() {
                             <div>
                               <div className="flex items-center justify-between pb-1.5 border-b border-slate-100 mb-2">
                                 <span className="flex items-center gap-1.5 text-xs font-extrabold text-slate-800 uppercase tracking-wider">
-                                  <Store className="h-3.5 w-3.5 text-purple-600" />
+                                  <Store className="h-3.5 w-3.5 text-[#c026d3]" />
                                   Matching Local Shops ({shopResults.length})
                                 </span>
                               </div>
@@ -434,7 +444,7 @@ export function HeroSection() {
                                       setIsFocused(false);
                                       navigate({ to: item.url as any });
                                     }}
-                                    className="w-full flex items-center gap-3 p-2 rounded-xl hover:bg-purple-50/80 transition-colors text-left group"
+                                    className="w-full flex items-center gap-3 p-2 rounded-xl hover:bg-[var(--sand)]/80 transition-colors text-left group"
                                   >
                                     <img
                                       src={item.imageUrl}
@@ -442,14 +452,14 @@ export function HeroSection() {
                                       className="w-10 h-10 rounded-lg object-cover border border-slate-200 shrink-0"
                                     />
                                     <div className="flex-1 min-w-0">
-                                      <h4 className="text-xs font-bold text-slate-900 group-hover:text-purple-700 truncate">
+                                      <h4 className="text-xs font-bold text-slate-900 group-hover:text-[#981495] truncate">
                                         {item.title}
                                       </h4>
                                       <p className="text-[11px] text-slate-500 mt-0.5 font-medium truncate">
                                         {item.subtitle}
                                       </p>
                                     </div>
-                                    <ChevronRight className="h-4 w-4 text-slate-300 group-hover:text-purple-600 shrink-0" />
+                                    <ChevronRight className="h-4 w-4 text-slate-300 group-hover:text-[#c026d3] shrink-0" />
                                   </button>
                                 ))}
                               </div>
@@ -461,7 +471,7 @@ export function HeroSection() {
                             type="button"
                             onMouseDown={(e) => e.preventDefault()}
                             onClick={() => handleSearchSubmit(undefined, searchQuery)}
-                            className="w-full mt-2 py-2 px-3 rounded-xl bg-purple-900 hover:bg-purple-950 text-white text-xs font-bold flex items-center justify-center gap-1.5 transition-colors shadow-sm cursor-pointer"
+                            className="w-full mt-2 py-2 px-3 rounded-xl bg-[#981495] hover:bg-[#700b6e] text-white text-xs font-bold flex items-center justify-center gap-1.5 transition-colors shadow-sm cursor-pointer"
                           >
                             <span>View all product & shop results for "{searchQuery}"</span>
                             <ArrowUpRight className="h-3.5 w-3.5" />

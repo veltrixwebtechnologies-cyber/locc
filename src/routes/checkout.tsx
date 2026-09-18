@@ -32,6 +32,8 @@ import {
   Banknote,
   Tag,
   ShoppingBag,
+  Landmark,
+  QrCode,
 } from "lucide-react";
 import { toast } from "sonner";
 import { AnimatePresence, m } from "motion/react";
@@ -64,7 +66,6 @@ function loadRazorpaySDK(): Promise<boolean> {
     }, 100);
   });
 }
-
 const CURRENT_LOCATION_ID = "__current_location";
 const isProductUuid = (value: string) =>
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
@@ -684,7 +685,6 @@ function CheckoutPage() {
     await initiateRazorpayCheckout();
   };
 
-
   const initiateRazorpayCheckout = async () => {
     const destinationCoords = parseCoordinates(pinCoords?.lat, pinCoords?.lng);
     if (!canPlace || !destinationCoords) {
@@ -930,7 +930,7 @@ function CheckoutPage() {
               className="flex items-center justify-between gap-3 text-xs py-1 border-b border-border/40 last:border-none"
             >
               <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                <div className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-purple-50 text-purple-900 font-bold text-xs border border-purple-200/60 shadow-2xs">
+                <div className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-[var(--sand)] text-[#981495] font-bold text-xs border border-[#f0abfc]/60 shadow-2xs">
                   {item.name[0]}
                 </div>
                 <div className="min-w-0 flex-1">
@@ -966,7 +966,7 @@ function CheckoutPage() {
             <button
               type="button"
               onClick={() => setShowMap((prev) => !prev)}
-              className="inline-flex items-center gap-1.5 rounded-full bg-purple-50 hover:bg-purple-100 text-[#981495] border border-purple-200/80 px-2.5 py-1 text-[11px] font-bold transition-all cursor-pointer"
+              className="inline-flex items-center gap-1.5 rounded-full bg-[var(--sand)] hover:bg-[var(--sand)] text-[#981495] border border-[#f0abfc]/80 px-2.5 py-1 text-[11px] font-bold transition-all cursor-pointer"
             >
               <span>{showMap ? "Hide map" : "🗺️ Show map"}</span>
             </button>
@@ -1149,65 +1149,59 @@ function CheckoutPage() {
       </section>
 
       {/* Payment */}
-      <section className="mx-3 sm:mx-5 mt-4 rounded-2xl bg-card p-3.5 sm:p-4 ring-1 ring-black/[0.04]">
-        <div className="flex items-center justify-between">
-          <h2 className="font-display text-sm sm:text-base font-bold">Payment method</h2>
-          <span className="text-[10px] font-extrabold uppercase tracking-wider text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
-            Razorpay Test Mode Active ⚡
+      <section aria-labelledby="payment-heading" className="mx-3 mt-4 min-w-0 rounded-2xl border border-border/60 bg-card p-4 sm:mx-5 sm:p-5">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 id="payment-heading" className="font-display text-base font-bold">Payment method</h2>
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/5 px-2.5 py-1 text-[11px] font-medium text-primary">
+            <ShieldCheck aria-hidden="true" className="h-3.5 w-3.5" />
+            Powered by Razorpay
           </span>
         </div>
-        <div className="mt-3 grid grid-cols-2 sm:grid-cols-5 gap-2 text-sm">
+        <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">Choose how you’d like to pay.</p>
+        <fieldset className="mt-4 grid min-w-0 grid-cols-1 gap-2.5 lg:grid-cols-2">
+          <legend className="sr-only">Choose a payment method</legend>
           {[
-            { id: "gpay" as const, label: "Google Pay (GPay)", badge: "Instant UPI", icon: "📱" },
+            { id: "gpay" as const, label: "Google Pay", description: "Pay using your UPI app", icon: Smartphone },
             {
               id: "online" as const,
-              label: "Netbanking / Wallet",
-              badge: "Recommended",
-              icon: "🌐",
+              label: "Netbanking & wallets",
+              description: "Choose your bank or wallet",
+              icon: Landmark,
             },
-            { id: "upi" as const, label: "UPI QR / ID", badge: "Scan & Pay", icon: "⚡" },
+            { id: "upi" as const, label: "UPI ID or QR code", description: "Enter your UPI ID or scan to pay", icon: QrCode },
             {
               id: "card" as const,
-              label: "Debit & Credit Card",
-              badge: "Visa / RuPay",
-              icon: "💳",
+              label: "Credit or debit card",
+              description: "Continue to card payment",
+              icon: CreditCard,
             },
-            { id: "cod" as const, label: "Cash on Delivery", badge: "Pay at Door", icon: "💵" },
+            { id: "cod" as const, label: "Cash on delivery", description: "Pay when your order arrives", icon: Banknote },
           ].map((p) => (
-            <m.button
+            <label
               key={p.id}
-              type="button"
-              onClick={() => setPay(p.id)}
-              className={`relative rounded-xl border py-3 px-2.5 font-bold text-center text-xs transition-all cursor-pointer flex flex-col items-center justify-center gap-1 ${
+              className={`relative flex min-h-[76px] min-w-0 cursor-pointer items-center gap-3 rounded-xl border p-3 transition-colors focus-within:ring-2 focus-within:ring-primary/50 focus-within:ring-offset-2 ${
                 pay === p.id
-                  ? "border-primary bg-primary text-primary-foreground shadow-sm ring-2 ring-primary/20"
-                  : "hairline hover:border-primary/40 bg-white text-foreground hover:bg-slate-50"
+                  ? "border-primary bg-primary/5"
+                  : "border-border/70 bg-background hover:border-primary/40"
               }`}
-              whileHover={{ scale: 1.015 }}
-              whileTap={{ scale: 0.975 }}
             >
-              <span className="text-base">{p.icon}</span>
-              <span className="leading-tight">{p.label}</span>
-              {p.badge && (
-                <span
-                  className={`absolute -top-2.5 left-1/2 -translate-x-1/2 text-[9px] font-black uppercase tracking-widest px-1.5 py-0.2 rounded-full shadow-2xs ${
-                    pay === p.id
-                      ? "bg-amber-400 text-slate-950"
-                      : "bg-emerald-100 text-emerald-800 border border-emerald-300"
-                  }`}
-                >
-                  {p.badge}
-                </span>
-              )}
-            </m.button>
+              <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${pay === p.id ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"}`}>
+                <p.icon aria-hidden="true" className="h-5 w-5" strokeWidth={1.7} />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-sm font-semibold leading-snug">{p.label}</span>
+                <span className="mt-1 block text-xs leading-relaxed text-muted-foreground">{p.description}</span>
+              </span>
+              <input type="radio" name="payment-method" value={p.id} checked={pay === p.id} onChange={() => setPay(p.id)} className="h-4 w-4 shrink-0 accent-primary" />
+            </label>
           ))}
-        </div>
-        <p className="mt-3 text-[11px] text-muted-foreground flex items-center gap-1.5">
-          <ShieldCheck className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
+        </fieldset>
+        <p className="mt-4 flex items-start gap-2 border-t border-border/60 pt-3 text-xs leading-relaxed text-muted-foreground">
+          <ShieldCheck aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
           <span>
             {pay === "cod"
-              ? "Pay with cash or UPI directly to delivery partner upon delivery."
-              : "Supports Google Pay, PhonePe, Paytm, BHIM, UPI ID/QR, Debit/Credit Cards & Net Banking via Razorpay."}
+              ? "Payment is collected when your order is delivered."
+              : "Continue to Razorpay to complete payment. Available options are shown at checkout."}
           </span>
         </p>
       </section>
@@ -1365,7 +1359,7 @@ function CheckoutPage() {
               Total Payable
             </span>
             <div className="flex items-baseline gap-1">
-              <span className="font-display text-lg font-black text-purple-900 font-mono">
+              <span className="font-display text-lg font-black text-[#981495] font-mono">
                 ₹{displayTotal}
               </span>
               {discountAmount > 0 && (

@@ -199,7 +199,9 @@ export function DeliveryMap({
     return () => clearInterval(timer);
   }, [lastUpdated]);
 
-  // Initialize Leaflet Map once
+  // Initialize Leaflet when the first valid point becomes available. This is
+  // important for checkout, where the customer may choose a pin after mount.
+  const hasMapPoint = Boolean(courier || destination || store);
   useEffect(() => {
     mountedRef.current = true;
     let cancelled = false;
@@ -252,6 +254,11 @@ export function DeliveryMap({
 
     return () => {
       cancelled = true;
+    };
+  }, [hasMapPoint]);
+
+  useEffect(() => {
+    return () => {
       mountedRef.current = false;
       if (mapRef.current) {
         mapRef.current.remove();

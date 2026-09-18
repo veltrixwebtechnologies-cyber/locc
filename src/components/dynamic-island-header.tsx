@@ -149,7 +149,7 @@ export function CategoryDynamicIsland() {
                   onClick={() => setIsExpanded(false)}
                   className={`flex items-center justify-between rounded-2xl p-2.5 text-xs font-black transition-all border ${
                     !currentCategorySlug
-                      ? "bg-gradient-to-r from-purple-600 to-indigo-600 border-purple-400 text-white shadow-lg ring-1 ring-purple-300/40"
+                      ? "bg-gradient-to-r from-[#c026d3] to-[#c026d3] border-[#c026d3] text-white shadow-lg ring-1 ring-[#f0abfc]/40"
                       : "bg-white/5 border-white/10 text-slate-200 hover:bg-white/10"
                   }`}
                 >
@@ -169,7 +169,7 @@ export function CategoryDynamicIsland() {
                       onClick={() => setIsExpanded(false)}
                       className={`flex items-center justify-between rounded-2xl p-2.5 text-xs font-bold transition-all border truncate ${
                         isActive
-                          ? "bg-gradient-to-r from-purple-600 to-indigo-600 border-purple-400 text-white shadow-lg ring-1 ring-purple-300/40"
+                          ? "bg-gradient-to-r from-[#c026d3] to-[#c026d3] border-[#c026d3] text-white shadow-lg ring-1 ring-[#f0abfc]/40"
                           : "bg-white/5 border-white/10 text-slate-200 hover:bg-white/10"
                       }`}
                     >
@@ -184,7 +184,7 @@ export function CategoryDynamicIsland() {
             {/* Footer Directory Action */}
             <div className="mt-3 pt-2.5 border-t border-white/10 flex items-center justify-between">
               <span className="text-[10px] font-mono uppercase tracking-wider text-slate-400 flex items-center gap-1">
-                <Grid className="h-3 w-3 text-purple-400" />
+                <Grid className="h-3 w-3 text-[#c026d3]" />
                 31 Categories Available
               </span>
               <Link

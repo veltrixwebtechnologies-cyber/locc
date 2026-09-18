@@ -15,7 +15,7 @@ export function sourceLoader(root, mocks = {}) {
       compilerOptions: {
         module: ts.ModuleKind.ESNext,
         target: ts.ScriptTarget.ES2022,
-        jsx: ts.JsxEmit.ReactJSX,
+        jsx: file.endsWith(".tsx") ? ts.JsxEmit.ReactJSX : ts.JsxEmit.None,
       },
     }).outputText;
     code = code.replace(/from\s+(["'])([^"']+)\1/g, (_, quote, specifier) => {

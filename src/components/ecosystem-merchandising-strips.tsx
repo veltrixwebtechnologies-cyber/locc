@@ -30,7 +30,7 @@ export function EcosystemMerchandisingStrips() {
         initial={{ opacity: 0, y: 12 }}
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true }}
-        className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-purple-950 via-purple-900 to-indigo-950 p-6 text-white shadow-xl border border-purple-200/50"
+        className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-[#700b6e] via-[#981495] to-[#700b6e] p-6 text-white shadow-xl border border-[#f0abfc]/50"
       >
         <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
           <div className="flex items-start gap-4">
@@ -42,12 +42,12 @@ export function EcosystemMerchandisingStrips() {
                 <span className="rounded-full bg-gold-gradient px-2.5 py-0.5 text-[10px] font-black uppercase text-slate-950 shadow-xs border border-white/30">
                   {USER_REWARDS.tier} Member
                 </span>
-                <span className="text-xs text-purple-200">LocalShore Club</span>
+                <span className="text-xs text-[#f0abfc]">LocalShore Club</span>
               </div>
               <h3 className="mt-1 font-display text-xl font-bold">
                 You have {USER_REWARDS.pointsBalance.toLocaleString()} Rewards Points!
               </h3>
-              <p className="mt-0.5 text-xs text-purple-200">
+              <p className="mt-0.5 text-xs text-[#f0abfc]">
                 Redeem for ₹{USER_REWARDS.cashbackEquivalent} instant cashback, free delivery, or
                 brand vouchers.
               </p>
@@ -75,7 +75,7 @@ export function EcosystemMerchandisingStrips() {
         <div className="flex items-center justify-between">
           <div>
             <div className="flex items-center gap-1.5">
-              <ShoppingBag className="h-4 w-4 text-purple-600" />
+              <ShoppingBag className="h-4 w-4 text-[#c026d3]" />
               <h2 className="font-display text-lg font-bold text-slate-900">
                 Official Brand Stores
               </h2>
@@ -86,7 +86,7 @@ export function EcosystemMerchandisingStrips() {
           </div>
           <Link
             to="/brands"
-            className="flex items-center gap-1 text-xs font-bold text-purple-700 hover:underline"
+            className="flex items-center gap-1 text-xs font-bold text-[#981495] hover:underline"
           >
             View all brands <ChevronRight className="h-3.5 w-3.5" />
           </Link>
@@ -98,7 +98,7 @@ export function EcosystemMerchandisingStrips() {
               key={brand.id}
               to="/brand/$brandId"
               params={{ brandId: brand.id }}
-              className="group overflow-hidden rounded-2xl border border-slate-200 bg-white p-3 shadow-xs transition hover:border-purple-300 hover:shadow-md"
+              className="group overflow-hidden rounded-2xl border border-slate-200 bg-white p-3 shadow-xs transition hover:border-[#f0abfc] hover:shadow-md"
             >
               <div className="relative aspect-[16/9] overflow-hidden rounded-xl bg-slate-100">
                 <img
@@ -115,7 +115,7 @@ export function EcosystemMerchandisingStrips() {
                   </div>
                   <p className="text-[10px] text-slate-400">{brand.category}</p>
                 </div>
-                <span className="text-[10px] font-bold text-purple-700 bg-purple-50 px-2 py-0.5 rounded-full">
+                <span className="text-[10px] font-bold text-[#981495] bg-[var(--sand)] px-2 py-0.5 rounded-full">
                   {brand.productCount}+
                 </span>
               </div>
@@ -209,12 +209,12 @@ export function EcosystemMerchandisingStrips() {
           <div>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-1.5">
-                <Newspaper className="h-4 w-4 text-purple-600" />
+                <Newspaper className="h-4 w-4 text-[#c026d3]" />
                 <h3 className="font-display text-base font-bold text-slate-900">
                   LocalShore Stories
                 </h3>
               </div>
-              <Link to="/news" className="text-xs font-bold text-purple-700 hover:underline">
+              <Link to="/news" className="text-xs font-bold text-[#981495] hover:underline">
                 Read all
               </Link>
             </div>

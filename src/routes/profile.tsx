@@ -133,12 +133,12 @@ function ProfilePage() {
     <AppShell>
       <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8">
         {/* ── 1. PROFILE HERO ──────────────────────────────────────────────── */}
-        <div className="overflow-hidden rounded-3xl border border-purple-100 bg-gradient-to-br from-purple-50/80 via-white to-amber-50/40 p-5 shadow-xs sm:p-7">
+        <div className="overflow-hidden rounded-3xl border border-[var(--sand)] bg-gradient-to-br from-[var(--sand)]/80 via-white to-amber-50/40 p-5 shadow-xs sm:p-7">
           {signedIn ? (
             <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-center gap-4 sm:gap-6">
                 <div className="relative">
-                  <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-tr from-purple-700 to-primary font-display text-2xl font-bold text-white shadow-md shadow-purple-900/20 sm:h-20 sm:w-20 sm:text-3xl">
+                  <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-tr from-[#981495] to-primary font-display text-2xl font-bold text-white shadow-md shadow-[#981495]/20 sm:h-20 sm:w-20 sm:text-3xl">
                     {auth.name
                       ? auth.name
                           .split(" ")
@@ -158,19 +158,19 @@ function ProfilePage() {
                     <h1 className="font-display text-2xl font-bold text-slate-900 sm:text-3xl">
                       {auth.name || "LocalShore Member"}
                     </h1>
-                    <span className="inline-flex items-center gap-1 rounded-full bg-purple-100 px-2.5 py-0.5 text-xs font-bold text-purple-800 border border-purple-200">
-                      <Sparkles className="h-3 w-3 fill-purple-600 text-purple-600" /> LocalShore
+                    <span className="inline-flex items-center gap-1 rounded-full bg-[var(--sand)] px-2.5 py-0.5 text-xs font-bold text-[#981495] border border-[#f0abfc]">
+                      <Sparkles className="h-3 w-3 fill-[#c026d3] text-[#c026d3]" /> LocalShore
                       Member
                     </span>
                   </div>
 
                   <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 font-mono text-xs text-slate-600">
                     <span className="flex items-center gap-1">
-                      <Mail className="h-3.5 w-3.5 text-purple-600" />
+                      <Mail className="h-3.5 w-3.5 text-[#c026d3]" />
                       {auth.email || "No email registered"}
                     </span>
                     <span className="flex items-center gap-1">
-                      <Phone className="h-3.5 w-3.5 text-purple-600" />
+                      <Phone className="h-3.5 w-3.5 text-[#c026d3]" />
                       {maskPhone(auth.phone)}
                     </span>
                     <span className="flex items-center gap-1 text-emerald-700 font-semibold">
@@ -185,7 +185,7 @@ function ProfilePage() {
                 <button
                   type="button"
                   onClick={() => setIsEditProfileOpen(true)}
-                  className="inline-flex items-center gap-1.5 rounded-xl border border-purple-200 bg-white px-4 py-2 text-xs font-bold text-purple-900 shadow-xs transition hover:bg-purple-50"
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-[#f0abfc] bg-white px-4 py-2 text-xs font-bold text-[#981495] shadow-xs transition hover:bg-[var(--sand)]"
                 >
                   <Edit3 className="h-3.5 w-3.5" /> Edit profile
                 </button>
@@ -206,7 +206,7 @@ function ProfilePage() {
           ) : (
             <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
               <div className="max-w-xl">
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-purple-100 px-3 py-1 text-xs font-bold text-purple-800 border border-purple-200">
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--sand)] px-3 py-1 text-xs font-bold text-[#981495] border border-[#f0abfc]">
                   <Store className="h-3.5 w-3.5" /> Your Neighborhood, Delivered
                 </span>
                 <h1 className="mt-2 font-display text-2xl font-bold text-slate-900 sm:text-3xl">
@@ -223,14 +223,14 @@ function ProfilePage() {
                 <Link
                   to="/auth"
                   search={{ redirect: "/profile" }}
-                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-purple-700 px-5 py-3 text-sm font-bold text-white shadow-md shadow-purple-900/20 transition hover:bg-purple-800"
+                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#981495] px-5 py-3 text-sm font-bold text-white shadow-md shadow-[#981495]/20 transition hover:bg-[#981495]"
                 >
                   <User className="h-4 w-4" /> Sign in / Create account
                 </Link>
                 <Link
                   to="/"
                   search={{ category: undefined, q: undefined }}
-                  className="inline-flex items-center justify-center gap-2 rounded-xl border border-purple-200 bg-white px-5 py-2.5 text-xs font-bold text-purple-900 transition hover:bg-purple-50"
+                  className="inline-flex items-center justify-center gap-2 rounded-xl border border-[#f0abfc] bg-white px-5 py-2.5 text-xs font-bold text-[#981495] transition hover:bg-[var(--sand)]"
                 >
                   <Store className="h-3.5 w-3.5" /> Explore local shops
                 </Link>
@@ -282,7 +282,7 @@ function ProfilePage() {
                   key={i}
                   className="rounded-2xl border border-slate-200/80 bg-white p-3.5 text-center shadow-xs"
                 >
-                  <div className="mx-auto grid h-9 w-9 place-items-center rounded-xl bg-purple-50 text-purple-700">
+                  <div className="mx-auto grid h-9 w-9 place-items-center rounded-xl bg-[var(--sand)] text-[#981495]">
                     <b.icon className="h-4 w-4" />
                   </div>
                   <h3 className="mt-2 text-xs font-bold text-slate-900">{b.title}</h3>
@@ -299,7 +299,7 @@ function ProfilePage() {
             <button
               type="button"
               onClick={() => setActiveTab("activity")}
-              className="flex items-center gap-3.5 rounded-2xl border border-purple-100 bg-white p-3.5 text-left shadow-xs transition hover:border-purple-300 hover:shadow-md group"
+              className="flex items-center gap-3.5 rounded-2xl border border-[var(--sand)] bg-white p-3.5 text-left shadow-xs transition hover:border-[#f0abfc] hover:shadow-md group"
             >
               <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-amber-50 text-amber-600 transition group-hover:bg-amber-100">
                 <Package className="h-5.5 w-5.5" />
@@ -316,7 +316,7 @@ function ProfilePage() {
 
             <Link
               to="/wishlist"
-              className="flex items-center gap-3.5 rounded-2xl border border-purple-100 bg-white p-3.5 text-left shadow-xs transition hover:border-purple-300 hover:shadow-md group"
+              className="flex items-center gap-3.5 rounded-2xl border border-[var(--sand)] bg-white p-3.5 text-left shadow-xs transition hover:border-[#f0abfc] hover:shadow-md group"
             >
               <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-rose-50 text-rose-600 transition group-hover:bg-rose-100">
                 <Heart className="h-5.5 w-5.5" />
@@ -334,9 +334,9 @@ function ProfilePage() {
             <button
               type="button"
               onClick={() => setActiveTab("offers")}
-              className="flex items-center gap-3.5 rounded-2xl border border-purple-100 bg-white p-3.5 text-left shadow-xs transition hover:border-purple-300 hover:shadow-md group"
+              className="flex items-center gap-3.5 rounded-2xl border border-[var(--sand)] bg-white p-3.5 text-left shadow-xs transition hover:border-[#f0abfc] hover:shadow-md group"
             >
-              <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-purple-50 text-purple-700 transition group-hover:bg-purple-100">
+              <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-[var(--sand)] text-[#981495] transition group-hover:bg-[var(--sand)]">
                 <Ticket className="h-5.5 w-5.5" />
               </div>
               <div>
@@ -352,7 +352,7 @@ function ProfilePage() {
             <button
               type="button"
               onClick={() => setActiveTab("offers")}
-              className="flex items-center gap-3.5 rounded-2xl border border-purple-100 bg-white p-3.5 text-left shadow-xs transition hover:border-purple-300 hover:shadow-md group"
+              className="flex items-center gap-3.5 rounded-2xl border border-[var(--sand)] bg-white p-3.5 text-left shadow-xs transition hover:border-[#f0abfc] hover:shadow-md group"
             >
               <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-emerald-50 text-emerald-600 transition group-hover:bg-emerald-100">
                 <Sparkles className="h-5.5 w-5.5" />
@@ -387,8 +387,8 @@ function ProfilePage() {
                 onClick={() => setActiveTab(tab.id as any)}
                 className={`whitespace-nowrap rounded-xl px-4 py-2 text-xs font-bold transition ${
                   activeTab === tab.id
-                    ? "bg-purple-700 text-white shadow-xs"
-                    : "text-slate-600 hover:bg-purple-50 hover:text-purple-900"
+                    ? "bg-[#981495] text-white shadow-xs"
+                    : "text-slate-600 hover:bg-[var(--sand)] hover:text-[#981495]"
                 }`}
               >
                 {tab.label}
@@ -408,7 +408,7 @@ function ProfilePage() {
                   <div className="flex items-center justify-between border-b border-slate-100 pb-4">
                     <div>
                       <h2 className="font-display text-lg font-bold text-slate-900 flex items-center gap-2">
-                        <User className="h-5 w-5 text-purple-700" /> Account Settings
+                        <User className="h-5 w-5 text-[#981495]" /> Account Settings
                       </h2>
                       <p className="text-xs text-slate-500">
                         Manage personal details, addresses, and payment methods
@@ -418,9 +418,9 @@ function ProfilePage() {
 
                   <div className="mt-5 space-y-5">
                     {/* Personal Info Row */}
-                    <div className="flex flex-col gap-3 rounded-2xl bg-purple-50/40 p-4 border border-purple-100/60 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="flex flex-col gap-3 rounded-2xl bg-[var(--sand)]/40 p-4 border border-[var(--sand)]/60 sm:flex-row sm:items-center sm:justify-between">
                       <div>
-                        <p className="text-xs font-bold uppercase tracking-wider text-purple-900">
+                        <p className="text-xs font-bold uppercase tracking-wider text-[#981495]">
                           Personal Information
                         </p>
                         <p className="mt-1 text-sm font-semibold text-slate-900">
@@ -433,7 +433,7 @@ function ProfilePage() {
                       <button
                         type="button"
                         onClick={() => setIsEditProfileOpen(true)}
-                        className="inline-flex items-center gap-1 text-xs font-bold text-purple-700 hover:underline"
+                        className="inline-flex items-center gap-1 text-xs font-bold text-[#981495] hover:underline"
                       >
                         Edit profile →
                       </button>
@@ -443,13 +443,13 @@ function ProfilePage() {
                     <div>
                       <div className="flex items-center justify-between">
                         <h3 className="text-sm font-bold text-slate-900 flex items-center gap-1.5">
-                          <MapPin className="h-4 w-4 text-purple-700" /> Saved Addresses (
+                          <MapPin className="h-4 w-4 text-[#981495]" /> Saved Addresses (
                           {addresses.length})
                         </h3>
                         <button
                           type="button"
                           onClick={() => setIsAddAddressOpen(true)}
-                          className="inline-flex items-center gap-1 text-xs font-bold text-purple-700 hover:bg-purple-50 px-2.5 py-1 rounded-lg transition"
+                          className="inline-flex items-center gap-1 text-xs font-bold text-[#981495] hover:bg-[var(--sand)] px-2.5 py-1 rounded-lg transition"
                         >
                           <Plus className="h-3.5 w-3.5" /> Add Address
                         </button>
@@ -464,7 +464,7 @@ function ProfilePage() {
                           <button
                             type="button"
                             onClick={() => setIsAddAddressOpen(true)}
-                            className="mt-2 text-xs font-bold text-purple-700 underline"
+                            className="mt-2 text-xs font-bold text-[#981495] underline"
                           >
                             + Add a new delivery address
                           </button>
@@ -474,12 +474,12 @@ function ProfilePage() {
                           {addresses.map((addr, idx) => (
                             <div
                               key={addr.id}
-                              className="relative flex flex-col justify-between rounded-2xl border border-slate-200 p-4 transition hover:border-purple-300 hover:shadow-xs"
+                              className="relative flex flex-col justify-between rounded-2xl border border-slate-200 p-4 transition hover:border-[#f0abfc] hover:shadow-xs"
                             >
                               <div>
                                 <div className="flex items-center justify-between">
-                                  <span className="inline-flex items-center gap-1 text-xs font-bold text-purple-900">
-                                    <MapPin className="h-3.5 w-3.5 text-purple-700" /> {addr.label}
+                                  <span className="inline-flex items-center gap-1 text-xs font-bold text-[#981495]">
+                                    <MapPin className="h-3.5 w-3.5 text-[#981495]" /> {addr.label}
                                   </span>
                                   {idx === 0 && (
                                     <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-800">
@@ -518,12 +518,12 @@ function ProfilePage() {
                     <div className="border-t border-slate-100 pt-5">
                       <div className="flex items-center justify-between">
                         <h3 className="text-sm font-bold text-slate-900 flex items-center gap-1.5">
-                          <CreditCard className="h-4 w-4 text-purple-700" /> Payment Methods
+                          <CreditCard className="h-4 w-4 text-[#981495]" /> Payment Methods
                         </h3>
                         <button
                           type="button"
                           onClick={() => setIsAddPaymentOpen(true)}
-                          className="inline-flex items-center gap-1 text-xs font-bold text-purple-700 hover:bg-purple-50 px-2.5 py-1 rounded-lg transition"
+                          className="inline-flex items-center gap-1 text-xs font-bold text-[#981495] hover:bg-[var(--sand)] px-2.5 py-1 rounded-lg transition"
                         >
                           <Plus className="h-3.5 w-3.5" /> Add Payment
                         </button>
@@ -536,14 +536,14 @@ function ProfilePage() {
                             className="flex items-center justify-between rounded-2xl border border-slate-200 p-3.5"
                           >
                             <div className="flex items-center gap-3">
-                              <div className="grid h-9 w-9 place-items-center rounded-xl bg-purple-50 text-purple-700 font-bold text-xs">
+                              <div className="grid h-9 w-9 place-items-center rounded-xl bg-[var(--sand)] text-[#981495] font-bold text-xs">
                                 {pay.type === "upi" ? "UPI" : "CARD"}
                               </div>
                               <div>
                                 <p className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
                                   {pay.title}
                                   {pay.isDefault && (
-                                    <span className="rounded-full bg-purple-100 px-2 py-0.2 text-[9px] font-bold text-purple-800">
+                                    <span className="rounded-full bg-[var(--sand)] px-2 py-0.2 text-[9px] font-bold text-[#981495]">
                                       Default
                                     </span>
                                   )}
@@ -574,11 +574,11 @@ function ProfilePage() {
 
               {/* 4. LOCALSHORE-SPECIFIC SECTION */}
               {(activeTab === "all" || activeTab === "localshore") && (
-                <section className="rounded-3xl border border-purple-100 bg-white p-5 shadow-xs sm:p-6">
+                <section className="rounded-3xl border border-[var(--sand)] bg-white p-5 shadow-xs sm:p-6">
                   <div className="flex items-center justify-between border-b border-slate-100 pb-4">
                     <div>
                       <h2 className="font-display text-lg font-bold text-slate-900 flex items-center gap-2">
-                        <Store className="h-5 w-5 text-purple-700" /> Your LocalShore
+                        <Store className="h-5 w-5 text-[#981495]" /> Your LocalShore
                       </h2>
                       <p className="text-xs text-slate-500">
                         Neighborhood sellers, favorite stores, and local offers
@@ -587,7 +587,7 @@ function ProfilePage() {
                     <Link
                       to="/"
                       search={{ category: undefined, q: undefined }}
-                      className="text-xs font-bold text-purple-700 hover:underline inline-flex items-center gap-1"
+                      className="text-xs font-bold text-[#981495] hover:underline inline-flex items-center gap-1"
                     >
                       Discover all shops <ChevronRight className="h-3.5 w-3.5" />
                     </Link>
@@ -609,18 +609,18 @@ function ProfilePage() {
                             key={shop.id}
                             to="/store/$storeId"
                             params={{ storeId: shop.id }}
-                            className="group flex flex-col justify-between rounded-2xl border border-slate-200 p-3.5 transition hover:border-purple-300 hover:shadow-sm"
+                            className="group flex flex-col justify-between rounded-2xl border border-slate-200 p-3.5 transition hover:border-[#f0abfc] hover:shadow-sm"
                           >
                             <div>
                               <div className="flex items-center justify-between">
-                                <span className="inline-flex items-center gap-1 text-[11px] font-bold text-purple-700">
+                                <span className="inline-flex items-center gap-1 text-[11px] font-bold text-[#981495]">
                                   <Store className="h-3.5 w-3.5" /> {shop.category}
                                 </span>
                                 <span className="flex items-center gap-1 text-xs font-bold text-amber-600">
                                   <Star className="h-3.5 w-3.5 fill-amber-400" /> {shop.rating}
                                 </span>
                               </div>
-                              <h4 className="mt-2 text-xs font-bold text-slate-900 group-hover:text-purple-700 transition">
+                              <h4 className="mt-2 text-xs font-bold text-slate-900 group-hover:text-[#981495] transition">
                                 {shop.name}
                               </h4>
                               <p className="text-[11px] text-slate-500 truncate">{shop.address}</p>
@@ -629,7 +629,7 @@ function ProfilePage() {
                               <span className="font-semibold text-slate-600">
                                 {shop.distanceKm} km away
                               </span>
-                              <span className="font-bold text-purple-700">Visit Shop →</span>
+                              <span className="font-bold text-[#981495]">Visit Shop →</span>
                             </div>
                           </Link>
                         ))}
@@ -648,9 +648,9 @@ function ProfilePage() {
                           key={shop.id}
                           to="/store/$storeId"
                           params={{ storeId: shop.id }}
-                          className="flex shrink-0 items-center gap-3 rounded-2xl border border-slate-200/90 bg-slate-50/50 p-2.5 pr-4 transition hover:bg-purple-50/50"
+                          className="flex shrink-0 items-center gap-3 rounded-2xl border border-slate-200/90 bg-slate-50/50 p-2.5 pr-4 transition hover:bg-[var(--sand)]/50"
                         >
-                          <div className="h-9 w-9 shrink-0 overflow-hidden rounded-xl bg-purple-100 flex items-center justify-center font-bold text-purple-800 text-xs">
+                          <div className="h-9 w-9 shrink-0 overflow-hidden rounded-xl bg-[var(--sand)] flex items-center justify-center font-bold text-[#981495] text-xs">
                             {shop.name[0]}
                           </div>
                           <div>
@@ -672,14 +672,11 @@ function ProfilePage() {
                   <div className="flex items-center justify-between border-b border-slate-100 pb-4">
                     <div>
                       <h2 className="font-display text-lg font-bold text-slate-900 flex items-center gap-2">
-                        <Package className="h-5 w-5 text-purple-700" /> Shopping Activity
+                        <Package className="h-5 w-5 text-[#981495]" /> Shopping Activity
                       </h2>
                       <p className="text-xs text-slate-500">Recent orders, reviews, and wishlist</p>
                     </div>
-                    <Link
-                      to="/orders"
-                      className="text-xs font-bold text-purple-700 hover:underline"
-                    >
+                    <Link to="/orders" className="text-xs font-bold text-[#981495] hover:underline">
                       View all orders →
                     </Link>
                   </div>
@@ -718,7 +715,7 @@ function ProfilePage() {
                       <Link
                         to="/"
                         search={{ category: undefined, q: undefined }}
-                        className="mt-1 text-xs font-bold text-purple-700 underline"
+                        className="mt-1 text-xs font-bold text-[#981495] underline"
                       >
                         Start shopping from neighborhood stores
                       </Link>
@@ -764,11 +761,11 @@ function ProfilePage() {
 
               {/* 6. OFFERS & REWARDS SECTION */}
               {(activeTab === "all" || activeTab === "offers") && (
-                <section className="rounded-3xl border border-purple-100 bg-white p-5 shadow-xs sm:p-6">
+                <section className="rounded-3xl border border-[var(--sand)] bg-white p-5 shadow-xs sm:p-6">
                   <div className="flex items-center justify-between border-b border-slate-100 pb-4">
                     <div>
                       <h2 className="font-display text-lg font-bold text-slate-900 flex items-center gap-2">
-                        <Sparkles className="h-5 w-5 text-purple-700" /> LocalShore Rewards & Offers
+                        <Sparkles className="h-5 w-5 text-[#981495]" /> LocalShore Rewards & Offers
                       </h2>
                       <p className="text-xs text-slate-500">
                         Points, active coupons, and cashback credits
@@ -778,10 +775,10 @@ function ProfilePage() {
 
                   {/* Points Card */}
                   <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2">
-                    <div className="rounded-2xl bg-gradient-to-br from-purple-900 to-purple-800 p-5 text-white shadow-md">
+                    <div className="rounded-2xl bg-gradient-to-br from-[#981495] to-[#981495] p-5 text-white shadow-md">
                       <div className="flex items-center justify-between">
-                        <span className="inline-flex items-center gap-1 text-xs font-bold uppercase tracking-wider text-purple-200">
-                          <Sparkles className="h-3.5 w-3.5 fill-purple-300" /> LocalShore Balance
+                        <span className="inline-flex items-center gap-1 text-xs font-bold uppercase tracking-wider text-[#f0abfc]">
+                          <Sparkles className="h-3.5 w-3.5 fill-[#f0abfc]" /> LocalShore Balance
                         </span>
                         <span className="rounded-full bg-white/20 px-2.5 py-0.5 text-[10px] font-bold text-white">
                           Loyalty Tier 1
@@ -790,13 +787,13 @@ function ProfilePage() {
                       <p className="mt-3 font-display text-3xl font-extrabold text-white">
                         {profileExtra.rewardsPoints} Shore Points
                       </p>
-                      <p className="mt-1 text-xs text-purple-200">
+                      <p className="mt-1 text-xs text-[#f0abfc]">
                         100 Points = ₹50 Discount Voucher
                       </p>
                       <button
                         type="button"
                         onClick={() => setIsRedeemOpen(true)}
-                        className="mt-4 inline-flex items-center gap-1.5 rounded-xl bg-white px-4 py-2 text-xs font-bold text-purple-900 shadow-sm hover:bg-purple-50 transition"
+                        className="mt-4 inline-flex items-center gap-1.5 rounded-xl bg-white px-4 py-2 text-xs font-bold text-[#981495] shadow-sm hover:bg-[var(--sand)] transition"
                       >
                         Redeem points →
                       </button>
@@ -825,14 +822,14 @@ function ProfilePage() {
                       {profileExtra.savedCoupons.map((c, i) => (
                         <div
                           key={i}
-                          className="flex items-center justify-between rounded-2xl border border-purple-200 bg-purple-50/50 p-3.5"
+                          className="flex items-center justify-between rounded-2xl border border-[#f0abfc] bg-[var(--sand)]/50 p-3.5"
                         >
                           <div>
                             <div className="flex items-center gap-2">
-                              <span className="font-mono text-xs font-bold text-purple-900 bg-white px-2 py-0.5 rounded border border-purple-200">
+                              <span className="font-mono text-xs font-bold text-[#981495] bg-white px-2 py-0.5 rounded border border-[#f0abfc]">
                                 {c.code}
                               </span>
-                              <span className="text-xs font-extrabold text-purple-700">
+                              <span className="text-xs font-extrabold text-[#981495]">
                                 {c.discountText}
                               </span>
                             </div>
@@ -847,7 +844,7 @@ function ProfilePage() {
                               navigator.clipboard?.writeText(c.code);
                               toast.success(`Coupon ${c.code} copied to clipboard!`);
                             }}
-                            className="rounded-xl border border-purple-300 bg-white px-3 py-1.5 text-xs font-bold text-purple-900 transition hover:bg-purple-100"
+                            className="rounded-xl border border-[#f0abfc] bg-white px-3 py-1.5 text-xs font-bold text-[#981495] transition hover:bg-[var(--sand)]"
                           >
                             Copy
                           </button>
@@ -865,7 +862,7 @@ function ProfilePage() {
               {(activeTab === "all" || activeTab === "delivery" || activeTab === "settings") && (
                 <section className="rounded-3xl border border-slate-200/80 bg-white p-5 shadow-xs">
                   <h2 className="font-display text-base font-bold text-slate-900 flex items-center gap-2 border-b border-slate-100 pb-3">
-                    <Truck className="h-4.5 w-4.5 text-purple-700" /> Delivery Preferences
+                    <Truck className="h-4.5 w-4.5 text-[#981495]" /> Delivery Preferences
                   </h2>
 
                   <div className="mt-4 space-y-3.5 text-xs">
@@ -877,7 +874,7 @@ function ProfilePage() {
                         onChange={(e) =>
                           profileStore.updateDeliveryPreferences({ contactless: e.target.checked })
                         }
-                        className="h-4 w-4 rounded accent-purple-700"
+                        className="h-4 w-4 rounded accent-[#981495]"
                       />
                     </label>
 
@@ -891,7 +888,7 @@ function ProfilePage() {
                             callBeforeDelivery: e.target.checked,
                           })
                         }
-                        className="h-4 w-4 rounded accent-purple-700"
+                        className="h-4 w-4 rounded accent-[#981495]"
                       />
                     </label>
 
@@ -934,7 +931,7 @@ function ProfilePage() {
                 activeTab === "settings") && (
                 <section className="rounded-3xl border border-slate-200/80 bg-white p-5 shadow-xs">
                   <h2 className="font-display text-base font-bold text-slate-900 flex items-center gap-2 border-b border-slate-100 pb-3">
-                    <Bell className="h-4.5 w-4.5 text-purple-700" /> Notifications
+                    <Bell className="h-4.5 w-4.5 text-[#981495]" /> Notifications
                   </h2>
 
                   <div className="mt-4 space-y-2 text-xs">
@@ -954,7 +951,7 @@ function ProfilePage() {
                           type="checkbox"
                           checked={(profileExtra.notificationSettings as any)[item.key]}
                           onChange={() => profileStore.toggleNotification(item.key as any)}
-                          className="h-4 w-4 rounded accent-purple-700"
+                          className="h-4 w-4 rounded accent-[#981495]"
                         />
                       </label>
                     ))}
@@ -966,16 +963,16 @@ function ProfilePage() {
               {(activeTab === "all" || activeTab === "support" || activeTab === "settings") && (
                 <section className="rounded-3xl border border-slate-200/80 bg-white p-5 shadow-xs">
                   <h2 className="font-display text-base font-bold text-slate-900 flex items-center gap-2 border-b border-slate-100 pb-3">
-                    <HelpCircle className="h-4.5 w-4.5 text-purple-700" /> Help & Support
+                    <HelpCircle className="h-4.5 w-4.5 text-[#981495]" /> Help & Support
                   </h2>
 
                   <div className="mt-4 space-y-2.5 text-xs">
                     <Link
                       to="/help"
-                      className="flex items-center justify-between rounded-xl bg-purple-50/60 p-3 font-bold text-purple-900 hover:bg-purple-100 transition"
+                      className="flex items-center justify-between rounded-xl bg-[var(--sand)]/60 p-3 font-bold text-[#981495] hover:bg-[var(--sand)] transition"
                     >
                       <span className="flex items-center gap-2">
-                        <MessageSquare className="h-4 w-4 text-purple-700" /> LocalShore Help Center
+                        <MessageSquare className="h-4 w-4 text-[#981495]" /> LocalShore Help Center
                       </span>
                       <ChevronRight className="h-4 w-4" />
                     </Link>
@@ -994,7 +991,7 @@ function ProfilePage() {
                       className="w-full flex items-center justify-between rounded-xl border border-slate-200 p-3 font-semibold text-slate-800 hover:bg-slate-50 transition text-left"
                     >
                       <span className="flex items-center gap-2">
-                        <Lock className="h-4 w-4 text-purple-700" /> Security & Privacy
+                        <Lock className="h-4 w-4 text-[#981495]" /> Security & Privacy
                       </span>
                       <ChevronRight className="h-4 w-4 text-slate-400" />
                     </button>
@@ -1083,7 +1080,7 @@ function ProfilePage() {
                   toast.success("Profile updated!");
                   setIsEditProfileOpen(false);
                 }}
-                className="rounded-xl bg-purple-700 px-5 py-2 text-xs font-bold text-white shadow-xs hover:bg-purple-800"
+                className="rounded-xl bg-[#981495] px-5 py-2 text-xs font-bold text-white shadow-xs hover:bg-[#981495]"
               >
                 Save Changes
               </button>
@@ -1118,7 +1115,7 @@ function ProfilePage() {
                       onClick={() => setNewAddrLabel(lbl)}
                       className={`flex-1 rounded-xl py-2 font-bold text-xs border ${
                         newAddrLabel === lbl
-                          ? "bg-purple-700 text-white border-purple-700"
+                          ? "bg-[#981495] text-white border-[#981495]"
                           : "bg-slate-50 text-slate-700 border-slate-200"
                       }`}
                     >
@@ -1141,8 +1138,8 @@ function ProfilePage() {
                 />
               </div>
 
-              <div className="rounded-2xl bg-purple-50/60 p-3 border border-purple-100 text-[11px] text-purple-900 flex items-center gap-2">
-                <Map className="h-4 w-4 shrink-0 text-purple-700" />
+              <div className="rounded-2xl bg-[var(--sand)]/60 p-3 border border-[var(--sand)] text-[11px] text-[#981495] flex items-center gap-2">
+                <Map className="h-4 w-4 shrink-0 text-[#981495]" />
                 <span>
                   {deliveryLoc
                     ? "Using your current live delivery location."
@@ -1180,7 +1177,7 @@ function ProfilePage() {
                   setNewAddrLine("");
                   setIsAddAddressOpen(false);
                 }}
-                className="rounded-xl bg-purple-700 px-5 py-2 text-xs font-bold text-white shadow-xs hover:bg-purple-800"
+                className="rounded-xl bg-[#981495] px-5 py-2 text-xs font-bold text-white shadow-xs hover:bg-[#981495]"
               >
                 Save Address
               </button>
@@ -1211,7 +1208,7 @@ function ProfilePage() {
                   onClick={() => setNewPayType("upi")}
                   className={`flex-1 rounded-xl py-2 font-bold text-xs border ${
                     newPayType === "upi"
-                      ? "bg-purple-700 text-white border-purple-700"
+                      ? "bg-[#981495] text-white border-[#981495]"
                       : "bg-slate-50 text-slate-700 border-slate-200"
                   }`}
                 >
@@ -1222,7 +1219,7 @@ function ProfilePage() {
                   onClick={() => setNewPayType("card")}
                   className={`flex-1 rounded-xl py-2 font-bold text-xs border ${
                     newPayType === "card"
-                      ? "bg-purple-700 text-white border-purple-700"
+                      ? "bg-[#981495] text-white border-[#981495]"
                       : "bg-slate-50 text-slate-700 border-slate-200"
                   }`}
                 >
@@ -1281,7 +1278,7 @@ function ProfilePage() {
                   setNewPaySub("");
                   setIsAddPaymentOpen(false);
                 }}
-                className="rounded-xl bg-purple-700 px-5 py-2 text-xs font-bold text-white shadow-xs hover:bg-purple-800"
+                className="rounded-xl bg-[#981495] px-5 py-2 text-xs font-bold text-white shadow-xs hover:bg-[#981495]"
               >
                 Save Payment Method
               </button>
@@ -1336,7 +1333,7 @@ function ProfilePage() {
                   <div>
                     <p className="text-xs font-bold text-slate-900">{rw.title}</p>
                     <p className="text-[11px] text-slate-500">{rw.description}</p>
-                    <span className="mt-1 inline-block text-xs font-black text-purple-700">
+                    <span className="mt-1 inline-block text-xs font-black text-[#981495]">
                       {rw.pointsRequired} Points
                     </span>
                   </div>
@@ -1352,7 +1349,7 @@ function ProfilePage() {
                         toast.error(e.message);
                       }
                     }}
-                    className="rounded-xl bg-purple-700 px-3.5 py-1.5 text-xs font-bold text-white shadow-xs disabled:opacity-50 hover:bg-purple-800 transition"
+                    className="rounded-xl bg-[#981495] px-3.5 py-1.5 text-xs font-bold text-white shadow-xs disabled:opacity-50 hover:bg-[#981495] transition"
                   >
                     Redeem
                   </button>
@@ -1425,7 +1422,7 @@ function ProfilePage() {
                   setReviewComment("");
                   setIsReviewOpen(null);
                 }}
-                className="rounded-xl bg-purple-700 px-5 py-2 text-xs font-bold text-white shadow-xs hover:bg-purple-800"
+                className="rounded-xl bg-[#981495] px-5 py-2 text-xs font-bold text-white shadow-xs hover:bg-[#981495]"
               >
                 Submit Review
               </button>
@@ -1440,7 +1437,7 @@ function ProfilePage() {
           <div className="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <h3 className="font-display text-lg font-bold text-slate-900 flex items-center gap-2">
-                <Lock className="h-4.5 w-4.5 text-purple-700" /> Security & Privacy
+                <Lock className="h-4.5 w-4.5 text-[#981495]" /> Security & Privacy
               </h3>
               <button
                 type="button"
@@ -1467,7 +1464,7 @@ function ProfilePage() {
                   <p className="font-bold text-slate-900">Two-Factor Auth (2FA)</p>
                   <p className="text-[11px] text-slate-500">SMS OTP Verification</p>
                 </div>
-                <span className="rounded-full bg-purple-100 px-2 py-0.5 text-[10px] font-bold text-purple-800">
+                <span className="rounded-full bg-[var(--sand)] px-2 py-0.5 text-[10px] font-bold text-[#981495]">
                   Enabled
                 </span>
               </div>
@@ -1477,7 +1474,7 @@ function ProfilePage() {
                 onClick={() => {
                   toast.success("Password reset link sent to your registered email!");
                 }}
-                className="w-full rounded-xl border border-purple-200 bg-purple-50 p-2.5 text-xs font-bold text-purple-900 hover:bg-purple-100 transition text-center"
+                className="w-full rounded-xl border border-[#f0abfc] bg-[var(--sand)] p-2.5 text-xs font-bold text-[#981495] hover:bg-[var(--sand)] transition text-center"
               >
                 Send Password Reset Email
               </button>

@@ -24,6 +24,7 @@ export type MerchandisingProduct = {
   average_rating: number;
   review_count: number;
   shop_name: string;
+  description?: string | null;
 };
 
 export type WishlistCatalogItem = {

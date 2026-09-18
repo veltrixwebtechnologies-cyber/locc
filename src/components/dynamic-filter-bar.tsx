@@ -61,14 +61,14 @@ export function DynamicFilterBar({
           onClick={() => setIsDrawerOpen(true)}
           className={`inline-flex shrink-0 items-center gap-1.5 rounded-xl border px-3.5 py-1.5 text-xs font-bold transition-all shadow-xs cursor-pointer ${
             activeAttributeCount > 0
-              ? "border-purple-700 bg-purple-900 text-white shadow-purple-200"
+              ? "border-[#981495] bg-[#981495] text-white shadow-[#f0abfc]"
               : "border-slate-200 bg-white text-slate-800 hover:bg-slate-50"
           }`}
         >
-          <SlidersHorizontal className="h-3.5 w-3.5 text-purple-400" />
+          <SlidersHorizontal className="h-3.5 w-3.5 text-[#c026d3]" />
           <span>Filters</span>
           {activeAttributeCount > 0 && (
-            <span className="flex h-4 w-4 items-center justify-center rounded-full bg-[#F3D053] text-[10px] font-black text-purple-950">
+            <span className="flex h-4 w-4 items-center justify-center rounded-full bg-[#F3D053] text-[10px] font-black text-[#700b6e]">
               {activeAttributeCount}
             </span>
           )}
@@ -101,18 +101,18 @@ export function DynamicFilterBar({
                 onClick={() => setOpenDropdownId(isOpen ? null : filter.id)}
                 className={`inline-flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-bold transition-all cursor-pointer ${
                   hasSelection
-                    ? "border-purple-700 bg-purple-50 text-purple-900 shadow-2xs ring-1 ring-purple-500/20"
+                    ? "border-[#981495] bg-[var(--sand)] text-[#981495] shadow-2xs ring-1 ring-[#c026d3]/20"
                     : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
                 }`}
               >
                 <span>{filter.name}</span>
                 {hasSelection && (
-                  <span className="rounded-full bg-purple-700 text-white text-[10px] font-bold px-1.5 py-0.2">
+                  <span className="rounded-full bg-[#981495] text-white text-[10px] font-bold px-1.5 py-0.2">
                     {selectedForThisFilter.length}
                   </span>
                 )}
                 <ChevronDown
-                  className={`h-3.5 w-3.5 text-slate-400 transition-transform ${isOpen ? "rotate-180 text-purple-700" : ""}`}
+                  className={`h-3.5 w-3.5 text-slate-400 transition-transform ${isOpen ? "rotate-180 text-[#981495]" : ""}`}
                 />
               </button>
 
@@ -133,7 +133,7 @@ export function DynamicFilterBar({
                             delete next[filter.id];
                             onChange({ ...activeState, selectedAttributes: next });
                           }}
-                          className="text-[10px] text-purple-700 font-bold hover:underline"
+                          className="text-[10px] text-[#981495] font-bold hover:underline"
                         >
                           Clear
                         </button>
@@ -148,7 +148,7 @@ export function DynamicFilterBar({
                             key={opt.value}
                             className={`flex items-center justify-between text-xs font-semibold p-2 rounded-xl cursor-pointer transition-colors ${
                               checked
-                                ? "bg-purple-50 text-purple-900"
+                                ? "bg-[var(--sand)] text-[#981495]"
                                 : "hover:bg-slate-50 text-slate-700"
                             }`}
                           >
@@ -157,11 +157,11 @@ export function DynamicFilterBar({
                                 type="checkbox"
                                 checked={checked}
                                 onChange={() => handleToggleOption(filter.id, opt.value)}
-                                className="rounded border-slate-300 text-purple-700 focus:ring-purple-700"
+                                className="rounded border-slate-300 text-[#981495] focus:ring-[#981495]"
                               />
                               <span>{opt.label}</span>
                             </span>
-                            {checked && <Check className="h-3.5 w-3.5 text-purple-700" />}
+                            {checked && <Check className="h-3.5 w-3.5 text-[#981495]" />}
                           </label>
                         );
                       })}
@@ -181,7 +181,7 @@ export function DynamicFilterBar({
             <div>
               <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
                 <div className="flex items-center gap-2">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-purple-100 text-purple-900">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[var(--sand)] text-[#981495]">
                     <Sparkles className="h-5 w-5" />
                   </div>
                   <div>
@@ -216,7 +216,7 @@ export function DynamicFilterBar({
                               onClick={() => handleToggleOption(filter.id, opt.value)}
                               className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
                                 checked
-                                  ? "bg-purple-900 text-white shadow-xs"
+                                  ? "bg-[#981495] text-white shadow-xs"
                                   : "bg-slate-100 text-slate-700 hover:bg-slate-200"
                               }`}
                             >
@@ -242,7 +242,7 @@ export function DynamicFilterBar({
               <button
                 type="button"
                 onClick={() => setIsDrawerOpen(false)}
-                className="w-2/3 py-2.5 rounded-xl bg-purple-900 text-white font-extrabold text-xs shadow-md hover:bg-purple-950"
+                className="w-2/3 py-2.5 rounded-xl bg-[#981495] text-white font-extrabold text-xs shadow-md hover:bg-[#700b6e]"
               >
                 Apply Filters ({activeAttributeCount})
               </button>

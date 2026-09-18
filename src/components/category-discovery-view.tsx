@@ -1,26 +1,23 @@
 import { useState, useMemo, startTransition, useEffect } from "react";
-import { Link, useNavigate } from "@tanstack/react-router";
+import { useNavigate } from "@tanstack/react-router";
 import {
   Star,
   MapPin,
   Filter,
   ChevronDown,
-  Clock,
   CheckCircle2,
   Tag,
   ShieldCheck,
   Headphones,
   X,
   Sparkles,
-  ArrowRight,
   Store as StoreIcon,
   Layers,
   Package,
 } from "lucide-react";
-import type { Store } from "@/lib/mock-data";
-import { WishlistButton } from "@/components/wishlist-button";
+import { categoryLabel, type Store } from "@/lib/mock-data";
+import { ShopCard } from "@/components/shop-card";
 import { scrollToShops } from "@/lib/scroll-utils";
-import { getFallbackProductImage, resolveImageUrl } from "@/lib/image-utils";
 import { useDeliveryLocation } from "@/lib/location-store";
 import { SmartLottieLoader } from "@/components/ui/smart-lottie-loader";
 import {
@@ -28,7 +25,6 @@ import {
   isStoreInCategory,
   ShopCategoryConfig,
 } from "@/lib/shop-categories";
-import { ShopCategoryNavBar } from "@/components/shop-category-nav-bar";
 import { calculateHaversineDistanceKm } from "@/lib/map-service/providers";
 import { isValidCoordinate } from "@/lib/geo";
 import {
@@ -156,21 +152,27 @@ export function CategoryDiscoveryView({
 
   // Filtered & Distance-Calculated Shops List
   const filteredStores = useMemo(() => {
-    if (typeof locLat !== "number" || typeof locLng !== "number" || !isValidCoordinate(locLat, locLng)) {
+    if (
+      typeof locLat !== "number" ||
+      typeof locLng !== "number" ||
+      !isValidCoordinate(locLat, locLng)
+    ) {
       return [];
     }
-    let result = stores.filter((s) => isValidCoordinate(s.lat, s.lng)).map((s) => {
-      const storeLat = Number(s.lat);
-      const storeLng = Number(s.lng);
-      const computedDistanceKm = calculateHaversineDistanceKm(locLat, locLng, storeLat, storeLng);
-      const computedEta = Math.max(10, Math.round(computedDistanceKm * 5 + 10));
+    let result = stores
+      .filter((s) => isValidCoordinate(s.lat, s.lng))
+      .map((s) => {
+        const storeLat = Number(s.lat);
+        const storeLng = Number(s.lng);
+        const computedDistanceKm = calculateHaversineDistanceKm(locLat, locLng, storeLat, storeLng);
+        const computedEta = Math.max(10, Math.round(computedDistanceKm * 5 + 10));
 
-      return {
-        ...s,
-        distanceKm: Number(computedDistanceKm.toFixed(1)),
-        etaMin: computedEta,
-      };
-    });
+        return {
+          ...s,
+          distanceKm: Number(computedDistanceKm.toFixed(1)),
+          etaMin: computedEta,
+        };
+      });
 
     // Filter by Shop Category using centralized matching engine
     if (activeCategory && activeCategory !== "all" && activeCategory !== "all-shops") {
@@ -222,17 +224,9 @@ export function CategoryDiscoveryView({
 
   return (
     <div className="mx-auto max-w-7xl px-3 sm:px-6 lg:px-8 py-4 sm:py-6 space-y-5 sm:space-y-6">
-      {/* 1. TOP HORIZONTAL CATEGORY & SUBCATEGORY NAVIGATION BAR */}
-      <ShopCategoryNavBar
-        activeCategorySlug={activeCategory}
-        activeSubcategoryId={activeSubcategoryId}
-        onSelectCategory={handleCategorySelect}
-        onSelectSubcategory={handleSubcategorySelect}
-        className="-mx-3 sm:-mx-6 lg:-mx-8 rounded-2xl shadow-xs border-purple-100"
-      />
-
-      {/* 2. DYNAMIC CATEGORY HEADER BANNER */}
-      <div className="relative overflow-hidden rounded-3xl border border-purple-200/70 bg-gradient-to-r from-purple-950 via-purple-900 to-indigo-950 p-5 sm:p-7 text-white shadow-xl">
+      {/* The global Liquid Glass category island is the single top-level category navigator. */}
+      {/* DYNAMIC CATEGORY HEADER BANNER */}
+      <div className="relative overflow-hidden rounded-3xl border border-[#f0abfc]/70 bg-gradient-to-r from-[#700b6e] via-[#981495] to-[#700b6e] p-5 sm:p-7 text-white shadow-xl">
         <div className="absolute right-0 top-0 w-64 h-64 opacity-15 bg-radial from-[#F3D053] to-transparent pointer-events-none" />
 
         <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -247,15 +241,15 @@ export function CategoryDiscoveryView({
                   <Sparkles className="h-3 w-3" /> Hyperlocal Shop Category
                 </span>
                 {activeSubcategoryId !== "all" && (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-purple-500/30 px-2.5 py-0.5 text-[10px] font-bold text-white uppercase tracking-wider border border-purple-400/30">
-                    <Layers className="h-3 w-3 text-purple-300" /> Subcategory Active
+                  <span className="inline-flex items-center gap-1 rounded-full bg-[#c026d3]/30 px-2.5 py-0.5 text-[10px] font-bold text-white uppercase tracking-wider border border-[#c026d3]/30">
+                    <Layers className="h-3 w-3 text-[#f0abfc]" /> Subcategory Active
                   </span>
                 )}
               </div>
               <h1 className="font-display text-xl sm:text-2xl lg:text-3xl font-extrabold text-white tracking-tight">
                 {categoryConfig.heading}
               </h1>
-              <p className="text-xs sm:text-sm text-purple-200 leading-relaxed max-w-2xl">
+              <p className="text-xs sm:text-sm text-[#f0abfc] leading-relaxed max-w-2xl">
                 {categoryConfig.subheading} around{" "}
                 <span className="font-bold text-[#F3D053] underline underline-offset-2">
                   {deliveryLoc?.area || deliveryLoc?.city || "your location"}
@@ -282,17 +276,17 @@ export function CategoryDiscoveryView({
 
       {/* 3. PRODUCT TYPES HORIZONTAL STRIP (3rd Tier Navigation) */}
       {productTypes.length > 0 && activeCategory !== "all" && (
-        <div className="bg-white rounded-2xl border border-purple-100 p-3 shadow-2xs space-y-2">
+        <div className="bg-white rounded-2xl border border-[var(--sand)] p-3 shadow-2xs space-y-2">
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-black uppercase text-purple-900/70 flex items-center gap-1.5 tracking-wider">
-              <Package className="h-3.5 w-3.5 text-purple-700" />
+            <span className="text-[11px] font-black uppercase text-[#981495]/70 flex items-center gap-1.5 tracking-wider">
+              <Package className="h-3.5 w-3.5 text-[#981495]" />
               Select Product Type
             </span>
             {activeProductTypeId !== "all" && (
               <button
                 type="button"
                 onClick={() => handleProductTypeSelect("all")}
-                className="text-[11px] font-bold text-purple-700 hover:underline"
+                className="text-[11px] font-bold text-[#981495] hover:underline"
               >
                 Clear product type
               </button>
@@ -305,8 +299,8 @@ export function CategoryDiscoveryView({
               onClick={() => handleProductTypeSelect("all")}
               className={`px-3.5 py-1.5 rounded-xl text-xs font-extrabold whitespace-nowrap transition-all border ${
                 activeProductTypeId === "all"
-                  ? "bg-purple-900 text-white border-purple-900 shadow-xs"
-                  : "bg-slate-50 text-slate-700 border-slate-200 hover:bg-purple-50 hover:border-purple-300"
+                  ? "bg-[#981495] text-white border-[#981495] shadow-xs"
+                  : "bg-slate-50 text-slate-700 border-slate-200 hover:bg-[var(--sand)] hover:border-[#f0abfc]"
               }`}
             >
               All Product Types
@@ -321,8 +315,8 @@ export function CategoryDiscoveryView({
                   onClick={() => handleProductTypeSelect(pt.id)}
                   className={`px-3.5 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all border ${
                     isSelected
-                      ? "bg-purple-900 text-white border-purple-900 shadow-xs"
-                      : "bg-slate-50 text-slate-700 border-slate-200 hover:bg-purple-50 hover:border-purple-300"
+                      ? "bg-[#981495] text-white border-[#981495] shadow-xs"
+                      : "bg-slate-50 text-slate-700 border-slate-200 hover:bg-[var(--sand)] hover:border-[#f0abfc]"
                   }`}
                 >
                   {pt.name}
@@ -389,22 +383,22 @@ export function CategoryDiscoveryView({
         </div>
 
         <div className="text-xs font-extrabold text-slate-500">
-          Showing <span className="text-purple-900 font-extrabold">{filteredStores.length}</span>{" "}
+          Showing <span className="text-[#981495] font-extrabold">{filteredStores.length}</span>{" "}
           Local Shops
         </div>
       </div>
 
       {/* 6. SHOP GRID CARDS */}
       {isDiscoveringShops ? (
-        <div className="py-12 flex justify-center items-center rounded-3xl bg-white border border-purple-100 shadow-xs">
+        <div className="py-12 flex justify-center items-center rounded-3xl bg-white border border-[var(--sand)] shadow-xs">
           <SmartLottieLoader
             message={`Finding verified shops near ${deliveryLoc?.area || deliveryLoc?.city || "you"}...`}
             size="md"
           />
         </div>
       ) : filteredStores.length === 0 ? (
-        <div className="rounded-3xl border border-dashed border-purple-200 bg-white p-8 sm:p-12 text-center space-y-3">
-          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-purple-50 text-purple-700">
+        <div className="rounded-3xl border border-dashed border-[#f0abfc] bg-white p-8 sm:p-12 text-center space-y-3">
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-[var(--sand)] text-[#981495]">
             <StoreIcon className="h-7 w-7" />
           </div>
           <h3 className="font-extrabold text-slate-900 text-lg">
@@ -424,102 +418,40 @@ export function CategoryDiscoveryView({
               setActiveFilterState(INITIAL_FILTER_STATE);
               handleCategorySelect(getCategoryByIdOrSlug("all"));
             }}
-            className="inline-flex items-center gap-1 text-xs font-bold text-purple-700 hover:text-purple-900 hover:underline pt-2"
+            className="inline-flex items-center gap-1 text-xs font-bold text-[#981495] hover:text-[#981495] hover:underline pt-2"
           >
             Explore All Shops Near You →
           </button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 sm:gap-5">
           {filteredStores.map((store) => (
-            <Link
+            <ShopCard
               key={store.id}
-              to="/store/$storeId"
-              params={{ storeId: store.id }}
-              className="group relative flex flex-col rounded-3xl bg-white border border-slate-200/90 shadow-xs hover:shadow-xl hover:-translate-y-1 transition-all duration-300 overflow-hidden"
-            >
-              {/* Shop Cover Image */}
-              <div className="relative h-44 sm:h-48 w-full bg-slate-100 overflow-hidden">
-                <img
-                  src={resolveImageUrl(store.imageUrl, store.name, store.category)}
-                  alt={store.name}
-                  loading="lazy"
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).src = getFallbackProductImage(
-                      store.name,
-                      store.category,
-                    );
-                  }}
-                  className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-                />
-
-                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/20" />
-
-                {/* Top Badge */}
-                <div className="absolute top-3 left-3 bg-slate-900/80 text-white text-[10px] font-bold px-2.5 py-1 rounded-full backdrop-blur-md border border-white/20">
-                  {store.category.replace("_", " ").toUpperCase()}
-                </div>
-
-                <div className="absolute top-3 right-3 z-10" onClick={(e) => e.stopPropagation()}>
-                  <WishlistButton productId={store.id} productName={store.name} />
-                </div>
-
-                <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between text-white text-xs font-bold">
-                  <span className="flex items-center gap-1 bg-black/60 px-2.5 py-1 rounded-lg backdrop-blur-xs">
-                    <Clock className="h-3 w-3 text-amber-300" /> {store.etaMin} mins
-                  </span>
-                  <span className="flex items-center gap-1 bg-black/60 px-2.5 py-1 rounded-lg backdrop-blur-xs">
-                    <MapPin className="h-3 w-3 text-amber-300" /> {store.distanceKm} km away
-                  </span>
-                </div>
-              </div>
-
-              {/* Shop Content */}
-              <div className="p-4 flex-1 flex flex-col justify-between space-y-3">
-                <div>
-                  <div className="flex items-start justify-between gap-2">
-                    <h3 className="font-extrabold text-slate-900 text-base line-clamp-1 group-hover:text-purple-700 transition-colors">
-                      {store.name}
-                    </h3>
-
-                    <div className="flex items-center gap-1 bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-lg text-xs font-extrabold shrink-0 border border-emerald-200/60">
-                      <Star className="h-3 w-3 fill-emerald-600 text-emerald-600" />
-                      <span>{store.rating.toFixed(1)}</span>
-                    </div>
-                  </div>
-
-                  <p className="mt-1.5 text-xs text-slate-500 line-clamp-2 leading-relaxed font-medium">
-                    {store.tagline || categoryConfig.description}
-                  </p>
-                </div>
-
-                <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
-                  <span
-                    className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full font-bold text-[11px] ${
-                      store.isOpen
-                        ? "bg-emerald-100 text-emerald-800"
-                        : "bg-slate-100 text-slate-500"
-                    }`}
-                  >
-                    <span
-                      className={`w-1.5 h-1.5 rounded-full ${store.isOpen ? "bg-emerald-600 animate-pulse" : "bg-slate-400"}`}
-                    />
-                    {store.isOpen ? "Open Now" : "Closed"}
-                  </span>
-
-                  <span className="text-xs font-bold text-purple-700 group-hover:text-purple-900 flex items-center gap-1">
-                    Visit Shop{" "}
-                    <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
-                  </span>
-                </div>
-              </div>
-            </Link>
+              shop={{
+                id: store.id,
+                name: store.name,
+                category: categoryLabel[store.category] ?? store.category,
+                imageUrl: store.imageUrl,
+                rating: store.rating,
+                distanceKm: store.distanceKm,
+                isOpen: store.isOpen,
+                closingTime: store.isOpen ? undefined : undefined,
+                address: store.address,
+                description: store.tagline || categoryConfig.description,
+                isVerified: true,
+                deliveryAvailable: true,
+                pickupAvailable: true,
+              }}
+              variant="wide"
+              className="h-full max-w-none"
+            />
           ))}
         </div>
       )}
 
       {/* 7. REQUEST A SHOP BANNER */}
-      <div className="rounded-3xl bg-gradient-to-r from-purple-900 via-indigo-900 to-purple-950 p-5 sm:p-7 text-white flex flex-col sm:flex-row items-start sm:items-center justify-between gap-5 shadow-lg relative overflow-hidden">
+      <div className="rounded-3xl bg-gradient-to-r from-[#981495] via-[#700b6e] to-[#700b6e] p-5 sm:p-7 text-white flex flex-col sm:flex-row items-start sm:items-center justify-between gap-5 shadow-lg relative overflow-hidden">
         <div className="flex items-center gap-4">
           <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white/10 text-amber-300 border border-white/15 backdrop-blur-sm">
             <Tag className="h-6 w-6 stroke-[2.2]" />
@@ -528,7 +460,7 @@ export function CategoryDiscoveryView({
             <h4 className="font-extrabold text-white text-base sm:text-lg">
               Don't see your favorite neighborhood shop listed?
             </h4>
-            <p className="text-xs sm:text-sm text-purple-200 mt-0.5 max-w-xl">
+            <p className="text-xs sm:text-sm text-[#f0abfc] mt-0.5 max-w-xl">
               Submit a shop request! Our LocalShoree ground operations team will onboard your
               trusted local store so you can order delivery.
             </p>
@@ -547,7 +479,7 @@ export function CategoryDiscoveryView({
       {/* TRUST & VERIFICATION STRIP */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 pt-2">
         <div className="flex items-center gap-3 rounded-2xl bg-white border border-slate-100 p-4 shadow-2xs">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-purple-50 text-purple-700">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--sand)] text-[#981495]">
             <ShieldCheck className="h-5 w-5" />
           </div>
           <div>
@@ -557,7 +489,7 @@ export function CategoryDiscoveryView({
         </div>
 
         <div className="flex items-center gap-3 rounded-2xl bg-white border border-slate-100 p-4 shadow-2xs">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-purple-50 text-purple-700">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--sand)] text-[#981495]">
             <MapPin className="h-5 w-5" />
           </div>
           <div>
@@ -569,7 +501,7 @@ export function CategoryDiscoveryView({
         </div>
 
         <div className="flex items-center gap-3 rounded-2xl bg-white border border-slate-100 p-4 shadow-2xs">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-purple-50 text-purple-700">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--sand)] text-[#981495]">
             <Star className="h-5 w-5 text-amber-500" />
           </div>
           <div>
@@ -579,7 +511,7 @@ export function CategoryDiscoveryView({
         </div>
 
         <div className="flex items-center gap-3 rounded-2xl bg-white border border-slate-100 p-4 shadow-2xs">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-purple-50 text-purple-700">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--sand)] text-[#981495]">
             <Headphones className="h-5 w-5" />
           </div>
           <div>
@@ -602,7 +534,7 @@ export function CategoryDiscoveryView({
             </button>
 
             <div className="flex items-center gap-3">
-              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-purple-100 text-purple-800">
+              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[var(--sand)] text-[#981495]">
                 <Tag className="h-6 w-6" />
               </div>
               <div>
@@ -635,7 +567,7 @@ export function CategoryDiscoveryView({
                     placeholder="e.g. Sri Krishna Sweets & Bakery..."
                     value={requestShopName}
                     onChange={(e) => setRequestShopName(e.target.value)}
-                    className="w-full rounded-xl border border-slate-200 px-3 py-2 text-xs focus:border-purple-700 focus:outline-none"
+                    className="w-full rounded-xl border border-slate-200 px-3 py-2 text-xs focus:border-[#981495] focus:outline-none"
                   />
                 </div>
 
@@ -648,7 +580,7 @@ export function CategoryDiscoveryView({
                     placeholder="e.g. Pappampatti Pirivu, Trichy Road..."
                     value={requestArea}
                     onChange={(e) => setRequestArea(e.target.value)}
-                    className="w-full rounded-xl border border-slate-200 px-3 py-2 text-xs focus:border-purple-700 focus:outline-none"
+                    className="w-full rounded-xl border border-slate-200 px-3 py-2 text-xs focus:border-[#981495] focus:outline-none"
                   />
                 </div>
 
@@ -661,7 +593,7 @@ export function CategoryDiscoveryView({
                     placeholder="Describe specific products..."
                     value={requestDetails}
                     onChange={(e) => setRequestDetails(e.target.value)}
-                    className="w-full rounded-xl border border-slate-200 px-3 py-2 text-xs focus:border-purple-700 focus:outline-none"
+                    className="w-full rounded-xl border border-slate-200 px-3 py-2 text-xs focus:border-[#981495] focus:outline-none"
                   />
                 </div>
 
@@ -675,7 +607,7 @@ export function CategoryDiscoveryView({
                   </button>
                   <button
                     type="submit"
-                    className="px-5 py-2 rounded-xl text-xs font-bold bg-purple-700 hover:bg-purple-800 text-white shadow-md"
+                    className="px-5 py-2 rounded-xl text-xs font-bold bg-[#981495] hover:bg-[#981495] text-white shadow-md"
                   >
                     Submit Request
                   </button>

@@ -8,6 +8,7 @@ import {
   categoryLabel,
 } from "@/lib/mock-data";
 import { calculateHaversineDistanceKm } from "./providers";
+import { isValidCoordinate } from "@/lib/geo";
 import type { MapMarkerItem, MapFilterOptions, MapLocation } from "./types";
 import { isStoreInCategory, toStoreCategory } from "@/lib/shop-categories";
 
@@ -152,32 +153,12 @@ export function getMapMarkerItems(
   const markers: MapMarkerItem[] = [];
 
   allStores.forEach((store, idx) => {
-    // Determine effective lat/lng:
-    // If store coordinates are missing or far away (>0.3 degrees/~30km from search center),
-    // scatter dynamically near user location using golden ratio spiral.
-    let effectiveLat = Number(store.lat);
-    let effectiveLng = Number(store.lng);
+    // Coordinates are authoritative. Never fabricate a shop position relative
+    // to the customer's location; an unlocated shop cannot be shown as nearby.
+    const effectiveLat = Number(store.lat);
+    const effectiveLng = Number(store.lng);
 
-    const isMissingOrFar =
-      !effectiveLat ||
-      !effectiveLng ||
-      isNaN(effectiveLat) ||
-      isNaN(effectiveLng) ||
-      Math.abs(effectiveLat - userLocation.lat) > 0.35 ||
-      Math.abs(effectiveLng - userLocation.lng) > 0.35;
-
-    if (isMissingOrFar) {
-      // Golden ratio spiral scatter angle & radius
-      const angle = (idx * 137.5 * Math.PI) / 180;
-      const radiusKm = 0.3 + ((idx * 0.6) % 3.8);
-
-      const latOffset = (radiusKm * Math.sin(angle)) / 111;
-      const lngOffset =
-        (radiusKm * Math.cos(angle)) / (111 * Math.cos((userLocation.lat * Math.PI) / 180));
-
-      effectiveLat = userLocation.lat + latOffset;
-      effectiveLng = userLocation.lng + lngOffset;
-    }
+    if (!isValidCoordinate(effectiveLat, effectiveLng)) return;
 
     // Calculate exact Haversine distance
     const computedDistanceKm = calculateHaversineDistanceKm(

@@ -45,7 +45,7 @@ export interface GiftCardTx {
 }
 
 export const GIFT_CARD_DESIGNS: GiftCardDesign[] = [
-  { id: "classic", name: "Classic Shore", gradient: "from-purple-700 to-purple-900", emoji: "🏪" },
+  { id: "classic", name: "Classic Shore", gradient: "from-[#981495] to-[#981495]", emoji: "🏪" },
   {
     id: "festive",
     name: "Festive Celebration",
@@ -55,7 +55,7 @@ export const GIFT_CARD_DESIGNS: GiftCardDesign[] = [
   { id: "birthday", name: "Happy Birthday", gradient: "from-pink-500 to-rose-600", emoji: "🎂" },
   { id: "thankyou", name: "Thank You", gradient: "from-teal-500 to-emerald-600", emoji: "💚" },
   { id: "wedding", name: "Wedding Wishes", gradient: "from-amber-400 to-yellow-500", emoji: "💍" },
-  { id: "local_love", name: "Local Love", gradient: "from-purple-500 to-fuchsia-600", emoji: "❤️" },
+  { id: "local_love", name: "Local Love", gradient: "from-[#c026d3] to-fuchsia-600", emoji: "❤️" },
 ];
 
 export const GIFT_CARD_DENOMINATIONS: GiftCardDenomination[] = [

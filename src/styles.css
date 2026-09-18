@@ -2,6 +2,50 @@
 @source "../src";
 @import "tw-animate-css";
 
+@keyframes localshore-placeholder-exit {
+  from {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    opacity: 0;
+    transform: translate3d(0, -100%, 0);
+  }
+}
+
+@keyframes localshore-placeholder-enter {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 100%, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+.localshore-placeholder-exit,
+.localshore-placeholder-enter {
+  animation-duration: 560ms;
+  animation-fill-mode: both;
+  animation-timing-function: ease-in-out;
+  white-space: nowrap;
+}
+
+.localshore-placeholder-exit {
+  animation-name: localshore-placeholder-exit;
+}
+.localshore-placeholder-enter {
+  animation-name: localshore-placeholder-enter;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .localshore-placeholder-exit,
+  .localshore-placeholder-enter {
+    animation-duration: 1ms;
+  }
+}
+
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
@@ -44,7 +88,7 @@
   --color-teal: var(--teal);
   --color-teal-deep: var(--teal-deep);
   --font-display:
-    "Outfit", "Plus Jakarta Sans", "Noto Sans Tamil", ui-sans-serif, system-ui, -apple-system,
+    "Poppins", "Outfit", "Plus Jakarta Sans", "Noto Sans Tamil", ui-sans-serif, system-ui, -apple-system,
     sans-serif;
   --font-sans:
     "Plus Jakarta Sans", "Outfit", "Noto Sans Tamil", ui-sans-serif, system-ui, -apple-system,
@@ -79,11 +123,11 @@
   --coral: oklch(0.72 0.14 30); /* Muted coral #E88A7A */
   --success: oklch(0.64 0.15 155);
 
-  --background: oklch(0.97 0.008 85);
+  --background: oklch(0.945 0.018 295);
   --foreground: var(--ink);
-  --card: oklch(0.988 0.005 85);
+  --card: oklch(0.975 0.014 295);
   --card-foreground: var(--ink);
-  --popover: oklch(0.988 0.005 85);
+  --popover: oklch(0.975 0.014 295);
   --popover-foreground: var(--ink);
   --primary: var(--orchid);
   --primary-foreground: oklch(1 0 0);
