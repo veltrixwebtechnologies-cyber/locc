@@ -347,30 +347,36 @@ export function CategoryMegaMenu() {
           </nav>
 
           {/* Right-aligned marketplace links */}
-          <div className="hidden lg:flex h-8 shrink-0 items-center gap-3 rounded-l-xl border-l-2 border-[#981495]/20 bg-[#faf7ff] pl-4 pr-1 text-xs text-slate-600 shadow-[inset_8px_0_18px_-18px_rgba(152,20,149,0.35)]">
+          <div className="hidden lg:flex h-9 shrink-0 items-center gap-1 rounded-xl border border-[#eadff3] bg-gradient-to-r from-[#fffaf0] via-[#fff7fd] to-[#f4f8ff] px-1.5 text-[11px] text-slate-600 shadow-[0_4px_14px_rgba(76,29,149,0.08)]">
             <Link
               to="/best-shops"
-              className="inline-flex items-center gap-1.5 hover:text-[#981495] font-semibold text-slate-700 transition"
+              className="group inline-flex h-7 items-center gap-1.5 rounded-lg bg-[#fff4cf] px-2.5 font-bold text-[#805b00] transition hover:-translate-y-0.5 hover:bg-[#ffe9a0]"
             >
-              <span>🏆</span> Best Shops
+              <span className="grid h-5 w-5 place-items-center rounded-md bg-white/80 text-xs shadow-sm">🏆</span>
+              <span>Best Shops</span>
             </Link>
+            <span className="h-4 w-px bg-[#eadff3]" aria-hidden="true" />
             <Link
               to="/brands"
-              className="inline-flex items-center gap-1.5 hover:text-[#981495] font-semibold text-slate-700 transition"
+              className="inline-flex h-7 items-center gap-1.5 rounded-lg px-2.5 font-bold text-[#981495] transition hover:-translate-y-0.5 hover:bg-[#fce7f9]"
             >
-              <span>🛍️</span> Brands
+              <span className="grid h-5 w-5 place-items-center rounded-md bg-[#fce7f9] text-xs">🛍️</span>
+              <span>Brands</span>
             </Link>
+            <span className="h-4 w-px bg-[#eadff3]" aria-hidden="true" />
             <Link
               to="/explore"
-              className="inline-flex items-center gap-1.5 hover:text-[#981495] font-semibold text-slate-700 transition"
+              className="inline-flex h-7 items-center gap-1.5 rounded-lg px-2.5 font-bold text-[#16606b] transition hover:-translate-y-0.5 hover:bg-[#e3f8f5]"
             >
-              <span>✈️</span> Explore
+              <span className="grid h-5 w-5 place-items-center rounded-md bg-[#e3f8f5] text-xs">✈️</span>
+              <span>Explore</span>
             </Link>
+            <span className="h-4 w-px bg-[#eadff3]" aria-hidden="true" />
             <Link
               to="/customer-care"
-              className="inline-flex items-center gap-1.5 hover:text-[#981495] font-medium transition"
+              className="inline-flex h-7 items-center gap-1.5 rounded-lg px-2.5 font-bold text-[#6d356d] transition hover:-translate-y-0.5 hover:bg-[#f6eafa]"
             >
-              <Headphones className="h-3.5 w-3.5 text-[#981495]" />
+              <span className="grid h-5 w-5 place-items-center rounded-md bg-[#f6eafa]"><Headphones className="h-3.5 w-3.5 text-[#981495]" /></span>
               Customer Care
             </Link>
           </div>

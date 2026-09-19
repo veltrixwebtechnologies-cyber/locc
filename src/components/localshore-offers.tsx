@@ -1,4 +1,4 @@
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -70,6 +70,7 @@ function resolveImage(imageUrl: string) {
 }
 
 export function LocalShoreOffers() {
+  const navigate = useNavigate();
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
   const offersQuery = useQuery({
     queryKey: ["localshore-offer-cards", "shopper"],
@@ -120,7 +121,17 @@ export function LocalShoreOffers() {
           return (
             <article
               key={offer.title}
-              className="relative min-h-[240px] min-w-0 overflow-hidden rounded-2xl border border-white/80 bg-white/75 p-4 shadow-[0_10px_24px_rgba(75,42,145,0.08)] backdrop-blur-sm"
+              role="link"
+              tabIndex={0}
+              aria-label={offer.action + ": " + offer.title.replace(/\n/g, " ")}
+              onClick={() => navigate({ to: "/search", search: { category: offer.category, q: undefined } })}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" || event.key === " ") {
+                  event.preventDefault();
+                  navigate({ to: "/search", search: { category: offer.category, q: undefined } });
+                }
+              }}
+              className="group relative min-h-[240px] min-w-0 cursor-pointer overflow-hidden rounded-2xl border border-white/80 bg-white/75 p-4 shadow-[0_10px_24px_rgba(75,42,145,0.08)] backdrop-blur-sm transition duration-300 ease-out hover:-translate-y-1 hover:border-[#b99be8] hover:bg-white hover:shadow-[0_18px_34px_rgba(75,42,145,0.18)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7c3aed] focus-visible:ring-offset-2 active:translate-y-0"
             >
               <div className="relative z-10 flex w-[72%] min-w-0 flex-col items-start [overflow-wrap:anywhere] sm:w-[68%]">
                 <div
@@ -138,7 +149,10 @@ export function LocalShoreOffers() {
                 </p>
                 <button
                   type="button"
-                  onClick={() => void copyCoupon(offer.coupon)}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    void copyCoupon(offer.coupon);
+                  }}
                   className="mt-2 inline-flex min-h-11 max-w-full items-center gap-2 rounded-md border border-dashed border-[#9b7ad9] bg-[#f5efff] px-3 py-2 text-xs font-black tracking-wider text-[#5421a7] transition hover:bg-[#5421a7] hover:text-white"
                   aria-label={`Copy coupon code ${offer.coupon}`}
                 >
@@ -148,7 +162,8 @@ export function LocalShoreOffers() {
                 <Link
                   to="/search"
                   search={{ category: offer.category, q: undefined }}
-                  className="mt-3 inline-flex min-h-11 max-w-full items-center gap-2 rounded-full bg-white px-3 py-2 text-xs font-black uppercase tracking-wide text-[#5421a7] shadow-sm hover:bg-[#5421a7] hover:text-white"
+                  onClick={(event) => event.stopPropagation()}
+                  className="mt-3 inline-flex min-h-11 max-w-full items-center gap-2 rounded-full bg-white px-3 py-2 text-xs font-black uppercase tracking-wide text-[#5421a7] shadow-sm transition group-hover:shadow-md hover:bg-[#5421a7] hover:text-white"
                 >
                   <span>{offer.action}</span> <ArrowRight className="h-3 w-3 shrink-0" />
                 </Link>
@@ -157,7 +172,7 @@ export function LocalShoreOffers() {
                 src={offer.image}
                 alt=""
                 loading="lazy"
-                className="pointer-events-none absolute bottom-0 right-0 h-[78%] w-[42%] object-cover object-center [mask-image:linear-gradient(to_right,transparent,black_45%)]"
+                className="pointer-events-none absolute bottom-0 right-0 h-[78%] w-[42%] object-cover object-center transition duration-500 ease-out [mask-image:linear-gradient(to_right,transparent,black_45%)] group-hover:scale-105"
               />
             </article>
           );

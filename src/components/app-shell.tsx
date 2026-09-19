@@ -569,11 +569,23 @@ export function AppShell({ children }: { children: ReactNode }) {
               </div>
 
               <div className="flex items-center gap-1.5 shrink-0">
+                {pathname === "/" && (
+                  <button
+                    type="button"
+                    onClick={() => document.getElementById("shops-section")?.scrollIntoView({ behavior: "smooth", block: "start" })}
+                    className="inline-flex min-h-10 shrink-0 items-center gap-1 rounded-xl bg-white/15 px-2.5 py-2 text-[11px] font-bold text-white transition hover:bg-white/25 active:scale-95"
+                  >
+                    <MapPin className="h-3.5 w-3.5" />
+                    <span className="hidden sm:inline">Show map</span>
+                    <span className="sm:hidden">Map</span>
+                  </button>
+                )}
                 <Link
                   to="/cart"
-                  className="inline-flex shrink-0 items-center gap-1.5 rounded-xl bg-[var(--marigold)] px-3.5 py-2 text-xs font-extrabold text-ink shadow-md hover:brightness-105 active:scale-95 transition-all"
+                  className="inline-flex min-h-10 shrink-0 items-center gap-1.5 rounded-xl bg-[var(--marigold)] px-3 py-2 text-xs font-extrabold text-ink shadow-md transition-all hover:brightness-105 active:scale-95 sm:px-3.5"
                 >
-                  View Cart
+                  <span className="hidden sm:inline">View Cart</span>
+                  <span className="sm:hidden">Cart</span>
                   <ArrowRight className="h-4 w-4" />
                 </Link>
 
