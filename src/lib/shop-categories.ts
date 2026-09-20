@@ -841,6 +841,14 @@ export function getCategoryByIdOrSlug(idOrSlug?: string | null): ShopCategoryCon
 
 import type { StoreCategory } from "@/lib/mock-data";
 
+/** Use the same category key in URLs, seller business types and catalog RPCs. */
+export function catalogCategoryKey(value?: string | null): string | null {
+  if (!value || value === "all" || value === "all-shops") return null;
+  const category = getCategoryByIdOrSlug(value);
+  // Preserve unknown keys so a typo cannot silently request every category.
+  return category.id === "all" || category.id === "favorites" ? value : category.id;
+}
+
 /**
  * Normalizes any category string into a valid StoreCategory
  */

@@ -7,9 +7,9 @@ import {
 } from "@/lib/filter-types";
 import { useDeliveryLocation } from "@/lib/location-store";
 import { hasConfirmedCoordinates, CUSTOMER_VISIBILITY_RADIUS_KM } from "@/lib/location-visibility";
+import { catalogCategoryKey, isStoreInCategory } from "@/lib/shop-categories";
 
 // Module-level circuit breaker and in-memory cache for ultra-fast response
-let isProductRpcUnavailable = false;
 let isFacetRpcUnavailable = false;
 let cachedCatalogRows: FilteredProduct[] | null = null;
 
@@ -31,17 +31,15 @@ function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
 export function useProductFilters(filterState: ProductFilterState) {
   const [deliveryLocation] = useDeliveryLocation();
   const productsQuery = useQuery<{ products: FilteredProduct[]; total: number }>({
-    queryKey: ["filter-products", filterState, deliveryLocation?.lat, deliveryLocation?.lng],
+    queryKey: ["filter-products-v2", filterState, deliveryLocation?.lat, deliveryLocation?.lng],
     staleTime: 1000 * 60 * 2,
     gcTime: 1000 * 60 * 10,
     retry: false,
-    placeholderData: (previousData) => previousData,
     queryFn: async () => {
       if (!hasConfirmedCoordinates(deliveryLocation)) return { products: [], total: 0 };
-      if (!isProductRpcUnavailable) {
-        try {
+      try {
           const rpcPromise = (supabase as any).rpc("filter_marketplace_products", {
-            p_category_slug: filterState.category ?? null,
+            p_category_slug: catalogCategoryKey(filterState.category),
             p_subcategory_slug: filterState.subcategory ?? null,
             p_product_type_slug: filterState.productType ?? null,
             p_query: filterState.query ?? null,
@@ -65,20 +63,24 @@ export function useProductFilters(filterState: ProductFilterState) {
             p_max_distance_km: CUSTOMER_VISIBILITY_RADIUS_KM,
           });
 
-          const { data, error } = (await withTimeout(rpcPromise, 800)) as any;
+          const { data, error } = (await withTimeout(rpcPromise, 8000)) as any;
 
           if (error) {
             console.warn("RPC filter_marketplace_products unavailable:", error);
-            isProductRpcUnavailable = true;
+            throw error;
           } else if (data) {
-            const products = (data as FilteredProduct[]) || [];
+            const products = ((data as FilteredProduct[]) || []).filter((product) =>
+              product.distance_km != null &&
+              Number.isFinite(Number(product.distance_km)) &&
+              Number(product.distance_km) <= CUSTOMER_VISIBILITY_RADIUS_KM &&
+              (!filterState.category || isStoreInCategory(product.category, filterState.category)),
+            );
             const total = products.length > 0 ? Number(products[0].total_count) : 0;
             return { products, total };
           }
-        } catch (err) {
-          console.warn("RPC filter_marketplace_products timed out/failed:", err);
-          isProductRpcUnavailable = true;
-        }
+      } catch (err) {
+        console.warn("RPC filter_marketplace_products timed out/failed:", err);
+        throw err;
       }
 
       // Never fall back to an unscoped catalog: that could expose distant shops.
@@ -102,7 +104,7 @@ export function useProductFilters(filterState: ProductFilterState) {
       if (!isFacetRpcUnavailable) {
         try {
           const rpcPromise = (supabase as any).rpc("get_marketplace_facets", {
-            p_category_slug: filterState.category ?? null,
+            p_category_slug: catalogCategoryKey(filterState.category),
             p_subcategory_slug: filterState.subcategory ?? null,
             p_product_type_slug: filterState.productType ?? null,
             p_query: filterState.query ?? null,
