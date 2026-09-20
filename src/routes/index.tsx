@@ -331,6 +331,8 @@ function Home() {
   }, [approvedProducts.data, hasConfirmedLocation]);
 
   const displayCategoryName = useMemo(() => getCategoryDisplayName(cat), [cat]);
+  const nearbyLoading =
+    hasConfirmedLocation && (approvedVendors.isLoading || approvedProducts.isLoading);
 
   return (
     <AppShell>
@@ -360,7 +362,9 @@ function Home() {
           </p>
         )}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {filtered.slice(0, 8).map((store) => (
+          {nearbyLoading
+            ? Array.from({ length: 8 }, (_, index) => <ShopCardSkeleton key={`shop-skeleton-${index}`} />)
+            : filtered.slice(0, 8).map((store) => (
             <ShopCard
               key={store.id}
               shop={{
@@ -378,7 +382,7 @@ function Home() {
               className="h-full max-w-none"
             />
           ))}
-          {filtered.length === 0 && (
+          {!nearbyLoading && filtered.length === 0 && (
             <div className="col-span-full">
               <EmptyState />
             </div>
@@ -420,7 +424,15 @@ function Home() {
           </Link>
         </div>
         <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-          {Array.from(
+          {nearbyLoading
+            ? Array.from({ length: 8 }, (_, index) => (
+                <div
+                  key={`product-skeleton-${index}`}
+                  className="h-52 animate-pulse rounded-2xl bg-muted/70"
+                  aria-hidden="true"
+                />
+              ))
+            : Array.from(
             new Map(
               homepageProducts
                 .filter((product) => product.stock > 0)
@@ -446,5 +458,23 @@ function EmptyState() {
         No stores near you yet — try expanding your search radius or clearing filters.
       </p>
     </Reveal>
+  );
+}
+
+function ShopCardSkeleton() {
+  return (
+    <div
+      className="animate-pulse overflow-hidden rounded-3xl border border-border/70 bg-card shadow-sm"
+      aria-hidden="true"
+    >
+      <div className="aspect-[16/10] max-[639px]:aspect-[16/7] bg-muted" />
+      <div className="space-y-3 p-4 max-[639px]:p-3">
+        <div className="h-3 w-1/3 rounded bg-muted" />
+        <div className="h-5 w-3/4 rounded bg-muted" />
+        <div className="h-3 w-1/2 rounded bg-muted" />
+        <div className="h-12 rounded-2xl bg-muted/80" />
+        <div className="h-10 rounded-2xl bg-muted" />
+      </div>
+    </div>
   );
 }
