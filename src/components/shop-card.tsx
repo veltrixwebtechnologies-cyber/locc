@@ -28,6 +28,7 @@ export interface ShopCardData {
   closingTime?: string;
   openingTime?: string;
   matchingProductCount?: number;
+  featuredProductName?: string;
   startingPrice?: number;
   deliveryAvailable?: boolean;
   pickupAvailable?: boolean;
@@ -43,6 +44,21 @@ interface ShopCardProps {
   searchQuery?: string;
   className?: string;
   variant?: "compact" | "standard" | "wide";
+}
+
+const SHOP_CATEGORY_LABELS: Record<string, string> = {
+  fruits_veg: "Fresh Produce",
+  meat_fish: "Meat & Fish",
+  bakery: "Bakery & Sweets",
+  grocery: "Kirana & Grocery",
+  pharmacy: "Pharmacy & Care",
+  fashion: "Fashion & Apparel",
+  electronics: "Electronics & Mobiles",
+  home_kitchen: "Home & Kitchen",
+};
+
+function getShopCategoryLabel(category: string) {
+  return SHOP_CATEGORY_LABELS[category.toLowerCase()] ?? category.replaceAll("_", " ");
 }
 
 export function ShopCard({
@@ -162,7 +178,7 @@ export function ShopCard({
               </Badge>
             )}
             <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
-              {shop.category}
+              {getShopCategoryLabel(shop.category)}
             </span>
           </div>
 
@@ -179,7 +195,7 @@ export function ShopCard({
           </Link>
 
           {shop.address && (
-            <p className="text-xs text-muted-foreground truncate mt-0.5 font-medium">
+            <p className="mt-1 line-clamp-2 break-words text-xs font-medium leading-relaxed text-muted-foreground">
               {shop.address}
             </p>
           )}
@@ -207,7 +223,9 @@ export function ShopCard({
             </div>
           ) : (
             <div className="flex items-center justify-between text-muted-foreground font-medium">
-              <span>Full store catalog listed</span>
+              <span className="truncate" title={shop.featuredProductName || "Full store catalog listed"}>
+                {shop.featuredProductName ? `Popular: ${shop.featuredProductName}` : "Full store catalog listed"}
+              </span>
               {shop.startingPrice !== undefined && shop.startingPrice > 0 && (
                 <span className="text-foreground font-bold">
                   From ₹{shop.startingPrice.toLocaleString("en-IN")}

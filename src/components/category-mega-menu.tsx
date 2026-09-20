@@ -793,12 +793,14 @@ export function HeaderCategoryMenu() {
   );
 }
 
-export function MobileCategoryStrip() {
+export function MobileCategoryStrip({ sticky = false }: { sticky?: boolean }) {
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   return (
     <>
-      <div className="sticky top-[53px] z-40 isolate w-full max-w-full overflow-hidden border-b border-[var(--sand)] bg-white text-slate-800 shadow-sm md:hidden">
+      <div
+        className={`${sticky ? "sticky top-[106px] z-50 shadow-sm sm:top-[57px]" : "relative z-30"} isolate w-full max-w-full overflow-hidden border-b border-[var(--sand)] bg-white text-slate-800 md:hidden`}
+      >
         <div className="flex w-full max-w-full items-center gap-1.5 overflow-x-auto overscroll-x-contain px-3 py-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {/* 1. All Categories Button (Amazon style) */}
           <button

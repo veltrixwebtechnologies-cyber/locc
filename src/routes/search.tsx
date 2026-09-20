@@ -217,10 +217,10 @@ function SwiggySearchPage() {
 
   return (
     <AppShell>
-      <div className="min-h-screen w-full min-w-0 max-w-7xl mx-auto overflow-hidden rounded-[28px] border border-[#eadff0] bg-[#fbf9fc] px-3 pb-20 pt-4 shadow-[0_16px_50px_rgba(76,29,149,0.06)] sm:px-6">
+      <div className="min-h-screen w-full min-w-0 max-w-7xl mx-auto overflow-x-clip rounded-[28px] border border-[#eadff0] bg-[#fbf9fc] px-3 pb-20 pt-4 shadow-[0_16px_50px_rgba(76,29,149,0.06)] [touch-action:pan-y_pinch-zoom] sm:px-6">
         {/* Search Bar Header */}
         <form onSubmit={handleSearchSubmit} className="relative mb-4">
-          <div className="flex items-center gap-3 rounded-full border border-[#eadff0] bg-white px-4 py-3 shadow-sm transition-all focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20">
+          <div className="flex min-w-0 items-center gap-2 rounded-full border border-[#eadff0] bg-white px-3 py-2.5 shadow-sm transition-all focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20 sm:gap-3 sm:px-4 sm:py-3">
             <button
               type="button"
               onClick={() => {
@@ -230,7 +230,7 @@ function SwiggySearchPage() {
                   window.history.back();
                 }
               }}
-              className="p-1 hover:bg-muted rounded-full text-foreground/80 transition-colors"
+              className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-foreground/80 transition-colors hover:bg-muted"
               title="Back"
             >
               <ChevronLeft className="w-6 h-6 stroke-[2.5]" />
@@ -240,8 +240,8 @@ function SwiggySearchPage() {
               type="text"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search local shops, products, brands..."
-              className="flex-1 bg-transparent text-base md:text-lg font-medium text-foreground outline-none placeholder:text-muted-foreground/70"
+              placeholder="Search shops or products"
+              className="min-w-0 flex-1 bg-transparent text-sm font-medium text-foreground outline-none placeholder:text-muted-foreground/70 sm:text-base md:text-lg"
               autoFocus
             />
 
@@ -249,7 +249,7 @@ function SwiggySearchPage() {
               <button
                 type="button"
                 onClick={handleClearAll}
-                className="p-1 hover:bg-muted rounded-full text-muted-foreground hover:text-foreground transition-colors"
+                className="grid h-8 w-8 shrink-0 place-items-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                 title="Clear"
               >
                 <X className="w-5 h-5 stroke-[2.5]" />
@@ -258,7 +258,7 @@ function SwiggySearchPage() {
 
             <button
               type="submit"
-              className="p-2 rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+              className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-primary text-primary-foreground transition-colors hover:bg-primary/90"
               title="Search"
             >
               <SearchIcon className="w-5 h-5" />
@@ -365,6 +365,11 @@ function SwiggySearchPage() {
                     </span>
                   </h2>
                   <div className="mt-1 h-0.5 w-10 bg-primary rounded-full" />
+                  {deliveryLocation && (
+                    <p className="mt-1 text-[11px] font-medium text-muted-foreground">
+                      Within 5 km of {deliveryLocation.area || deliveryLocation.label}
+                    </p>
+                  )}
                 </div>
 
                 <Link
@@ -377,11 +382,11 @@ function SwiggySearchPage() {
               </div>
 
               {shopsLoading ? (
-                <div className="flex gap-4 overflow-x-auto pb-2">
+                <div className="touch-scroll flex snap-x snap-mandatory gap-4 overflow-x-auto overscroll-x-contain pb-2">
                   {[1, 2, 3].map((i) => (
                     <div
                       key={i}
-                      className="w-[280px] h-64 rounded-3xl bg-muted animate-pulse shrink-0 border hairline"
+                      className="w-[82vw] max-w-[320px] snap-start h-64 rounded-3xl bg-muted animate-pulse shrink-0 border hairline"
                     />
                   ))}
                 </div>
@@ -396,9 +401,9 @@ function SwiggySearchPage() {
                   </p>
                 </div>
               ) : (
-                <div className="grid min-w-0 grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+                <div className="touch-scroll -mx-1 flex min-w-0 snap-x snap-mandatory gap-3 overflow-x-auto overscroll-x-contain px-1 pb-2 md:mx-0 md:grid md:grid-cols-2 md:gap-4 md:overflow-visible md:px-0 md:pb-0 lg:grid-cols-3">
                   {shops.map((shop) => (
-                    <div key={shop.id} className="min-w-0 w-full">
+                    <div key={shop.id} className="w-[82vw] max-w-[340px] shrink-0 snap-start md:w-full md:max-w-none md:min-w-0">
                       <ShopCard
                         shop={shop}
                         searchQuery={query}

@@ -43,6 +43,17 @@ import { useDeliveryLocation } from "@/lib/location-store";
 import { getCategoryByIdOrSlug, toStoreCategory, isStoreInCategory } from "@/lib/shop-categories";
 import { calculateHaversineDistanceKm } from "@/lib/map-service/providers";
 import { CUSTOMER_VISIBILITY_RADIUS_KM, hasConfirmedCoordinates } from "@/lib/location-visibility";
+
+const DEMO_SHOP_FEATURES: Partial<Record<StoreCategory, { name: string; imageUrl: string }>> = {
+  fruits_veg: { name: "Tomato", imageUrl: "https://images.unsplash.com/photo-1546094096-0df4bcaaa337?auto=format&fit=crop&w=640&q=80" },
+  meat_fish: { name: "Chicken", imageUrl: "https://images.unsplash.com/photo-1604503468506-a8da13d82791?auto=format&fit=crop&w=640&q=80" },
+  bakery: { name: "Birthday Cake", imageUrl: "https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&w=640&q=80" },
+  grocery: { name: "Rice", imageUrl: "https://images.unsplash.com/photo-1586201375761-83865001e31c?auto=format&fit=crop&w=640&q=80" },
+  pharmacy: { name: "Paracetamol", imageUrl: "https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?auto=format&fit=crop&w=640&q=80" },
+  fashion: { name: "T-Shirts", imageUrl: "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&w=640&q=80" },
+  electronics: { name: "Smartphones", imageUrl: "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?auto=format&fit=crop&w=640&q=80" },
+  home_kitchen: { name: "Cookware", imageUrl: "https://images.unsplash.com/photo-1556911220-e15b29be8c8f?auto=format&fit=crop&w=640&q=80" },
+};
 import { rankShopsWithML } from "@/lib/ml-shop-ranker";
 import { LocalShoreOffers } from "@/components/localshore-offers";
 import { LiquidGlassCategorySelector } from "@/components/liquid-glass-category-selector";
@@ -54,6 +65,16 @@ const getCategoryDisplayName = (catName?: string | null): string => {
 };
 
 export const Route = createFileRoute("/")({
+  head: () => ({
+    links: [
+      {
+        rel: "preload",
+        href: "/assets/shoreline-rider-cutout.webp",
+        as: "image",
+        fetchPriority: "high",
+      },
+    ],
+  }),
   validateSearch: (s: Record<string, unknown>) => s,
   component: Home,
 });
@@ -198,24 +219,46 @@ function Home() {
     if (!hasConfirmedLocation) return [];
     const liveProducts = approvedProducts.data ?? [];
     const normalizedQuery = query.trim().toLowerCase();
+    // Use each seller's own in-stock catalog image for their nearby shop card.
+    // This prevents unrelated category/stock imagery from being presented as that shop's products.
+    const featuredProductBySeller = new Map<string, any>();
+    for (const product of liveProducts) {
+      if (!product?.seller_id || featuredProductBySeller.has(product.seller_id)) continue;
+      if (Number(product.stock ?? 1) <= 0) continue;
+      featuredProductBySeller.set(product.seller_id, product);
+    }
     const liveVendorStores = (approvedVendors.data ?? [])
       .map((vendor: any, index: number) => {
         const vLat = Number(vendor.lat);
         const vLng = Number(vendor.lng);
         if (!isValidCoordinate(vLat, vLng)) return null;
         const dKm = Number(vendor.distance_km ?? 0);
+        const featuredProduct = featuredProductBySeller.get(vendor.id);
+        // The RPC's `category` is derived from a product row and can be stale or
+        // miscategorized. Seller.business_type is the authoritative shop category.
+        const storeCategory = toStoreCategory(vendor.business_type || vendor.category);
+        const demoFeature = /^localshore\s+(?:demo\s+)?(?:CBE|BLR)-\d{2}\b/i.test(vendor.shop_name || "")
+          ? DEMO_SHOP_FEATURES[storeCategory]
+          : undefined;
+        const productImage = isValidImageUrl(featuredProduct?.image_url) &&
+          !String(featuredProduct.image_url).includes("photo-1542838132-92c53300491e")
+          ? featuredProduct.image_url
+          : null;
         return {
           ...APPROVED_STORE,
           id: vendor.id,
           name: vendor.shop_name || APPROVED_STORE.name,
           tagline: vendor.business_type || "Approved local vendor",
-          category: toStoreCategory(vendor.category),
+          category: storeCategory,
           address:
             [vendor.address_line1, vendor.city, vendor.state].filter(Boolean).join(", ") ||
             APPROVED_STORE.address,
           imageUrl:
+            demoFeature?.imageUrl ||
+            productImage ||
             vendor.storefront_image_url ||
             getFallbackProductImage(vendor.shop_name, vendor.category || vendor.business_type),
+          featuredProductName: demoFeature?.name || featuredProduct?.name,
           distanceKm: Number(dKm.toFixed(1)),
           etaMin: Math.max(10, Math.round(dKm * 5 + 10)),
         };
@@ -379,6 +422,7 @@ function Home() {
                 name: store.name,
                 category: categoryLabel[store.category] ?? store.category,
                 imageUrl: store.imageUrl,
+                featuredProductName: store.featuredProductName,
                 rating: store.rating,
                 distanceKm: store.distanceKm,
                 isOpen: store.isOpen,
@@ -454,18 +498,19 @@ function Home() {
       </section>
 
       {isNearbyMapOpen && (
-        <div className="fixed inset-0 z-[90] overflow-y-auto bg-slate-950/70 p-2 backdrop-blur-sm sm:p-6">
-          <div className="relative mx-auto min-h-full w-full max-w-[1500px] rounded-2xl bg-background p-3 shadow-2xl sm:min-h-0 sm:p-6">
-            <button
-              type="button"
-              onClick={() => setIsNearbyMapOpen(false)}
-              className="absolute right-4 top-4 z-[95] rounded-full bg-white px-3 py-2 text-sm font-bold text-slate-800 shadow-md ring-1 ring-slate-200 hover:bg-slate-50"
-              aria-label="Close nearby shops map"
-            >
-              Close map
-            </button>
-            <LocalShoreMapExperience />
-          </div>
+        <div className="fixed inset-0 z-[90] overflow-y-auto bg-background">
+          <button
+            type="button"
+            onClick={() => setIsNearbyMapOpen(false)}
+            className="absolute right-3 top-3 z-[130] hidden rounded-full bg-white px-3 py-2 text-sm font-bold text-slate-800 shadow-md ring-1 ring-slate-200 hover:bg-slate-50 lg:block"
+            aria-label="Close nearby shops map"
+          >
+            Close map
+          </button>
+          <LocalShoreMapExperience
+            initialMapOpen
+            onCloseMap={() => setIsNearbyMapOpen(false)}
+          />
         </div>
       )}
 

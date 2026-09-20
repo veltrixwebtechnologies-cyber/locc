@@ -170,12 +170,19 @@ export function getFallbackProductImage(name?: string | null, category?: string 
   }
 
   if (
-    c.includes("grocery") ||
-    c.includes("kirana") ||
-    c.includes("palamuthir") ||
-    c.includes("fresh produce")
+    c.includes("fruits_veg") ||
+    c.includes("produce") ||
+    c.includes("vegetable") ||
+    c.includes("palamuthir")
   ) {
-    return "https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=800&q=80";
+    return "https://images.unsplash.com/photo-1610832958506-aa56368176cf?auto=format&fit=crop&w=800&q=80";
+  }
+
+  if (
+    c.includes("grocery") ||
+    c.includes("kirana")
+  ) {
+    return "https://images.unsplash.com/photo-1586201375761-83865001e31c?auto=format&fit=crop&w=800&q=80";
   }
 
   return "https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=800&q=80";

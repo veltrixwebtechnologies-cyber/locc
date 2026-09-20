@@ -45,7 +45,9 @@ import { NearbySimilarShopsWidget } from "@/components/nearby-similar-shops-widg
 import { scrollToShops } from "@/lib/scroll-utils";
 
 const isUuid = (value: string) =>
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+  // Demo seller IDs are UUID-shaped MD5 values and don't necessarily carry
+  // RFC 4122 version/variant bits. Match the UUID format, not those bit flags.
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
 
 import { toStoreCategory } from "@/lib/shop-categories";
 import { isTestEntity } from "@/lib/map-service/store-engine";
@@ -91,12 +93,14 @@ function getCategoryIcon(_catName: string) {
 function StorePage() {
   const loaded = Route.useLoaderData() as { store: Store; products: Product[] };
   const approved = useQuery({
-    queryKey: ["approved-store", loaded.store.id],
+    // Bump the key so a previously cached cross-seller result cannot survive the
+    // seller-ID scoping fix in this query.
+    queryKey: ["approved-store-v3", loaded.store.id],
     enabled: loaded.store.id === APPROVED_STORE.id || isUuid(loaded.store.id),
     queryFn: async () => {
       let productQuery = (supabase as any)
         .from("approved_product_catalog")
-        .select("id,seller_id,name,category,selling_price,image_url,stock")
+        .select("id,seller_id,shop_name,name,category,selling_price,image_url,stock")
         .order("created_at", { ascending: false });
       if (loaded.store.id !== APPROVED_STORE.id) {
         productQuery = productQuery.eq("seller_id", loaded.store.id);
@@ -116,7 +120,13 @@ function StorePage() {
         error = fallback.error;
       }
       if (error) throw error;
-      const validRows = (data ?? []).filter((p: any) => !isTestEntity(p.name));
+      // Keep a client-side ownership guard as well as the database seller_id
+      // filter. This also protects storefronts if an older view/cache returns
+      // rows from the wider approved catalog.
+      const sellerRows = loaded.store.id === APPROVED_STORE.id
+        ? (data ?? [])
+        : (data ?? []).filter((p: any) => p.seller_id === loaded.store.id);
+      const validRows = sellerRows.filter((p: any) => !isTestEntity(p.name));
       const products = await Promise.all(
         validRows.map(async (p: any) => {
           const rawImage = p.image_url ?? "";
@@ -130,6 +140,7 @@ function StorePage() {
           return {
             id: p.id,
             storeId: p.seller_id ?? APPROVED_STORE.id,
+            shopName: p.shop_name ?? undefined,
             name: p.name,
             unit: p.unit || p.category || "1 unit",
             price: Number(p.selling_price),
@@ -151,7 +162,9 @@ function StorePage() {
         .maybeSingle();
 
       let storeName = vendor?.shop_name;
-      let storeCategory = vendor?.category;
+      // The vendor view's `category` comes from wizard_data and can lag behind
+      // the admin-assigned seller.business_type. Prefer the authoritative type.
+      let storeCategory = vendor?.business_type || vendor?.category;
       let storeTagline = vendor?.business_type || "Approved local vendor";
       let storeAddress = [vendor?.address_line1, vendor?.city, vendor?.state]
         .filter(Boolean)
@@ -177,7 +190,7 @@ function StorePage() {
         if (sellerData) {
           const w = sellerData.wizard_data || {};
           storeName = sellerData.business_name || storeName;
-          storeCategory = w.category || sellerData.business_type || storeCategory;
+          storeCategory = sellerData.business_type || w.category || storeCategory;
           storeTagline = w.description || sellerData.business_name || storeTagline;
           storeAddress = [sellerData.address_line1, sellerData.city, sellerData.state]
             .filter(Boolean)
@@ -191,8 +204,14 @@ function StorePage() {
         }
       }
 
+      const isLocalShoreZoneDemo = /^LocalShore\s+(?:Demo\s+)?(?:CBE|BLR)-\d{2}\b/i.test(storeName || "");
+      const expectedDemoCategory = toStoreCategory(storeCategory);
+      const storeProducts = isLocalShoreZoneDemo
+        ? products.filter((product) => product.category.toLowerCase() === expectedDemoCategory)
+        : products;
+
       return {
-        products,
+        products: storeProducts,
         store: vendor
           ? ({
               ...APPROVED_STORE,
@@ -210,8 +229,9 @@ function StorePage() {
 
   const store = approved.data?.store ?? loaded.store;
   const liveProds = approved.data?.products ?? [];
+  const isLiveSellerStore = isUuid(loaded.store.id) && loaded.store.id !== APPROVED_STORE.id;
   const products = (
-    liveProds.length > 0
+    isLiveSellerStore
       ? liveProds
       : loaded.products && loaded.products.length > 0
         ? loaded.products
@@ -717,10 +737,10 @@ function StorePage() {
                           <WishlistButton
                             productId={p.id}
                             productName={p.name}
-                            item={{
-                              productId: p.id,
-                              name: p.name,
-                              shopName: store.name,
+                          item={{
+                            productId: p.id,
+                            name: p.name,
+                            shopName: p.shopName || store.name,
                               category: p.category,
                               price: p.price,
                               imageUrl: p.imageUrl,
@@ -749,7 +769,7 @@ function StorePage() {
                               onClick={() => {
                                 void recordProductEvent(p.id, "add_to_cart");
                                 flyProductToCart(p.id);
-                                cartStore.add(store.id || p.storeId, store.name, p);
+                                cartStore.add(p.storeId || store.id, p.shopName || store.name, p);
                               }}
                               className="rounded-lg bg-[#fffafd] border border-emerald-600 text-emerald-700 hover:bg-emerald-600 hover:text-white px-3.5 py-1 text-xs font-black uppercase tracking-wider shadow-sm transition-all active:scale-95 cursor-pointer flex items-center gap-1"
                             >
@@ -762,7 +782,7 @@ function StorePage() {
                               onAdd={() => {
                                 void recordProductEvent(p.id, "add_to_cart");
                                 flyProductToCart(p.id);
-                                cartStore.add(store.id || p.storeId, store.name, p);
+                                cartStore.add(p.storeId || store.id, p.shopName || store.name, p);
                               }}
                               onChange={(n) => cartStore.setQty(p.id, n)}
                               addClassName="rounded-lg bg-emerald-700 text-white px-2 py-0.5 text-xs font-bold shadow-sm"
@@ -803,6 +823,12 @@ function StorePage() {
                         <h3 className="line-clamp-2 text-xs sm:text-sm font-bold text-slate-800 leading-snug group-hover:text-[#981495] transition-colors">
                           {p.name}
                         </h3>
+
+                        {p.shopName && (
+                          <p className="truncate pt-0.5 text-[11px] font-medium text-slate-500">
+                            Sold by {p.shopName}
+                          </p>
+                        )}
 
                         {/* Rating & ETA */}
                         <div className="flex items-center gap-2 pt-0.5 text-[11px] font-bold text-slate-600">

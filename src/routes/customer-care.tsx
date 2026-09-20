@@ -15,6 +15,8 @@ import {
 } from "lucide-react";
 import { m } from "motion/react";
 import { SUPPORT_CATEGORIES, SUPPORT_FAQS, type SupportCategory } from "@/lib/platform-data";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/customer-care")({ component: CustomerCarePage });
 
@@ -25,6 +27,7 @@ function CustomerCarePage() {
   const [ticketSubject, setTicketSubject] = useState("");
   const [ticketMessage, setTicketMessage] = useState("");
   const [showTicketForm, setShowTicketForm] = useState(false);
+  const [submittingTicket, setSubmittingTicket] = useState(false);
 
   const filteredFaqs = searchQuery.trim()
     ? SUPPORT_FAQS.filter(
@@ -33,6 +36,47 @@ function CustomerCarePage() {
           f.a.toLowerCase().includes(searchQuery.toLowerCase()),
       )
     : SUPPORT_FAQS;
+
+  const submitTicket = async () => {
+    const subject = ticketSubject.trim();
+    const body = ticketMessage.trim();
+    if (!subject || !body) {
+      toast.error("Add a subject and describe how we can help.");
+      return;
+    }
+
+    setSubmittingTicket(true);
+    try {
+      const { data: authData, error: authError } = await supabase.auth.getUser();
+      if (authError) throw authError;
+      if (!authData.user) {
+        toast.error("Please sign in before contacting customer care.");
+        return;
+      }
+
+      const { error } = await (supabase as any).from("support_tickets").insert({
+        user_id: authData.user.id,
+        raised_by: "customer",
+        subject,
+        body,
+        priority: "normal",
+        status: "open",
+        issue_type: selectedCategory?.id ?? "general",
+        support_stage: "submitted",
+      });
+      if (error) throw error;
+
+      toast.success("Your message was sent to Customer Care.");
+      setTicketSubject("");
+      setTicketMessage("");
+      setShowTicketForm(false);
+    } catch (error) {
+      console.error("Customer Care ticket submission failed", error);
+      toast.error(error instanceof Error ? error.message : "Could not send your request. Please try again.");
+    } finally {
+      setSubmittingTicket(false);
+    }
+  };
 
   return (
     <AppShell>
@@ -176,12 +220,17 @@ function CustomerCarePage() {
                       className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm placeholder:text-slate-400"
                     />
                     <div className="flex items-center gap-3">
-                      <button className="flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50">
+                    <button type="button" className="flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50">
                         <Paperclip className="h-3.5 w-3.5" /> Attach image
                       </button>
                     </div>
-                    <button className="w-full rounded-xl bg-[#981495] py-3 text-sm font-bold text-white shadow-md transition hover:bg-[#981495] flex items-center justify-center gap-2">
-                      <Send className="h-4 w-4" /> Submit Ticket
+                    <button
+                      type="button"
+                      onClick={() => void submitTicket()}
+                      disabled={submittingTicket}
+                      className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#981495] py-3 text-sm font-bold text-white shadow-md transition hover:bg-[#700b6e] disabled:cursor-wait disabled:opacity-60"
+                    >
+                      <Send className="h-4 w-4" /> {submittingTicket ? "Sending…" : "Submit Ticket"}
                     </button>
                   </div>
                   <div className="mt-3 flex items-center gap-2 text-[11px] text-slate-500">

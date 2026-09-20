@@ -48,6 +48,8 @@ const QUICK_FILTERS = [
 interface Props {
   initialQuery?: string;
   initialCategory?: string;
+  initialMapOpen?: boolean;
+  onCloseMap?: () => void;
   onQueryChange?: (q: string) => void;
   onCategoryChange?: (c: string) => void;
 }
@@ -55,6 +57,8 @@ interface Props {
 export function LocalShoreMapExperience({
   initialQuery = "",
   initialCategory = "all",
+  initialMapOpen = false,
+  onCloseMap,
   onQueryChange,
   onCategoryChange,
 }: Props) {
@@ -220,12 +224,21 @@ export function LocalShoreMapExperience({
   };
 
   const activeQuickFilter = filters.category ? getCategoryByIdOrSlug(filters.category).id : "all";
-  const [showDesktopMap, setShowDesktopMap] = useState(false);
-  const [isMobileMapOpen, setIsMobileMapOpen] = useState(false);
+  const [showDesktopMap, setShowDesktopMap] = useState(initialMapOpen);
+  const [isMobileMapOpen, setIsMobileMapOpen] = useState(initialMapOpen);
 
   if (!userLocation) {
     return (
-      <div className="w-full rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-8 text-center">
+      <div className="relative w-full rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-8 text-center">
+        {initialMapOpen && onCloseMap && (
+          <button
+            type="button"
+            onClick={onCloseMap}
+            className="absolute right-3 top-3 rounded-full bg-white px-3 py-2 text-xs font-bold text-slate-700 shadow-sm"
+          >
+            Close
+          </button>
+        )}
         <MapPin className="mx-auto h-8 w-8 text-[#981495]" />
         <h3 className="mt-3 font-display text-base font-bold text-slate-900">
           Recommended from LocalShore
@@ -470,12 +483,15 @@ export function LocalShoreMapExperience({
 
       {/* MOBILE FULLSCREEN MAP MODAL OVERLAY */}
       {isMobileMapOpen && (
-        <div className="fixed inset-0 z-50 flex flex-col bg-white lg:hidden animate-in fade-in duration-200">
+        <div className="fixed inset-0 z-[120] flex flex-col bg-white lg:hidden animate-in fade-in duration-200">
           {/* Top Navbar */}
           <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200 bg-white shadow-xs">
             <button
               type="button"
-              onClick={() => setIsMobileMapOpen(false)}
+              onClick={() => {
+                setIsMobileMapOpen(false);
+                onCloseMap?.();
+              }}
               className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-slate-700 hover:bg-slate-200 font-bold"
             >
               ✕
@@ -486,7 +502,10 @@ export function LocalShoreMapExperience({
             </div>
             <button
               type="button"
-              onClick={() => setIsMobileMapOpen(false)}
+              onClick={() => {
+                setIsMobileMapOpen(false);
+                onCloseMap?.();
+              }}
               className="inline-flex items-center gap-1 rounded-full border border-[#981495] px-3 py-1 text-xs font-bold text-[#981495]"
             >
               List View

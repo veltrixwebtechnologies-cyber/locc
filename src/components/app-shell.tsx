@@ -37,6 +37,14 @@ const HEADER_SEARCH_PLACEHOLDERS = [
   "Search for local favorites",
 ];
 
+const OPEN_LOCATION_MODAL_EVENT = "localshore_open_location_modal";
+
+function requestLocationModal() {
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new CustomEvent(OPEN_LOCATION_MODAL_EVENT));
+  }
+}
+
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const navigate = useNavigate();
@@ -46,7 +54,6 @@ export function AppShell({ children }: { children: ReactNode }) {
   const wishlistProducts = useWishlistProducts();
   const [deliveryLocation] = useDeliveryLocation();
   const gpsState = useGPSStatus();
-  const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
   const [isCartBarMinimized, setIsCartBarMinimized] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [headerQuery, setHeaderQuery] = useState("");
@@ -68,18 +75,11 @@ export function AppShell({ children }: { children: ReactNode }) {
     // dismissible location prompt if they continue browsing without choosing.
     const promptTimer = window.setTimeout(() => {
       if (deliveryLocation || hasUserChosenLocation()) return;
-      setIsLocationModalOpen(true);
+      requestLocationModal();
     }, 8000);
 
-    const handleOpenModal = () => setIsLocationModalOpen(true);
-    if (typeof window !== "undefined") {
-      window.addEventListener("localshore_open_location_modal", handleOpenModal);
-    }
     return () => {
       window.clearTimeout(promptTimer);
-      if (typeof window !== "undefined") {
-        window.removeEventListener("localshore_open_location_modal", handleOpenModal);
-      }
     };
   }, []);
 
@@ -122,10 +122,13 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   return (
     <div
-      className={`min-h-screen bg-background transition-[padding] duration-300 ${
-        showFloatingCart && !isCartBarMinimized
-          ? "pb-[calc(11rem+env(safe-area-inset-bottom,0px))] md:pb-8"
-          : "pb-[calc(5.75rem+env(safe-area-inset-bottom,0px))] md:pb-0"
+      // Reserve a stable mobile footer/cart-bar gutter from the first render.
+      // Cart state is hydrated from localStorage after SSR; changing page
+      // padding when that state arrives causes a large layout shift.
+      className={`min-h-screen bg-background pb-[calc(11rem+env(safe-area-inset-bottom,0px))] md:pb-8 ${
+        pathname.startsWith("/cart") || pathname.startsWith("/checkout")
+          ? "!pb-[calc(5.75rem+env(safe-area-inset-bottom,0px))] md:!pb-0"
+          : ""
       }`}
     >
       {/* Mobile top nav header */}
@@ -147,7 +150,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         <div className="flex items-center gap-2">
           <button
             type="button"
-            onClick={() => setIsLocationModalOpen(true)}
+            onClick={requestLocationModal}
             className={`hidden items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-bold transition cursor-pointer shrink-0 max-w-[140px] sm:flex sm:max-w-[180px] ${
               gpsState.status === "detecting"
                 ? "border-amber-300/60 bg-amber-50/80 text-amber-800"
@@ -177,6 +180,15 @@ export function AppShell({ children }: { children: ReactNode }) {
             aria-label="Search products"
           >
             <Search className="h-4 w-4" />
+          </Link>
+
+          <Link
+            to="/customer-care"
+            className="grid h-8 w-8 place-items-center rounded-lg border hairline bg-muted/60 text-foreground hover:bg-muted"
+            aria-label="Customer Care"
+            title="Customer Care"
+          >
+            <Headphones className="h-4 w-4" />
           </Link>
 
           <Link
@@ -224,6 +236,37 @@ export function AppShell({ children }: { children: ReactNode }) {
         </div>
       </header>
 
+      {/* Delivery location is shown on the customer home page only. */}
+      {pathname === "/" && <div className="sticky top-[57px] z-40 border-b hairline bg-background px-3 py-1.5 shadow-2xs sm:hidden md:hidden">
+        <button
+          type="button"
+          onClick={requestLocationModal}
+          className="flex min-h-9 w-full items-center gap-2 rounded-lg px-2 text-left transition-colors hover:bg-muted/70 active:bg-muted"
+          aria-label={hasLocation ? `Change delivery location, currently ${deliveryLocation!.area || deliveryLocation!.label}` : "Select delivery location"}
+        >
+          <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-primary/10 text-primary">
+            {gpsState.status === "detecting" ? (
+              <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+            ) : (
+              <MapPin className="h-4 w-4" />
+            )}
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-[9px] font-semibold uppercase tracking-wide text-muted-foreground">
+              {gpsState.status === "detecting" ? "Finding your location" : "Deliver to"}
+            </span>
+            <span className="block truncate text-xs font-bold text-foreground">
+              {gpsState.status === "detecting"
+                ? "Please wait…"
+                : hasLocation
+                  ? deliveryLocation!.area || deliveryLocation!.label
+                  : "Select your location"}
+            </span>
+          </span>
+          <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" />
+        </button>
+      </div>}
+
       {/* Desktop top nav */}
       <header
         className={`sticky top-0 z-50 hidden border-b hairline bg-background/95 backdrop-blur transition-shadow duration-300 md:block ${
@@ -249,13 +292,15 @@ export function AppShell({ children }: { children: ReactNode }) {
             />
           </Link>
 
+          {pathname === "/" && (
+            <>
           {/* Vertical Divider (Equal top/bottom spacing) */}
           <div className="h-6 w-px bg-border/80 shrink-0 mx-1" />
 
           {/* Location Selector (Deliver to -> Location -> Chevron) */}
           <button
             type="button"
-            onClick={() => setIsLocationModalOpen(true)}
+            onClick={requestLocationModal}
             className="flex shrink-0 items-center gap-2 text-left cursor-pointer hover:opacity-85 transition group min-w-0"
           >
             <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--sand)] text-primary">
@@ -288,6 +333,8 @@ export function AppShell({ children }: { children: ReactNode }) {
               </span>
             </div>
           </button>
+            </>
+          )}
 
           {/* Main Search Bar */}
           <m.form
@@ -386,6 +433,14 @@ export function AppShell({ children }: { children: ReactNode }) {
                 </Fragment>
               );
             })}
+            <Link
+              to="/customer-care"
+              className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-2 text-xs font-semibold text-foreground transition-colors hover:bg-muted lg:px-3 lg:text-sm"
+              aria-label="Customer Care"
+            >
+              <Headphones className="h-4 w-4 text-primary" />
+              <span>Customer Care</span>
+            </Link>
             <a
               href={import.meta.env.VITE_SELLER_HUB_URL || "/seller"}
               className="inline-flex items-center rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 text-xs font-bold text-primary transition-colors hover:bg-primary/10 lg:text-sm"
@@ -467,9 +522,13 @@ export function AppShell({ children }: { children: ReactNode }) {
           </nav>
         </div>
       </header>
-      {/* Global category navigation with hover mega-menu and mobile drawer. */}
-      <CategoryMegaMenu />
-      <MobileCategoryStrip />
+      {/* Category navigation is part of the customer home page only. */}
+      {pathname === "/" && (
+        <>
+          <CategoryMegaMenu />
+          <MobileCategoryStrip sticky />
+        </>
+      )}
 
       <main className="mx-auto w-full max-w-[1600px] xl:max-w-[1800px] px-3 sm:px-4 md:px-6 lg:px-10 xl:px-12">
         {children}
@@ -605,9 +664,21 @@ export function AppShell({ children }: { children: ReactNode }) {
         )}
       </AnimatePresence>
 
-      <LocationModal isOpen={isLocationModalOpen} onClose={() => setIsLocationModalOpen(false)} />
+      <LocationModalHost />
     </div>
   );
+}
+
+function LocationModalHost() {
+  const [isOpen, setIsOpen] = useState(false);
+
+  useEffect(() => {
+    const open = () => setIsOpen(true);
+    window.addEventListener(OPEN_LOCATION_MODAL_EVENT, open);
+    return () => window.removeEventListener(OPEN_LOCATION_MODAL_EVENT, open);
+  }, []);
+
+  return <LocationModal isOpen={isOpen} onClose={() => setIsOpen(false)} />;
 }
 
 const footerColumns = [

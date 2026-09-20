@@ -181,6 +181,8 @@ export const deliveryCategories: DeliveryCategory[] = [
 export interface Product {
   id: string;
   storeId: string;
+  /** Seller name for products returned from the cross-seller approved catalog. */
+  shopName?: string;
   name: string;
   unit: string;
   price: number;

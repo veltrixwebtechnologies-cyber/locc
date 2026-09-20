@@ -348,7 +348,7 @@ export function LiquidGlassCategorySelector({ variant = "image" }: { variant?: "
                 : "grid grid-cols-2 gap-3 select-none px-1 py-1 sm:grid-cols-3 sm:gap-4 lg:grid-cols-6"
             }
           >
-            {visibleCategories.map((cat, index) => {
+            {visibleCategories.map((cat) => {
               const isActive = activeId === cat.id;
               const Icon = cat.icon;
 
@@ -388,8 +388,8 @@ export function LiquidGlassCategorySelector({ variant = "image" }: { variant?: "
                         <img
                           src={cat.imageUrl}
                           alt=""
-                          loading={index < 2 ? "eager" : "lazy"}
-                          fetchPriority={index < 2 ? "high" : "auto"}
+                          loading="lazy"
+                          fetchPriority="low"
                           decoding="async"
                           className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
                         />
