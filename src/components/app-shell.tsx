@@ -26,6 +26,7 @@ import { AnimatePresence, m } from "motion/react";
 import { SwiggyInstantSearchDropdown } from "@/components/ui/swiggy-instant-search-dropdown";
 import { hasUserChosenLocation, useDeliveryLocation, useGPSStatus } from "@/lib/location-store";
 import { LocationModal } from "@/components/ui/location-modal";
+import { supabase } from "@/integrations/supabase/client";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -88,6 +89,18 @@ export function AppShell({ children }: { children: ReactNode }) {
       window.clearTimeout(promptTimer);
     };
   }, []);
+
+  // Supabase may send recovery links to the configured site root rather than
+  // /auth. Catch the recovery event at the app shell so the token session is
+  // established before navigating to the password form.
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === "PASSWORD_RECOVERY" && pathname !== "/auth") {
+        void navigate({ to: "/auth", search: { flow: "password-recovery" } });
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, [navigate, pathname]);
 
   useEffect(() => {
     let ticking = false;
