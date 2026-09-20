@@ -135,12 +135,13 @@ export function AppShell({ children }: { children: ReactNode }) {
           search={{ category: undefined, q: undefined }}
           className="flex shrink-0 items-center gap-2"
         >
-          <span className="grid h-8 w-8 place-items-center rounded-xl bg-primary text-xs font-bold text-primary-foreground font-display shadow-xs">
-            LS
-          </span>
-          <span className="font-display text-base font-bold text-foreground tracking-tight">
-            LocalShore
-          </span>
+          <img
+            src="/assets/localshore-logo.jpeg"
+            alt="LocalShore"
+            width={132}
+            height={48}
+            className="h-9 w-[132px] object-cover object-center mix-blend-multiply"
+          />
         </Link>
 
         <div className="flex items-center gap-2">
@@ -237,16 +238,15 @@ export function AppShell({ children }: { children: ReactNode }) {
             search={{ category: undefined, q: undefined }}
             className="flex shrink-0 items-center gap-2.5"
           >
-            <m.span
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              className="grid h-9 w-9 place-items-center rounded-xl bg-primary text-primary-foreground font-display text-sm font-black shadow-xs"
-            >
-              LS
-            </m.span>
-            <span className="font-display text-xl font-bold tracking-tight text-foreground">
-              LocalShore
-            </span>
+            <m.img
+              src="/assets/localshore-logo.jpeg"
+              alt="LocalShore"
+              width={176}
+              height={54}
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.98 }}
+              className="h-12 w-[190px] object-cover object-center mix-blend-multiply"
+            />
           </Link>
 
           {/* Vertical Divider (Equal top/bottom spacing) */}
@@ -572,7 +572,8 @@ export function AppShell({ children }: { children: ReactNode }) {
                 {pathname === "/" && (
                   <button
                     type="button"
-                    onClick={() => document.getElementById("shops-section")?.scrollIntoView({ behavior: "smooth", block: "start" })}
+                    onClick={() => window.dispatchEvent(new CustomEvent("localshore_open_nearby_map"))}
+                    aria-label="Open nearby shops map"
                     className="inline-flex min-h-10 shrink-0 items-center gap-1 rounded-xl bg-white/15 px-2.5 py-2 text-[11px] font-bold text-white transition hover:bg-white/25 active:scale-95"
                   >
                     <MapPin className="h-3.5 w-3.5" />
@@ -652,12 +653,13 @@ function ShopperFooter() {
         <div className="grid gap-10 md:grid-cols-[1.25fr_1fr_1fr_1fr] lg:gap-16">
           <section className="space-y-3">
             <div className="flex items-center gap-2">
-              <span className="grid h-11 w-11 place-items-center rounded-2xl bg-[#981495] font-display text-sm font-black text-white shadow-sm">
-                LS
-              </span>
-              <span className="font-display text-2xl font-extrabold tracking-tight text-slate-900">
-                LocalShore
-              </span>
+              <img
+                src="/assets/localshore-logo.jpeg"
+                alt="LocalShore"
+                width={200}
+                height={68}
+                className="h-16 w-[220px] object-cover object-center mix-blend-multiply"
+              />
             </div>
             <p className="max-w-xs text-sm font-medium leading-relaxed">
               Everyday essentials and specialty products from verified neighborhood local sellers.
@@ -734,9 +736,9 @@ function ShopperFooter() {
           </section>
         </div>
 
-        <div className="mt-10 flex flex-col items-center justify-between gap-5 border-t border-slate-400/70 pt-7 md:flex-row">
-          <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-xs">
-            <span className="font-bold text-slate-800">Shop by need</span>
+        <div className="mt-10 flex flex-col items-center justify-between gap-7 border-t border-slate-400/70 pt-7 md:flex-row md:gap-5">
+          <div className="flex max-w-[340px] flex-wrap items-center justify-center gap-x-4 gap-y-2 text-xs md:max-w-none md:justify-start">
+            <span className="w-full text-center font-bold text-slate-800 md:w-auto">Shop by need</span>
             <Link
               to="/"
               search={{ category: undefined, q: undefined }}
@@ -758,11 +760,12 @@ function ShopperFooter() {
                 </Link>
               ))}
           </div>
-          <div className="grid w-full grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-2 md:flex md:w-auto md:gap-3">
-            <span className="font-display text-xs font-bold leading-tight text-slate-800 sm:text-sm">
+          <div className="flex w-full max-w-[340px] flex-col items-center gap-3 md:w-auto md:max-w-none md:flex-row md:gap-3">
+            <span className="w-full text-center font-display text-xs font-bold leading-tight text-slate-800 sm:text-sm md:w-auto md:text-left">
               Shop better with the LocalShore app
             </span>
-            <span className="flex h-11 w-[94px] shrink-0 items-center justify-center gap-1.5 rounded-lg bg-black px-2 text-white shadow-sm sm:w-[112px]">
+            <div className="flex items-center gap-2">
+            <span className="flex h-11 w-[112px] shrink-0 items-center justify-center gap-1.5 rounded-lg bg-black px-2 text-white shadow-sm">
               <span className="text-lg">●</span>
               <span className="whitespace-nowrap text-[8px] leading-tight">
                 DOWNLOAD ON THE
@@ -770,7 +773,7 @@ function ShopperFooter() {
                 <strong className="text-xs">App Store</strong>
               </span>
             </span>
-            <span className="flex h-11 w-[94px] shrink-0 items-center justify-center gap-1.5 rounded-lg bg-black px-2 text-white shadow-sm sm:w-[112px]">
+            <span className="flex h-11 w-[112px] shrink-0 items-center justify-center gap-1.5 rounded-lg bg-black px-2 text-white shadow-sm">
               <span className="text-lg text-[#3ddc84]">▶</span>
               <span className="whitespace-nowrap text-[8px] leading-tight">
                 GET IT ON
@@ -778,6 +781,7 @@ function ShopperFooter() {
                 <strong className="text-xs">Google Play</strong>
               </span>
             </span>
+            </div>
           </div>
         </div>
         <p className="mt-6 text-center text-xs text-slate-500">

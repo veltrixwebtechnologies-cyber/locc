@@ -316,7 +316,7 @@ export function LiquidGlassCategorySelector({ variant = "image" }: { variant?: "
 
   return (
     <div
-      className={`${isPillLayout ? "sticky top-[53px] md:top-[74px] my-1.5" : "relative my-7"} z-40 px-3 transform-gpu sm:px-6 lg:px-8`}
+      className={`${isPillLayout ? "sticky top-[53px] md:top-[74px] my-1.5 z-40" : "relative z-30 my-7"} px-3 transform-gpu sm:px-6 lg:px-8`}
     >
       <div
         className={`relative mx-auto w-full ${isPillLayout ? "max-w-[calc(100vw-1rem)] rounded-full border border-[#f0abfc]/60 bg-white/75 p-1 shadow-[0_8px_32px_rgba(60,20,70,0.10)] backdrop-blur-xl sm:p-1.5" : "max-w-[1710px]"}`}
@@ -348,7 +348,7 @@ export function LiquidGlassCategorySelector({ variant = "image" }: { variant?: "
                 : "grid grid-cols-2 gap-3 select-none px-1 py-1 sm:grid-cols-3 sm:gap-4 lg:grid-cols-6"
             }
           >
-            {visibleCategories.map((cat) => {
+            {visibleCategories.map((cat, index) => {
               const isActive = activeId === cat.id;
               const Icon = cat.icon;
 
@@ -388,11 +388,12 @@ export function LiquidGlassCategorySelector({ variant = "image" }: { variant?: "
                         <img
                           src={cat.imageUrl}
                           alt=""
-                          loading="lazy"
+                          loading={index < 2 ? "eager" : "lazy"}
+                          fetchPriority={index < 2 ? "high" : "auto"}
                           decoding="async"
                           className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
                         />
-                        <span className="absolute inset-0 bg-gradient-to-b from-black/15 via-transparent to-black/20" />
+                        <span className="absolute inset-0 bg-transparent" />
                       </span>
                       <span className="absolute left-3 top-2.5 z-10 max-w-[86%] text-left text-sm font-bold leading-[1.05] text-white drop-shadow-md sm:left-4 sm:top-3 sm:text-xl">
                         {cat.label}

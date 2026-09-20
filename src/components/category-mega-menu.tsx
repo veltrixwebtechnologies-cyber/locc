@@ -798,8 +798,8 @@ export function MobileCategoryStrip() {
 
   return (
     <>
-      <div className="sticky top-[53px] z-40 border-b border-[var(--sand)]/90 bg-white/95 text-slate-800 shadow-2xs backdrop-blur-md md:hidden">
-        <div className="flex items-center gap-1.5 px-3 py-2 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <div className="sticky top-[53px] z-40 isolate w-full max-w-full overflow-hidden border-b border-[var(--sand)] bg-white text-slate-800 shadow-sm md:hidden">
+        <div className="flex w-full max-w-full items-center gap-1.5 overflow-x-auto overscroll-x-contain px-3 py-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {/* 1. All Categories Button (Amazon style) */}
           <button
             type="button"

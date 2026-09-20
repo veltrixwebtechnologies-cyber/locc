@@ -61,6 +61,13 @@ export const Route = createFileRoute("/")({
 function Home() {
   const search = Route.useSearch() as Record<string, any>;
   const navigate = Route.useNavigate();
+  const [isNearbyMapOpen, setIsNearbyMapOpen] = useState(false);
+
+  useEffect(() => {
+    const openMap = () => setIsNearbyMapOpen(true);
+    window.addEventListener("localshore_open_nearby_map", openMap);
+    return () => window.removeEventListener("localshore_open_nearby_map", openMap);
+  }, []);
 
   useEffect(() => {
     if (
@@ -350,7 +357,7 @@ function Home() {
       <LocalShoreOffers />
 
       {/* Server-filtered nearby shops: always limited to the customer's 5 km radius. */}
-      <section className="px-5 pb-8 md:px-8">
+      <section id="shops-section" className="px-5 pb-8 md:px-8">
         <h2 className="mb-4 font-display text-xl font-bold text-foreground">
           {hasConfirmedLocation
             ? `Shops within ${CUSTOMER_VISIBILITY_RADIUS_KM} km around you`
@@ -445,6 +452,22 @@ function Home() {
             ))}
         </div>
       </section>
+
+      {isNearbyMapOpen && (
+        <div className="fixed inset-0 z-[90] overflow-y-auto bg-slate-950/70 p-2 backdrop-blur-sm sm:p-6">
+          <div className="relative mx-auto min-h-full w-full max-w-[1500px] rounded-2xl bg-background p-3 shadow-2xl sm:min-h-0 sm:p-6">
+            <button
+              type="button"
+              onClick={() => setIsNearbyMapOpen(false)}
+              className="absolute right-4 top-4 z-[95] rounded-full bg-white px-3 py-2 text-sm font-bold text-slate-800 shadow-md ring-1 ring-slate-200 hover:bg-slate-50"
+              aria-label="Close nearby shops map"
+            >
+              Close map
+            </button>
+            <LocalShoreMapExperience />
+          </div>
+        </div>
+      )}
 
     </AppShell>
   );
