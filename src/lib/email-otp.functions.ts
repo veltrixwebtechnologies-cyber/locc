@@ -29,6 +29,13 @@ export const sendResendEmailOtp = createServerFn({ method: "POST" })
     return { email: data.email.trim().toLowerCase(), name: data.name?.trim() ?? "" };
   })
   .handler(async ({ data }) => {
+    // 1. Redis Rate Limit (5 attempts per 10 minutes) - Fail-Closed for Security
+    const { redisRateLimit } = await import("@/lib/redis.server");
+    const rateCheck = await redisRateLimit(`otp:${data.email}`, 5, 600);
+    if (!rateCheck.allowed) {
+      throw new Error("Too many verification requests. Please try again in 10 minutes.");
+    }
+
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const rpc = supabaseAdmin.rpc as unknown as (
       functionName: string,
