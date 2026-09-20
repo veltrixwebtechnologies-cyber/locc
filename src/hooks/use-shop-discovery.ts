@@ -4,12 +4,13 @@ import { useDeliveryLocation } from "@/lib/location-store";
 import { type ProductFilterState } from "@/lib/filter-types";
 import { type ShopCardData } from "@/components/shop-card";
 import { hasConfirmedCoordinates, CUSTOMER_VISIBILITY_RADIUS_KM } from "@/lib/location-visibility";
+import { catalogCategoryKey } from "@/lib/shop-categories";
 
 export function useShopDiscovery(filterState: ProductFilterState) {
   const [deliveryLoc] = useDeliveryLocation();
 
   const queryKey = [
-    "shops-discovery-v2",
+    "shops-discovery-v3",
     filterState.query,
     filterState.category,
     filterState.maxDistanceKm,
@@ -35,7 +36,7 @@ export function useShopDiscovery(filterState: ProductFilterState) {
         p_lat: deliveryLoc.lat,
         p_lng: deliveryLoc.lng,
         p_query: filterState.query || null,
-        p_category_slug: filterState.category || null,
+        p_category_slug: catalogCategoryKey(filterState.category),
         p_limit: 100,
         p_offset: 0,
       });

@@ -26,6 +26,12 @@ import { AnimatePresence, m } from "motion/react";
 import { SwiggyInstantSearchDropdown } from "@/components/ui/swiggy-instant-search-dropdown";
 import { hasUserChosenLocation, useDeliveryLocation, useGPSStatus } from "@/lib/location-store";
 import { LocationModal } from "@/components/ui/location-modal";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const HEADER_SEARCH_PLACEHOLDERS = [
   "Search for shops, products and more",
@@ -237,35 +243,41 @@ export function AppShell({ children }: { children: ReactNode }) {
       </header>
 
       {/* Delivery location is shown on the customer home page only. */}
-      {pathname === "/" && <div className="sticky top-[57px] z-40 border-b hairline bg-background px-3 py-1.5 shadow-2xs sm:hidden md:hidden">
-        <button
-          type="button"
-          onClick={requestLocationModal}
-          className="flex min-h-9 w-full items-center gap-2 rounded-lg px-2 text-left transition-colors hover:bg-muted/70 active:bg-muted"
-          aria-label={hasLocation ? `Change delivery location, currently ${deliveryLocation!.area || deliveryLocation!.label}` : "Select delivery location"}
-        >
-          <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-primary/10 text-primary">
-            {gpsState.status === "detecting" ? (
-              <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-            ) : (
-              <MapPin className="h-4 w-4" />
-            )}
-          </span>
-          <span className="min-w-0 flex-1">
-            <span className="block text-[9px] font-semibold uppercase tracking-wide text-muted-foreground">
-              {gpsState.status === "detecting" ? "Finding your location" : "Deliver to"}
+      {pathname === "/" && (
+        <div className="sticky top-[57px] z-40 border-b hairline bg-background px-3 py-1.5 shadow-2xs sm:hidden md:hidden">
+          <button
+            type="button"
+            onClick={requestLocationModal}
+            className="flex min-h-9 w-full items-center gap-2 rounded-lg px-2 text-left transition-colors hover:bg-muted/70 active:bg-muted"
+            aria-label={
+              hasLocation
+                ? `Change delivery location, currently ${deliveryLocation!.area || deliveryLocation!.label}`
+                : "Select delivery location"
+            }
+          >
+            <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-primary/10 text-primary">
+              {gpsState.status === "detecting" ? (
+                <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+              ) : (
+                <MapPin className="h-4 w-4" />
+              )}
             </span>
-            <span className="block truncate text-xs font-bold text-foreground">
-              {gpsState.status === "detecting"
-                ? "Please wait…"
-                : hasLocation
-                  ? deliveryLocation!.area || deliveryLocation!.label
-                  : "Select your location"}
+            <span className="min-w-0 flex-1">
+              <span className="block text-[9px] font-semibold uppercase tracking-wide text-muted-foreground">
+                {gpsState.status === "detecting" ? "Finding your location" : "Deliver to"}
+              </span>
+              <span className="block truncate text-xs font-bold text-foreground">
+                {gpsState.status === "detecting"
+                  ? "Please wait…"
+                  : hasLocation
+                    ? deliveryLocation!.area || deliveryLocation!.label
+                    : "Select your location"}
+              </span>
             </span>
-          </span>
-          <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" />
-        </button>
-      </div>}
+            <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" />
+          </button>
+        </div>
+      )}
 
       {/* Desktop top nav */}
       <header
@@ -294,45 +306,45 @@ export function AppShell({ children }: { children: ReactNode }) {
 
           {pathname === "/" && (
             <>
-          {/* Vertical Divider (Equal top/bottom spacing) */}
-          <div className="h-6 w-px bg-border/80 shrink-0 mx-1" />
+              {/* Vertical Divider (Equal top/bottom spacing) */}
+              <div className="h-6 w-px bg-border/80 shrink-0 mx-1" />
 
-          {/* Location Selector (Deliver to -> Location -> Chevron) */}
-          <button
-            type="button"
-            onClick={requestLocationModal}
-            className="flex shrink-0 items-center gap-2 text-left cursor-pointer hover:opacity-85 transition group min-w-0"
-          >
-            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--sand)] text-primary">
-              {gpsState.status === "detecting" ? (
-                <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-              ) : (
-                <MapPin className="h-4 w-4 text-primary fill-primary/10" />
-              )}
-            </div>
+              {/* Location Selector (Deliver to -> Location -> Chevron) */}
+              <button
+                type="button"
+                onClick={requestLocationModal}
+                className="flex shrink-0 items-center gap-2 text-left cursor-pointer hover:opacity-85 transition group min-w-0"
+              >
+                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--sand)] text-primary">
+                  {gpsState.status === "detecting" ? (
+                    <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                  ) : (
+                    <MapPin className="h-4 w-4 text-primary fill-primary/10" />
+                  )}
+                </div>
 
-            <div className="flex flex-col min-w-0">
-              <span className="text-[10px] font-medium text-muted-foreground leading-none mb-0.5">
-                {gpsState.status === "detecting" ? "Detecting location..." : "Deliver to"}
-              </span>
-              <span className="flex items-center gap-1 text-xs font-bold text-foreground leading-none truncate">
-                {gpsState.status === "detecting"
-                  ? "Please wait..."
-                  : hasLocation
-                    ? deliveryLocation!.area || deliveryLocation!.label.split(",")[0]
-                    : "Select location"}
-                <svg
-                  className="h-3.5 w-3.5 shrink-0 text-muted-foreground group-hover:text-primary transition-colors"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2.5"
-                >
-                  <path d="M6 9l6 6 6-6" />
-                </svg>
-              </span>
-            </div>
-          </button>
+                <div className="flex flex-col min-w-0">
+                  <span className="text-[10px] font-medium text-muted-foreground leading-none mb-0.5">
+                    {gpsState.status === "detecting" ? "Detecting location..." : "Deliver to"}
+                  </span>
+                  <span className="flex items-center gap-1 text-xs font-bold text-foreground leading-none truncate">
+                    {gpsState.status === "detecting"
+                      ? "Please wait..."
+                      : hasLocation
+                        ? deliveryLocation!.area || deliveryLocation!.label.split(",")[0]
+                        : "Select location"}
+                    <svg
+                      className="h-3.5 w-3.5 shrink-0 text-muted-foreground group-hover:text-primary transition-colors"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2.5"
+                    >
+                      <path d="M6 9l6 6 6-6" />
+                    </svg>
+                  </span>
+                </div>
+              </button>
             </>
           )}
 
@@ -447,78 +459,72 @@ export function AppShell({ children }: { children: ReactNode }) {
             >
               Become a Seller
             </a>
-            <div
-              className="relative ml-1 lg:ml-2"
-              onMouseEnter={() => setProfileMenuOpen(true)}
-              onMouseLeave={() => setProfileMenuOpen(false)}
-            >
-              <button
-                type="button"
-                onClick={() => setProfileMenuOpen((open) => !open)}
-                className={`inline-flex items-center gap-2 rounded-lg border px-2.5 py-2 text-sm font-medium transition-colors ${
-                  profileMenuOpen || pathname.startsWith("/profile")
-                    ? "border-primary/20 bg-primary/10 text-primary"
-                    : "hairline bg-card text-foreground hover:bg-muted"
-                }`}
-                aria-expanded={profileMenuOpen}
-                aria-haspopup="menu"
-              >
-                {isSignedIn ? (
-                  <span className="grid h-6 w-6 place-items-center rounded-full bg-primary text-[11px] font-bold text-primary-foreground">
-                    {(auth.name?.[0] ?? "U").toUpperCase()}
-                  </span>
-                ) : (
-                  <User className="h-4 w-4" />
-                )}
-                <span>Profile</span>
-                <ChevronDown className="h-3.5 w-3.5" />
-              </button>
-
-              {profileMenuOpen && (
-                <div
-                  role="menu"
-                  className="absolute right-0 top-full z-[70] mt-2 w-52 overflow-hidden rounded-2xl border border-[#eadff0] bg-white p-1.5 text-slate-800 shadow-[0_18px_45px_rgba(30,10,50,0.18)]"
+            <DropdownMenu open={profileMenuOpen} onOpenChange={setProfileMenuOpen}>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  className={`ml-1 inline-flex items-center gap-2 rounded-lg border px-2.5 py-2 text-sm font-medium transition-colors lg:ml-2 ${
+                    profileMenuOpen || pathname.startsWith("/profile")
+                      ? "border-primary/20 bg-primary/10 text-primary"
+                      : "hairline bg-card text-foreground hover:bg-muted"
+                  }`}
                 >
-                  {isSignedIn && (
+                  {isSignedIn ? (
+                    <span className="grid h-6 w-6 place-items-center rounded-full bg-primary text-[11px] font-bold text-primary-foreground">
+                      {(auth.name?.[0] ?? "U").toUpperCase()}
+                    </span>
+                  ) : (
+                    <User className="h-4 w-4" />
+                  )}
+                  <span>Profile</span>
+                  <ChevronDown className="h-3.5 w-3.5" />
+                </button>
+              </DropdownMenuTrigger>
+
+              <DropdownMenuContent
+                align="end"
+                sideOffset={8}
+                className="z-[70] w-52 rounded-2xl border border-[#eadff0] bg-white p-1.5 text-slate-800 shadow-[0_18px_45px_rgba(30,10,50,0.18)]"
+              >
+                {isSignedIn && (
+                  <DropdownMenuItem asChild>
                     <Link
                       to="/profile"
-                      onClick={() => setProfileMenuOpen(false)}
                       className="mb-1 flex items-center gap-2 rounded-xl bg-primary/10 px-3 py-2.5 text-sm font-bold text-primary"
-                      role="menuitem"
                     >
                       <User className="h-4 w-4" /> My Profile
                     </Link>
-                  )}
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuItem asChild>
                   <Link
                     to="/orders"
-                    onClick={() => setProfileMenuOpen(false)}
                     className="flex items-center gap-2 rounded-xl px-3 py-2 text-sm hover:bg-muted"
-                    role="menuitem"
                   >
                     <ClipboardList className="h-4 w-4 text-primary" /> Orders
                   </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
                   <Link
                     to="/rewards"
-                    onClick={() => setProfileMenuOpen(false)}
                     className="flex items-center gap-2 rounded-xl px-3 py-2 text-sm hover:bg-muted"
-                    role="menuitem"
                   >
                     <Gift className="h-4 w-4 text-primary" /> Rewards
                   </Link>
-                  {!isSignedIn && (
+                </DropdownMenuItem>
+                {!isSignedIn && (
+                  <DropdownMenuItem asChild>
                     <Link
                       to="/auth"
                       search={{ redirect: pathname }}
-                      onClick={() => setProfileMenuOpen(false)}
                       className="mt-1 flex items-center gap-2 rounded-xl bg-primary px-3 py-2 text-sm font-bold text-primary-foreground hover:bg-[#700b6e]"
-                      role="menuitem"
                     >
                       <LogIn className="h-4 w-4" /> Sign in
                     </Link>
-                  )}
-                </div>
-              )}
-            </div>
+                  </DropdownMenuItem>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
           </nav>
         </div>
       </header>
@@ -631,7 +637,9 @@ export function AppShell({ children }: { children: ReactNode }) {
                 {pathname === "/" && (
                   <button
                     type="button"
-                    onClick={() => window.dispatchEvent(new CustomEvent("localshore_open_nearby_map"))}
+                    onClick={() =>
+                      window.dispatchEvent(new CustomEvent("localshore_open_nearby_map"))
+                    }
                     aria-label="Open nearby shops map"
                     className="inline-flex min-h-10 shrink-0 items-center gap-1 rounded-xl bg-white/15 px-2.5 py-2 text-[11px] font-bold text-white transition hover:bg-white/25 active:scale-95"
                   >

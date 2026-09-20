@@ -49,7 +49,7 @@ const isUuid = (value: string) =>
   // RFC 4122 version/variant bits. Match the UUID format, not those bit flags.
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
 
-import { toStoreCategory } from "@/lib/shop-categories";
+import { CATEGORY_PHOTOS, toStoreCategory } from "@/lib/shop-categories";
 import { isTestEntity } from "@/lib/map-service/store-engine";
 import { LottieLoading } from "@/components/ui/lottie-loading";
 import { RelatedProductsSection } from "@/components/related-products-section";
@@ -169,7 +169,8 @@ function StorePage() {
       let storeAddress = [vendor?.address_line1, vendor?.city, vendor?.state]
         .filter(Boolean)
         .join(", ");
-      let imageUrl = APPROVED_STORE.imageUrl;
+      let imageUrl = (CATEGORY_PHOTOS[toStoreCategory(storeCategory)] || APPROVED_STORE.imageUrl)
+        .replace("w=160", "w=800");
 
       const storefrontPath = vendor?.shop_banner_path || vendor?.shop_logo_path;
       if (storefrontPath) {

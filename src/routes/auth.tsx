@@ -27,6 +27,7 @@ export const Route = createFileRoute("/auth")({
   component: AuthPage,
   validateSearch: (s: Record<string, unknown>) => ({
     redirect: typeof s.redirect === "string" ? s.redirect : undefined,
+    flow: typeof s.flow === "string" ? s.flow : undefined,
   }),
 });
 
@@ -77,7 +78,7 @@ function authFriendlyError(error: unknown, fallback: string) {
 
 function AuthPage() {
   const navigate = useNavigate();
-  const { redirect } = Route.useSearch();
+  const { redirect, flow } = Route.useSearch();
   const [mode, setMode] = useState<Mode>("phone");
   const [intent, setIntent] = useState<AuthIntent>("login");
 
@@ -98,6 +99,9 @@ function AuthPage() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [forgotPassword, setForgotPassword] = useState(false);
+  const [passwordRecovery, setPasswordRecovery] = useState(flow === "password-recovery");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmNewPassword, setConfirmNewPassword] = useState("");
 
   const PENDING_OTP_KEY = "localshore.pending-otp.v1";
 
@@ -149,16 +153,28 @@ function AuthPage() {
   }, []);
 
   useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === "PASSWORD_RECOVERY") {
+        setPasswordRecovery(true);
+        setMode("password");
+        setIntent("login");
+        setError(null);
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, []);
+
+  useEffect(() => {
     let active = true;
 
     void supabase.auth.getSession().then(({ data }) => {
-      if (active && data.session) done();
+      if (active && data.session && !passwordRecovery) done();
     });
 
     return () => {
       active = false;
     };
-  }, [done]);
+  }, [done, passwordRecovery]);
 
   const saveProfile = async (
     userId: string,
@@ -457,7 +473,7 @@ function AuthPage() {
     setLoading(true);
     try {
       const { error: authError } = await supabase.auth.resetPasswordForEmail(email.trim(), {
-        redirectTo: `${window.location.origin}/auth`,
+        redirectTo: `${window.location.origin}/auth?flow=password-recovery`,
       });
       if (authError) throw authError;
       toast.success("Password reset instructions sent to your email!");
@@ -465,6 +481,31 @@ function AuthPage() {
     } catch (err) {
       console.error("Password reset error", err);
       setError(authFriendlyError(err, "Could not send password reset email."));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const updateRecoveredPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (newPassword.length < 8) {
+      setError("Choose a password with at least 8 characters.");
+      return;
+    }
+    if (newPassword !== confirmNewPassword) {
+      setError("The passwords do not match.");
+      return;
+    }
+    setError(null);
+    setLoading(true);
+    try {
+      const { error: updateError } = await supabase.auth.updateUser({ password: newPassword });
+      if (updateError) throw updateError;
+      toast.success("Password updated. You are signed in.");
+      done();
+    } catch (err) {
+      console.error("Password update error", err);
+      setError(authFriendlyError(err, "Could not update your password. Request a new reset link."));
     } finally {
       setLoading(false);
     }
@@ -1074,7 +1115,27 @@ function AuthPage() {
               </form>
             )
           ) : /* PASSWORD FLOW FORM */
-          forgotPassword ? (
+          passwordRecovery ? (
+            <form onSubmit={updateRecoveredPassword} className="mt-5 space-y-4">
+              <p className="text-sm font-semibold text-slate-600">Choose a new password for your account.</p>
+              <div>
+                <label className="mb-1 block text-xs font-bold text-slate-700">New password</label>
+                <input type="password" autoComplete="new-password" minLength={8} required value={newPassword}
+                  onChange={(event) => setNewPassword(event.target.value)} placeholder="At least 8 characters"
+                  className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium outline-none transition focus:border-[#981495] focus:bg-white focus:ring-4 focus:ring-[#981495]/10" />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-bold text-slate-700">Confirm new password</label>
+                <input type="password" autoComplete="new-password" minLength={8} required value={confirmNewPassword}
+                  onChange={(event) => setConfirmNewPassword(event.target.value)} placeholder="Enter it again"
+                  className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium outline-none transition focus:border-[#981495] focus:bg-white focus:ring-4 focus:ring-[#981495]/10" />
+              </div>
+              {error && <div role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3 text-xs font-bold text-red-600">{error}</div>}
+              <button type="submit" disabled={loading} className="w-full rounded-2xl bg-gradient-to-r from-[#981495] to-[#700b6e] px-5 py-3.5 text-sm font-extrabold text-white shadow-md disabled:opacity-60">
+                {loading ? "Updating password…" : "Update password"}
+              </button>
+            </form>
+          ) : forgotPassword ? (
             <form onSubmit={sendPasswordReset} className="mt-5 space-y-4">
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">Email Address</label>
