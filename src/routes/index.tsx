@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState, startTransition } from "react";
 import { Search } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { AwningCard } from "@/components/awning-card";
+import { ShopCard } from "@/components/shop-card";
 import {
   stores,
   deliveryCategories,
@@ -26,9 +27,9 @@ import {
   SwiggyFeaturedBanner,
   Swiggy99StoreSection,
 } from "@/components/swiggy-inspiration-sections";
-import { HeroSection } from "@/components/hero-section";
+import { ReferenceHomeHero } from "@/components/reference-home-hero";
 import { LocalShoreMapExperience } from "@/components/map/localshore-map-experience";
-import { fetchPublicProductsServerFn, fetchPublicShopsServerFn } from "@/lib/catalog.server";
+import { isValidCoordinate } from "@/lib/geo";
 import {
   FlipkartCategoryStrip,
   FlipkartBannerRow,
@@ -41,8 +42,22 @@ import { isTestEntity } from "@/lib/map-service/store-engine";
 import { useDeliveryLocation } from "@/lib/location-store";
 import { getCategoryByIdOrSlug, toStoreCategory, isStoreInCategory } from "@/lib/shop-categories";
 import { calculateHaversineDistanceKm } from "@/lib/map-service/providers";
+import { CUSTOMER_VISIBILITY_RADIUS_KM, hasConfirmedCoordinates } from "@/lib/location-visibility";
+
+const DEMO_SHOP_FEATURES: Partial<Record<StoreCategory, { name: string; imageUrl: string }>> = {
+  fruits_veg: { name: "Tomato", imageUrl: "https://images.unsplash.com/photo-1546094096-0df4bcaaa337?auto=format&fit=crop&w=640&q=80" },
+  meat_fish: { name: "Chicken", imageUrl: "https://images.unsplash.com/photo-1604503468506-a8da13d82791?auto=format&fit=crop&w=640&q=80" },
+  bakery: { name: "Birthday Cake", imageUrl: "https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&w=640&q=80" },
+  grocery: { name: "Rice", imageUrl: "https://images.unsplash.com/photo-1586201375761-83865001e31c?auto=format&fit=crop&w=640&q=80" },
+  pharmacy: { name: "Paracetamol", imageUrl: "https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?auto=format&fit=crop&w=640&q=80" },
+  fashion: { name: "T-Shirts", imageUrl: "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&w=640&q=80" },
+  electronics: { name: "Smartphones", imageUrl: "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?auto=format&fit=crop&w=640&q=80" },
+  home_kitchen: { name: "Cookware", imageUrl: "https://images.unsplash.com/photo-1556911220-e15b29be8c8f?auto=format&fit=crop&w=640&q=80" },
+};
 import { rankShopsWithML } from "@/lib/ml-shop-ranker";
-import { AppDownloadBanner } from "@/components/app-download-banner";
+import { LocalShoreOffers } from "@/components/localshore-offers";
+import { LiquidGlassCategorySelector } from "@/components/liquid-glass-category-selector";
+import { PopularBrandsCarousel } from "@/components/popular-brands-carousel";
 
 const getCategoryDisplayName = (catName?: string | null): string => {
   if (!catName || catName === "all") return "";
@@ -50,6 +65,16 @@ const getCategoryDisplayName = (catName?: string | null): string => {
 };
 
 export const Route = createFileRoute("/")({
+  head: () => ({
+    links: [
+      {
+        rel: "preload",
+        href: "/assets/shoreline-rider-cutout.webp",
+        as: "image",
+        fetchPriority: "high",
+      },
+    ],
+  }),
   validateSearch: (s: Record<string, unknown>) => s,
   component: Home,
 });
@@ -57,6 +82,13 @@ export const Route = createFileRoute("/")({
 function Home() {
   const search = Route.useSearch() as Record<string, any>;
   const navigate = Route.useNavigate();
+  const [isNearbyMapOpen, setIsNearbyMapOpen] = useState(false);
+
+  useEffect(() => {
+    const openMap = () => setIsNearbyMapOpen(true);
+    window.addEventListener("localshore_open_nearby_map", openMap);
+    return () => window.removeEventListener("localshore_open_nearby_map", openMap);
+  }, []);
 
   useEffect(() => {
     if (
@@ -75,20 +107,41 @@ function Home() {
   }, [search, navigate]);
 
   const [deliveryLoc] = useDeliveryLocation();
-  const locLat = deliveryLoc?.lat ?? 11.0285;
-  const locLng = deliveryLoc?.lng ?? 76.9258;
+  const locLat = deliveryLoc?.lat;
+  const locLng = deliveryLoc?.lng;
+  const hasConfirmedLocation =
+    typeof locLat === "number" && typeof locLng === "number" && isValidCoordinate(locLat, locLng);
+  const operationalZone = useQuery({
+    queryKey: ["customer-operational-zone", locLat, locLng],
+    enabled: hasConfirmedLocation,
+    staleTime: 1000 * 60 * 30,
+    retry: false,
+    queryFn: async () => {
+      const { data, error } = await (supabase as any).rpc("get_customer_operational_zone", {
+        p_lat: locLat,
+        p_lng: locLng,
+      });
+      if (error) throw error;
+      return data?.[0] ?? null;
+    },
+  });
   const [query, setQuery] = useState(search.q ?? "");
   const [cat, setCat] = useState<string>(search.category ?? "all");
   const approvedProducts = useQuery({
-    queryKey: ["approved-product-catalog"],
+    queryKey: ["homepage-visible-products", locLat, locLng],
     staleTime: 1000 * 60 * 5,
     gcTime: 1000 * 60 * 10,
     retry: 1,
     refetchOnWindowFocus: false,
     queryFn: async () => {
+      if (!hasConfirmedCoordinates(deliveryLoc)) return [];
       try {
-        const res = await fetchPublicProductsServerFn({ data: { category: "all", sort: "newest", limit: 100 } });
-        return (res.products ?? []).filter((p: any) => !isTestEntity(p.name));
+        const { data, error } = await (supabase as any).rpc("get_customer_visible_products", {
+          p_lat: deliveryLoc.lat, p_lng: deliveryLoc.lng, p_query: null,
+          p_category_slug: null, p_limit: 100, p_offset: 0,
+        });
+        if (error) throw error;
+        return (data ?? []).filter((p: any) => !isTestEntity(p.name));
       } catch (err) {
         console.warn("Products query fallback:", err);
         return [];
@@ -97,18 +150,18 @@ function Home() {
   });
 
   const approvedVendors = useQuery({
-    queryKey: ["approved-vendors"],
+    queryKey: ["homepage-visible-shops", locLat, locLng],
     staleTime: 1000 * 60 * 5,
     gcTime: 1000 * 60 * 10,
     retry: 1,
     refetchOnWindowFocus: false,
     queryFn: async () => {
+      if (!hasConfirmedCoordinates(deliveryLoc)) return [];
       try {
-        const { data, error } = await (supabase as any)
-          .from("approved_vendor_catalog")
-          .select(
-            "id,shop_name,business_type,city,state,address_line1,category,shop_logo_path,shop_banner_path",
-          );
+        const { data, error } = await (supabase as any).rpc("get_customer_visible_shops", {
+          p_lat: deliveryLoc.lat, p_lng: deliveryLoc.lng, p_query: null,
+          p_category_slug: null, p_limit: 100, p_offset: 0,
+        });
         if (error) throw error;
         const rows = (data ?? []).filter((v: any) => !isTestEntity(v.shop_name));
         const paths = Array.from(
@@ -163,41 +216,56 @@ function Home() {
   }, [cat]);
 
   const filtered = useMemo(() => {
+    if (!hasConfirmedLocation) return [];
     const liveProducts = approvedProducts.data ?? [];
     const normalizedQuery = query.trim().toLowerCase();
-    const liveSellerIds = new Set(liveProducts.map((product: any) => product.seller_id));
+    // Use each seller's own in-stock catalog image for their nearby shop card.
+    // This prevents unrelated category/stock imagery from being presented as that shop's products.
+    const featuredProductBySeller = new Map<string, any>();
+    for (const product of liveProducts) {
+      if (!product?.seller_id || featuredProductBySeller.has(product.seller_id)) continue;
+      if (Number(product.stock ?? 1) <= 0) continue;
+      featuredProductBySeller.set(product.seller_id, product);
+    }
     const liveVendorStores = (approvedVendors.data ?? [])
-      .filter((vendor: any) => liveSellerIds.has(vendor.id))
       .map((vendor: any, index: number) => {
-        const vLat = Number(vendor.lat) || locLat + index * 0.005;
-        const vLng = Number(vendor.lng) || locLng + index * 0.005;
-        const dKm = calculateHaversineDistanceKm(locLat, locLng, vLat, vLng);
+        const vLat = Number(vendor.lat);
+        const vLng = Number(vendor.lng);
+        if (!isValidCoordinate(vLat, vLng)) return null;
+        const dKm = Number(vendor.distance_km ?? 0);
+        const featuredProduct = featuredProductBySeller.get(vendor.id);
+        // The RPC's `category` is derived from a product row and can be stale or
+        // miscategorized. Seller.business_type is the authoritative shop category.
+        const storeCategory = toStoreCategory(vendor.business_type || vendor.category);
+        const demoFeature = /^localshore\s+(?:demo\s+)?(?:CBE|BLR)-\d{2}\b/i.test(vendor.shop_name || "")
+          ? DEMO_SHOP_FEATURES[storeCategory]
+          : undefined;
+        const productImage = isValidImageUrl(featuredProduct?.image_url) &&
+          !String(featuredProduct.image_url).includes("photo-1542838132-92c53300491e")
+          ? featuredProduct.image_url
+          : null;
         return {
           ...APPROVED_STORE,
           id: vendor.id,
           name: vendor.shop_name || APPROVED_STORE.name,
           tagline: vendor.business_type || "Approved local vendor",
-          category: toStoreCategory(vendor.category),
+          category: storeCategory,
           address:
             [vendor.address_line1, vendor.city, vendor.state].filter(Boolean).join(", ") ||
             APPROVED_STORE.address,
-          imageUrl: vendor.storefront_image_url || APPROVED_STORE.imageUrl,
+          imageUrl:
+            demoFeature?.imageUrl ||
+            productImage ||
+            vendor.storefront_image_url ||
+            getFallbackProductImage(vendor.shop_name, vendor.category || vendor.business_type),
+          featuredProductName: demoFeature?.name || featuredProduct?.name,
           distanceKm: Number(dKm.toFixed(1)),
           etaMin: Math.max(10, Math.round(dKm * 5 + 10)),
         };
       });
-    const baseStores = stores.map((s, idx) => {
-      const sLat = Number(s.lat) || locLat + idx * 0.006;
-      const sLng = Number(s.lng) || locLng + idx * 0.006;
-      const dKm = calculateHaversineDistanceKm(locLat, locLng, sLat, sLng);
-      return {
-        ...s,
-        distanceKm: Number(dKm.toFixed(1)),
-        etaMin: Math.max(10, Math.round(dKm * 5 + 10)),
-      };
-    });
-    const allStores =
-      liveVendorStores.length > 0 ? [...liveVendorStores, ...baseStores] : baseStores;
+    const allStores = liveVendorStores
+      .filter((store): store is NonNullable<typeof store> => store !== null)
+      .filter((store) => (store.distanceKm ?? Infinity) <= CUSTOMER_VISIBILITY_RADIUS_KM);
     const filteredList = allStores.filter((s) => {
       if (activeFilter && !isStoreInCategory(s.category, activeFilter, s.rating)) return false;
       if (
@@ -228,7 +296,7 @@ function Home() {
       })),
       locLat,
       locLng,
-      query
+      query,
     );
 
     const mlScoreById = new Map(mlRanked.map((r) => [r.id, r.total_ml_score]));
@@ -239,7 +307,14 @@ function Home() {
       if (scoreB !== scoreA) return scoreB - scoreA;
       return a.distanceKm - b.distanceKm;
     });
-  }, [activeFilter, query, approvedProducts.data, approvedVendors.data, deliveryLoc]);
+  }, [
+    activeFilter,
+    query,
+    approvedProducts.data,
+    approvedVendors.data,
+    deliveryLoc,
+    hasConfirmedLocation,
+  ]);
 
   const homepageProducts = useMemo<MerchandisingProduct[]>(() => {
     const liveProducts = (approvedProducts.data ?? []).map((product: any) => ({
@@ -257,7 +332,8 @@ function Home() {
       discount_ends_at: null,
       clearance: false,
       stock: Number(product.stock ?? 20),
-      image_url: isValidImageUrl(product.image_url)
+      image_url: isValidImageUrl(product.image_url) &&
+        !product.image_url.includes("photo-1542838132-92c53300491e")
         ? product.image_url
         : getFallbackProductImage(product.name, product.category),
       created_at: "",
@@ -267,7 +343,7 @@ function Home() {
     }));
 
     const existingIds = new Set(liveProducts.map((product: MerchandisingProduct) => product.id));
-    const localFallback = Object.values(productsByStore)
+    const localFallback = hasConfirmedLocation ? [] : Object.values(productsByStore)
       .flat()
       .filter((product) => !existingIds.has(product.id))
       .map((product: (typeof productsByStore)[string][number]) => {
@@ -297,307 +373,147 @@ function Home() {
         };
       });
 
-    const allProducts = [...liveProducts, ...localFallback];
+    const allProducts = hasConfirmedLocation ? liveProducts : [];
 
-    // Filter by category or search query
-    const filteredProducts = allProducts.filter((product) => {
-      const store = stores.find((s) => s.id === product.seller_id);
-      const storeCat = store?.category || toStoreCategory(product.category);
-      const prodCat = toStoreCategory(product.category);
-
-      if (activeFilter) {
-        const matchesCategory =
-          isStoreInCategory(storeCat, activeFilter) ||
-          isStoreInCategory(prodCat, activeFilter) ||
-          isStoreInCategory(product.category, activeFilter) ||
-          (product.category &&
-            product.category.toLowerCase().includes(activeFilter.toLowerCase())) ||
-          (cat && product.category && product.category.toLowerCase().includes(cat.toLowerCase()));
-        if (!matchesCategory) return false;
-      }
-
-      if (query.trim()) {
-        const qWords = query
-          .trim()
-          .toLowerCase()
-          .split(/[\s&,/]+/)
-          .filter(Boolean);
-        const pName = product.name.toLowerCase();
-        const pCat = (product.category || "").toLowerCase();
-        const pShop = product.shop_name.toLowerCase();
-
-        const matchesQuery = qWords.some(
-          (w: string) => pName.includes(w) || pCat.includes(w) || pShop.includes(w),
-        );
-        if (!matchesQuery) return false;
-      }
-
-      return true;
-    });
-
-    // Intelligent fallback: If specific query returns 0 products under an active category,
-    // show all products in that category so the user always sees available products!
-    if (filteredProducts.length === 0 && activeFilter) {
-      return allProducts.filter((product) => {
-        const store = stores.find((s) => s.id === product.seller_id);
-        const storeCat = store?.category || toStoreCategory(product.category);
-        const prodCat = toStoreCategory(product.category);
-        return (
-          isStoreInCategory(storeCat, activeFilter) ||
-          isStoreInCategory(prodCat, activeFilter) ||
-          isStoreInCategory(product.category, activeFilter) ||
-          (product.category &&
-            product.category.toLowerCase().includes(activeFilter.toLowerCase())) ||
-          (cat && product.category && product.category.toLowerCase().includes(cat.toLowerCase()))
-        );
-      });
-    }
-
-    return filteredProducts;
-  }, [approvedProducts.data, activeFilter, cat, query]);
+    // Recommendations use the complete nearby catalog. Search and category
+    // filters narrow the nearby-shop list above, but do not empty this rail.
+    return allProducts;
+  }, [approvedProducts.data, hasConfirmedLocation]);
 
   const displayCategoryName = useMemo(() => getCategoryDisplayName(cat), [cat]);
+  const nearbyLoading =
+    hasConfirmedLocation && (approvedVendors.isLoading || approvedProducts.isLoading);
 
   return (
     <AppShell>
       {/* Swiggy-Style Hero Landing Section */}
-      <HeroSection />
+      <ReferenceHomeHero />
 
-      {/* Main Promo Carousel (Swiggy / Local Shore Banners) */}
+      {/* Image-led category navigation sits directly beneath the Orchid hero. */}
+      <LiquidGlassCategorySelector />
+
+      {/* Existing promotional ads restored below the coded reference-style front page. */}
       <PromoCarousel />
-
-      {/* 1. Swiggy Top Yellow Deals Carousel Strip */}
-      <SwiggyTopDealsStrip />
-
-      {/* 2. Swiggy Featured Merchant Ad Banner */}
       <SwiggyFeaturedBanner />
+      <PopularBrandsCarousel />
 
-      {/* RedBus-Style App Download & Offer Banner */}
-      <AppDownloadBanner />
+      <LocalShoreOffers />
 
-      {/* Shops section — full-width split view matching reference design */}
-      <div id="shops-section" className="scroll-mt-24 px-5 pt-6 md:px-8">
-        <LocalShoreMapExperience
-          initialQuery={query}
-          initialCategory={cat}
-          onQueryChange={(q) => {
-            startTransition(() => {
-              navigate({
-                search: (prev) => ({ ...prev, q: q || undefined }),
-                resetScroll: false,
-              });
-            });
-          }}
-          onCategoryChange={(c) => {
-            startTransition(() => {
-              navigate({
-                search: (prev) => ({ ...prev, category: c === "all" ? undefined : c }),
-                resetScroll: false,
-              });
-            });
-          }}
-        />
-      </div>
-
-      {/* Swiggy-style shop row */}
-
-      <SwiggyShopRow
-        stores={filtered}
-        activeCategory={activeFilter || "all"}
-        onSelectCategory={(catId) => {
-          startTransition(() => {
-            navigate({
-              search: (prev) => ({
-                category: catId === "all" || catId === "all-shops" ? undefined : catId,
-                q: prev.q,
-              }),
-              resetScroll: false,
-            });
-            scrollToShops();
-          });
-        }}
-      />
-
-      <div className="px-5 md:px-8">
-        {/* Active category filter bar */}
-        {((cat && cat !== "all" && cat !== "all-shops") || query) && (
-          <div className="mx-5 mb-4 flex items-center justify-between rounded-xl border border-primary/20 bg-primary/5 px-4 py-2.5 md:mx-8">
-            <div className="flex items-center gap-2 text-xs font-semibold text-foreground md:text-sm">
-              <span className="h-2 w-2 rounded-full bg-primary" />
-              <span>
-                {cat && cat !== "all" && cat !== "all-shops" ? (
-                  <>
-                    Filtering by: <strong className="text-primary">{displayCategoryName}</strong>
-                  </>
-                ) : null}
-                {query ? (
-                  <>
-                    {cat && cat !== "all" && cat !== "all-shops" ? " · " : ""}Matching:{" "}
-                    <strong className="text-primary">"{query}"</strong>
-                  </>
-                ) : null}
-              </span>
-            </div>
-            <Link
-              to="/"
-              search={{ category: undefined, q: undefined }}
-              className="rounded-lg bg-background px-3 py-1 text-xs font-bold text-primary shadow-xs hover:bg-muted"
-            >
-              Clear filter ×
-            </Link>
-          </div>
+      {/* Server-filtered nearby shops: always limited to the customer's 5 km radius. */}
+      <section id="shops-section" className="px-5 pb-8 md:px-8">
+        <h2 className="mb-4 font-display text-xl font-bold text-foreground">
+          {hasConfirmedLocation
+            ? `Shops within ${CUSTOMER_VISIBILITY_RADIUS_KM} km around you`
+            : "Choose your location to see nearby shops"}
+        </h2>
+        {hasConfirmedLocation && !deliveryLoc?.isGPS && (
+          <p className="-mt-2 mb-4 text-xs text-muted-foreground">
+            Around {deliveryLoc?.area || deliveryLoc?.label || operationalZone.data?.zone_name || "your selected location"} · based on your selected location.
+          </p>
         )}
-
-        {/* 3. Comprehensive Category Discovery & Shop Grid View matching UI design */}
-        <CategoryDiscoveryView
-          stores={stores}
-          activeCategory={activeFilter || "all"}
-          onCategoryChange={(catId) => {
-            startTransition(() => {
-              navigate({
-                search: (prev) => ({
-                  category: catId === "all" || catId === "all-shops" ? undefined : catId,
-                  q: prev.q,
-                }),
-                resetScroll: false,
-              });
-              scrollToShops();
-            });
-          }}
-        />
-
-        {/* 4. Swiggy ₹99 Store / Budget Meals Section */}
-        <Swiggy99StoreSection products={homepageProducts} />
-
-        {/* Flipkart-Style Signature "Best Deals on..." Container */}
-        <FlipkartBestDealsShowcase
-          products={homepageProducts}
-          title={
-            activeFilter ? `Best Deals on ${displayCategoryName}` : "Best Deals on Local Shore"
-          }
-        />
-
-        {/* Category Products Grid */}
-        <div className="mx-5 my-6 md:mx-8 md:my-8">
-          <div className="mb-4 flex items-center justify-between">
-            <div>
-              <h2 className="font-display text-base font-bold text-foreground md:text-xl">
-                {activeFilter
-                  ? `Products in ${displayCategoryName}`
-                  : query.trim()
-                    ? `Products matching "${query}"`
-                    : "Popular products near you"}
-              </h2>
-              <p className="mt-0.5 text-xs text-muted-foreground">
-                {homepageProducts.length} item{homepageProducts.length === 1 ? "" : "s"} available
-                for instant 20-40 min delivery
-              </p>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {nearbyLoading
+            ? Array.from({ length: 8 }, (_, index) => <ShopCardSkeleton key={`shop-skeleton-${index}`} />)
+            : filtered.slice(0, 8).map((store) => (
+            <ShopCard
+              key={store.id}
+              shop={{
+                id: store.id,
+                name: store.name,
+                category: categoryLabel[store.category] ?? store.category,
+                imageUrl: store.imageUrl,
+                featuredProductName: store.featuredProductName,
+                rating: store.rating,
+                distanceKm: store.distanceKm,
+                isOpen: store.isOpen,
+                address: store.address,
+                description: store.tagline,
+              }}
+              variant="wide"
+              className="h-full max-w-none"
+            />
+          ))}
+          {!nearbyLoading && filtered.length === 0 && (
+            <div className="col-span-full">
+              <EmptyState />
             </div>
-            {activeFilter && (
-              <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-bold text-primary">
-                {homepageProducts.length} items
-              </span>
-            )}
-          </div>
-
-          {homepageProducts.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-border p-6 text-center">
-              <p className="text-sm font-medium text-foreground">
-                No products found in this category.
-              </p>
-              <p className="mt-1 text-xs text-muted-foreground">
-                Try selecting a different category or clearing search filters.
-              </p>
-            </div>
-          ) : (
-            <>
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
-                {homepageProducts.slice(0, visibleProductLimit).map((product) => (
-                  <ProductCard key={product.id} product={product} />
-                ))}
-              </div>
-              {homepageProducts.length > visibleProductLimit && (
-                <div className="mt-5 flex justify-center">
-                  <button
-                    onClick={() => setVisibleProductLimit((prev) => prev + 20)}
-                    className="inline-flex items-center gap-2 rounded-full border border-amber-500/40 bg-card px-6 py-2.5 text-xs font-bold text-foreground shadow-sm transition hover:bg-amber-500/10 active:scale-95"
-                  >
-                    <span>
-                      Show more products ({homepageProducts.length - visibleProductLimit} remaining)
-                    </span>
-                  </button>
-                </div>
-              )}
-            </>
           )}
         </div>
-      </div>
+      </section>
 
-      <MarketplaceDiscovery products={homepageProducts} />
-
-      {/* Mobile search — floats below the hero, not sticky */}
-      <div className="px-5 pb-2 pt-1 md:hidden">
-        <label className="flex items-center gap-2 rounded-xl bg-card px-3 py-2.5 ring-1 ring-black/[0.04]">
-          <Search className="h-4 w-4 text-muted-foreground" />
-          <input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search products, categories or shops"
-            className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
-          />
-        </label>
-      </div>
-
-      <MerchandisingSections fallbackProducts={homepageProducts} />
-
-      {/* Ecosystem Merchandising Strips (Rewards, Brands, Best Shops, Travel, Cities, News) */}
-      <div className="px-5 md:px-8">
-        <EcosystemMerchandisingStrips />
-      </div>
-
-      {/* App Download Promo Banner */}
-      <AppDownloadBanner />
-
-      {/* All shops grid — shown below the Swiggy row as secondary listing */}
-      <div className="mt-6 flex items-center justify-between px-5 pt-2 md:mt-8 md:px-8">
-        <h2 className="font-display text-base font-bold text-foreground md:text-xl">
-          All verified shops
+      {/* Yellow sliding deals rail */}
+      <section aria-labelledby="highlighted-deals-heading" className="mt-2 pb-6 pt-2">
+        <h2
+          id="highlighted-deals-heading"
+          className="px-5 pb-1 font-display text-lg font-bold text-foreground md:px-8 md:text-2xl"
+        >
+          Highlighted deals
         </h2>
-        <span className="font-mono text-[10px] uppercase text-muted-foreground md:text-xs">
-          {filtered.length} shops
-        </span>
-      </div>
+        <SwiggyTopDealsStrip />
+      </section>
 
-      <div className="mt-3 grid grid-cols-1 gap-3 px-5 pb-8 md:mt-4 md:grid-cols-2 md:gap-5 md:px-8 lg:grid-cols-3">
-        {filtered.length === 0 ? (
-          <div className="md:col-span-2 lg:col-span-3">
-            <EmptyState />
+      {/* Local shop picks below the deals rail */}
+      <section aria-labelledby="local-products-heading" className="px-5 pb-8 md:px-8">
+        <div className="flex items-end justify-between gap-3">
+          <div>
+            <h2
+              id="local-products-heading"
+              className="font-display text-xl font-bold text-foreground"
+            >
+              Popular picks from local shops
+            </h2>
+            <p className="mt-1 text-xs font-medium text-muted-foreground">
+              Fresh products available from different neighborhood sellers
+            </p>
           </div>
-        ) : (
-          filtered.map((s) => <AwningCard key={s.id} store={s} />)
-        )}
-      </div>
+          <Link
+            to="/search"
+            search={{ q: undefined, category: undefined }}
+            className="shrink-0 text-xs font-bold text-primary hover:underline"
+          >
+            View all →
+          </Link>
+        </div>
+        <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+          {nearbyLoading
+            ? Array.from({ length: 8 }, (_, index) => (
+                <div
+                  key={`product-skeleton-${index}`}
+                  className="h-52 animate-pulse rounded-2xl bg-muted/70"
+                  aria-hidden="true"
+                />
+              ))
+            : Array.from(
+            new Map(
+              homepageProducts
+                .filter((product) => product.stock > 0)
+                .map((product) => [product.seller_id, product]),
+            ).values(),
+          )
+            .slice(0, 8)
+            .map((product) => (
+              <ProductCard key={product.id} product={product} compact />
+            ))}
+        </div>
+      </section>
 
-      <p className="px-5 pb-6 text-center font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
-        · Local Shore · Coastal India ·
-      </p>
+      {isNearbyMapOpen && (
+        <div className="fixed inset-0 z-[90] overflow-y-auto bg-background">
+          <button
+            type="button"
+            onClick={() => setIsNearbyMapOpen(false)}
+            className="absolute right-3 top-3 z-[130] hidden rounded-full bg-white px-3 py-2 text-sm font-bold text-slate-800 shadow-md ring-1 ring-slate-200 hover:bg-slate-50 lg:block"
+            aria-label="Close nearby shops map"
+          >
+            Close map
+          </button>
+          <LocalShoreMapExperience
+            initialMapOpen
+            onCloseMap={() => setIsNearbyMapOpen(false)}
+          />
+        </div>
+      )}
 
-      {/* Auth CTA (mock) */}
-      <div className="px-5 pb-4">
-        <Link
-          to="/auth"
-          search={{ redirect: undefined }}
-          className="block text-center text-xs text-muted-foreground underline-offset-4 hover:underline"
-        >
-          Sign in with phone number
-        </Link>
-        <a
-          href={import.meta.env.VITE_SELLER_HUB_URL || "/seller"}
-          className="mt-2 block text-center text-xs text-primary underline-offset-4 hover:underline"
-        >
-          Become a seller
-        </a>
-      </div>
     </AppShell>
   );
 }
@@ -610,5 +526,23 @@ function EmptyState() {
         No stores near you yet — try expanding your search radius or clearing filters.
       </p>
     </Reveal>
+  );
+}
+
+function ShopCardSkeleton() {
+  return (
+    <div
+      className="animate-pulse overflow-hidden rounded-3xl border border-border/70 bg-card shadow-sm"
+      aria-hidden="true"
+    >
+      <div className="aspect-[16/10] max-[639px]:aspect-[16/7] bg-muted" />
+      <div className="space-y-3 p-4 max-[639px]:p-3">
+        <div className="h-3 w-1/3 rounded bg-muted" />
+        <div className="h-5 w-3/4 rounded bg-muted" />
+        <div className="h-3 w-1/2 rounded bg-muted" />
+        <div className="h-12 rounded-2xl bg-muted/80" />
+        <div className="h-10 rounded-2xl bg-muted" />
+      </div>
+    </div>
   );
 }

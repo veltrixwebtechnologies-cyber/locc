@@ -1,3 +1,4 @@
+import { parseCoordinates } from "./coordinates";
 import { useEffect, useState } from "react";
 import type { CartLine } from "./cart-store";
 import { supabase } from "@/integrations/supabase/client";
@@ -36,40 +37,15 @@ function updateOrdersCache(rows: Order[]) {
   }
 }
 
-function loadDemoOrders(userId: string): Order[] {
-  if (typeof window === "undefined") return [];
-  try {
-    const raw = window.localStorage.getItem(demoOrdersKey(userId));
-    return raw ? (JSON.parse(raw) as Order[]) : [];
-  } catch {
-    return [];
-  }
-}
-
-function saveDemoOrder(userId: string, order: Order) {
-  if (typeof window === "undefined") return;
-  const existing = loadDemoOrders(userId);
-  const updated = [order, ...existing];
-  window.localStorage.setItem(demoOrdersKey(userId), JSON.stringify(updated));
-  updateOrdersCache([order, ...getInitialCachedOrders()]);
-}
-
 export function addPlacedOrderToCache(order: Order) {
   const current = getInitialCachedOrders();
   const existingIdx = current.findIndex((o) => o.id === order.id || o.code === order.code);
-  const updated = existingIdx !== -1
-    ? current.map((o, idx) => (idx === existingIdx ? order : o))
-    : [order, ...current];
+  const updated =
+    existingIdx !== -1
+      ? current.map((o, idx) => (idx === existingIdx ? order : o))
+      : [order, ...current];
   updateOrdersCache(updated);
-
-  supabase.auth.getSession().then(({ data }) => {
-    const userId = data.session?.user?.id;
-    if (userId) {
-      saveDemoOrder(userId, order);
-    }
-  });
 }
-
 
 export type OrderStatus =
   | "new"
@@ -284,7 +260,6 @@ async function loadOrders(): Promise<Order[]> {
     const cached = getInitialCachedOrders();
     return cached.length > 0 ? cached : [];
   }
-  const demoOrders = loadDemoOrders(userId);
 
   try {
     const { data: ordersData, error } = await (supabase as any)
@@ -295,23 +270,23 @@ async function loadOrders(): Promise<Order[]> {
 
     if (error) {
       console.warn("[orders] orders query notice:", error.message);
-      const res = [...demoOrders];
-      updateOrdersCache(res);
-      return res;
+      return getInitialCachedOrders();
     }
 
     if (!ordersData || ordersData.length === 0) {
-      updateOrdersCache(demoOrders);
-      return demoOrders;
+      updateOrdersCache([]);
+      return [];
     }
 
     // Fetch active delivery assignments for live partner tracking
     const orderIds = ordersData.map((o: any) => o.id);
-    let assignmentsMap: Record<string, any> = {};
+    const assignmentsMap: Record<string, any> = {};
     try {
       const { data: assignments } = await (supabase as any)
         .from("delivery_assignments")
-        .select("id, order_id, status, current_latitude, current_longitude, current_heading, estimated_delivery_eta")
+        .select(
+          "id, order_id, status, current_latitude, current_longitude, current_heading, estimated_delivery_eta",
+        )
         .in("order_id", orderIds);
       if (assignments) {
         assignments.forEach((a: any) => {
@@ -330,13 +305,12 @@ async function loadOrders(): Promise<Order[]> {
       return fromRow(rowWithAssignment);
     });
 
-    const res = [...demoOrders, ...processedOrders];
-    updateOrdersCache(res);
-    return res;
+    updateOrdersCache(processedOrders);
+    return processedOrders;
   } catch (error) {
     console.error("[orders] loadOrders failed", error);
     const cached = getInitialCachedOrders();
-    return cached.length > 0 ? cached : demoOrders;
+    return cached;
   }
 }
 
@@ -375,23 +349,13 @@ export const ordersStore = {
     const { data: session } = await supabase.auth.getSession();
     const user = session.session?.user;
     if (!user) throw new Error("Sign in before placing an order");
+    if (!parseCoordinates(order.destination?.lat, order.destination?.lng))
+      throw new Error("Confirm a valid delivery entrance pin before placing an order.");
     if (!order.address.trim()) throw new Error("Add a delivery address before placing the order.");
     if (!order.lines.length) throw new Error("Your cart is empty.");
 
-    // Curated storefront products are intentionally local demo catalog entries,
-    // not rows in approved_product_catalog. Keep their checkout flow usable while
-    // the real seller inventory integration is being connected.
     if (order.lines.some((line) => !isUuid(line.productId))) {
-      const createdAt = Date.now();
-      const demoOrder: Order = {
-        ...order,
-        id: crypto.randomUUID(),
-        code: `LS-${String(createdAt).slice(-8)}`,
-        createdAt,
-        status: "new",
-      };
-      saveDemoOrder(user.id, demoOrder);
-      return demoOrder;
+      throw new Error("Your cart contains invalid product references. Please update your cart.");
     }
 
     const baseParams = {
@@ -452,44 +416,71 @@ export async function advanceDemoOrder(orderId: string) {
   throw new Error("Order status is managed by the seller and delivery partner.");
 }
 
+function loadDemoOrders(userId: string): Order[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = localStorage.getItem(demoOrdersKey(userId));
+    if (raw) return JSON.parse(raw);
+  } catch {}
+  return [];
+}
+
 export async function cancelOrder(orderId: string, reason: string): Promise<boolean> {
   const { data: session } = await supabase.auth.getSession();
   const userId = session.session?.user.id;
+  if (!userId) return false;
+
+  const cancellableStatuses = [
+    "new",
+    "accepted",
+    "vendor_accepted",
+    "preparing",
+    "packed",
+    "ready_for_pickup",
+  ];
+  let cancelled = false;
 
   // 1. Update local storage demo order if present
   if (userId) {
     const demoOrders = loadDemoOrders(userId);
     const demoIndex = demoOrders.findIndex(
-      (o) =>
+      (o: Order) =>
         o.id === orderId ||
         o.code === orderId ||
         (o.code && o.code.toLowerCase() === orderId.toLowerCase()),
     );
-    if (demoIndex !== -1) {
+    if (demoIndex !== -1 && cancellableStatuses.includes(demoOrders[demoIndex].status)) {
       demoOrders[demoIndex].status = "cancelled";
       demoOrders[demoIndex].cancellationReason = reason;
       if (typeof window !== "undefined") {
         window.localStorage.setItem(demoOrdersKey(userId), JSON.stringify(demoOrders));
         window.dispatchEvent(new Event("storage"));
       }
+      cancelled = true;
     }
   }
 
   // 2. Update real Supabase order if UUID
   if (isUuid(orderId)) {
     try {
-      const { error } = await (supabase as any)
+      const { data: cancelledOrder, error } = await (supabase as any)
         .from("orders")
         .update({
           status: "cancelled",
           cancellation_reason: reason,
           cancelled_at: new Date().toISOString(),
         })
-        .eq("id", orderId);
+        .eq("id", orderId)
+        .eq("user_id", userId)
+        .in("status", cancellableStatuses)
+        .select("id")
+        .maybeSingle();
 
       if (error) {
-        console.warn("Supabase order cancellation update error:", error);
+        throw error;
       }
+      if (!cancelledOrder) return false;
+      cancelled = true;
 
       // Also cancel active delivery assignment if any
       await (supabase as any)
@@ -498,6 +489,7 @@ export async function cancelOrder(orderId: string, reason: string): Promise<bool
         .eq("order_id", orderId);
     } catch (err) {
       console.warn("Cancel order database update error:", err);
+      return false;
     }
   }
 
@@ -510,7 +502,7 @@ export async function cancelOrder(orderId: string, reason: string): Promise<bool
     updateOrdersCache([...currentCached]);
   }
 
-  return true;
+  return cancelled || currentCached.some((o) => o.id === orderId || o.code === orderId);
 }
 
 export function useOrders() {
@@ -563,18 +555,22 @@ export function useOrdersState() {
     refresh();
     const channel = supabase
       .channel("shoreline-orders")
-      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "orders" }, (payload: any) => {
-        const newStatus = payload.new?.status as OrderStatus | undefined;
-        const oldStatus = payload.old?.status as OrderStatus | undefined;
-        if (newStatus && newStatus !== oldStatus && orderStatusLabel[newStatus]) {
-          playCustomerOrderChimeSound();
-          toast.info(`📦 Order Status: ${orderStatusLabel[newStatus]}`, {
-            id: `order-status-${payload.new?.id}`,
-            duration: 8000,
-          });
-        }
-        refresh();
-      })
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "orders" },
+        (payload: any) => {
+          const newStatus = payload.new?.status as OrderStatus | undefined;
+          const oldStatus = payload.old?.status as OrderStatus | undefined;
+          if (newStatus && newStatus !== oldStatus && orderStatusLabel[newStatus]) {
+            playCustomerOrderChimeSound();
+            toast.info(`📦 Order Status: ${orderStatusLabel[newStatus]}`, {
+              id: `order-status-${payload.new?.id}`,
+              duration: 8000,
+            });
+          }
+          refresh();
+        },
+      )
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "orders" }, refresh)
       .on("postgres_changes", { event: "*", schema: "public", table: "order_items" }, refresh)
       .on(

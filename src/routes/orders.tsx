@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { AppShell } from "@/components/app-shell";
 import { useOrdersState, orderStatusLabel } from "@/lib/orders-store";
+import { useAuth } from "@/lib/auth-store";
 import { Clock, Star } from "lucide-react";
 import { LottieLoading } from "@/components/ui/lottie-loading";
 
@@ -36,7 +37,31 @@ function OrdersSkeleton() {
 }
 
 function OrdersPage() {
+  const auth = useAuth();
   const { orders, isLoading } = useOrdersState();
+
+  const signedIn = Boolean(auth.id || auth.phone || auth.email);
+
+  if (!signedIn) {
+    return (
+      <AppShell>
+        <div className="mx-5 mt-12 rounded-2xl border hairline bg-card p-6 text-center shadow-xs">
+          <p className="font-display text-xl font-bold text-foreground">Sign in required</p>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Please sign in to view your order history and track live 20-minute neighborhood
+            deliveries.
+          </p>
+          <Link
+            to="/auth"
+            search={{ redirect: "/orders" }}
+            className="mt-5 inline-block rounded-xl bg-primary px-6 py-2.5 text-sm font-bold text-primary-foreground shadow-md transition hover:bg-primary/90"
+          >
+            Sign in to your account
+          </Link>
+        </div>
+      </AppShell>
+    );
+  }
 
   return (
     <AppShell>

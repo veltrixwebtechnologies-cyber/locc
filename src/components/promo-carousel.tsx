@@ -187,12 +187,15 @@ export function PromoCarousel() {
       try {
         const { data, error } = await (supabase as any)
           .from("banners")
-          .select("id,title,subtitle,image_url,link_url,sort_order,starts_at,ends_at,is_active,placement")
+          .select(
+            "id,title,subtitle,image_url,link_url,sort_order,starts_at,ends_at,is_active,placement",
+          )
           .order("sort_order", { ascending: true });
-        
+
         let list = (data ?? []) as any[];
         if (error || list.length === 0) {
-          const raw = typeof window !== "undefined" ? localStorage.getItem("localshore_admin_banners") : null;
+          const raw =
+            typeof window !== "undefined" ? localStorage.getItem("localshore_admin_banners") : null;
           if (raw) {
             try {
               list = JSON.parse(raw);

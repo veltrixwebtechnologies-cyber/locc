@@ -63,7 +63,7 @@ export function ProductCard({
   return (
     <div
       data-product-id={product.id}
-      className={`group relative flex min-w-0 flex-col justify-between overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-xs hover:border-purple-300 hover:shadow-md transition-all duration-200 ${
+      className={`group relative flex min-w-0 flex-col justify-between overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-xs hover:border-[#f0abfc] hover:shadow-md transition-all duration-200 ${
         compact ? "p-2.5" : "p-3"
       }`}
     >
@@ -184,6 +184,8 @@ export function ProductCard({
             {product.name}
           </h3>
 
+          <p className="truncate text-[10px] font-semibold text-[#981495]">{product.shop_name}</p>
+
           {/* Rating & ETA */}
           <div className="flex items-center gap-2 pt-0.5 text-[11px] font-bold text-slate-600">
             <span className="flex items-center gap-0.5 text-amber-600">
@@ -196,7 +198,7 @@ export function ProductCard({
 
           {/* Category pill with arrow */}
           <div className="pt-1">
-            <span className="inline-flex items-center gap-1 rounded-md bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-600 group-hover:bg-purple-50 group-hover:text-[#981495] transition-colors">
+            <span className="inline-flex items-center gap-1 rounded-md bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-600 group-hover:bg-[var(--sand)] group-hover:text-[#981495] transition-colors">
               <span>All {product.category || "Item"}</span>
               <span className="text-[8px]">▶</span>
             </span>

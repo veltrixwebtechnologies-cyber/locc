@@ -1,3 +1,6 @@
+import { RouteRequest } from "@/lib/route-request";
+import { parseCoordinates } from "@/lib/coordinates";
+import { assignmentLocation } from "@/lib/tracking-location";
 import { useEffect, useRef, useState } from "react";
 import { Clock, Navigation, MapPin, Store, RotateCw } from "lucide-react";
 import {
@@ -70,16 +73,23 @@ export function DeliveryMap({
   const markersRef = useRef<Record<string, any>>({});
   const polylineRef = useRef<any>(null);
   const mountedRef = useRef(true);
+  const cameraTarget = useRef("");
 
-  const [courier, setCourier] = useState<LatLng | undefined>(initialCourier);
+  const [courier, setCourier] = useState<LatLng | undefined>(undefined);
   const [routeInfo, setRouteInfo] = useState<AdvancedRouteResult | null>(null);
-  const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
+  const [lastUpdated, setLastUpdated] = useState<Date>(new Date(0));
   const [secAgo, setSecAgo] = useState<number>(0);
   const [loading, setLoading] = useState(true);
 
   const lastRouteCalculatedAt = useRef<number>(0);
   const lastRoutePos = useRef<LatLng | null>(null);
-  const currentPhase = useRef<"to_vendor" | "to_customer">("to_customer");
+  const requests = useRef(new RouteRequest());
+  const routeEndpoint = useRef("");
+  const lastRouteAttempt = useRef(0);
+  const [routeError, setRouteError] = useState("");
+  const destinationCallback = useRef(onDestinationChange);
+  destinationCallback.current = onDestinationChange;
+  useEffect(() => () => requests.current.cancel(), []);
 
   // Determine current active route phase
   const phase: "to_vendor" | "to_customer" = [
@@ -93,100 +103,93 @@ export function DeliveryMap({
     ? "to_vendor"
     : "to_customer";
 
-  // Keep courier state synced with props
+  // Subscribe only to the selected order/assignment. Never consume arbitrary partner updates.
   useEffect(() => {
-    if (initialCourier) setCourier(initialCourier);
-  }, [initialCourier?.lat, initialCourier?.lng, initialCourier?.heading]);
-
-  // Realtime subscription for customer order tracking
-  useEffect(() => {
-    if (!orderId && !assignmentId) return;
-
-    const handleLocationPayload = (newRow: any) => {
-      if (newRow?.current_latitude && newRow?.current_longitude) {
-        const newPos = {
-          lat: Number(newRow.current_latitude),
-          lng: Number(newRow.current_longitude),
-          heading: Number(newRow.current_heading || 0),
-        };
-        setCourier(newPos);
-        setLastUpdated(new Date());
-        if (mapRef.current) {
-          try {
-            mapRef.current.panTo([newPos.lat, newPos.lng], { animate: true, duration: 0.5 });
-          } catch {}
-        }
-      }
+    let alive = true,
+      polling = false;
+    let latest: any = null;
+    let newestCapture = 0;
+    let revision = 0;
+    setCourier(undefined);
+    setLastUpdated(new Date(0));
+    if (!orderId && !assignmentId) {
+      if (initialCourier && parseCoordinates(initialCourier.lat, initialCourier.lng))
+        setCourier(initialCourier);
+      return;
+    }
+    const accept = (row: any) => {
+      if (!alive) return;
+      const capture = Date.parse(row?.last_location_update_at ?? "");
+      if (Number.isFinite(capture) && capture < newestCapture) return;
+      const location = assignmentLocation(row);
+      if (Number.isFinite(capture)) newestCapture = capture;
+      latest = row;
+      setCourier(location ?? undefined);
+      if (location) setLastUpdated(new Date(location.capturedAt));
     };
-
     const channel = supabase
-      .channel(`delivery-map-${orderId || assignmentId}`)
+      .channel("delivery-map-" + (assignmentId || orderId))
       .on(
         "postgres_changes",
         {
           event: "UPDATE",
           schema: "public",
           table: "delivery_assignments",
-          filter: orderId ? `order_id=eq.${orderId}` : `id=eq.${assignmentId}`,
+          filter: assignmentId ? "id=eq." + assignmentId : "order_id=eq." + orderId,
         },
-        (payload: any) => handleLocationPayload(payload.new),
-      )
-      .on(
-        "postgres_changes",
-        {
-          event: "UPDATE",
-          schema: "public",
-          table: "delivery_partners",
+        (payload: any) => {
+          revision++;
+          accept(payload.new);
         },
-        (payload: any) => handleLocationPayload(payload.new),
       )
       .subscribe();
-
-    // Fallback: poll Supabase every 10s in case realtime WebSocket is throttled or missed
-    const pollInterval = setInterval(async () => {
-      if (!mountedRef.current) return;
+    const poll = async () => {
+      if (!alive || polling) return;
+      polling = true;
+      const started = revision;
       try {
         const query = (supabase as any)
           .from("delivery_assignments")
-          .select("current_latitude, current_longitude, current_heading, partner_id")
-          .not("current_latitude", "is", null);
-        if (orderId) query.eq("order_id", orderId);
-        else if (assignmentId) query.eq("id", assignmentId);
-        const { data } = await query.limit(1).maybeSingle();
-
-        if (data?.current_latitude && data?.current_longitude && mountedRef.current) {
-          setCourier({
-            lat: Number(data.current_latitude),
-            lng: Number(data.current_longitude),
-            heading: Number(data.current_heading || 0),
-          });
-          setLastUpdated(new Date());
-        } else if (data?.partner_id) {
-          // Check partner table fallback if assignment row latitude isn't set yet
-          const { data: partnerData } = await (supabase as any)
-            .from("delivery_partners")
-            .select("current_latitude, current_longitude")
-            .eq("id", data.partner_id)
-            .maybeSingle();
-          if (partnerData?.current_latitude && partnerData?.current_longitude && mountedRef.current) {
-            setCourier({
-              lat: Number(partnerData.current_latitude),
-              lng: Number(partnerData.current_longitude),
-              heading: 0,
-            });
-            setLastUpdated(new Date());
-          }
-        }
+          .select(
+            "current_latitude,current_longitude,current_heading,last_location_update_at,status",
+          )
+          .in("status", [
+            "accepted",
+            "navigating_to_vendor",
+            "reached_vendor",
+            "picked_up",
+            "out_for_delivery",
+          ]);
+        if (assignmentId) query.eq("id", assignmentId);
+        else query.eq("order_id", orderId);
+        const { data, error } = await query
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        if (!error && started === revision) accept(data);
       } catch {
-        // Ignore poll errors silently
+        /* Keep the last capture time; expiry hides an old fix. */
+      } finally {
+        polling = false;
       }
-    }, 10_000);
-
-    return () => {
-      supabase.removeChannel(channel);
-      clearInterval(pollInterval);
     };
-  }, [orderId, assignmentId]);
+    void poll();
+    const pollTimer = setInterval(() => void poll(), 10000);
+    const expiry = setInterval(() => {
+      if (alive && !assignmentLocation(latest)) setCourier(undefined);
+    }, 1000);
+    return () => {
+      alive = false;
+      clearInterval(pollTimer);
+      clearInterval(expiry);
+      supabase.removeChannel(channel);
+    };
+  }, [
+    orderId,
+    assignmentId,
+    orderId || assignmentId ? undefined : initialCourier?.lat,
+    orderId || assignmentId ? undefined : initialCourier?.lng,
+  ]);
 
   // Timer for "Updated X seconds ago" display
   useEffect(() => {
@@ -196,7 +199,9 @@ export function DeliveryMap({
     return () => clearInterval(timer);
   }, [lastUpdated]);
 
-  // Initialize Leaflet Map once
+  // Initialize Leaflet when the first valid point becomes available. This is
+  // important for checkout, where the customer may choose a pin after mount.
+  const hasMapPoint = Boolean(courier || destination || store);
   useEffect(() => {
     mountedRef.current = true;
     let cancelled = false;
@@ -207,20 +212,19 @@ export function DeliveryMap({
         if (cancelled || !mapContainerRef.current) return;
 
         LRef.current = L;
-        const initialCenter: [number, number] = courier
-          ? [courier.lat, courier.lng]
-          : destination
-            ? [destination.lat, destination.lng]
-            : store
-              ? [store.lat, store.lng]
-              : [11.02, 76.99];
+        const initialPoint = courier ?? destination ?? store;
+        if (!initialPoint) {
+          setLoading(false);
+          return;
+        }
+        const initialCenter: [number, number] = [initialPoint.lat, initialPoint.lng];
 
         const map = L.map(mapContainerRef.current, {
           center: initialCenter,
           zoom: 15,
           maxZoom: 18,
           zoomControl: true,
-          attributionControl: false,
+          attributionControl: true,
         });
 
         const tileConfig = getMapTileConfig();
@@ -231,15 +235,15 @@ export function DeliveryMap({
         }).addTo(map);
 
         setTimeout(() => {
-          map.invalidateSize();
+          if (!cancelled) map.invalidateSize();
         }, 100);
 
         mapRef.current = map;
         setLoading(false);
 
-        if (interactive && onDestinationChange) {
+        if (interactive) {
           map.on("click", (e: any) => {
-            onDestinationChange({ lat: e.latlng.lat, lng: e.latlng.lng });
+            destinationCallback.current?.({ lat: e.latlng.lat, lng: e.latlng.lng });
           });
         }
       } catch (err) {
@@ -250,6 +254,11 @@ export function DeliveryMap({
 
     return () => {
       cancelled = true;
+    };
+  }, [hasMapPoint]);
+
+  useEffect(() => {
+    return () => {
       mountedRef.current = false;
       if (mapRef.current) {
         mapRef.current.remove();
@@ -258,40 +267,57 @@ export function DeliveryMap({
     };
   }, []);
 
-  // Recalculate OSRM Route dynamically
   useEffect(() => {
-    let active = true;
-    const origin = courier || (phase === "to_customer" && store ? store : undefined);
-    const dest = phase === "to_vendor" && store ? store : destination;
-
-    if (!origin || !dest) return;
-
-    const phaseChanged = currentPhase.current !== phase;
-    currentPhase.current = phase;
-
-    const shouldCalc = shouldRecalculateRoute(
-      origin,
-      lastRoutePos.current,
-      routeInfo?.geometry || null,
-      lastRouteCalculatedAt.current,
-      phaseChanged,
-    );
-
-    if (!shouldCalc && routeInfo) return;
-
-    (async () => {
-      const res = await fetchDeliveryRoute(origin, dest, phase);
-      if (active && res) {
-        setRouteInfo(res);
+    const origin = courier;
+    const dest = phase === "to_vendor" ? store : destination;
+    const endpoint = [orderId, assignmentId, phase, dest?.lat, dest?.lng].join(":");
+    const changed = routeEndpoint.current !== endpoint;
+    if (changed) {
+      requests.current.cancel();
+      setRouteInfo(null);
+      setRouteError("");
+    }
+    routeEndpoint.current = endpoint;
+    if (
+      !origin ||
+      !dest ||
+      !parseCoordinates(origin.lat, origin.lng) ||
+      !parseCoordinates(dest.lat, dest.lng)
+    ) {
+      requests.current.cancel();
+      setRouteInfo(null);
+      return;
+    }
+    if (!changed && (requests.current.busy || Date.now() - lastRouteAttempt.current < 10000))
+      return;
+    if (
+      !changed &&
+      !shouldRecalculateRoute(
+        origin,
+        lastRoutePos.current,
+        routeInfo?.geometry ?? null,
+        lastRouteCalculatedAt.current,
+        false,
+      )
+    )
+      return;
+    lastRouteAttempt.current = Date.now();
+    void requests.current.run(
+      (signal) => fetchDeliveryRoute(origin, dest, phase, 1, signal),
+      (result) => {
+        setRouteInfo(result);
+        setRouteError("");
         lastRouteCalculatedAt.current = Date.now();
         lastRoutePos.current = origin;
-      }
-    })();
-
-    return () => {
-      active = false;
-    };
+      },
+      (error) => {
+        setRouteInfo(null);
+        setRouteError(error instanceof Error ? error.message : "Road routing unavailable.");
+      },
+    );
   }, [
+    orderId,
+    assignmentId,
     courier?.lat,
     courier?.lng,
     destination?.lat,
@@ -299,6 +325,7 @@ export function DeliveryMap({
     store?.lat,
     store?.lng,
     phase,
+    secAgo,
   ]);
 
   // Sync Leaflet markers and route polyline with animation
@@ -314,7 +341,7 @@ export function DeliveryMap({
       iconUrl: string,
       size: [number, number],
     ) => {
-      if (!pos) {
+      if (!pos || !parseCoordinates(pos.lat, pos.lng)) {
         if (markersRef.current[id]) {
           map.removeLayer(markersRef.current[id]);
           delete markersRef.current[id];
@@ -353,17 +380,19 @@ export function DeliveryMap({
     };
 
     // Render markers
-    if (store) upsertMarker("store", store, pinSvg("#2A6F77", "store"), [28, 38]);
-    if (destination) {
-      upsertMarker("dest", destination, pinSvg("#E3A72E", "destination"), [28, 38]);
+    upsertMarker("store", store, pinSvg("#2A6F77", "store"), [28, 38]);
+    {
+      upsertMarker("dest", destination ?? undefined, pinSvg("#E3A72E", "destination"), [28, 38]);
     }
-    if (courier)
-      upsertMarker(
-        "courier",
-        courier,
-        courierScooterSvg("#D9584C", courier.heading || 0),
-        [36, 36],
-      );
+    upsertMarker("courier", courier, courierScooterSvg("#D9584C", courier?.heading || 0), [36, 36]);
+
+    if (interactive && destination && parseCoordinates(destination.lat, destination.lng)) {
+      const key = destination.lat + ":" + destination.lng;
+      if (cameraTarget.current !== key) {
+        cameraTarget.current = key;
+        map.setView([destination.lat, destination.lng], 17);
+      }
+    }
 
     // Render road polyline
     if (polylineRef.current) {
@@ -383,13 +412,21 @@ export function DeliveryMap({
 
       map.fitBounds(polylineRef.current.getBounds(), { padding: [40, 40] });
     }
-  }, [store, destination, courier, routeInfo, phase]);
+  }, [store, destination, courier, routeInfo, phase, loading]);
 
   return (
     <div
       className={`relative overflow-hidden rounded-2xl ring-1 ring-black/10 shadow-md isolate z-0 ${className ?? ""}`}
       style={{ height }}
     >
+      {routeError && (
+        <p
+          role="status"
+          className="absolute bottom-8 left-3 right-3 z-[400] rounded bg-white p-3 text-sm text-amber-700"
+        >
+          {routeError} No road route is displayed.
+        </p>
+      )}
       <div ref={mapContainerRef} className="h-full w-full bg-slate-100" />
 
       {/* Floating Status & Route Summary Banner */}
@@ -400,7 +437,13 @@ export function DeliveryMap({
             <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500"></span>
           </span>
           <span className="text-xs font-medium">
-            {phase === "to_vendor" ? "Partner going to shop 🏪" : "Partner on the way to you 🛵"}
+            {interactive
+              ? "Select the delivery entrance"
+              : !courier
+                ? "Waiting for fresh delivery partner location"
+                : phase === "to_vendor"
+                  ? "Partner going to shop 🏪"
+                  : "Partner on the way to you 🛵"}
           </span>
         </div>
 
@@ -415,7 +458,7 @@ export function DeliveryMap({
 
       {/* Bottom Live Update Status Indicator */}
       <div className="absolute bottom-2 right-2 z-[400] rounded-lg bg-slate-900/80 px-2.5 py-1 font-mono text-[10px] text-slate-300 backdrop-blur-sm">
-        Updated {secAgo}s ago
+        {lastUpdated.getTime() ? `Last GPS update ${secAgo}s ago` : "No live GPS fix"}
       </div>
     </div>
   );

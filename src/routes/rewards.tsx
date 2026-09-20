@@ -2,13 +2,22 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { AppShell } from "@/components/app-shell";
 import {
-  ChevronRight,
-  X,
-  Copy,
-  Check,
-  CheckCircle2,
   Sparkles,
+  Gift,
+  ArrowRight,
+  ChevronRight,
+  Trophy,
+  Star,
+  Clock,
+  TrendingUp,
+  ShieldCheck,
+  Zap,
+  Users,
+  MessageSquare,
+  UserCheck,
+  Cake,
 } from "lucide-react";
+import { m } from "motion/react";
 import {
   REWARD_TIERS,
   REWARD_ACTIONS,
@@ -16,468 +25,307 @@ import {
   SAMPLE_REWARD_HISTORY,
   SAMPLE_REWARDS_SUMMARY,
   type RewardTransaction,
-  type RedeemOption,
 } from "@/lib/rewards-data";
 
 export const Route = createFileRoute("/rewards")({ component: RewardsPage });
 
-export function RewardsPage() {
-  const [summary, setSummary] = useState(SAMPLE_REWARDS_SUMMARY);
-  const [history, setHistory] = useState(SAMPLE_REWARD_HISTORY);
-  const [selectedReward, setSelectedReward] = useState<RedeemOption | null>(null);
-  const [unlockedCoupon, setUnlockedCoupon] = useState<string | null>(null);
-  const [copiedCoupon, setCopiedCoupon] = useState(false);
-  const [showAllRewardsModal, setShowAllRewardsModal] = useState(false);
-  const [showHistoryModal, setShowHistoryModal] = useState(false);
-  const [showBenefitsModal, setShowBenefitsModal] = useState(false);
-  const [redeemedRewardIds, setRedeemedRewardIds] = useState<string[]>([]);
+const tierIcon = (tier: string) => {
+  if (tier === "platinum") return "💎";
+  if (tier === "gold") return "🥇";
+  if (tier === "silver") return "🥈";
+  return "🥉";
+};
 
-  const currentTier = REWARD_TIERS.find((t) => t.id === summary.currentTier)!;
-  const nextTier = REWARD_TIERS.find((t) => t.id === summary.nextTier)!;
+const txColor = (type: RewardTransaction["type"]) => {
+  if (type === "earned" || type === "bonus" || type === "referral") return "text-emerald-600";
+  if (type === "redeemed") return "text-[#981495]";
+  return "text-slate-400";
+};
 
-  const handleRedeemClick = (reward: RedeemOption) => {
-    setSelectedReward(reward);
-    setUnlockedCoupon(null);
-    setCopiedCoupon(false);
-  };
+const txSign = (type: RewardTransaction["type"]) => {
+  if (type === "earned" || type === "bonus" || type === "referral") return "+";
+  return "";
+};
 
-  const handleConfirmRedeem = () => {
-    if (!selectedReward || summary.currentPoints < selectedReward.pointsCost) return;
+function RewardsPage() {
+  const s = SAMPLE_REWARDS_SUMMARY;
+  const currentTier = REWARD_TIERS.find((t) => t.id === s.currentTier)!;
+  const nextTier = REWARD_TIERS.find((t) => t.id === s.nextTier)!;
+  const progress =
+    ((s.currentPoints - currentTier.minPoints) / (nextTier.minPoints - currentTier.minPoints)) *
+    100;
+  const [historyFilter, setHistoryFilter] = useState<"all" | RewardTransaction["type"]>("all");
+  const [showAllActions, setShowAllActions] = useState(false);
 
-    const couponCode = `LOCAL-${selectedReward.value.replace(/[^A-Z0-9]/gi, "").toUpperCase()}-${Math.floor(
-      1000 + Math.random() * 9000
-    )}`;
+  const filteredHistory =
+    historyFilter === "all"
+      ? SAMPLE_REWARD_HISTORY
+      : SAMPLE_REWARD_HISTORY.filter((t) => t.type === historyFilter);
 
-    setSummary((prev) => ({
-      ...prev,
-      currentPoints: prev.currentPoints - selectedReward.pointsCost,
-    }));
-
-    setRedeemedRewardIds((prev) => [...prev, selectedReward.id]);
-
-    const newTx: RewardTransaction = {
-      id: `rt_${Date.now()}`,
-      type: "redeemed",
-      points: -selectedReward.pointsCost,
-      description: `${selectedReward.title} (${couponCode})`,
-      date: new Date().toISOString().split("T")[0],
-    };
-
-    setHistory((prev) => [newTx, ...prev]);
-    setUnlockedCoupon(couponCode);
-  };
-
-  const handleCopyCoupon = (code: string) => {
-    void navigator.clipboard.writeText(code);
-    setCopiedCoupon(true);
-    setTimeout(() => setCopiedCoupon(false), 2000);
-  };
-
-  const scrollToRedeem = () => {
-    const el = document.getElementById("redeem-section");
-    if (el) el.scrollIntoView({ behavior: "smooth" });
-  };
+  const visibleActions = showAllActions ? REWARD_ACTIONS : REWARD_ACTIONS.slice(0, 4);
 
   return (
     <AppShell>
-      <div className="min-h-screen bg-[#FAF9F7] py-6 sm:py-8">
-        <div className="mx-auto max-w-[1100px] px-4 sm:px-6 space-y-8">
-          
-          {/* 1. HEADER */}
-          <div>
-            <div className="flex items-center gap-2 text-xs font-semibold text-slate-500 mb-2">
-              <Link to="/" search={{ category: undefined, q: undefined }} className="hover:text-[#981495] transition-colors">
-                Home
-              </Link>
-              <ChevronRight className="h-3 w-3 text-slate-400" />
-              <span className="text-slate-900 font-bold">Rewards</span>
-            </div>
-            <h1 className="font-display text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
-              Rewards
-            </h1>
-            <p className="text-sm font-medium text-slate-600 mt-0.5">
-              Earn points. Save more when you shop local.
-            </p>
-          </div>
-
-          {/* 2. ELEGANT POINTS BALANCE CARD */}
-          <div className="rounded-2xl bg-white border border-slate-200/90 p-6 sm:p-8 shadow-xs">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
-              <div className="space-y-1">
-                <div className="inline-flex items-center gap-1.5 text-xs font-bold text-[#981495] uppercase tracking-wider">
-                  <Sparkles className="h-4 w-4" />
-                  <span>SharePoints Balance</span>
-                </div>
-
-                <div className="flex items-baseline gap-3 pt-1">
-                  <span className="font-display text-4xl sm:text-5xl font-black text-slate-900 tracking-tight">
-                    {summary.currentPoints.toLocaleString()}
-                  </span>
-                  <span className="text-sm font-semibold text-slate-500">
-                    ≈ ₹{Math.floor(summary.currentPoints / 10)} in rewards
-                  </span>
-                </div>
-
-                <div className="flex items-center gap-2 text-xs font-semibold text-slate-600 pt-2">
-                  <span className="font-bold text-slate-900">{currentTier.name} Member</span>
-                  <span className="text-slate-300">•</span>
-                  <span>{summary.pointsToNextTier} points to {nextTier.name}</span>
-                  <button
-                    type="button"
-                    onClick={() => setShowBenefitsModal(true)}
-                    className="ml-1 text-[#981495] hover:underline font-bold cursor-pointer"
-                  >
-                    [ View benefits ]
-                  </button>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <button
-                  type="button"
-                  onClick={scrollToRedeem}
-                  className="rounded-xl bg-[#981495] hover:bg-purple-800 text-white font-bold px-6 py-3 text-xs uppercase tracking-wider shadow-xs transition-all active:scale-95 cursor-pointer"
-                >
-                  Redeem Points
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* 3. REDEEM REWARDS */}
-          <div id="redeem-section" className="space-y-4">
-            <div className="flex items-end justify-between gap-2">
-              <div>
-                <h2 className="font-display text-xl font-bold text-slate-900 tracking-tight">
-                  Use your points
-                </h2>
-                <p className="text-xs text-slate-500 font-medium mt-0.5">
-                  Simple rewards you can redeem now.
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowAllRewardsModal(true)}
-                className="text-xs font-bold text-[#981495] hover:underline flex items-center gap-1 cursor-pointer"
-              >
-                <span>View all rewards</span>
-                <ChevronRight className="h-3.5 w-3.5" />
-              </button>
-            </div>
-
-            {/* 3 to 4 clean reward cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              {REDEEM_OPTIONS.slice(0, 4).map((reward) => {
-                const canAfford = summary.currentPoints >= reward.pointsCost;
-                const isRedeemed = redeemedRewardIds.includes(reward.id);
-                return (
-                  <div
-                    key={reward.id}
-                    className="flex flex-col justify-between rounded-xl bg-white border border-slate-200/90 p-4 shadow-xs hover:border-[#981495]/40 transition-all"
-                  >
-                    <div>
-                      <div className="flex items-center justify-between text-xs font-bold text-slate-500 mb-2">
-                        <span>{reward.shopName || reward.category}</span>
-                        <span className="text-[#981495] font-black">{reward.pointsCost} pts</span>
-                      </div>
-                      <h3 className="font-display text-base font-bold text-slate-900 leading-snug">
-                        {reward.title}
-                      </h3>
-                      <p className="text-xs text-slate-500 mt-1 font-medium">
-                        {reward.description}
-                      </p>
-                    </div>
-
-                    <button
-                      type="button"
-                      disabled={!canAfford || isRedeemed}
-                      onClick={() => handleRedeemClick(reward)}
-                      className={`mt-4 w-full rounded-lg py-2 text-xs font-bold transition-all cursor-pointer ${
-                        isRedeemed
-                          ? "bg-emerald-100 text-emerald-800"
-                          : canAfford
-                            ? "bg-[#981495] hover:bg-purple-800 text-white shadow-xs active:scale-95"
-                            : "bg-slate-100 text-slate-400 cursor-not-allowed"
-                      }`}
-                    >
-                      {isRedeemed ? "✓ Redeemed" : canAfford ? "Redeem" : "Need Points"}
-                    </button>
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* 4. LOCAL SHOP CONNECTION (Contextual Small Bar) */}
-            <div className="rounded-xl bg-white border border-amber-200/90 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
-              <div className="flex items-center gap-3">
-                <span className="text-xl">🏪</span>
-                <div>
-                  <p className="font-bold text-slate-900">Shop local and earn more</p>
-                  <p className="text-slate-500 font-medium">Earn bonus SharePoints at participating nearby shops.</p>
-                </div>
-              </div>
-              <Link
-                to="/"
-                search={{ category: "all-shops", q: undefined }}
-                className="inline-flex items-center justify-center rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-bold px-4 py-2 text-xs transition-colors shrink-0"
-              >
-                Explore local shops
-              </Link>
-            </div>
-          </div>
-
-          {/* 5. EARN POINTS & RECENT ACTIVITY (Clean Two-Column Grid) */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            
-            {/* EARN POINTS LIST */}
-            <div className="space-y-3">
-              <h2 className="font-display text-xl font-bold text-slate-900 tracking-tight">
-                Earn SharePoints
-              </h2>
-
-              <div className="divide-y divide-slate-100 bg-white rounded-2xl border border-slate-200/90 overflow-hidden">
-                {REWARD_ACTIONS.slice(0, 5).map((action) => (
-                  <div key={action.id} className="flex items-center justify-between p-4 text-xs hover:bg-slate-50/80 transition-colors">
-                    <div className="flex items-center gap-3">
-                      <span className="text-lg">{action.icon}</span>
-                      <div>
-                        <p className="font-bold text-slate-900">{action.title}</p>
-                        <p className="text-slate-500 font-medium text-[11px]">{action.description}</p>
-                      </div>
-                    </div>
-                    <span className="font-extrabold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-md border border-emerald-200/60 shrink-0">
-                      +{action.points} pts
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* RECENT ACTIVITY */}
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <h2 className="font-display text-xl font-bold text-slate-900 tracking-tight">
-                  Recent activity
-                </h2>
-                <button
-                  type="button"
-                  onClick={() => setShowHistoryModal(true)}
-                  className="text-xs font-bold text-[#981495] hover:underline flex items-center gap-1 cursor-pointer"
-                >
-                  <span>View all</span>
-                  <ChevronRight className="h-3.5 w-3.5" />
-                </button>
-              </div>
-
-              <div className="divide-y divide-slate-100 bg-white rounded-2xl border border-slate-200/90 overflow-hidden">
-                {history.slice(0, 4).map((tx) => (
-                  <div key={tx.id} className="flex items-center justify-between p-4 text-xs hover:bg-slate-50/80 transition-colors">
-                    <div>
-                      <p className="font-bold text-slate-900">{tx.description}</p>
-                      <p className="text-[11px] text-slate-400 font-medium mt-0.5">{tx.date}</p>
-                    </div>
-                    <span className={`font-extrabold text-sm ${tx.type === "redeemed" ? "text-[#981495]" : "text-emerald-700"}`}>
-                      {tx.type === "redeemed" ? "" : "+"}{tx.points} pts
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
+      <div className="mx-auto max-w-5xl px-4 py-6 sm:px-6">
+        {/* Breadcrumb */}
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <Link
+            to="/"
+            search={{ category: undefined, q: undefined }}
+            className="hover:text-primary"
+          >
+            Home
+          </Link>
+          <ChevronRight className="h-3 w-3" />
+          <span className="font-semibold text-foreground">Rewards</span>
         </div>
 
-        {/* MODALS */}
-        {/* Redeem Confirmation Modal */}
-        {selectedReward && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs">
-            <div className="relative w-full max-w-md rounded-2xl bg-white p-6 shadow-xl border border-slate-200">
-              <button
-                type="button"
-                onClick={() => setSelectedReward(null)}
-                className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 cursor-pointer"
-              >
-                <X className="h-5 w-5" />
-              </button>
+        {/* ── Hero Points Card ──────────────────────────────────────────── */}
+        <m.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4 }}
+          className="mt-5 overflow-hidden rounded-3xl bg-gradient-to-br from-[#981495] via-[#981495] to-fuchsia-900 p-6 text-white shadow-xl sm:p-8"
+        >
+          <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <div className="flex items-center gap-2">
+                <Sparkles className="h-5 w-5 text-amber-300" />
+                <span className="text-xs font-bold uppercase tracking-widest text-[#f0abfc]">
+                  LocalShore Rewards
+                </span>
+              </div>
+              <p className="mt-3 font-display text-4xl font-extrabold sm:text-5xl">
+                🪙 {s.currentPoints.toLocaleString()}
+              </p>
+              <p className="mt-1 text-sm font-semibold text-[#f0abfc]">Shore Points</p>
 
-              {!unlockedCoupon ? (
-                <div>
-                  <h3 className="text-lg font-bold text-slate-900">{selectedReward.title}</h3>
-                  <p className="text-xs text-slate-500 mt-1">{selectedReward.description}</p>
+              <div className="mt-4 flex flex-wrap gap-3">
+                <span className="rounded-full bg-white/15 px-3 py-1 text-xs font-bold">
+                  {tierIcon(s.currentTier)} {currentTier.name} Member
+                </span>
+                <span className="rounded-full bg-white/10 px-3 py-1 text-xs">
+                  +{s.earnedThisMonth} this month
+                </span>
+              </div>
+            </div>
 
-                  <div className="my-4 rounded-xl bg-slate-50 p-4 space-y-2 text-xs">
-                    <div className="flex justify-between">
-                      <span className="text-slate-500">Points Cost</span>
-                      <span className="font-bold text-slate-900">{selectedReward.pointsCost} points</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-500">Your Balance</span>
-                      <span className="font-bold text-emerald-700">{summary.currentPoints} points</span>
-                    </div>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={handleConfirmRedeem}
-                    className="w-full rounded-xl bg-[#981495] hover:bg-purple-800 text-white font-bold py-3 text-xs uppercase tracking-wider transition-all cursor-pointer"
-                  >
-                    Confirm & Redeem
-                  </button>
-                </div>
-              ) : (
-                <div className="text-center py-2">
-                  <div className="mx-auto h-12 w-12 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-xl mb-3">
-                    ✓
-                  </div>
-                  <h3 className="text-lg font-bold text-slate-900">Reward Unlocked!</h3>
-                  <p className="text-xs text-slate-500 mt-1">Coupon code for {selectedReward.title}:</p>
-
-                  <div className="my-4 rounded-xl bg-amber-50 border border-dashed border-amber-300 p-3 flex items-center justify-between">
-                    <span className="font-mono text-sm font-bold text-slate-900">{unlockedCoupon}</span>
-                    <button
-                      type="button"
-                      onClick={() => handleCopyCoupon(unlockedCoupon)}
-                      className="inline-flex items-center gap-1 rounded-md bg-slate-900 text-white px-2.5 py-1 text-xs font-bold cursor-pointer"
-                    >
-                      {copiedCoupon ? <Check className="h-3.5 w-3.5 text-emerald-400" /> : <Copy className="h-3.5 w-3.5" />}
-                      <span>{copiedCoupon ? "Copied" : "Copy"}</span>
-                    </button>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => setSelectedReward(null)}
-                    className="w-full rounded-xl bg-slate-900 text-white font-bold py-2.5 text-xs transition-all cursor-pointer"
-                  >
-                    Done
-                  </button>
-                </div>
+            <div className="min-w-[200px] rounded-2xl bg-white/10 p-4 backdrop-blur-sm sm:text-right">
+              <p className="text-xs font-bold uppercase text-[#f0abfc]">Next: {nextTier.name}</p>
+              <p className="mt-1 text-sm font-bold">{s.pointsToNextTier} points away</p>
+              <div className="mt-3 h-2 overflow-hidden rounded-full bg-white/20">
+                <m.div
+                  initial={{ width: 0 }}
+                  animate={{ width: `${Math.min(progress, 100)}%` }}
+                  transition={{ duration: 0.8, ease: "easeOut" }}
+                  className="h-full rounded-full bg-amber-400"
+                />
+              </div>
+              {s.expiringPoints > 0 && (
+                <p className="mt-2 text-[11px] text-amber-300">
+                  ⏰ {s.expiringPoints} points expiring {s.expiringDate}
+                </p>
               )}
             </div>
           </div>
-        )}
+        </m.div>
 
-        {/* View All Rewards Modal */}
-        {showAllRewardsModal && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs">
-            <div className="relative w-full max-w-3xl max-h-[80vh] flex flex-col rounded-2xl bg-white p-6 shadow-xl border border-slate-200">
-              <button
-                type="button"
-                onClick={() => setShowAllRewardsModal(false)}
-                className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 cursor-pointer"
+        {/* ── Stats Row ────────────────────────────────────────────────── */}
+        <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+          {[
+            {
+              label: "Current Points",
+              value: s.currentPoints.toLocaleString(),
+              icon: Sparkles,
+              color: "text-[#981495] bg-[var(--sand)]",
+            },
+            {
+              label: "This Month",
+              value: `+${s.earnedThisMonth}`,
+              icon: TrendingUp,
+              color: "text-emerald-700 bg-emerald-50",
+            },
+            {
+              label: "Lifetime",
+              value: s.lifetimePoints.toLocaleString(),
+              icon: Trophy,
+              color: "text-amber-700 bg-amber-50",
+            },
+            {
+              label: "Expiring Soon",
+              value: s.expiringPoints.toString(),
+              icon: Clock,
+              color: "text-rose-600 bg-rose-50",
+            },
+          ].map((stat) => (
+            <div
+              key={stat.label}
+              className="rounded-2xl border border-slate-200 bg-white p-4 shadow-xs"
+            >
+              <div
+                className={`inline-flex h-9 w-9 items-center justify-center rounded-xl ${stat.color}`}
               >
-                <X className="h-5 w-5" />
-              </button>
-
-              <h3 className="text-lg font-bold text-slate-900 mb-1">All Available Rewards</h3>
-              <p className="text-xs text-slate-500 mb-4">Choose any reward to redeem with your SharePoints balance</p>
-
-              <div className="overflow-y-auto grid grid-cols-1 sm:grid-cols-2 gap-3 pr-1 flex-1">
-                {REDEEM_OPTIONS.map((reward) => {
-                  const canAfford = summary.currentPoints >= reward.pointsCost;
-                  const isRedeemed = redeemedRewardIds.includes(reward.id);
-                  return (
-                    <div key={reward.id} className="flex flex-col justify-between rounded-xl bg-slate-50 p-4 border border-slate-200">
-                      <div>
-                        <div className="flex items-center justify-between text-xs font-bold text-slate-500 mb-1">
-                          <span>{reward.shopName || reward.category}</span>
-                          <span className="text-[#981495] font-black">{reward.pointsCost} pts</span>
-                        </div>
-                        <h4 className="font-bold text-sm text-slate-900">{reward.title}</h4>
-                        <p className="text-xs text-slate-500 mt-0.5">{reward.description}</p>
-                      </div>
-                      <button
-                        type="button"
-                        disabled={!canAfford || isRedeemed}
-                        onClick={() => {
-                          setShowAllRewardsModal(false);
-                          handleRedeemClick(reward);
-                        }}
-                        className={`mt-3 w-full rounded-lg py-2 text-xs font-bold transition-all cursor-pointer ${
-                          isRedeemed
-                            ? "bg-emerald-100 text-emerald-800"
-                            : canAfford
-                              ? "bg-[#981495] text-white hover:bg-purple-800"
-                              : "bg-slate-200 text-slate-400 cursor-not-allowed"
-                        }`}
-                      >
-                        {isRedeemed ? "✓ Redeemed" : canAfford ? "Redeem" : "Need Points"}
-                      </button>
-                    </div>
-                  );
-                })}
+                <stat.icon className="h-4 w-4" />
               </div>
+              <p className="mt-2 font-display text-xl font-extrabold text-slate-900">
+                {stat.value}
+              </p>
+              <p className="text-[11px] font-semibold text-slate-500">{stat.label}</p>
             </div>
-          </div>
-        )}
+          ))}
+        </div>
 
-        {/* Benefits Modal */}
-        {showBenefitsModal && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs">
-            <div className="relative w-full max-w-md rounded-2xl bg-white p-6 shadow-xl border border-slate-200">
-              <button
-                type="button"
-                onClick={() => setShowBenefitsModal(false)}
-                className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 cursor-pointer"
-              >
-                <X className="h-5 w-5" />
-              </button>
-
-              <h3 className="text-lg font-bold text-slate-900 mb-1">{currentTier.name} Membership Benefits</h3>
-              <p className="text-xs text-slate-500 mb-4">Your current tier perks & roadmap</p>
-
-              <div className="space-y-2 text-xs">
-                {currentTier.benefits.map((b) => (
-                  <div key={b} className="flex items-center gap-2 font-medium text-slate-700 bg-slate-50 p-2.5 rounded-lg">
-                    <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
-                    <span>{b}</span>
+        {/* ── Reward Tiers ─────────────────────────────────────────────── */}
+        <section className="mt-8">
+          <h2 className="font-display text-lg font-bold text-slate-900">Membership Tiers</h2>
+          <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
+            {REWARD_TIERS.map((tier) => {
+              const isActive = tier.id === s.currentTier;
+              return (
+                <div
+                  key={tier.id}
+                  className={`rounded-2xl border p-4 transition ${
+                    isActive
+                      ? "border-[#f0abfc] bg-[var(--sand)] ring-2 ring-[#f0abfc]"
+                      : "border-slate-200 bg-white"
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="text-lg">{tierIcon(tier.id)}</span>
+                    <span className="text-sm font-bold text-slate-900">{tier.name}</span>
+                    {isActive && (
+                      <span className="rounded-full bg-[#981495] px-2 py-0.5 text-[9px] font-bold text-white">
+                        You
+                      </span>
+                    )}
                   </div>
-                ))}
-              </div>
-
-              <button
-                type="button"
-                onClick={() => setShowBenefitsModal(false)}
-                className="mt-5 w-full rounded-xl bg-slate-900 text-white font-bold py-2.5 text-xs"
-              >
-                Close
-              </button>
-            </div>
+                  <p className="mt-1 text-[11px] text-slate-500">
+                    {tier.minPoints.toLocaleString()}+ points
+                  </p>
+                  <ul className="mt-2 space-y-1">
+                    {tier.benefits.slice(0, 2).map((b) => (
+                      <li key={b} className="text-[11px] text-slate-600">
+                        • {b}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              );
+            })}
           </div>
-        )}
+        </section>
 
-        {/* History Modal */}
-        {showHistoryModal && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs">
-            <div className="relative w-full max-w-lg max-h-[80vh] flex flex-col rounded-2xl bg-white p-6 shadow-xl border border-slate-200">
-              <button
-                type="button"
-                onClick={() => setShowHistoryModal(false)}
-                className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 cursor-pointer"
-              >
-                <X className="h-5 w-5" />
-              </button>
-
-              <h3 className="text-lg font-bold text-slate-900 mb-1">Full Activity History</h3>
-              <p className="text-xs text-slate-500 mb-3">Complete log of points earned and spent</p>
-
-              <div className="overflow-y-auto divide-y divide-slate-100 space-y-1 flex-1 pr-1">
-                {history.map((tx) => (
-                  <div key={tx.id} className="flex items-center justify-between py-2.5 text-xs">
-                    <div>
-                      <p className="font-bold text-slate-900">{tx.description}</p>
-                      <p className="text-[11px] text-slate-400 font-medium">{tx.date}</p>
-                    </div>
-                    <span className={`font-bold text-sm ${tx.type === "redeemed" ? "text-[#981495]" : "text-emerald-700"}`}>
-                      {tx.type === "redeemed" ? "" : "+"}{tx.points} pts
-                    </span>
+        <div className="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-2">
+          {/* ── Earn Points ──────────────────────────────────────────── */}
+          <section>
+            <h2 className="font-display text-lg font-bold text-slate-900">Ways to Earn</h2>
+            <p className="mt-0.5 text-xs text-slate-500">Complete actions to earn Shore Points</p>
+            <div className="mt-3 space-y-2">
+              {visibleActions.map((action) => (
+                <div
+                  key={action.id}
+                  className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white p-3.5 transition hover:border-[#f0abfc] hover:shadow-xs"
+                >
+                  <span className="text-xl">{action.icon}</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-bold text-slate-900">{action.title}</p>
+                    <p className="text-[11px] text-slate-500">{action.description}</p>
                   </div>
-                ))}
-              </div>
+                  <span className="shrink-0 rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700">
+                    +{action.points} pts
+                  </span>
+                </div>
+              ))}
+              {!showAllActions && REWARD_ACTIONS.length > 4 && (
+                <button
+                  onClick={() => setShowAllActions(true)}
+                  className="w-full rounded-xl bg-slate-50 py-2.5 text-xs font-bold text-[#981495] hover:bg-[var(--sand)] transition"
+                >
+                  Show all {REWARD_ACTIONS.length} ways to earn →
+                </button>
+              )}
             </div>
-          </div>
-        )}
+          </section>
 
+          {/* ── Redeem Points ────────────────────────────────────────── */}
+          <section>
+            <h2 className="font-display text-lg font-bold text-slate-900">Redeem Points</h2>
+            <p className="mt-0.5 text-xs text-slate-500">Use your points for rewards</p>
+            <div className="mt-3 space-y-2">
+              {REDEEM_OPTIONS.map((opt) => (
+                <div
+                  key={opt.id}
+                  className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white p-3.5 transition hover:border-[#f0abfc] hover:shadow-xs"
+                >
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-bold text-slate-900">{opt.title}</p>
+                    <p className="text-[11px] text-slate-500">{opt.description}</p>
+                  </div>
+                  <button
+                    disabled={s.currentPoints < opt.pointsCost}
+                    className="shrink-0 rounded-xl bg-[#981495] px-3 py-2 text-xs font-bold text-white shadow-xs transition hover:bg-[#981495] disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    {opt.pointsCost} pts
+                  </button>
+                </div>
+              ))}
+            </div>
+          </section>
+        </div>
+
+        {/* ── Transaction History ───────────────────────────────────── */}
+        <section className="mt-8 pb-8">
+          <div className="flex items-center justify-between">
+            <h2 className="font-display text-lg font-bold text-slate-900">Points History</h2>
+          </div>
+          <div className="mt-3 flex gap-2 overflow-x-auto pb-2">
+            {(["all", "earned", "redeemed", "bonus", "referral", "expired"] as const).map((f) => (
+              <button
+                key={f}
+                onClick={() => setHistoryFilter(f)}
+                className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-bold capitalize transition ${
+                  historyFilter === f
+                    ? "bg-[#981495] text-white"
+                    : "bg-slate-100 text-slate-600 hover:bg-[var(--sand)]"
+                }`}
+              >
+                {f}
+              </button>
+            ))}
+          </div>
+          <div className="mt-3 space-y-2">
+            {filteredHistory.length === 0 ? (
+              <div className="rounded-2xl border border-dashed border-slate-200 p-6 text-center">
+                <p className="text-sm text-slate-500">No transactions in this category</p>
+              </div>
+            ) : (
+              filteredHistory.map((tx) => (
+                <div
+                  key={tx.id}
+                  className="flex items-center gap-3 rounded-2xl border border-slate-100 bg-white p-3.5"
+                >
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-slate-900">{tx.description}</p>
+                    <p className="text-[11px] text-slate-400">
+                      {tx.orderId && <span className="font-mono">{tx.orderId} · </span>}
+                      {new Date(tx.date).toLocaleDateString("en-IN", {
+                        day: "numeric",
+                        month: "short",
+                        year: "numeric",
+                      })}
+                    </p>
+                  </div>
+                  <span
+                    className={`shrink-0 font-display text-base font-extrabold ${txColor(tx.type)}`}
+                  >
+                    {txSign(tx.type)}
+                    {Math.abs(tx.points)}
+                  </span>
+                </div>
+              ))
+            )}
+          </div>
+        </section>
       </div>
     </AppShell>
   );

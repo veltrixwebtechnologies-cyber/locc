@@ -5,6 +5,7 @@ import { Locate, RefreshCw } from "lucide-react";
 import type { MapMarkerItem, MapLocation } from "@/lib/map-service/types";
 import { getMapLibreStyle } from "@/lib/map-service/providers";
 import { ShopCardSheet } from "./shop-card-sheet";
+import { getFallbackProductImage, isValidImageUrl } from "@/lib/image-utils";
 
 export interface InteractiveMapViewRef {
   flyToLocation: (lat: number, lng: number, zoom?: number) => void;
@@ -323,20 +324,12 @@ export const InteractiveMapView = forwardRef<InteractiveMapViewRef, Props>(
           // Always sync priceDisplay and shopName DOM content
           const pill = el.querySelector(".marker-price-pill");
           if (pill) {
-            pill.innerHTML = `
-              <span class="font-extrabold">${marker.priceDisplay}</span>
-              <span class="shop-name-tag">${marker.shopName}</span>
-            `;
+            pill.innerHTML = markerPillMarkup(marker);
           }
         } else {
           const pinEl = document.createElement("div");
           pinEl.className = getMarkerClass(isSelected, isHovered);
-          pinEl.innerHTML = `
-            <div class="marker-price-pill shadow-md transition-all">
-              <span class="font-extrabold">${marker.priceDisplay}</span>
-              <span class="shop-name-tag">${marker.shopName}</span>
-            </div>
-          `;
+          pinEl.innerHTML = `<div class="marker-price-pill shadow-md transition-all">${markerPillMarkup(marker)}</div>`;
 
           pinEl.addEventListener("click", (e) => {
             e.stopPropagation();
@@ -435,19 +428,35 @@ export const InteractiveMapView = forwardRef<InteractiveMapViewRef, Props>(
           .marker-price-pill {
             display: inline-flex !important;
             align-items: center !important;
-            gap: 6px !important;
+            gap: 7px !important;
             width: auto !important;
-            max-width: max-content !important;
+            height: auto !important;
+            max-width: 220px !important;
             background-color: #ffffff;
             color: #111827;
             border: 1.5px solid #e5e7eb;
             border-radius: 9999px;
-            padding: 5px 12px;
+            padding: 5px 12px 5px 5px !important;
             font-size: 13px;
             font-weight: 800;
             white-space: nowrap !important;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.16);
             transition: all 0.15s ease-in-out;
+          }
+          .marker-shop-image {
+            width: 28px;
+            height: 28px;
+            flex: 0 0 28px;
+            border-radius: 9px;
+            object-fit: cover;
+            border: 2px solid rgba(255,255,255,0.9);
+            background: #f3f4f6;
+          }
+          .marker-price-content {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            min-width: 0;
           }
           .shop-name-tag {
             font-size: 11px;
@@ -475,6 +484,26 @@ export const InteractiveMapView = forwardRef<InteractiveMapViewRef, Props>(
           .selected .shop-name-tag {
             border-left-color: rgba(255, 255, 255, 0.3);
             opacity: 0.95;
+          }
+          @media (max-width: 900px) {
+            .maplibre-marker-pin {
+              max-width: 116px !important;
+            }
+            .marker-price-pill {
+              max-width: 116px !important;
+              padding: 3px 6px 3px 3px !important;
+              gap: 4px !important;
+              font-size: 10px;
+              box-shadow: 0 2px 8px rgba(30, 27, 75, 0.16);
+            }
+            .marker-shop-image {
+              width: 21px;
+              height: 21px;
+              flex-basis: 21px;
+              border-radius: 6px;
+            }
+            .marker-price-content { gap: 3px; }
+            .shop-name-tag { max-width: 52px; font-size: 9px; padding-left: 3px; }
           }
         `}</style>
 
@@ -569,6 +598,26 @@ export const InteractiveMapView = forwardRef<InteractiveMapViewRef, Props>(
 
 function getMarkerClass(isSelected: boolean, isHovered: boolean): string {
   return `maplibre-marker-pin ${isSelected ? "selected" : ""} ${isHovered ? "hovered" : ""}`;
+}
+
+function escapeAttribute(value: string): string {
+  return value.replace(
+    /[&<>"']/g,
+    (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char]!,
+  );
+}
+
+function markerPillMarkup(marker: MapMarkerItem): string {
+  const image = isValidImageUrl(marker.productImage)
+    ? marker.productImage
+    : getFallbackProductImage(marker.productName, marker.category);
+  return `
+    <img class="marker-shop-image" src="${escapeAttribute(image)}" alt="" aria-hidden="true" />
+    <span class="marker-price-content">
+      <span class="font-extrabold">${escapeAttribute(marker.priceDisplay)}</span>
+      <span class="shop-name-tag">${escapeAttribute(marker.shopName)}</span>
+    </span>
+  `;
 }
 
 InteractiveMapView.displayName = "InteractiveMapView";

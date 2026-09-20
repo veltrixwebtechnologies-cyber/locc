@@ -246,17 +246,9 @@ function OrderPage() {
     if (order?.partner?.lat && order?.partner?.lng && destination) {
       return { lat: order.partner.lat, lng: order.partner.lng, label: order.partner.name };
     }
-    const storeLoc =
-      order?.storeCoordinates ?? (store ? { lat: store.lat, lng: store.lng } : undefined);
-    if (!storeLoc || !status || !destination) return undefined;
-    const steps = Math.max(1, orderStatusFlow.length - 1);
-    const validIndex = Math.max(0, currentIndex);
-    const t = Math.min(0.95, Math.max(0.05, validIndex / steps));
-    if (status === "delivered" || status === "new" || status === "accepted") return undefined;
-    return {
-      lat: storeLoc.lat + (destination.lat - storeLoc.lat) * t,
-      lng: storeLoc.lng + (destination.lng - storeLoc.lng) * t,
-    };
+    // Never interpolate a fake rider position from order status. The map gets
+    // the authoritative live position from delivery_assignments.
+    return undefined;
   }, [order?.partner, order?.storeCoordinates, store, destination, currentIndex, status]);
 
   if (isLoading) {
@@ -449,8 +441,14 @@ function OrderPage() {
         </ul>
         <div className="mt-3 space-y-1.5 border-t hairline pt-3 font-mono text-xs">
           <Row label="Item subtotal" value={`₹${order.subtotal}`} />
-          <Row label="Govt. Taxes & GST (5% incl.)" value={`₹${Math.round(order.subtotal * 0.05)}`} />
-          <Row label="Delivery fee" value={order.deliveryFee === 0 ? "FREE" : `₹${order.deliveryFee}`} />
+          <Row
+            label="Govt. Taxes & GST (5% incl.)"
+            value={`₹${Math.round(order.subtotal * 0.05)}`}
+          />
+          <Row
+            label="Delivery fee"
+            value={order.deliveryFee === 0 ? "FREE" : `₹${order.deliveryFee}`}
+          />
           <Row label="Platform & packaging fee" value={order.subtotal > 500 ? "FREE" : "₹5"} />
           {order.discountAmount && order.discountAmount > 0 ? (
             <div className="flex items-center justify-between text-xs text-emerald-600 font-bold py-0.5">
@@ -529,7 +527,10 @@ function CancelOrderModal({
 
     setIsSubmitting(true);
     try {
-      await cancelOrder(order.id, finalReason);
+      const cancelled = await cancelOrder(order.id, finalReason);
+      if (!cancelled) {
+        throw new Error("This order can no longer be cancelled or was not found.");
+      }
       toast.success(`Order #${order.code} cancelled successfully`);
       onCancelled();
     } catch (err: any) {
@@ -613,7 +614,8 @@ function CancelOrderModal({
           )}
 
           <div className="rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200/60 p-3 text-[11px] text-amber-800 dark:text-amber-300">
-            💡 <strong>Note:</strong> Prepaid orders will be automatically refunded to your original payment method within 1–2 business days.
+            💡 <strong>Note:</strong> Prepaid orders will be automatically refunded to your original
+            payment method within 1–2 business days.
           </div>
         </div>
 

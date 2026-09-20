@@ -152,7 +152,9 @@ function SwiggyShopCard({
                 {offers.overlayTag}
               </p>
               <p className="text-[11px] font-semibold text-white/80">
-                {store.etaMin} MINS · {store.distanceKm.toFixed(1)} km
+                {store.distanceKm !== undefined
+                  ? `${store.etaMin} MINS · ${store.distanceKm.toFixed(1)} km`
+                  : "Explore this shop"}
               </p>
             </div>
 
@@ -220,7 +222,7 @@ function SwiggyShopCard({
 /* ─── main shop row ────────────────────────────────────────────────────── */
 export function SwiggyShopRow({
   stores,
-  title = "Top shops near you",
+  title = "Recommended Shops",
   activeCategory,
   onSelectCategory,
 }: {
@@ -275,8 +277,6 @@ export function SwiggyShopRow({
 
   return (
     <section className="mt-8 px-5 md:px-8" aria-label={title}>
-
-
       {/* Header row */}
       <div className="mb-4 flex items-center justify-between">
         <div>
@@ -507,7 +507,10 @@ function CategoryCircle({
     <div className="shrink-0">
       <Link
         to="/"
-        search={{ category: cat.id === "all" || cat.id === "all-shops" ? undefined : cat.id, q: undefined }}
+        search={{
+          category: cat.id === "all" || cat.id === "all-shops" ? undefined : cat.id,
+          q: undefined,
+        }}
         resetScroll={false}
         onClick={scrollToShops}
         className="group flex flex-col items-center gap-1.5"

@@ -220,19 +220,6 @@ export function OrderSupport({ order }: { order: Order }) {
       if (!data) throw new Error("Support ticket was created without an id.");
       setSubmittedId(data.id);
       toast.success("Your issue has been sent to support.");
-      void withTimeout(
-        (supabase as any).from("notifications").insert({
-          user_id: user.id,
-          title: "Support request received",
-          body: `We received your ${labelFor(issue)} request for order ${order.code}.`,
-          kind: "info",
-          link: "/support",
-        }),
-        "Support notification delivery timed out.",
-        5_000,
-      ).catch((notificationError) => {
-        console.warn("Support ticket created, but notification delivery failed", notificationError);
-      });
     } catch (error) {
       console.error("support case submission failed", error);
       toast.error(error instanceof Error ? error.message : "Could not submit the support request.");

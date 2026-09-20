@@ -48,7 +48,7 @@ export function getSubcategoriesForCategory(categoryId?: string | null): Subcate
  */
 export function getProductTypesForSubcategory(
   categoryId?: string | null,
-  subcategoryId?: string | null
+  subcategoryId?: string | null,
 ): ProductTypeTaxonomy[] {
   const subcategories = getSubcategoriesForCategory(categoryId);
   if (!subcategoryId || subcategoryId === "all") {
@@ -64,7 +64,7 @@ export function getProductTypesForSubcategory(
 export function getActiveAttributeFilters(
   categoryId?: string | null,
   subcategoryId?: string | null,
-  productTypeId?: string | null
+  productTypeId?: string | null,
 ): DynamicAttributeFilter[] {
   const taxonomy = getCategoryTaxonomy(categoryId);
   const filters: DynamicAttributeFilter[] = [...taxonomy.categoryFilters];
@@ -145,7 +145,7 @@ export function filterStoreByState(store: Store, state: ActiveFilterState): bool
 export function filterProductByState(
   product: Product & Record<string, any>,
   state: ActiveFilterState,
-  excludeAttributeKey?: string
+  excludeAttributeKey?: string,
 ): boolean {
   // Category check
   if (state.categoryId && state.categoryId !== "all") {
@@ -180,11 +180,20 @@ export function filterProductByState(
     if (val == null) {
       return false;
     } else if (Array.isArray(val)) {
-      const match = selectedValues.some((sv) => val.map((v) => String(v).toLowerCase()).includes(sv.toLowerCase()));
+      const match = selectedValues.some((sv) =>
+        val.map((v) => String(v).toLowerCase()).includes(sv.toLowerCase()),
+      );
       if (!match) return false;
     } else {
       const valStr = String(val).toLowerCase();
-      const match = selectedValues.some((sv) => valStr === sv.toLowerCase() || valStr.split(",").map((s) => s.trim().toLowerCase()).includes(sv.toLowerCase()));
+      const match = selectedValues.some(
+        (sv) =>
+          valStr === sv.toLowerCase() ||
+          valStr
+            .split(",")
+            .map((s) => s.trim().toLowerCase())
+            .includes(sv.toLowerCase()),
+      );
       if (!match) return false;
     }
   }
@@ -199,7 +208,7 @@ export function filterProductByState(
 export function calculateContextAwareFacets(
   products: Array<Product & Record<string, any>>,
   filterDef: DynamicAttributeFilter,
-  state: ActiveFilterState
+  state: ActiveFilterState,
 ): DynamicAttributeFilter {
   const optionsWithCounts = filterDef.options.map((opt) => {
     const count = products.filter((prod) => {
@@ -214,7 +223,13 @@ export function calculateContextAwareFacets(
         return val.some((v) => String(v).toLowerCase() === opt.value.toLowerCase());
       } else {
         const valStr = String(val).toLowerCase();
-        return valStr === opt.value.toLowerCase() || valStr.split(",").map((s) => s.trim().toLowerCase()).includes(opt.value.toLowerCase());
+        return (
+          valStr === opt.value.toLowerCase() ||
+          valStr
+            .split(",")
+            .map((s) => s.trim().toLowerCase())
+            .includes(opt.value.toLowerCase())
+        );
       }
     }).length;
 
@@ -226,4 +241,3 @@ export function calculateContextAwareFacets(
     options: optionsWithCounts,
   };
 }
-

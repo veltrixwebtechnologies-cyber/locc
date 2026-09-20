@@ -628,7 +628,7 @@ function AuthPage() {
                 </svg>
 
                 {/* Rider Icon Badge */}
-                <div className="absolute top-2.5 grid h-8 w-8 place-items-center rounded-xl bg-[#981495] text-white border border-[#f0abfc] shadow-lg shadow-purple-950/70 animate-bounce">
+                <div className="absolute top-2.5 grid h-8 w-8 place-items-center rounded-xl bg-[#981495] text-white border border-[#f0abfc] shadow-lg shadow-[#700b6e]/70 animate-bounce">
                   <Truck className="h-4 w-4" />
                 </div>
               </div>

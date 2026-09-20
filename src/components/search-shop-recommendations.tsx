@@ -1,6 +1,14 @@
 import { useRef } from "react";
 import { Link } from "@tanstack/react-router";
-import { Star, MapPin, ChevronRight, ChevronLeft, Store as StoreIcon, Sparkles, Tag } from "lucide-react";
+import {
+  Star,
+  MapPin,
+  ChevronRight,
+  ChevronLeft,
+  Store as StoreIcon,
+  Sparkles,
+  Tag,
+} from "lucide-react";
 import { useSearchShopRecommendations } from "@/hooks/use-search-shop-recommendations";
 import { resolveImageUrl } from "@/lib/image-utils";
 import { m } from "motion/react";
@@ -38,7 +46,7 @@ export function SearchShopRecommendations({
       {/* Contextual Header */}
       <div className="flex flex-wrap items-end justify-between gap-4 mb-5">
         <div>
-          <div className="inline-flex items-center gap-1.5 rounded-full bg-purple-100/90 px-3 py-1 text-xs font-black text-[#981495] border border-purple-200 shadow-2xs mb-2">
+          <div className="inline-flex items-center gap-1.5 rounded-full bg-[var(--sand)]/90 px-3 py-1 text-xs font-black text-[#981495] border border-[#f0abfc] shadow-2xs mb-2">
             <Sparkles className="h-3.5 w-3.5 text-amber-500 fill-amber-400" />
             <span>Search Match Engine</span>
           </div>
@@ -48,7 +56,8 @@ export function SearchShopRecommendations({
           </h3>
 
           <p className="text-xs sm:text-sm text-slate-500 font-medium mt-1">
-            Compare nearby local stores matching <strong className="text-purple-900">"{formattedQuery}"</strong>
+            Compare nearby local stores matching{" "}
+            <strong className="text-[#981495]">"{formattedQuery}"</strong>
             {currentShopName ? ` besides ${currentShopName}` : ""}
           </p>
         </div>
@@ -57,7 +66,7 @@ export function SearchShopRecommendations({
           <Link
             to="/search"
             search={{ q: formattedQuery }}
-            className="text-xs font-extrabold text-[#981495] hover:text-purple-800 hover:underline flex items-center gap-1 bg-purple-50 px-3.5 py-2 rounded-full border border-purple-200/70 transition-all"
+            className="text-xs font-extrabold text-[#981495] hover:text-[#981495] hover:underline flex items-center gap-1 bg-[var(--sand)] px-3.5 py-2 rounded-full border border-[#f0abfc]/70 transition-all"
           >
             <span>View All Shops ({recommendations.length})</span>
             <ChevronRight className="h-4 w-4" />
@@ -67,7 +76,7 @@ export function SearchShopRecommendations({
             <button
               type="button"
               onClick={() => scroll("left")}
-              className="grid h-9 w-9 place-items-center rounded-full border border-amber-300/80 bg-white text-slate-700 hover:bg-purple-50 hover:text-[#981495] transition-all shadow-2xs cursor-pointer"
+              className="grid h-9 w-9 place-items-center rounded-full border border-amber-300/80 bg-white text-slate-700 hover:bg-[var(--sand)] hover:text-[#981495] transition-all shadow-2xs cursor-pointer"
               aria-label="Scroll left"
             >
               <ChevronLeft className="h-4 w-4" />
@@ -75,7 +84,7 @@ export function SearchShopRecommendations({
             <button
               type="button"
               onClick={() => scroll("right")}
-              className="grid h-9 w-9 place-items-center rounded-full border border-amber-300/80 bg-white text-slate-700 hover:bg-purple-50 hover:text-[#981495] transition-all shadow-2xs cursor-pointer"
+              className="grid h-9 w-9 place-items-center rounded-full border border-amber-300/80 bg-white text-slate-700 hover:bg-[var(--sand)] hover:text-[#981495] transition-all shadow-2xs cursor-pointer"
               aria-label="Scroll right"
             >
               <ChevronRight className="h-4 w-4" />
@@ -122,7 +131,9 @@ export function SearchShopRecommendations({
                   <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
                   <span>{rec.rating.toFixed(1)}</span>
                   {rec.reviewCount ? (
-                    <span className="text-slate-400 font-normal text-[10px]">({rec.reviewCount})</span>
+                    <span className="text-slate-400 font-normal text-[10px]">
+                      ({rec.reviewCount})
+                    </span>
                   ) : null}
                 </div>
 
@@ -146,12 +157,15 @@ export function SearchShopRecommendations({
               {/* Match Highlights */}
               <div className="space-y-2.5 my-1 flex-1">
                 {/* Specific Matching Products Count Badge */}
-                <div className="flex items-center justify-between rounded-xl bg-purple-50 px-3 py-2 border border-purple-200/80">
+                <div className="flex items-center justify-between rounded-xl bg-[var(--sand)] px-3 py-2 border border-[#f0abfc]/80">
                   <span className="flex items-center gap-1.5 text-xs font-black text-[#981495]">
                     <Sparkles className="h-3.5 w-3.5 text-amber-500 fill-amber-400" />
-                    <span>{rec.matchingProductCount} matching product{rec.matchingProductCount > 1 ? "s" : ""}</span>
+                    <span>
+                      {rec.matchingProductCount} matching product
+                      {rec.matchingProductCount > 1 ? "s" : ""}
+                    </span>
                   </span>
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-purple-700 bg-purple-100/80 px-2 py-0.5 rounded-md">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-[#981495] bg-[var(--sand)]/80 px-2 py-0.5 rounded-md">
                     In Stock
                   </span>
                 </div>
@@ -188,7 +202,7 @@ export function SearchShopRecommendations({
                   to="/store/$storeId"
                   params={{ storeId: rec.shopId }}
                   search={{ sq: formattedQuery, category: undefined }}
-                  className="w-full rounded-2xl bg-[#981495] hover:bg-[#7e107b] text-white py-2.5 px-4 text-xs font-black flex items-center justify-center gap-2 shadow-md shadow-purple-900/15 active:scale-95 transition-all cursor-pointer group/btn"
+                  className="w-full rounded-2xl bg-[#981495] hover:bg-[#7e107b] text-white py-2.5 px-4 text-xs font-black flex items-center justify-center gap-2 shadow-md shadow-[#981495]/15 active:scale-95 transition-all cursor-pointer group/btn"
                 >
                   <StoreIcon className="h-3.5 w-3.5" />
                   <span>View Shop</span>

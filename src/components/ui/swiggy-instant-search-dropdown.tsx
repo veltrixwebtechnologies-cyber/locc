@@ -51,7 +51,11 @@ export function SwiggyInstantSearchDropdown({
     const targetUrl = item.url || "";
     if (targetUrl.startsWith("/store/")) {
       const storeId = item.storeId || targetUrl.replace("/store/", "");
-      void navigate({ to: "/store/$storeId", params: { storeId }, search: { sq: query, category: undefined } });
+      void navigate({
+        to: "/store/$storeId",
+        params: { storeId },
+        search: { sq: query, category: undefined },
+      });
     } else if (targetUrl.startsWith("/product/")) {
       const productId = item.id.replace(/^prod-/, "") || targetUrl.replace("/product/", "");
       void navigate({ to: "/product/$productId", params: { productId }, search: { sq: query } });
@@ -155,12 +159,17 @@ export function SwiggyInstantSearchDropdown({
         {/* 🏪 SHOPS SECTION */}
         {shopsList.length > 0 && (
           <div>
-            <div className="px-3 py-1 text-[11px] font-extrabold uppercase tracking-wider text-purple-700 dark:text-purple-300 flex items-center gap-1.5 bg-purple-50 dark:bg-purple-950/40 rounded-lg mb-1">
+            <div className="px-3 py-1 text-[11px] font-extrabold uppercase tracking-wider text-[#981495] dark:text-[#f0abfc] flex items-center gap-1.5 bg-[var(--sand)] dark:bg-[#700b6e]/40 rounded-lg mb-1">
               <Store className="w-3.5 h-3.5" />
               <span>Shops ({shopsList.length})</span>
             </div>
             {shopsList.map((item) => (
-              <SearchResultRow key={item.id} item={item} query={query} onClick={() => handleResultClick(item)} />
+              <SearchResultRow
+                key={item.id}
+                item={item}
+                query={query}
+                onClick={() => handleResultClick(item)}
+              />
             ))}
           </div>
         )}
@@ -173,7 +182,12 @@ export function SwiggyInstantSearchDropdown({
               <span>Products ({productsList.length})</span>
             </div>
             {productsList.map((item) => (
-              <SearchResultRow key={item.id} item={item} query={query} onClick={() => handleResultClick(item)} />
+              <SearchResultRow
+                key={item.id}
+                item={item}
+                query={query}
+                onClick={() => handleResultClick(item)}
+              />
             ))}
           </div>
         )}
@@ -185,7 +199,12 @@ export function SwiggyInstantSearchDropdown({
               <span>🏷️ Brands ({brandsList.length})</span>
             </div>
             {brandsList.map((item) => (
-              <SearchResultRow key={item.id} item={item} query={query} onClick={() => handleResultClick(item)} />
+              <SearchResultRow
+                key={item.id}
+                item={item}
+                query={query}
+                onClick={() => handleResultClick(item)}
+              />
             ))}
           </div>
         )}
@@ -193,11 +212,16 @@ export function SwiggyInstantSearchDropdown({
         {/* 📁 CATEGORIES SECTION */}
         {categoriesList.length > 0 && (
           <div>
-            <div className="px-3 py-1 text-[11px] font-extrabold uppercase tracking-wider text-indigo-700 dark:text-indigo-300 flex items-center gap-1.5 bg-indigo-50 dark:bg-indigo-950/40 rounded-lg mb-1">
+            <div className="px-3 py-1 text-[11px] font-extrabold uppercase tracking-wider text-[#981495] dark:text-[#f0abfc] flex items-center gap-1.5 bg-[var(--sand)] dark:bg-[#700b6e]/40 rounded-lg mb-1">
               <span>📁 Categories ({categoriesList.length})</span>
             </div>
             {categoriesList.map((item) => (
-              <SearchResultRow key={item.id} item={item} query={query} onClick={() => handleResultClick(item)} />
+              <SearchResultRow
+                key={item.id}
+                item={item}
+                query={query}
+                onClick={() => handleResultClick(item)}
+              />
             ))}
           </div>
         )}

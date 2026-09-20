@@ -38,7 +38,10 @@ export function CategoryDynamicIsland() {
                 <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-500 shadow-[0_0_8px_#10b981]" />
               </div>
 
-              <m.span layoutId="category-island-title" className="text-xs font-black text-white truncate flex items-center gap-1.5">
+              <m.span
+                layoutId="category-island-title"
+                className="text-xs font-black text-white truncate flex items-center gap-1.5"
+              >
                 {currentCategoryName ? (
                   <>
                     <span className="text-slate-400 font-medium text-[10px] uppercase tracking-wider">
@@ -58,9 +61,21 @@ export function CategoryDynamicIsland() {
             {/* Right side: Apple Waveform bars & Chevron */}
             <div className="flex items-center gap-2 shrink-0">
               <div className="flex items-end gap-0.5 h-3">
-                <m.span animate={{ height: [4, 12, 6, 12, 4] }} transition={{ repeat: Infinity, duration: 1.2 }} className="w-0.5 bg-amber-400 rounded-full" />
-                <m.span animate={{ height: [10, 4, 12, 4, 10] }} transition={{ repeat: Infinity, duration: 1.4 }} className="w-0.5 bg-amber-300 rounded-full" />
-                <m.span animate={{ height: [6, 12, 4, 12, 6] }} transition={{ repeat: Infinity, duration: 1.1 }} className="w-0.5 bg-amber-400 rounded-full" />
+                <m.span
+                  animate={{ height: [4, 12, 6, 12, 4] }}
+                  transition={{ repeat: Infinity, duration: 1.2 }}
+                  className="w-0.5 bg-amber-400 rounded-full"
+                />
+                <m.span
+                  animate={{ height: [10, 4, 12, 4, 10] }}
+                  transition={{ repeat: Infinity, duration: 1.4 }}
+                  className="w-0.5 bg-amber-300 rounded-full"
+                />
+                <m.span
+                  animate={{ height: [6, 12, 4, 12, 6] }}
+                  transition={{ repeat: Infinity, duration: 1.1 }}
+                  className="w-0.5 bg-amber-400 rounded-full"
+                />
               </div>
 
               <span className="grid h-4 w-4 place-items-center rounded-full bg-white/20 text-slate-200">
@@ -115,7 +130,10 @@ export function CategoryDynamicIsland() {
                   className="w-full bg-transparent text-xs font-medium text-white outline-none placeholder:text-slate-500"
                 />
                 {filterQuery && (
-                  <button onClick={() => setFilterQuery("")} className="text-slate-400 hover:text-white text-xs">
+                  <button
+                    onClick={() => setFilterQuery("")}
+                    className="text-slate-400 hover:text-white text-xs"
+                  >
                     ×
                   </button>
                 )}
@@ -131,12 +149,14 @@ export function CategoryDynamicIsland() {
                   onClick={() => setIsExpanded(false)}
                   className={`flex items-center justify-between rounded-2xl p-2.5 text-xs font-black transition-all border ${
                     !currentCategorySlug
-                      ? "bg-gradient-to-r from-purple-600 to-indigo-600 border-purple-400 text-white shadow-lg ring-1 ring-purple-300/40"
+                      ? "bg-gradient-to-r from-[#c026d3] to-[#c026d3] border-[#c026d3] text-white shadow-lg ring-1 ring-[#f0abfc]/40"
                       : "bg-white/5 border-white/10 text-slate-200 hover:bg-white/10"
                   }`}
                 >
                   <span className="truncate">🛍️ All Categories</span>
-                  {!currentCategorySlug && <Check className="h-3.5 w-3.5 text-amber-300 shrink-0" />}
+                  {!currentCategorySlug && (
+                    <Check className="h-3.5 w-3.5 text-amber-300 shrink-0" />
+                  )}
                 </Link>
 
                 {filteredGroups.map((group) => {
@@ -149,7 +169,7 @@ export function CategoryDynamicIsland() {
                       onClick={() => setIsExpanded(false)}
                       className={`flex items-center justify-between rounded-2xl p-2.5 text-xs font-bold transition-all border truncate ${
                         isActive
-                          ? "bg-gradient-to-r from-purple-600 to-indigo-600 border-purple-400 text-white shadow-lg ring-1 ring-purple-300/40"
+                          ? "bg-gradient-to-r from-[#c026d3] to-[#c026d3] border-[#c026d3] text-white shadow-lg ring-1 ring-[#f0abfc]/40"
                           : "bg-white/5 border-white/10 text-slate-200 hover:bg-white/10"
                       }`}
                     >
@@ -164,7 +184,7 @@ export function CategoryDynamicIsland() {
             {/* Footer Directory Action */}
             <div className="mt-3 pt-2.5 border-t border-white/10 flex items-center justify-between">
               <span className="text-[10px] font-mono uppercase tracking-wider text-slate-400 flex items-center gap-1">
-                <Grid className="h-3 w-3 text-purple-400" />
+                <Grid className="h-3 w-3 text-[#c026d3]" />
                 31 Categories Available
               </span>
               <Link

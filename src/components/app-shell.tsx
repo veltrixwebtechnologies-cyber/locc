@@ -14,17 +14,36 @@ import {
   Headphones,
   Gift,
   X,
+  ChevronDown,
 } from "lucide-react";
 import { useCart, cartTotals } from "@/lib/cart-store";
 import { useAuth } from "@/lib/auth-store";
-import { CategoryMegaMenu } from "@/components/category-mega-menu";
+import { CategoryMegaMenu, MobileCategoryStrip } from "@/components/category-mega-menu";
+import { AnimatedSearchPlaceholder } from "@/components/ui/animated-search-placeholder";
 import { Fragment, type ReactNode, useEffect, useState, useRef } from "react";
 import { useWishlist, useWishlistProducts } from "@/lib/merchandising";
 import { AnimatePresence, m } from "motion/react";
 import { SwiggyInstantSearchDropdown } from "@/components/ui/swiggy-instant-search-dropdown";
-import { useDeliveryLocation, initAutoGPSLocation, hasUserChosenLocation, useGPSStatus, detectCurrentGPSLocation } from "@/lib/location-store";
+import { hasUserChosenLocation, useDeliveryLocation, useGPSStatus } from "@/lib/location-store";
 import { LocationModal } from "@/components/ui/location-modal";
-import { LiquidGlassCategorySelector } from "@/components/liquid-glass-category-selector";
+
+const HEADER_SEARCH_PLACEHOLDERS = [
+  "Search for shops, products and more",
+  "Search for fresh vegetables",
+  "Search for nearby bakeries",
+  "Search for fashion stores",
+  "Search for electronics shops",
+  "Search for pharmacies",
+  "Search for local favorites",
+];
+
+const OPEN_LOCATION_MODAL_EVENT = "localshore_open_location_modal";
+
+function requestLocationModal() {
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new CustomEvent(OPEN_LOCATION_MODAL_EVENT));
+  }
+}
 
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
@@ -35,11 +54,11 @@ export function AppShell({ children }: { children: ReactNode }) {
   const wishlistProducts = useWishlistProducts();
   const [deliveryLocation] = useDeliveryLocation();
   const gpsState = useGPSStatus();
-  const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
   const [isCartBarMinimized, setIsCartBarMinimized] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [headerQuery, setHeaderQuery] = useState("");
   const [searchFocused, setSearchFocused] = useState(false);
+  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const { itemCount, subtotal } = cartTotals(cart.lines);
   const savedCount = wishlistProducts.data?.length ?? wishlist.data?.length ?? 0;
@@ -47,17 +66,21 @@ export function AppShell({ children }: { children: ReactNode }) {
   const hasLocation = mounted && deliveryLocation !== null;
 
   const showFloatingCart =
-    itemCount > 0 &&
-    !pathname.startsWith("/cart") &&
-    !pathname.startsWith("/checkout");
+    itemCount > 0 && !pathname.startsWith("/cart") && !pathname.startsWith("/checkout");
 
   useEffect(() => {
     setMounted(true);
-    initAutoGPSLocation();
-    // Auto-open location picker on first visit (no explicit location chosen yet)
-    if (!hasUserChosenLocation()) {
-      setIsLocationModalOpen(true);
-    }
+
+    // Keep location optional: let customers browse first, then offer a
+    // dismissible location prompt if they continue browsing without choosing.
+    const promptTimer = window.setTimeout(() => {
+      if (deliveryLocation || hasUserChosenLocation()) return;
+      requestLocationModal();
+    }, 8000);
+
+    return () => {
+      window.clearTimeout(promptTimer);
+    };
   }, []);
 
   useEffect(() => {
@@ -83,13 +106,6 @@ export function AppShell({ children }: { children: ReactNode }) {
     icon: typeof Home;
     match: (p: string) => boolean;
   }> = [
-    { to: "/", label: "Shops", icon: Home, match: (p) => p === "/" },
-    {
-      to: "/explore",
-      label: "Explore",
-      icon: Search,
-      match: (p) => p.startsWith("/explore"),
-    },
     {
       to: "/cart",
       label: "Cart",
@@ -102,35 +118,17 @@ export function AppShell({ children }: { children: ReactNode }) {
       icon: Heart,
       match: (p) => p.startsWith("/wishlist"),
     },
-    {
-      to: "/orders",
-      label: "Orders",
-      icon: ClipboardList,
-      match: (p) => p.startsWith("/orders") || p.startsWith("/order/"),
-    },
-    {
-      to: "/rewards",
-      label: "Rewards",
-      icon: Gift,
-      match: (p) => p.startsWith("/rewards"),
-    },
-    { to: "/profile", label: "Profile", icon: User, match: (p) => p.startsWith("/profile") },
   ];
-
-  const hideCategories =
-    pathname.startsWith("/order/") ||
-    pathname.startsWith("/orders") ||
-    pathname.startsWith("/checkout") ||
-    pathname.startsWith("/cart") ||
-    pathname.startsWith("/profile") ||
-    pathname.startsWith("/auth");
 
   return (
     <div
-      className={`min-h-screen bg-background transition-[padding] duration-300 ${
-        showFloatingCart && !isCartBarMinimized
-          ? "pb-[calc(9.5rem+env(safe-area-inset-bottom,0px))] md:pb-8"
-          : "pb-[calc(4.5rem+env(safe-area-inset-bottom,0px))] md:pb-0"
+      // Reserve a stable mobile footer/cart-bar gutter from the first render.
+      // Cart state is hydrated from localStorage after SSR; changing page
+      // padding when that state arrives causes a large layout shift.
+      className={`min-h-screen bg-background pb-[calc(11rem+env(safe-area-inset-bottom,0px))] md:pb-8 ${
+        pathname.startsWith("/cart") || pathname.startsWith("/checkout")
+          ? "!pb-[calc(5.75rem+env(safe-area-inset-bottom,0px))] md:!pb-0"
+          : ""
       }`}
     >
       {/* Mobile top nav header */}
@@ -140,36 +138,37 @@ export function AppShell({ children }: { children: ReactNode }) {
           search={{ category: undefined, q: undefined }}
           className="flex shrink-0 items-center gap-2"
         >
-          <span className="grid h-8 w-8 place-items-center rounded-xl bg-primary text-xs font-bold text-primary-foreground font-display shadow-xs">
-            LS
-          </span>
-          <span className="font-display text-base font-bold text-foreground tracking-tight">
-            LocalShore
-          </span>
+          <img
+            src="/assets/localshore-logo.jpeg"
+            alt="LocalShore"
+            width={132}
+            height={48}
+            className="h-9 w-[132px] object-cover object-center mix-blend-multiply"
+          />
         </Link>
 
         <div className="flex items-center gap-2">
           <button
             type="button"
-            onClick={() => setIsLocationModalOpen(true)}
-            className={`flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-bold transition cursor-pointer shrink-0 max-w-[140px] sm:max-w-[180px] ${
+            onClick={requestLocationModal}
+            className={`hidden items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-bold transition cursor-pointer shrink-0 max-w-[140px] sm:flex sm:max-w-[180px] ${
               gpsState.status === "detecting"
                 ? "border-amber-300/60 bg-amber-50/80 text-amber-800"
                 : gpsState.status === "denied" || gpsState.status === "unavailable"
-                  ? "border-purple-200/60 bg-purple-50/80 text-purple-800 hover:bg-purple-100"
-                  : "border-purple-200/60 bg-purple-50/80 text-purple-800 hover:bg-purple-100"
+                  ? "border-[#f0abfc]/60 bg-[var(--sand)]/80 text-[#981495] hover:bg-[var(--sand)]"
+                  : "border-[#f0abfc]/60 bg-[var(--sand)]/80 text-[#981495] hover:bg-[var(--sand)]"
             }`}
           >
             {gpsState.status === "detecting" ? (
               <span className="h-3 w-3 shrink-0 animate-spin rounded-full border-2 border-amber-500 border-t-transparent" />
             ) : (
-              <MapPin className="h-3.5 w-3.5 shrink-0 text-purple-600 fill-purple-600/20" />
+              <MapPin className="h-3.5 w-3.5 shrink-0 text-[#c026d3] fill-[#c026d3]/20" />
             )}
             <span className="truncate text-left">
               {gpsState.status === "detecting"
                 ? "Detecting..."
                 : hasLocation
-                  ? (deliveryLocation!.area || deliveryLocation!.label.split(",")[0])
+                  ? deliveryLocation!.area || deliveryLocation!.label.split(",")[0]
                   : "Select location"}
             </span>
           </button>
@@ -184,8 +183,17 @@ export function AppShell({ children }: { children: ReactNode }) {
           </Link>
 
           <Link
+            to="/customer-care"
+            className="grid h-8 w-8 place-items-center rounded-lg border hairline bg-muted/60 text-foreground hover:bg-muted"
+            aria-label="Customer Care"
+            title="Customer Care"
+          >
+            <Headphones className="h-4 w-4" />
+          </Link>
+
+          <Link
             to="/wishlist"
-            className="relative grid h-8 w-8 place-items-center rounded-lg border hairline bg-muted/60 text-foreground hover:bg-muted"
+            className="relative hidden h-8 w-8 place-items-center rounded-lg border hairline bg-muted/60 text-foreground hover:bg-muted sm:grid"
             aria-label="View Saved Items"
           >
             <Heart className="h-4 w-4" />
@@ -228,6 +236,37 @@ export function AppShell({ children }: { children: ReactNode }) {
         </div>
       </header>
 
+      {/* Delivery location is shown on the customer home page only. */}
+      {pathname === "/" && <div className="sticky top-[57px] z-40 border-b hairline bg-background px-3 py-1.5 shadow-2xs sm:hidden md:hidden">
+        <button
+          type="button"
+          onClick={requestLocationModal}
+          className="flex min-h-9 w-full items-center gap-2 rounded-lg px-2 text-left transition-colors hover:bg-muted/70 active:bg-muted"
+          aria-label={hasLocation ? `Change delivery location, currently ${deliveryLocation!.area || deliveryLocation!.label}` : "Select delivery location"}
+        >
+          <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-primary/10 text-primary">
+            {gpsState.status === "detecting" ? (
+              <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+            ) : (
+              <MapPin className="h-4 w-4" />
+            )}
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-[9px] font-semibold uppercase tracking-wide text-muted-foreground">
+              {gpsState.status === "detecting" ? "Finding your location" : "Deliver to"}
+            </span>
+            <span className="block truncate text-xs font-bold text-foreground">
+              {gpsState.status === "detecting"
+                ? "Please wait…"
+                : hasLocation
+                  ? deliveryLocation!.area || deliveryLocation!.label
+                  : "Select your location"}
+            </span>
+          </span>
+          <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" />
+        </button>
+      </div>}
+
       {/* Desktop top nav */}
       <header
         className={`sticky top-0 z-50 hidden border-b hairline bg-background/95 backdrop-blur transition-shadow duration-300 md:block ${
@@ -242,28 +281,29 @@ export function AppShell({ children }: { children: ReactNode }) {
             search={{ category: undefined, q: undefined }}
             className="flex shrink-0 items-center gap-2.5"
           >
-            <m.span
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              className="grid h-9 w-9 place-items-center rounded-xl bg-primary text-primary-foreground font-display text-sm font-black shadow-xs"
-            >
-              LS
-            </m.span>
-            <span className="font-display text-xl font-bold tracking-tight text-foreground">
-              LocalShore
-            </span>
+            <m.img
+              src="/assets/localshore-logo.jpeg"
+              alt="LocalShore"
+              width={176}
+              height={54}
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.98 }}
+              className="h-12 w-[190px] object-cover object-center mix-blend-multiply"
+            />
           </Link>
 
+          {pathname === "/" && (
+            <>
           {/* Vertical Divider (Equal top/bottom spacing) */}
           <div className="h-6 w-px bg-border/80 shrink-0 mx-1" />
 
           {/* Location Selector (Deliver to -> Location -> Chevron) */}
           <button
             type="button"
-            onClick={() => setIsLocationModalOpen(true)}
+            onClick={requestLocationModal}
             className="flex shrink-0 items-center gap-2 text-left cursor-pointer hover:opacity-85 transition group min-w-0"
           >
-            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-purple-50 text-primary">
+            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--sand)] text-primary">
               {gpsState.status === "detecting" ? (
                 <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
               ) : (
@@ -293,6 +333,8 @@ export function AppShell({ children }: { children: ReactNode }) {
               </span>
             </div>
           </button>
+            </>
+          )}
 
           {/* Main Search Bar */}
           <m.form
@@ -313,13 +355,20 @@ export function AppShell({ children }: { children: ReactNode }) {
             onBlur={() => window.setTimeout(() => setSearchFocused(false), 200)}
           >
             <Search className="h-4 w-4 shrink-0 text-muted-foreground" />
-            <input
-              value={headerQuery}
-              onChange={(event) => setHeaderQuery(event.target.value)}
-              placeholder="Search shops, products, brands..."
-              aria-label="Search shops, products, brands"
-              className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
-            />
+            <div className="relative min-w-0 flex-1">
+              <AnimatedSearchPlaceholder
+                phrases={HEADER_SEARCH_PLACEHOLDERS}
+                active={!searchFocused && !headerQuery}
+                className="right-0 text-sm text-muted-foreground"
+              />
+              <input
+                value={headerQuery}
+                onChange={(event) => setHeaderQuery(event.target.value)}
+                placeholder=""
+                aria-label="Search shops, products, brands"
+                className="relative z-10 w-full min-w-0 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+              />
+            </div>
             <AnimatePresence>
               {searchFocused && (
                 <div className="absolute left-0 right-0 top-full z-50 mt-2">
@@ -384,50 +433,114 @@ export function AppShell({ children }: { children: ReactNode }) {
                 </Fragment>
               );
             })}
-            {isSignedIn ? (
-              <Link
-                to="/profile"
-                className="ml-1 lg:ml-2 inline-flex items-center gap-2 rounded-lg border hairline bg-card px-2.5 lg:px-3 py-2 text-sm font-medium text-foreground hover:bg-muted"
-                aria-label="Profile"
+            <Link
+              to="/customer-care"
+              className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-2 text-xs font-semibold text-foreground transition-colors hover:bg-muted lg:px-3 lg:text-sm"
+              aria-label="Customer Care"
+            >
+              <Headphones className="h-4 w-4 text-primary" />
+              <span>Customer Care</span>
+            </Link>
+            <a
+              href={import.meta.env.VITE_SELLER_HUB_URL || "/seller"}
+              className="inline-flex items-center rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 text-xs font-bold text-primary transition-colors hover:bg-primary/10 lg:text-sm"
+            >
+              Become a Seller
+            </a>
+            <div
+              className="relative ml-1 lg:ml-2"
+              onMouseEnter={() => setProfileMenuOpen(true)}
+              onMouseLeave={() => setProfileMenuOpen(false)}
+            >
+              <button
+                type="button"
+                onClick={() => setProfileMenuOpen((open) => !open)}
+                className={`inline-flex items-center gap-2 rounded-lg border px-2.5 py-2 text-sm font-medium transition-colors ${
+                  profileMenuOpen || pathname.startsWith("/profile")
+                    ? "border-primary/20 bg-primary/10 text-primary"
+                    : "hairline bg-card text-foreground hover:bg-muted"
+                }`}
+                aria-expanded={profileMenuOpen}
+                aria-haspopup="menu"
               >
-                <span className="grid h-6 w-6 place-items-center rounded-full bg-primary text-[11px] font-bold text-primary-foreground">
-                  {(auth.name?.[0] ?? "U").toUpperCase()}
-                </span>
-              </Link>
-            ) : (
-              <Link
-                to="/auth"
-                search={{ redirect: pathname }}
-                className="ml-1 lg:ml-2 inline-flex items-center gap-1.5 rounded-lg bg-primary px-3.5 py-2 text-xs lg:text-sm font-bold text-primary-foreground hover:bg-[#700b6e] transition-colors"
-              >
-                <LogIn className="h-4 w-4" /> Sign in
-              </Link>
-            )}
+                {isSignedIn ? (
+                  <span className="grid h-6 w-6 place-items-center rounded-full bg-primary text-[11px] font-bold text-primary-foreground">
+                    {(auth.name?.[0] ?? "U").toUpperCase()}
+                  </span>
+                ) : (
+                  <User className="h-4 w-4" />
+                )}
+                <span>Profile</span>
+                <ChevronDown className="h-3.5 w-3.5" />
+              </button>
+
+              {profileMenuOpen && (
+                <div
+                  role="menu"
+                  className="absolute right-0 top-full z-[70] mt-2 w-52 overflow-hidden rounded-2xl border border-[#eadff0] bg-white p-1.5 text-slate-800 shadow-[0_18px_45px_rgba(30,10,50,0.18)]"
+                >
+                  {isSignedIn && (
+                    <Link
+                      to="/profile"
+                      onClick={() => setProfileMenuOpen(false)}
+                      className="mb-1 flex items-center gap-2 rounded-xl bg-primary/10 px-3 py-2.5 text-sm font-bold text-primary"
+                      role="menuitem"
+                    >
+                      <User className="h-4 w-4" /> My Profile
+                    </Link>
+                  )}
+                  <Link
+                    to="/orders"
+                    onClick={() => setProfileMenuOpen(false)}
+                    className="flex items-center gap-2 rounded-xl px-3 py-2 text-sm hover:bg-muted"
+                    role="menuitem"
+                  >
+                    <ClipboardList className="h-4 w-4 text-primary" /> Orders
+                  </Link>
+                  <Link
+                    to="/rewards"
+                    onClick={() => setProfileMenuOpen(false)}
+                    className="flex items-center gap-2 rounded-xl px-3 py-2 text-sm hover:bg-muted"
+                    role="menuitem"
+                  >
+                    <Gift className="h-4 w-4 text-primary" /> Rewards
+                  </Link>
+                  {!isSignedIn && (
+                    <Link
+                      to="/auth"
+                      search={{ redirect: pathname }}
+                      onClick={() => setProfileMenuOpen(false)}
+                      className="mt-1 flex items-center gap-2 rounded-xl bg-primary px-3 py-2 text-sm font-bold text-primary-foreground hover:bg-[#700b6e]"
+                      role="menuitem"
+                    >
+                      <LogIn className="h-4 w-4" /> Sign in
+                    </Link>
+                  )}
+                </div>
+              )}
+            </div>
           </nav>
         </div>
       </header>
-      {/* Dynamic Liquid Glass Category Island (Desktop & Mobile) - Hidden on Order Tracking, Checkout, Cart & Profile */}
-      {!hideCategories && (
-        <div className="relative z-40 overflow-visible">
-          <LiquidGlassCategorySelector />
-        </div>
+      {/* Category navigation is part of the customer home page only. */}
+      {pathname === "/" && (
+        <>
+          <CategoryMegaMenu />
+          <MobileCategoryStrip sticky />
+        </>
       )}
 
-      <main className="mx-auto w-full max-w-[1600px] xl:max-w-[1800px] px-3 sm:px-4 md:px-6 lg:px-10 xl:px-12">{children}</main>
+      <main className="mx-auto w-full max-w-[1600px] xl:max-w-[1800px] px-3 sm:px-4 md:px-6 lg:px-10 xl:px-12">
+        {children}
+      </main>
 
       <ShopperFooter />
 
       {/* Mobile bottom tab bar */}
       <nav className="fixed inset-x-0 bottom-0 z-40 border-t hairline bg-background/95 backdrop-blur pb-[env(safe-area-inset-bottom,0px)] md:hidden">
-        <div className="mx-auto grid max-w-xl grid-cols-5">
+        <div className="mx-auto grid max-w-xl grid-cols-4">
           {[
             { to: "/", label: "Shops", icon: Home, match: (p: string) => p === "/" },
-            {
-              to: "/explore",
-              label: "Explore",
-              icon: Heart,
-              match: (p: string) => p.startsWith("/explore"),
-            },
             {
               to: "/cart",
               label: "Cart",
@@ -493,54 +606,79 @@ export function AppShell({ children }: { children: ReactNode }) {
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: 80, opacity: 0 }}
             transition={{ type: "spring", stiffness: 380, damping: 26 }}
-            className="fixed bottom-[calc(3.8rem+env(safe-area-inset-bottom,0px))] inset-x-3 z-[45] md:bottom-6 md:right-8 md:inset-x-auto md:w-96 pointer-events-auto"
+            className="fixed bottom-[calc(4.4rem+env(safe-area-inset-bottom,0px))] inset-x-3 z-[45] pointer-events-auto md:bottom-6 md:right-8 md:inset-x-auto md:w-96"
           >
-              <div className="flex items-center justify-between gap-2.5 rounded-2xl bg-gradient-to-r from-[#4c1074] via-[#6b1fa0] to-[#125c52] p-3 text-white shadow-[0_12px_36px_rgba(0,0,0,0.4)] ring-1 ring-white/20 backdrop-blur-xl">
-                <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                  <div className="relative grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-white/20 text-white shadow-inner">
-                    <ShoppingBag className="h-5 w-5 text-amber-300" />
-                    <span className="absolute -right-1 -top-1 grid h-4 min-w-[16px] place-items-center rounded-full bg-[var(--marigold)] px-1 font-mono text-[9px] font-extrabold text-ink shadow-xs">
-                      {itemCount}
-                    </span>
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-xs font-bold text-white leading-tight truncate">
-                      {itemCount} {itemCount === 1 ? "item" : "items"}{" "}
-                      {cart.storeName ? `· ${cart.storeName}` : ""}
-                    </p>
-                    <p className="font-mono text-sm font-extrabold text-[#ffe566] tracking-wide">
-                      ₹{subtotal}
-                    </p>
-                  </div>
+            <div className="flex items-center justify-between gap-2.5 rounded-2xl bg-[#981495] p-3 text-white shadow-[0_12px_36px_rgba(112,11,110,0.28)] ring-1 ring-[#f3d053]/40 backdrop-blur-xl">
+              <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                <div className="relative grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-white/20 text-white shadow-inner">
+                  <ShoppingBag className="h-5 w-5 text-amber-300" />
+                  <span className="absolute -right-1 -top-1 grid h-4 min-w-[16px] place-items-center rounded-full bg-[var(--marigold)] px-1 font-mono text-[9px] font-extrabold text-ink shadow-xs">
+                    {itemCount}
+                  </span>
                 </div>
-
-                <div className="flex items-center gap-1.5 shrink-0">
-                  <Link
-                    to="/cart"
-                    className="inline-flex shrink-0 items-center gap-1.5 rounded-xl bg-[var(--marigold)] px-3.5 py-2 text-xs font-extrabold text-ink shadow-md hover:brightness-105 active:scale-95 transition-all"
-                  >
-                    View Cart
-                    <ArrowRight className="h-4 w-4" />
-                  </Link>
-
-                  <button
-                    type="button"
-                    onClick={() => setIsCartBarMinimized(true)}
-                    className="grid h-7 w-7 place-items-center rounded-full bg-black/20 hover:bg-black/40 text-white/80 hover:text-white transition-colors cursor-pointer"
-                    title="Minimize cart bar"
-                    aria-label="Minimize cart summary bar"
-                  >
-                    <X className="h-3.5 w-3.5" />
-                  </button>
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs font-bold text-white leading-tight truncate">
+                    {itemCount} {itemCount === 1 ? "item" : "items"}{" "}
+                    {cart.storeName ? `· ${cart.storeName}` : ""}
+                  </p>
+                  <p className="font-mono text-sm font-extrabold text-[#ffe566] tracking-wide">
+                    ₹{subtotal}
+                  </p>
                 </div>
               </div>
-            </m.div>
+
+              <div className="flex items-center gap-1.5 shrink-0">
+                {pathname === "/" && (
+                  <button
+                    type="button"
+                    onClick={() => window.dispatchEvent(new CustomEvent("localshore_open_nearby_map"))}
+                    aria-label="Open nearby shops map"
+                    className="inline-flex min-h-10 shrink-0 items-center gap-1 rounded-xl bg-white/15 px-2.5 py-2 text-[11px] font-bold text-white transition hover:bg-white/25 active:scale-95"
+                  >
+                    <MapPin className="h-3.5 w-3.5" />
+                    <span className="hidden sm:inline">Show map</span>
+                    <span className="sm:hidden">Map</span>
+                  </button>
+                )}
+                <Link
+                  to="/cart"
+                  className="inline-flex min-h-10 shrink-0 items-center gap-1.5 rounded-xl bg-[var(--marigold)] px-3 py-2 text-xs font-extrabold text-ink shadow-md transition-all hover:brightness-105 active:scale-95 sm:px-3.5"
+                >
+                  <span className="hidden sm:inline">View Cart</span>
+                  <span className="sm:hidden">Cart</span>
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
+
+                <button
+                  type="button"
+                  onClick={() => setIsCartBarMinimized(true)}
+                  className="grid h-7 w-7 place-items-center rounded-full bg-black/20 hover:bg-black/40 text-white/80 hover:text-white transition-colors cursor-pointer"
+                  title="Minimize cart bar"
+                  aria-label="Minimize cart summary bar"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            </div>
+          </m.div>
         )}
       </AnimatePresence>
 
-      <LocationModal isOpen={isLocationModalOpen} onClose={() => setIsLocationModalOpen(false)} />
+      <LocationModalHost />
     </div>
   );
+}
+
+function LocationModalHost() {
+  const [isOpen, setIsOpen] = useState(false);
+
+  useEffect(() => {
+    const open = () => setIsOpen(true);
+    window.addEventListener(OPEN_LOCATION_MODAL_EVENT, open);
+    return () => window.removeEventListener(OPEN_LOCATION_MODAL_EVENT, open);
+  }, []);
+
+  return <LocationModal isOpen={isOpen} onClose={() => setIsOpen(false)} />;
 }
 
 const footerColumns = [
@@ -581,80 +719,145 @@ const footerCategories = [
 
 function ShopperFooter() {
   return (
-    <footer className="mt-16 border-t border-border bg-background px-5 pb-7 pt-9 md:px-8 lg:px-10">
-      <div className="mx-auto max-w-7xl">
-        <div className="grid gap-8 md:grid-cols-[1fr_2.2fr]">
+    <footer className="mt-16 border-t border-[#e2dff0] bg-[#f2f2f7] px-5 pb-8 pt-12 text-slate-600 md:px-8 lg:px-10">
+      <div className="mx-auto max-w-[1240px]">
+        <div className="grid gap-10 md:grid-cols-[1.25fr_1fr_1fr_1fr] lg:gap-16">
           <section className="space-y-3">
             <div className="flex items-center gap-2">
-              <span className="grid h-9 w-9 place-items-center rounded-xl bg-purple-900 font-display font-black text-white text-xs shadow-xs">
-                LS
-              </span>
-              <span className="font-display text-xl font-extrabold text-slate-900 tracking-tight">
-                Local Shore
-              </span>
+              <img
+                src="/assets/localshore-logo.jpeg"
+                alt="LocalShore"
+                width={200}
+                height={68}
+                className="h-16 w-[220px] object-cover object-center mix-blend-multiply"
+              />
             </div>
-            <p className="max-w-sm text-xs leading-relaxed text-slate-600 font-medium">
-              Everyday essentials & specialty products from verified neighborhood local sellers.
+            <p className="max-w-xs text-sm font-medium leading-relaxed">
+              Everyday essentials and specialty products from verified neighborhood local sellers.
+            </p>
+            <p className="text-xs font-semibold text-slate-500">
+              © LocalShore, 2026 · Made for nearby living.
             </p>
           </section>
-          <section>
-            <div className="grid grid-cols-1 gap-7 text-sm text-slate-600 sm:grid-cols-3">
-              {footerColumns.map((col) => (
-                <div key={col.title} className="space-y-2.5">
-                  <h4 className="font-display text-sm font-extrabold text-slate-900 tracking-tight">
-                    {col.title}
-                  </h4>
-                  <div className="space-y-1.5">
-                    {col.links.map(([label, href]) => (
-                      <Link
-                        key={label}
-                        to={href as any}
-                        className="block text-xs font-semibold text-slate-600 transition-colors hover:text-purple-900"
-                      >
-                        {label}
-                      </Link>
-                    ))}
-                  </div>
-                </div>
+
+          <section className="space-y-3">
+            <h4 className="font-display text-base font-extrabold tracking-tight text-slate-900">
+              Company
+            </h4>
+            <div className="space-y-2">
+              {footerColumns[0].links.slice(0, 4).map(([label, href]) => (
+                <Link
+                  key={label}
+                  to={href as any}
+                  className="block text-sm font-medium transition-colors hover:text-[#981495]"
+                >
+                  {label}
+                </Link>
+              ))}
+            </div>
+          </section>
+
+          <section className="space-y-3">
+            <h4 className="font-display text-base font-extrabold tracking-tight text-slate-900">
+              Contact & Legal
+            </h4>
+            <div className="space-y-2">
+              {footerColumns[2].links.map(([label, href]) => (
+                <Link
+                  key={label}
+                  to={href as any}
+                  className="block text-sm font-medium transition-colors hover:text-[#981495]"
+                >
+                  {label}
+                </Link>
+              ))}
+            </div>
+            <h4 className="pt-3 font-display text-base font-extrabold tracking-tight text-slate-900">
+              Partner With Us
+            </h4>
+            <Link to="/help?topic=sell" className="block text-sm font-medium hover:text-[#981495]">
+              Sell on LocalShore
+            </Link>
+          </section>
+
+          <section className="space-y-3">
+            <h4 className="font-display text-base font-extrabold tracking-tight text-slate-900">
+              Available in
+            </h4>
+            <div className="space-y-2 text-sm font-medium">
+              <p>Coimbatore</p>
+              <p>Chennai</p>
+              <p>Bengaluru</p>
+              <p>Hyderabad</p>
+              <p>More cities coming soon</p>
+            </div>
+            <h4 className="pt-3 font-display text-base font-extrabold tracking-tight text-slate-900">
+              Social Links
+            </h4>
+            <div className="flex gap-2 text-xs font-bold text-slate-700" aria-label="Social links">
+              {["in", "◎", "f", "p", "𝕏"].map((icon) => (
+                <span
+                  key={icon}
+                  className="grid h-7 w-7 place-items-center rounded-full border border-slate-300 bg-white"
+                >
+                  {icon}
+                </span>
               ))}
             </div>
           </section>
         </div>
 
-        <div className="mt-8 border-t border-border pt-6">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <span className="text-sm font-semibold text-foreground">Shop by need</span>
-              <Link
-                to="/"
-                search={{ category: undefined, q: undefined }}
-                className="text-xs text-primary hover:underline"
-              >
-                Browse all
-              </Link>
-            </div>
-            <div className="flex flex-wrap gap-x-4 gap-y-2 text-xs text-muted-foreground">
-              {footerCategories
-                .flat()
-                .slice(0, 8)
-                .map((label) => (
-                  <Link
-                    key={label}
-                    to="/"
-                    search={{ category: undefined, q: label }}
-                    className="hover:text-primary"
-                  >
-                    {label}
-                  </Link>
-                ))}
+        <div className="mt-10 flex flex-col items-center justify-between gap-7 border-t border-slate-400/70 pt-7 md:flex-row md:gap-5">
+          <div className="flex max-w-[340px] flex-wrap items-center justify-center gap-x-4 gap-y-2 text-xs md:max-w-none md:justify-start">
+            <span className="w-full text-center font-bold text-slate-800 md:w-auto">Shop by need</span>
+            <Link
+              to="/"
+              search={{ category: undefined, q: undefined }}
+              className="font-semibold text-[#981495] hover:underline"
+            >
+              Browse all
+            </Link>
+            {footerCategories
+              .flat()
+              .slice(0, 7)
+              .map((label) => (
+                <Link
+                  key={label}
+                  to="/"
+                  search={{ category: undefined, q: label }}
+                  className="hover:text-[#981495]"
+                >
+                  {label}
+                </Link>
+              ))}
+          </div>
+          <div className="flex w-full max-w-[340px] flex-col items-center gap-3 md:w-auto md:max-w-none md:flex-row md:gap-3">
+            <span className="w-full text-center font-display text-xs font-bold leading-tight text-slate-800 sm:text-sm md:w-auto md:text-left">
+              Shop better with the LocalShore app
+            </span>
+            <div className="flex items-center gap-2">
+            <span className="flex h-11 w-[112px] shrink-0 items-center justify-center gap-1.5 rounded-lg bg-black px-2 text-white shadow-sm">
+              <span className="text-lg">●</span>
+              <span className="whitespace-nowrap text-[8px] leading-tight">
+                DOWNLOAD ON THE
+                <br />
+                <strong className="text-xs">App Store</strong>
+              </span>
+            </span>
+            <span className="flex h-11 w-[112px] shrink-0 items-center justify-center gap-1.5 rounded-lg bg-black px-2 text-white shadow-sm">
+              <span className="text-lg text-[#3ddc84]">▶</span>
+              <span className="whitespace-nowrap text-[8px] leading-tight">
+                GET IT ON
+                <br />
+                <strong className="text-xs">Google Play</strong>
+              </span>
+            </span>
             </div>
           </div>
         </div>
-
-        <div className="mt-6 flex flex-col gap-2 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
-          <p>© Local Shore, 2026 · Made for nearby living.</p>
-          <p>Availability and delivery times vary by neighborhood.</p>
-        </div>
+        <p className="mt-6 text-center text-xs text-slate-500">
+          Availability and delivery times vary by neighborhood.
+        </p>
       </div>
     </footer>
   );

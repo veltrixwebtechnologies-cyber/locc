@@ -19,7 +19,7 @@ export function SortDropdown({ value, onChange }: SortDropdownProps) {
     <div className="flex items-center gap-2">
       <span className="text-xs font-semibold text-muted-foreground hidden sm:inline">Sort By:</span>
       <Select value={value} onValueChange={onChange}>
-        <SelectTrigger className="w-[170px] h-9 text-xs font-medium rounded-xl border-border bg-card">
+        <SelectTrigger className="h-9 w-[150px] rounded-xl border-border bg-card text-xs font-medium sm:w-[170px]">
           <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground mr-1 shrink-0" />
           <SelectValue placeholder="Sort By" />
         </SelectTrigger>

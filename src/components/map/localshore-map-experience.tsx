@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, useEffect, startTransition } from "react";
+import { lazy, Suspense, useState, useMemo, useRef, useEffect, startTransition } from "react";
 import {
   MapPin,
   Locate,
@@ -10,7 +10,11 @@ import {
   Store as StoreIcon,
 } from "lucide-react";
 import { motion } from "framer-motion";
-import { InteractiveMapView, type InteractiveMapViewRef } from "./interactive-map-view";
+import type { InteractiveMapViewRef } from "./interactive-map-view";
+
+const InteractiveMapView = lazy(() =>
+  import("./interactive-map-view").then((module) => ({ default: module.InteractiveMapView })),
+);
 
 import type { MapFilterOptions, MapLocation, MapMarkerItem } from "@/lib/map-service/types";
 import { getMapMarkerItems, isTestEntity } from "@/lib/map-service/store-engine";
@@ -21,9 +25,14 @@ import { getFallbackProductImage, isValidImageUrl } from "@/lib/image-utils";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { useDeliveryLocation, detectCurrentGPSLocation } from "@/lib/location-store";
+import {
+  useDeliveryLocation,
+  detectCurrentGPSLocation,
+  setActiveDeliveryLocation,
+} from "@/lib/location-store";
 import { getCategoryByIdOrSlug } from "@/lib/shop-categories";
-import { fetchPublicProductsServerFn, fetchPublicShopsServerFn } from "@/lib/catalog.server";
+import { isValidCoordinate } from "@/lib/geo";
+import { CUSTOMER_VISIBILITY_RADIUS_KM, hasConfirmedCoordinates } from "@/lib/location-visibility";
 
 // Quick category filter tabs matching the reference design
 const QUICK_FILTERS = [
@@ -39,38 +48,35 @@ const QUICK_FILTERS = [
 interface Props {
   initialQuery?: string;
   initialCategory?: string;
+  initialMapOpen?: boolean;
+  onCloseMap?: () => void;
   onQueryChange?: (q: string) => void;
   onCategoryChange?: (c: string) => void;
 }
 
-// Default center: Kovilmedu, Coimbatore localshore market
-const DEFAULT_LOCATION: MapLocation = {
-  lat: 11.0285,
-  lng: 76.9258,
-  label: "Kovilmedu, Coimbatore",
-};
-
 export function LocalShoreMapExperience({
   initialQuery = "",
   initialCategory = "all",
+  initialMapOpen = false,
+  onCloseMap,
   onQueryChange,
   onCategoryChange,
 }: Props) {
   const mapRef = useRef<InteractiveMapViewRef>(null);
   const [deliveryLoc] = useDeliveryLocation();
   const [view, setView] = useState<"map" | "list">("map");
-  const [userLocation, setUserLocation] = useState<MapLocation>(() => ({
-    lat: deliveryLoc?.lat ?? DEFAULT_LOCATION.lat,
-    lng: deliveryLoc?.lng ?? DEFAULT_LOCATION.lng,
-    label: deliveryLoc?.area || deliveryLoc?.label || DEFAULT_LOCATION.label,
-  }));
+  const [userLocation, setUserLocation] = useState<MapLocation | null>(() =>
+    deliveryLoc && isValidCoordinate(deliveryLoc.lat, deliveryLoc.lng)
+      ? { lat: deliveryLoc.lat, lng: deliveryLoc.lng, label: deliveryLoc.area || deliveryLoc.label }
+      : null,
+  );
 
   useEffect(() => {
-    if (deliveryLoc && deliveryLoc.lat && deliveryLoc.lng) {
+    if (deliveryLoc && isValidCoordinate(deliveryLoc.lat, deliveryLoc.lng)) {
       setUserLocation({
         lat: deliveryLoc.lat,
         lng: deliveryLoc.lng,
-        label: deliveryLoc.area || deliveryLoc.label || DEFAULT_LOCATION.label,
+        label: deliveryLoc.area || deliveryLoc.label,
       });
       mapRef.current?.flyToLocation(deliveryLoc.lat, deliveryLoc.lng, 13.5);
     }
@@ -84,7 +90,7 @@ export function LocalShoreMapExperience({
   const [filters, setFilters] = useState<MapFilterOptions>({
     query: initialQuery,
     category: initialCategory !== "all" ? (initialCategory as any) : undefined,
-    maxDistanceKm: 25, // Show all verified local shops within 25 km radius
+    maxDistanceKm: CUSTOMER_VISIBILITY_RADIUS_KM,
   });
   const [selectedMarkerId, setSelectedMarkerId] = useState<string | null>(null);
   const [hoveredMarkerId, setHoveredMarkerId] = useState<string | null>(null);
@@ -99,17 +105,22 @@ export function LocalShoreMapExperience({
     }));
   }, [initialQuery, initialCategory]);
 
-  // Query live approved vendor catalog & product catalog (Redis-cached via server functions)
+  // Query live Supabase approved vendor catalog & product catalog (cached across app)
   const approvedProducts = useQuery({
-    queryKey: ["approved-product-catalog"],
+    queryKey: ["customer-visible-products", deliveryLoc?.lat, deliveryLoc?.lng, query, initialCategory],
     staleTime: 1000 * 60 * 5,
     gcTime: 1000 * 60 * 10,
     retry: 1,
     refetchOnWindowFocus: false,
     queryFn: async () => {
+      if (!hasConfirmedCoordinates(deliveryLoc)) return [];
       try {
-        const res = await fetchPublicProductsServerFn({ data: { category: "all", limit: 100 } });
-        return (res.products ?? []).filter((p: any) => !isTestEntity(p.name));
+        const { data, error } = await (supabase as any).rpc("get_customer_visible_products", {
+          p_lat: deliveryLoc.lat, p_lng: deliveryLoc.lng, p_query: query || null,
+          p_category_slug: initialCategory !== "all" ? initialCategory : null, p_limit: 100, p_offset: 0,
+        });
+        if (error) throw error;
+        return (data ?? []).filter((p: any) => !isTestEntity(p.name));
       } catch (err) {
         console.warn("Map products query fallback:", err);
         return [];
@@ -118,21 +129,20 @@ export function LocalShoreMapExperience({
   });
 
   const approvedVendors = useQuery({
-    queryKey: ["approved-vendors", userLocation?.lat, userLocation?.lng],
+    queryKey: ["customer-visible-shops", deliveryLoc?.lat, deliveryLoc?.lng, query, initialCategory],
     staleTime: 1000 * 60 * 5,
     gcTime: 1000 * 60 * 10,
     retry: 1,
     refetchOnWindowFocus: false,
     queryFn: async () => {
+      if (!hasConfirmedCoordinates(deliveryLoc)) return [];
       try {
-        const res = await fetchPublicShopsServerFn({
-          data: {
-            lat: userLocation?.lat,
-            lng: userLocation?.lng,
-            limit: 100,
-          },
+        const { data, error } = await (supabase as any).rpc("get_customer_visible_shops", {
+          p_lat: deliveryLoc.lat, p_lng: deliveryLoc.lng, p_query: query || null,
+          p_category_slug: initialCategory !== "all" ? initialCategory : null, p_limit: 100, p_offset: 0,
         });
-        return (res.shops ?? []).filter((v: any) => !isTestEntity(v.name || v.shop_name));
+        if (error) throw error;
+        return (data ?? []).filter((v: any) => !isTestEntity(v.shop_name));
       } catch (err) {
         console.warn("Map vendors query fallback:", err);
         return [];
@@ -142,12 +152,21 @@ export function LocalShoreMapExperience({
 
   // Calculate Product-Aware Map Markers
   const markerItems: MapMarkerItem[] = useMemo(() => {
-    return getMapMarkerItems(
+    if (!userLocation) return [];
+    const markers = getMapMarkerItems(
       userLocation,
       filters,
       approvedProducts.data ?? [],
       approvedVendors.data ?? [],
     );
+
+    // Keep the homepage focused: show a maximum of eight unique shops.
+    const seenShopIds = new Set<string>();
+    return markers.filter((marker) => {
+      if (seenShopIds.has(marker.shopId)) return false;
+      seenShopIds.add(marker.shopId);
+      return true;
+    }).slice(0, 8);
   }, [userLocation, filters, approvedProducts.data, approvedVendors.data]);
 
   // Handle Geocoding Search for Map Locations
@@ -170,6 +189,14 @@ export function LocalShoreMapExperience({
       label: result.placeName.split(",")[0],
     };
     setUserLocation(loc);
+    setActiveDeliveryLocation({
+      id: `map-search-${Date.now()}`,
+      label: result.placeName || result.label || loc.label,
+      area: loc.label,
+      city: (result.placeName || "").split(",").slice(1, 3).join(", ").trim(),
+      lat: loc.lat,
+      lng: loc.lng,
+    });
     setLocationSearchQuery("");
     setLocationSuggestions([]);
     mapRef.current?.flyToLocation(loc.lat, loc.lng, 14);
@@ -196,11 +223,40 @@ export function LocalShoreMapExperience({
     onQueryChange?.(query);
   };
 
-  const activeQuickFilter = filters.category
-    ? getCategoryByIdOrSlug(filters.category).id
-    : "all";
-  const [showDesktopMap, setShowDesktopMap] = useState(false);
-  const [isMobileMapOpen, setIsMobileMapOpen] = useState(false);
+  const activeQuickFilter = filters.category ? getCategoryByIdOrSlug(filters.category).id : "all";
+  const [showDesktopMap, setShowDesktopMap] = useState(initialMapOpen);
+  const [isMobileMapOpen, setIsMobileMapOpen] = useState(initialMapOpen);
+
+  if (!userLocation) {
+    return (
+      <div className="relative w-full rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-8 text-center">
+        {initialMapOpen && onCloseMap && (
+          <button
+            type="button"
+            onClick={onCloseMap}
+            className="absolute right-3 top-3 rounded-full bg-white px-3 py-2 text-xs font-bold text-slate-700 shadow-sm"
+          >
+            Close
+          </button>
+        )}
+        <MapPin className="mx-auto h-8 w-8 text-[#981495]" />
+        <h3 className="mt-3 font-display text-base font-bold text-slate-900">
+          Recommended from LocalShore
+        </h3>
+        <p className="mt-1 text-xs font-medium text-slate-500">
+          Popular local shops are shown while your location is unknown.
+        </p>
+        <button
+          type="button"
+          onClick={() => window.dispatchEvent(new CustomEvent("localshore_open_location_modal"))}
+          className="mt-4 inline-flex items-center gap-2 rounded-full bg-[#981495] px-4 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-[#700b6e]"
+        >
+          <MapPin className="h-3.5 w-3.5" />
+          Add location to see shops near you
+        </button>
+      </div>
+    );
+  }
 
   // Category badge color lookup for high-contrast tag pills
   const getBadgeColor = (cat: string) => {
@@ -223,7 +279,7 @@ export function LocalShoreMapExperience({
             <h2 className="font-display text-xl md:text-2xl font-extrabold text-slate-900 tracking-tight">
               Shops near you
             </h2>
-            <span className="inline-flex items-center gap-1 rounded-full bg-purple-50 border border-purple-200 px-2.5 py-0.5 text-[11px] font-bold text-[#981495]">
+            <span className="inline-flex items-center gap-1 rounded-full bg-[var(--sand)] border border-[#f0abfc] px-2.5 py-0.5 text-[11px] font-bold text-[#981495]">
               <span className="h-1.5 w-1.5 rounded-full bg-[#981495] animate-pulse" />
               Verified Local Sellers
             </span>
@@ -386,7 +442,7 @@ export function LocalShoreMapExperience({
                           </span>
                           <span className="text-[10px] text-slate-400 ml-1">total</span>
                         </div>
-                        <span className="inline-flex items-center gap-1 rounded-full bg-purple-50 px-3.5 py-1.5 text-[11px] font-bold text-[#981495] group-hover:bg-[#981495] group-hover:text-white transition-all shadow-2xs">
+                        <span className="inline-flex items-center gap-1 rounded-full bg-[var(--sand)] px-3.5 py-1.5 text-[11px] font-bold text-[#981495] group-hover:bg-[#981495] group-hover:text-white transition-all shadow-2xs">
                           View Shop
                           <ArrowRight className="h-3.5 w-3.5" />
                         </span>
@@ -403,17 +459,23 @@ export function LocalShoreMapExperience({
         {showDesktopMap && (
           <div className="hidden lg:block lg:col-span-6 sticky top-20">
             <div className="rounded-2xl border border-slate-200/80 bg-white overflow-hidden shadow-lg">
-              <InteractiveMapView
-                ref={mapRef}
-                markers={markerItems}
-                userLocation={userLocation}
-                selectedMarkerId={selectedMarkerId}
-                hoveredMarkerId={hoveredMarkerId}
-                onSelectMarker={(m) => setSelectedMarkerId(m ? m.id : null)}
-                onBoundsChange={(bounds) => setFilters((prev) => ({ ...prev, bounds }))}
-                onUserLocationChange={setUserLocation}
-                className="h-[calc(100vh-210px)] min-h-[560px] max-h-[760px] w-full"
-              />
+              <Suspense
+                fallback={
+                  <div className="h-[calc(100vh-210px)] min-h-[560px] max-h-[760px] animate-pulse bg-slate-100" />
+                }
+              >
+                <InteractiveMapView
+                  ref={mapRef}
+                  markers={markerItems}
+                  userLocation={userLocation}
+                  selectedMarkerId={selectedMarkerId}
+                  hoveredMarkerId={hoveredMarkerId}
+                  onSelectMarker={(m) => setSelectedMarkerId(m ? m.id : null)}
+                  onBoundsChange={(bounds) => setFilters((prev) => ({ ...prev, bounds }))}
+                  onUserLocationChange={setUserLocation}
+                  className="h-[calc(100vh-210px)] min-h-[560px] max-h-[760px] w-full"
+                />
+              </Suspense>
             </div>
           </div>
         )}
@@ -421,12 +483,15 @@ export function LocalShoreMapExperience({
 
       {/* MOBILE FULLSCREEN MAP MODAL OVERLAY */}
       {isMobileMapOpen && (
-        <div className="fixed inset-0 z-50 flex flex-col bg-white lg:hidden animate-in fade-in duration-200">
+        <div className="fixed inset-0 z-[120] flex flex-col bg-white lg:hidden animate-in fade-in duration-200">
           {/* Top Navbar */}
           <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200 bg-white shadow-xs">
             <button
               type="button"
-              onClick={() => setIsMobileMapOpen(false)}
+              onClick={() => {
+                setIsMobileMapOpen(false);
+                onCloseMap?.();
+              }}
               className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-slate-700 hover:bg-slate-200 font-bold"
             >
               ✕
@@ -437,7 +502,10 @@ export function LocalShoreMapExperience({
             </div>
             <button
               type="button"
-              onClick={() => setIsMobileMapOpen(false)}
+              onClick={() => {
+                setIsMobileMapOpen(false);
+                onCloseMap?.();
+              }}
               className="inline-flex items-center gap-1 rounded-full border border-[#981495] px-3 py-1 text-xs font-bold text-[#981495]"
             >
               List View
@@ -446,25 +514,29 @@ export function LocalShoreMapExperience({
 
           {/* Map Container */}
           <div className="flex-1 relative">
-            <InteractiveMapView
-              ref={mapRef}
-              markers={markerItems}
-              userLocation={userLocation}
-              selectedMarkerId={selectedMarkerId}
-              hoveredMarkerId={hoveredMarkerId}
-              onSelectMarker={(m) => setSelectedMarkerId(m ? m.id : null)}
-              onBoundsChange={(bounds) => setFilters((prev) => ({ ...prev, bounds }))}
-              onUserLocationChange={setUserLocation}
-              className="h-full w-full rounded-none border-0"
-            />
+            <Suspense fallback={<div className="h-full w-full animate-pulse bg-slate-100" />}>
+              <InteractiveMapView
+                ref={mapRef}
+                markers={markerItems}
+                userLocation={userLocation}
+                selectedMarkerId={selectedMarkerId}
+                hoveredMarkerId={hoveredMarkerId}
+                onSelectMarker={(m) => setSelectedMarkerId(m ? m.id : null)}
+                onBoundsChange={(bounds) => setFilters((prev) => ({ ...prev, bounds }))}
+                onUserLocationChange={setUserLocation}
+                className="h-full w-full rounded-none border-0"
+              />
+            </Suspense>
           </div>
         </div>
       )}
 
       {/* Mobile Floating Map/List Bar */}
-      <div className="fixed bottom-[80px] inset-x-0 z-40 flex justify-center pointer-events-none lg:hidden">
+      <div className="fixed bottom-[80px] inset-x-0 z-[60] flex justify-center pointer-events-none lg:hidden">
         <button
-          onClick={() => setIsMobileMapOpen(!isMobileMapOpen)}
+          type="button"
+          onClick={() => setIsMobileMapOpen((isOpen) => !isOpen)}
+          aria-label={isMobileMapOpen ? "Show nearby shop list" : "Show nearby shops on map"}
           className="pointer-events-auto flex items-center gap-2 rounded-full bg-[#981495] px-5 py-3 text-xs font-bold text-white shadow-2xl hover:scale-105 active:scale-95 transition-all"
         >
           {isMobileMapOpen ? (
@@ -531,7 +603,7 @@ function NeighborhoodMapPreviewCard({
   };
 
   return (
-    <div className="w-full rounded-3xl sm:rounded-[36px] bg-white border border-purple-100/80 shadow-xl p-6 sm:p-8 md:p-10 mb-8 flex flex-col lg:flex-row items-center justify-between gap-8 overflow-hidden relative transition-all">
+    <div className="w-full rounded-3xl sm:rounded-[36px] bg-white border border-[var(--sand)]/80 shadow-xl p-6 sm:p-8 md:p-10 mb-8 flex flex-col lg:flex-row items-center justify-between gap-8 overflow-hidden relative transition-all">
       {/* Left Content Column */}
       <div className="flex-1 max-w-xl space-y-4">
         {/* Main Headline */}
@@ -556,7 +628,7 @@ function NeighborhoodMapPreviewCard({
                 />
               </svg>
               {/* 3 Radiating ray lines on the right of delivered */}
-              <span className="absolute -top-1 -right-6 flex flex-col gap-1 text-purple-500">
+              <span className="absolute -top-1 -right-6 flex flex-col gap-1 text-[#c026d3]">
                 <svg
                   className="w-5 h-5"
                   viewBox="0 0 20 20"
@@ -601,7 +673,7 @@ function NeighborhoodMapPreviewCard({
 
           {/* Pill 3 */}
           <div className="flex items-center gap-2.5 rounded-full bg-slate-50 border border-slate-200/60 px-3.5 py-2">
-            <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-purple-100 text-purple-700">
+            <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--sand)] text-[#981495]">
               <span className="text-xs font-black">∅</span>
             </div>
             <span className="text-xs font-bold text-slate-700">No dark stores</span>
@@ -622,14 +694,14 @@ function NeighborhoodMapPreviewCard({
             <button
               type="button"
               onClick={onOpenMap}
-              className="inline-flex items-center gap-2.5 rounded-full bg-gradient-to-r from-[#7e22ce] to-[#6b21a8] hover:from-[#6b21a8] hover:to-[#581c87] px-7 py-3.5 text-sm font-bold text-white shadow-lg hover:shadow-purple-500/30 transition-all active:scale-95 group cursor-pointer"
+              className="inline-flex items-center gap-2.5 rounded-full bg-gradient-to-r from-[#7e22ce] to-[#6b21a8] hover:from-[#6b21a8] hover:to-[#581c87] px-7 py-3.5 text-sm font-bold text-white shadow-lg hover:shadow-[#c026d3]/30 transition-all active:scale-95 group cursor-pointer"
             >
               <span>View on map</span>
               <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
             </button>
             {/* Radiating Ray Lines on right of button */}
             <svg
-              className="ml-2 w-5 h-5 text-purple-400"
+              className="ml-2 w-5 h-5 text-[#c026d3]"
               viewBox="0 0 20 20"
               fill="none"
               stroke="currentColor"
@@ -642,14 +714,14 @@ function NeighborhoodMapPreviewCard({
             </svg>
           </div>
 
-          <div className="flex flex-col font-['Caveat'] text-lg text-purple-900/90 leading-tight">
+          <div className="flex flex-col font-['Caveat'] text-lg text-[#981495]/90 leading-tight">
             <div className="flex items-center gap-1.5 font-bold">
               <span className="text-pink-500">♡</span> Local shops. Real people.
             </div>
             <div className="relative font-bold inline-block">
               Better together.
               <svg
-                className="absolute -bottom-1 left-0 w-full h-2 text-purple-400/80"
+                className="absolute -bottom-1 left-0 w-full h-2 text-[#c026d3]/80"
                 viewBox="0 0 100 8"
                 fill="none"
               >
@@ -668,7 +740,7 @@ function NeighborhoodMapPreviewCard({
       {/* Right Graphic Area: Light Vector Map Canvas with Floating Dynamic Shop Cards */}
       <div
         onClick={onOpenMap}
-        className="relative w-full lg:w-[500px] h-[300px] sm:h-[320px] rounded-3xl bg-[#f8fafc] border border-purple-100/90 overflow-hidden shadow-inner cursor-pointer group shrink-0"
+        className="relative w-full lg:w-[500px] h-[300px] sm:h-[320px] rounded-3xl bg-[#f8fafc] border border-[var(--sand)]/90 overflow-hidden shadow-inner cursor-pointer group shrink-0"
       >
         {/* Stylized Light Vector Map Graphic */}
         <svg
@@ -685,11 +757,7 @@ function NeighborhoodMapPreviewCard({
 
           {/* Green Park Polygons */}
           <path d="M 20 20 Q 90 10, 120 70 T 170 140 L 40 160 Z" fill="#d1fae5" opacity="0.65" />
-          <path
-            d="M 340 190 Q 400 170, 440 230 L 360 280 Z"
-            fill="#d1fae5"
-            opacity="0.65"
-          />
+          <path d="M 340 190 Q 400 170, 440 230 L 360 280 Z" fill="#d1fae5" opacity="0.65" />
 
           {/* Blue Water River Accent */}
           <path
@@ -710,18 +778,8 @@ function NeighborhoodMapPreviewCard({
           <path d="M 70 -10 L 340 340" fill="none" stroke="#ffffff" strokeWidth="12" />
           <path d="M 70 -10 L 340 340" fill="none" stroke="#e2e8f0" strokeWidth="6" />
 
-          <path
-            d="M 320 20 Q 260 160, 500 220"
-            fill="none"
-            stroke="#ffffff"
-            strokeWidth="14"
-          />
-          <path
-            d="M 320 20 Q 260 160, 500 220"
-            fill="none"
-            stroke="#cbd5e1"
-            strokeWidth="7"
-          />
+          <path d="M 320 20 Q 260 160, 500 220" fill="none" stroke="#ffffff" strokeWidth="14" />
+          <path d="M 320 20 Q 260 160, 500 220" fill="none" stroke="#cbd5e1" strokeWidth="7" />
         </svg>
 
         {/* Center User Location Marker ("You are here") */}
@@ -764,7 +822,7 @@ function NeighborhoodMapPreviewCard({
         </div>
 
         {/* Card 2: Top Right - StyleHaven */}
-        <div className="absolute top-4 right-4 flex items-center gap-2.5 rounded-2xl bg-white/95 backdrop-blur-xs p-2 pr-3 shadow-lg border border-purple-100 z-10 transition-transform group-hover:scale-105 max-w-[180px] sm:max-w-[210px] min-w-0">
+        <div className="absolute top-4 right-4 flex items-center gap-2.5 rounded-2xl bg-white/95 backdrop-blur-xs p-2 pr-3 shadow-lg border border-[var(--sand)] z-10 transition-transform group-hover:scale-105 max-w-[180px] sm:max-w-[210px] min-w-0">
           <img
             src={p1.productImage || (p1 as any).imageUrl || "/assets/clothing.png"}
             alt={p1.shopName}
@@ -775,15 +833,15 @@ function NeighborhoodMapPreviewCard({
               <span className="text-xs font-black text-slate-900 leading-tight truncate">
                 {p1.shopName}
               </span>
-              <span className="flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-full bg-purple-500 text-white text-[8px] font-bold">
+              <span className="flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-full bg-[#c026d3] text-white text-[8px] font-bold">
                 ✓
               </span>
             </div>
             <p className="text-[9px] font-semibold text-slate-400 truncate">
               {p1.category || "Fashion & Lifestyle"}
             </p>
-            <div className="flex items-center gap-1 text-[10px] font-bold text-purple-600 mt-0.5 whitespace-nowrap">
-              <MapPin className="h-3 w-3 fill-purple-600 shrink-0" />
+            <div className="flex items-center gap-1 text-[10px] font-bold text-[#c026d3] mt-0.5 whitespace-nowrap">
+              <MapPin className="h-3 w-3 fill-[#c026d3] shrink-0" />
               <span>{getEtaString(p1)}</span>
             </div>
           </div>
@@ -842,14 +900,14 @@ function NeighborhoodMapPreviewCard({
         </div>
 
         {/* Map Bottom Left CTA Pill */}
-        <div className="absolute bottom-3 left-4 bg-white/90 backdrop-blur-xs px-3.5 py-1.5 rounded-full text-xs font-bold text-[#7e22ce] shadow-md border border-purple-100 flex items-center gap-1.5 opacity-95 group-hover:opacity-100 transition-opacity z-20">
+        <div className="absolute bottom-3 left-4 bg-white/90 backdrop-blur-xs px-3.5 py-1.5 rounded-full text-xs font-bold text-[#7e22ce] shadow-md border border-[var(--sand)] flex items-center gap-1.5 opacity-95 group-hover:opacity-100 transition-opacity z-20">
           <span>📖 Click to explore live map</span>
           <ArrowRight className="h-3.5 w-3.5" />
         </div>
 
         {/* Map Bottom Right Purple Dashed Delivery Truck Trail Accent */}
         <div className="absolute bottom-2 right-4 flex items-center gap-1.5 opacity-80 pointer-events-none z-10">
-          <svg className="w-20 h-4 text-purple-500" viewBox="0 0 80 16" fill="none">
+          <svg className="w-20 h-4 text-[#c026d3]" viewBox="0 0 80 16" fill="none">
             <path
               d="M 2 12 Q 25 4, 78 12"
               stroke="currentColor"

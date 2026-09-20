@@ -1,4 +1,5 @@
-import { useState, useMemo, startTransition } from "react";
+import { useState, useMemo, startTransition, useEffect } from "react";
+import { motion, useReducedMotion } from "framer-motion";
 import { useNavigate } from "@tanstack/react-router";
 import {
   ALL_SHOP_CATEGORIES,
@@ -28,8 +29,19 @@ export function ShopCategoryNavBar({
   className = "",
 }: ShopCategoryNavBarProps) {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [isIslandExpanded, setIsIslandExpanded] = useState(false);
+  const [isCompactMode, setIsCompactMode] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const reduceMotion = useReducedMotion();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const media = window.matchMedia("(min-width: 1024px)");
+    const update = () => setIsCompactMode(media.matches);
+    update();
+    media.addEventListener("change", update);
+    return () => media.removeEventListener("change", update);
+  }, []);
 
   // Get current active category configuration
   const currentCategory = useMemo(() => {
@@ -148,157 +160,175 @@ export function ShopCategoryNavBar({
 
   return (
     <div
-      className={`w-full bg-white/95 backdrop-blur-md border-b border-purple-100/80 sticky top-[64px] z-30 transition-all ${className}`}
+      className={`w-full bg-white/95 backdrop-blur-md border-b border-[var(--sand)]/80 sticky top-[64px] z-30 transition-all ${className}`}
     >
       {/* 1st Level Shop Category Navigation Bar */}
-      <div className="mx-auto max-w-7xl px-3 sm:px-6 flex items-center gap-2 py-2">
-        <div className="flex-1 overflow-x-auto scrollbar-none [scrollbar-width:none] [&::-webkit-scrollbar]:hidden flex items-center gap-2 py-0.5 px-0.5">
-          {/* Desktop Visibility */}
-          <div className="hidden lg:flex items-center gap-1.5">
-            {DESKTOP_PRIORITY_CATEGORIES.map((cat) => {
-              const Icon = cat.icon;
-              const isSelected = currentCategory.id === cat.id;
-              const label =
-                cat.id === "all"
-                  ? "All Categories"
-                  : cat.id === "fruits_veg"
-                    ? "Fresh"
-                    : cat.id === "meat_fish"
-                      ? "Meat & Fish"
-                      : cat.id === "bakery"
-                        ? "Bakery & Sweets"
-                        : cat.id === "fashion"
-                          ? "Fashion"
-                          : cat.id === "beauty"
-                            ? "Beauty & Care"
-                            : cat.id === "electronics"
-                              ? "Electronics"
-                              : cat.id === "home_kitchen"
-                                ? "Home & Kitchen"
-                                : cat.id === "pharmacy"
-                                  ? "Pharmacy"
-                                  : cat.id === "toys"
-                                    ? "Kids & Sports"
-                                    : cat.id === "favorites"
-                                      ? "Local Favorites"
-                                      : cat.name;
+      <div className="mx-auto max-w-7xl px-3 sm:px-6 flex items-center justify-center gap-2 py-2">
+        <motion.div
+          initial={false}
+          animate={{ maxWidth: isCompactMode && !isIslandExpanded ? 148 : 1120 }}
+          transition={
+            reduceMotion ? { duration: 0 } : { type: "spring", stiffness: 360, damping: 30 }
+          }
+          onMouseEnter={() => setIsIslandExpanded(true)}
+          onMouseLeave={() => setIsIslandExpanded(false)}
+          onFocus={() => setIsIslandExpanded(true)}
+          onBlur={(event) => {
+            if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
+              setIsIslandExpanded(false);
+            }
+          }}
+          className="relative flex w-full overflow-hidden rounded-full border border-[var(--sand)]/80 bg-white/95 px-2 py-1 shadow-[0_12px_30px_rgba(76,29,149,0.12)] backdrop-blur-md [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          aria-label="Shop categories"
+        >
+          <div className="flex min-w-max items-center gap-1.5">
+            {/* Desktop Visibility */}
+            <div className="hidden lg:flex items-center gap-1.5">
+              {DESKTOP_PRIORITY_CATEGORIES.map((cat) => {
+                const Icon = cat.icon;
+                const isSelected = currentCategory.id === cat.id;
+                const label =
+                  cat.id === "all"
+                    ? "All Categories"
+                    : cat.id === "fruits_veg"
+                      ? "Fresh"
+                      : cat.id === "meat_fish"
+                        ? "Meat & Fish"
+                        : cat.id === "bakery"
+                          ? "Bakery & Sweets"
+                          : cat.id === "fashion"
+                            ? "Fashion"
+                            : cat.id === "beauty"
+                              ? "Beauty & Care"
+                              : cat.id === "electronics"
+                                ? "Electronics"
+                                : cat.id === "home_kitchen"
+                                  ? "Home & Kitchen"
+                                  : cat.id === "pharmacy"
+                                    ? "Pharmacy"
+                                    : cat.id === "toys"
+                                      ? "Kids & Sports"
+                                      : cat.id === "favorites"
+                                        ? "Local Favorites"
+                                        : cat.name;
 
-              return (
-                <button
-                  key={cat.id}
-                  onClick={() => handleCategorySelect(cat)}
-                  className={`group inline-flex items-center gap-1.5 rounded-full pl-1 pr-3 py-1 text-xs font-semibold whitespace-nowrap transition-all shrink-0 border ${
-                    isSelected
-                      ? "bg-purple-900 text-white font-bold shadow-xs border-purple-900 ring-1 ring-purple-900/40"
-                      : "text-slate-700 bg-white hover:bg-purple-50 hover:text-purple-900 border-slate-200"
-                  }`}
-                >
-                  {CATEGORY_PHOTOS[cat.id] ? (
-                    <div className="w-5 h-5 rounded-full overflow-hidden shrink-0 border border-white/50 shadow-2xs">
-                      <img
-                        src={CATEGORY_PHOTOS[cat.id]}
-                        alt={label}
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                  ) : cat.id === "all" ? (
-                    <Layers className="h-3.5 w-3.5 text-[#F3D053]" />
-                  ) : cat.id === "favorites" ? (
-                    <span className="text-amber-500 text-xs">⭐</span>
-                  ) : null}
-                  <span>{label}</span>
-                </button>
-              );
-            })}
-          </div>
+                return (
+                  <button
+                    key={cat.id}
+                    onClick={() => handleCategorySelect(cat)}
+                    className={`group inline-flex items-center gap-1.5 rounded-full pl-1 pr-3 py-1 text-xs font-semibold whitespace-nowrap transition-all shrink-0 border ${
+                      isSelected
+                        ? "bg-[#981495] text-white font-bold shadow-xs border-[#981495] ring-1 ring-[#981495]/40"
+                        : "text-slate-700 bg-white hover:bg-[var(--sand)] hover:text-[#981495] border-slate-200"
+                    }`}
+                  >
+                    {CATEGORY_PHOTOS[cat.id] ? (
+                      <div className="w-5 h-5 rounded-full overflow-hidden shrink-0 border border-white/50 shadow-2xs">
+                        <img
+                          src={CATEGORY_PHOTOS[cat.id]}
+                          alt={label}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                    ) : cat.id === "all" ? (
+                      <Layers className="h-3.5 w-3.5 text-[#F3D053]" />
+                    ) : cat.id === "favorites" ? (
+                      <span className="text-amber-500 text-xs">⭐</span>
+                    ) : null}
+                    <span>{label}</span>
+                  </button>
+                );
+              })}
+            </div>
 
-          {/* Mobile Visibility */}
-          <div className="flex lg:hidden items-center gap-1.5">
-            {MOBILE_PRIORITY_CATEGORIES.map((cat) => {
-              const isSelected = currentCategory.id === cat.id;
-              const label =
-                cat.id === "all"
-                  ? "All Categories"
-                  : cat.id === "fruits_veg"
-                    ? "Fresh"
-                    : cat.id === "meat_fish"
-                      ? "Meat & Fish"
-                      : cat.id === "bakery"
-                        ? "Bakery & Sweets"
-                        : cat.id === "fashion"
-                          ? "Fashion"
-                          : cat.id === "beauty"
-                            ? "Beauty & Care"
-                            : cat.id === "electronics"
-                              ? "Electronics"
-                              : cat.id === "home_kitchen"
-                                ? "Home & Kitchen"
-                                : cat.id === "pharmacy"
-                                  ? "Pharmacy"
-                                  : cat.id === "toys"
-                                    ? "Kids & Sports"
-                                    : cat.id === "favorites"
-                                      ? "Local Favorites"
-                                      : cat.name;
+            {/* Mobile Visibility */}
+            <div className="flex lg:hidden items-center gap-1.5 overflow-x-auto scrollbar-none [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              {MOBILE_PRIORITY_CATEGORIES.map((cat) => {
+                const isSelected = currentCategory.id === cat.id;
+                const label =
+                  cat.id === "all"
+                    ? "All Categories"
+                    : cat.id === "fruits_veg"
+                      ? "Fresh"
+                      : cat.id === "meat_fish"
+                        ? "Meat & Fish"
+                        : cat.id === "bakery"
+                          ? "Bakery & Sweets"
+                          : cat.id === "fashion"
+                            ? "Fashion"
+                            : cat.id === "beauty"
+                              ? "Beauty & Care"
+                              : cat.id === "electronics"
+                                ? "Electronics"
+                                : cat.id === "home_kitchen"
+                                  ? "Home & Kitchen"
+                                  : cat.id === "pharmacy"
+                                    ? "Pharmacy"
+                                    : cat.id === "toys"
+                                      ? "Kids & Sports"
+                                      : cat.id === "favorites"
+                                        ? "Local Favorites"
+                                        : cat.name;
 
-              return (
-                <button
-                  key={cat.id}
-                  onClick={() => handleCategorySelect(cat)}
-                  className={`group inline-flex items-center gap-1.5 rounded-full pl-1 pr-3 py-1 text-xs font-semibold whitespace-nowrap transition-all shrink-0 border ${
-                    isSelected
-                      ? "bg-purple-900 text-white font-bold shadow-xs border-purple-900 ring-1 ring-purple-900/40"
-                      : "text-slate-700 bg-white hover:bg-purple-50 hover:text-purple-900 border-slate-200"
-                  }`}
-                >
-                  {CATEGORY_PHOTOS[cat.id] ? (
-                    <div className="w-5 h-5 rounded-full overflow-hidden shrink-0 border border-white/50 shadow-2xs">
-                      <img
-                        src={CATEGORY_PHOTOS[cat.id]}
-                        alt={label}
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                  ) : cat.id === "all" ? (
-                    <Layers className="h-3.5 w-3.5 text-[#F3D053]" />
-                  ) : cat.id === "favorites" ? (
-                    <span className="text-amber-500 text-xs">⭐</span>
-                  ) : null}
-                  <span>{label}</span>
-                </button>
-              );
-            })}
-          </div>
+                return (
+                  <button
+                    key={cat.id}
+                    onClick={() => handleCategorySelect(cat)}
+                    className={`group inline-flex items-center gap-1.5 rounded-full pl-1 pr-3 py-1 text-xs font-semibold whitespace-nowrap transition-all shrink-0 border ${
+                      isSelected
+                        ? "bg-[#981495] text-white font-bold shadow-xs border-[#981495] ring-1 ring-[#981495]/40"
+                        : "text-slate-700 bg-white hover:bg-[var(--sand)] hover:text-[#981495] border-slate-200"
+                    }`}
+                  >
+                    {CATEGORY_PHOTOS[cat.id] ? (
+                      <div className="w-5 h-5 rounded-full overflow-hidden shrink-0 border border-white/50 shadow-2xs">
+                        <img
+                          src={CATEGORY_PHOTOS[cat.id]}
+                          alt={label}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                    ) : cat.id === "all" ? (
+                      <Layers className="h-3.5 w-3.5 text-[#F3D053]" />
+                    ) : cat.id === "favorites" ? (
+                      <span className="text-amber-500 text-xs">⭐</span>
+                    ) : null}
+                    <span>{label}</span>
+                  </button>
+                );
+              })}
+            </div>
 
-          {/* Active fallback pill */}
-          {!DESKTOP_PRIORITY_CATEGORIES.some((c) => c.id === currentCategory.id) && (
+            {/* Active fallback pill */}
+            {!DESKTOP_PRIORITY_CATEGORIES.some((c) => c.id === currentCategory.id) && (
+              <button
+                onClick={() => handleCategorySelect(currentCategory)}
+                className="inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-xs font-semibold whitespace-nowrap bg-[#981495] text-white shadow-md shrink-0"
+              >
+                <currentCategory.icon className="h-3.5 w-3.5 text-[#F3D053]" />
+                <span>{currentCategory.name}</span>
+              </button>
+            )}
+
+            {/* More Pill */}
             <button
-              onClick={() => handleCategorySelect(currentCategory)}
-              className="inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-xs font-semibold whitespace-nowrap bg-purple-900 text-white shadow-md shrink-0"
+              onClick={() => setIsDrawerOpen(true)}
+              className="inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-bold whitespace-nowrap bg-[var(--sand)]/80 text-[#981495] hover:bg-[#f0abfc] border border-[#f0abfc]/60 shrink-0 shadow-xs"
             >
-              <currentCategory.icon className="h-3.5 w-3.5 text-[#F3D053]" />
-              <span>{currentCategory.name}</span>
+              <Sparkles className="h-3.5 w-3.5 text-[#981495]" />
+              <span>More</span>
+              <ChevronDown className="h-3.5 w-3.5 text-[#981495]" />
             </button>
-          )}
-
-          {/* More Pill */}
-          <button
-            onClick={() => setIsDrawerOpen(true)}
-            className="inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-bold whitespace-nowrap bg-purple-100/80 text-purple-900 hover:bg-purple-200 border border-purple-200/60 shrink-0 shadow-xs"
-          >
-            <Sparkles className="h-3.5 w-3.5 text-purple-700" />
-            <span>More</span>
-            <ChevronDown className="h-3.5 w-3.5 text-purple-700" />
-          </button>
-        </div>
+          </div>
+        </motion.div>
       </div>
 
       {/* 2nd-LEVEL SUBCATEGORY FILTER STRIP */}
       {subcategories.length > 0 && currentCategory.id !== "all" && (
-        <div className="bg-purple-50/60 border-t border-purple-100/70 py-1.5 px-3 sm:px-6">
+        <div className="bg-[var(--sand)]/60 border-t border-[var(--sand)]/70 py-1.5 px-3 sm:px-6">
           <div className="mx-auto max-w-7xl flex items-center gap-2 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-            <span className="text-[11px] font-black uppercase text-purple-900/60 shrink-0 flex items-center gap-1">
-              <Layers className="h-3 w-3 text-purple-700" />
+            <span className="text-[11px] font-black uppercase text-[#981495]/60 shrink-0 flex items-center gap-1">
+              <Layers className="h-3 w-3 text-[#981495]" />
               Subcategory:
             </span>
 
@@ -308,8 +338,8 @@ export function ShopCategoryNavBar({
               onClick={() => handleSubcategorySelect("all")}
               className={`px-3 py-1 rounded-lg text-xs font-bold whitespace-nowrap transition-all ${
                 activeSubcategoryId === "all"
-                  ? "bg-purple-900 text-white shadow-2xs"
-                  : "bg-white text-slate-700 hover:bg-purple-100 border border-purple-200/60"
+                  ? "bg-[#981495] text-white shadow-2xs"
+                  : "bg-white text-slate-700 hover:bg-[var(--sand)] border border-[#f0abfc]/60"
               }`}
             >
               All {currentCategory.name}
@@ -324,8 +354,8 @@ export function ShopCategoryNavBar({
                   onClick={() => handleSubcategorySelect(sub.id)}
                   className={`px-3 py-1 rounded-lg text-xs font-bold whitespace-nowrap transition-all ${
                     isSelected
-                      ? "bg-purple-900 text-white shadow-2xs"
-                      : "bg-white text-slate-700 hover:bg-purple-100 border border-purple-200/60"
+                      ? "bg-[#981495] text-white shadow-2xs"
+                      : "bg-white text-slate-700 hover:bg-[var(--sand)] border border-[#f0abfc]/60"
                   }`}
                 >
                   {sub.name}
@@ -338,8 +368,8 @@ export function ShopCategoryNavBar({
 
       {/* Category Drawer Modal */}
       <Dialog open={isDrawerOpen} onOpenChange={setIsDrawerOpen}>
-        <DialogContent className="max-w-4xl max-h-[85vh] overflow-hidden flex flex-col p-0 rounded-3xl border-purple-100">
-          <div className="bg-gradient-to-r from-purple-900 via-indigo-900 to-purple-950 p-6 text-white shrink-0 relative">
+        <DialogContent className="max-w-4xl max-h-[85vh] overflow-hidden flex flex-col p-0 rounded-3xl border-[var(--sand)]">
+          <div className="bg-gradient-to-r from-[#981495] via-[#700b6e] to-[#700b6e] p-6 text-white shrink-0 relative">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2.5">
                 <div className="p-2 rounded-2xl bg-white/10 backdrop-blur-md border border-white/15">
@@ -349,7 +379,7 @@ export function ShopCategoryNavBar({
                   <DialogTitle className="text-xl font-bold text-white">
                     All Shop Categories
                   </DialogTitle>
-                  <p className="text-xs text-purple-200 mt-0.5">
+                  <p className="text-xs text-[#f0abfc] mt-0.5">
                     Browse all 30+ specialized local business types in your neighborhood
                   </p>
                 </div>
@@ -400,12 +430,12 @@ export function ShopCategoryNavBar({
                           onClick={() => handleCategorySelect(cat)}
                           className={`flex items-start gap-3 p-3.5 rounded-2xl border text-left transition-all ${
                             isSelected
-                              ? "bg-purple-900 text-white border-purple-900 shadow-md ring-2 ring-purple-900/20"
-                              : "bg-white text-slate-800 border-slate-200 hover:border-purple-300 hover:shadow-sm"
+                              ? "bg-[#981495] text-white border-[#981495] shadow-md ring-2 ring-[#981495]/20"
+                              : "bg-white text-slate-800 border-slate-200 hover:border-[#f0abfc] hover:shadow-sm"
                           }`}
                         >
                           <div
-                            className={`p-2.5 rounded-xl shrink-0 ${isSelected ? "bg-white/10 text-[#F3D053]" : "bg-purple-50 text-purple-700"}`}
+                            className={`p-2.5 rounded-xl shrink-0 ${isSelected ? "bg-white/10 text-[#F3D053]" : "bg-[var(--sand)] text-[#981495]"}`}
                           >
                             <Icon className="h-5 w-5" />
                           </div>
@@ -415,7 +445,7 @@ export function ShopCategoryNavBar({
                               {isSelected && <Check className="h-3.5 w-3.5 text-[#F3D053]" />}
                             </div>
                             <p
-                              className={`text-[11px] mt-0.5 line-clamp-2 leading-relaxed ${isSelected ? "text-purple-200" : "text-slate-500"}`}
+                              className={`text-[11px] mt-0.5 line-clamp-2 leading-relaxed ${isSelected ? "text-[#f0abfc]" : "text-slate-500"}`}
                             >
                               {cat.description}
                             </p>
@@ -430,7 +460,7 @@ export function ShopCategoryNavBar({
               categoryGroups.map((group) => (
                 <div key={group.title}>
                   <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3 flex items-center gap-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-purple-600" />
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#c026d3]" />
                     {group.title}
                   </h4>
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -445,17 +475,21 @@ export function ShopCategoryNavBar({
                           onClick={() => handleCategorySelect(cat)}
                           className={`flex items-start gap-3 p-3.5 rounded-2xl border text-left transition-all ${
                             isSelected
-                              ? "bg-purple-900 text-white border-purple-900 shadow-md ring-2 ring-purple-900/20"
-                              : "bg-white text-slate-800 border-slate-200 hover:border-purple-300 hover:shadow-sm"
+                              ? "bg-[#981495] text-white border-[#981495] shadow-md ring-2 ring-[#981495]/20"
+                              : "bg-white text-slate-800 border-slate-200 hover:border-[#f0abfc] hover:shadow-sm"
                           }`}
                         >
                           {photo ? (
                             <div className="w-10 h-10 rounded-full overflow-hidden shrink-0 border border-white/60 shadow-xs">
-                              <img src={photo} alt={cat.name} className="w-full h-full object-cover" />
+                              <img
+                                src={photo}
+                                alt={cat.name}
+                                className="w-full h-full object-cover"
+                              />
                             </div>
                           ) : (
                             <div
-                              className={`p-2.5 rounded-xl shrink-0 ${isSelected ? "bg-white/10 text-[#F3D053]" : "bg-purple-50 text-purple-700"}`}
+                              className={`p-2.5 rounded-xl shrink-0 ${isSelected ? "bg-white/10 text-[#F3D053]" : "bg-[var(--sand)] text-[#981495]"}`}
                             >
                               <Icon className="h-5 w-5" />
                             </div>
@@ -466,7 +500,7 @@ export function ShopCategoryNavBar({
                               {isSelected && <Check className="h-3.5 w-3.5 text-[#F3D053]" />}
                             </div>
                             <p
-                              className={`text-[11px] mt-0.5 line-clamp-2 leading-relaxed ${isSelected ? "text-purple-200" : "text-slate-500"}`}
+                              className={`text-[11px] mt-0.5 line-clamp-2 leading-relaxed ${isSelected ? "text-[#f0abfc]" : "text-slate-500"}`}
                             >
                               {cat.description}
                             </p>

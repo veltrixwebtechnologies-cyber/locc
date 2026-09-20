@@ -52,7 +52,6 @@ function WishlistPage() {
             Sign in
           </Link>
         </EmptyState>
-
       ) : wishlist.isLoading || products.isLoading ? (
         <div className="py-12 flex justify-center">
           <LottieLoading

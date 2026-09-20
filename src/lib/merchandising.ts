@@ -24,6 +24,7 @@ export type MerchandisingProduct = {
   average_rating: number;
   review_count: number;
   shop_name: string;
+  description?: string | null;
 };
 
 export type WishlistCatalogItem = {
@@ -208,20 +209,30 @@ export function useTrending() {
   });
 }
 
+let isFeaturedBrandsDisabled = false;
+let isCollectionsDisabled = false;
+let isFlashSalesDisabled = false;
+
 export function useFeaturedBrands() {
   return useQuery({
     queryKey: ["merchandising", "featured-brands"],
     retry: false,
     refetchOnWindowFocus: false,
+    enabled: !isFeaturedBrandsDisabled,
     queryFn: async () => {
+      if (isFeaturedBrandsDisabled) return [];
       try {
         const { data, error } = await (supabase as any)
           .from("featured_brands")
           .select("brand_id,display_order,brands(id,name,logo_url)")
           .order("display_order");
-        if (error) throw error;
+        if (error) {
+          isFeaturedBrandsDisabled = true;
+          return [];
+        }
         return data ?? [];
       } catch {
+        isFeaturedBrandsDisabled = true;
         return [];
       }
     },
@@ -233,7 +244,9 @@ export function useActiveCollections() {
     queryKey: ["merchandising", "collections"],
     retry: false,
     refetchOnWindowFocus: false,
+    enabled: !isCollectionsDisabled,
     queryFn: async () => {
+      if (isCollectionsDisabled) return { gift: [], seasonal: [] };
       try {
         const [gift, seasonal] = await Promise.all([
           (supabase as any)
@@ -249,8 +262,13 @@ export function useActiveCollections() {
             .order("display_order")
             .limit(8),
         ]);
+        if (gift.error || seasonal.error) {
+          isCollectionsDisabled = true;
+          return { gift: [], seasonal: [] };
+        }
         return { gift: gift.data ?? [], seasonal: seasonal.data ?? [] };
       } catch {
+        isCollectionsDisabled = true;
         return { gift: [], seasonal: [] };
       }
     },
@@ -262,22 +280,30 @@ export function useRecentlyViewed() {
   return useQuery({
     queryKey: ["merchandising", "recently-viewed", auth.email || auth.phone],
     enabled: Boolean(auth.email || auth.phone),
+    retry: false,
+    refetchOnWindowFocus: false,
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
-        .from("recently_viewed")
-        .select("product_id,viewed_at")
-        .order("viewed_at", { ascending: false })
-        .limit(30);
-      if (error) throw error;
-      const ids = (data ?? []).map((row: any) => row.product_id);
-      if (!ids.length) return [] as MerchandisingProduct[];
-      const products = await (supabase as any)
-        .from("public_merchandising_products")
-        .select(productSelect)
-        .in("id", ids);
-      if (products.error) throw products.error;
-      const byId = new Map((products.data ?? []).map((row: MerchandisingProduct) => [row.id, row]));
-      return ids.map((id: string) => byId.get(id)).filter(Boolean) as MerchandisingProduct[];
+      try {
+        const { data, error } = await (supabase as any)
+          .from("recently_viewed")
+          .select("product_id,viewed_at")
+          .order("viewed_at", { ascending: false })
+          .limit(30);
+        if (error) return [] as MerchandisingProduct[];
+        const ids = (data ?? []).map((row: any) => row.product_id);
+        if (!ids.length) return [] as MerchandisingProduct[];
+        const products = await (supabase as any)
+          .from("public_merchandising_products")
+          .select(productSelect)
+          .in("id", ids);
+        if (products.error) return [] as MerchandisingProduct[];
+        const byId = new Map(
+          (products.data ?? []).map((row: MerchandisingProduct) => [row.id, row]),
+        );
+        return ids.map((id: string) => byId.get(id)).filter(Boolean) as MerchandisingProduct[];
+      } catch {
+        return [] as MerchandisingProduct[];
+      }
     },
   });
 }
@@ -302,7 +328,9 @@ export function useActiveFlashSales() {
     queryKey: ["merchandising", "flash-sales"],
     retry: false,
     refetchOnWindowFocus: false,
+    enabled: !isFlashSalesDisabled,
     queryFn: async () => {
+      if (isFlashSalesDisabled) return [];
       try {
         const now = new Date().toISOString();
         const { data, error } = await (supabase as any)
@@ -314,9 +342,13 @@ export function useActiveFlashSales() {
           .lte("starts_at", now)
           .gt("ends_at", now)
           .order("ends_at", { ascending: true });
-        if (error) return [];
+        if (error) {
+          isFlashSalesDisabled = true;
+          return [];
+        }
         return data ?? [];
       } catch {
+        isFlashSalesDisabled = true;
         return [];
       }
     },

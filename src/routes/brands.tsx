@@ -46,11 +46,11 @@ function BrandsPage() {
         <m.div
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mt-5 rounded-3xl bg-gradient-to-br from-slate-900 via-slate-800 to-purple-900 p-6 text-white shadow-xl sm:p-8"
+          className="mt-5 rounded-3xl bg-gradient-to-br from-slate-900 via-slate-800 to-[#981495] p-6 text-white shadow-xl sm:p-8"
         >
           <div className="flex items-center gap-2">
-            <ShoppingBag className="h-5 w-5 text-purple-400" />
-            <span className="text-xs font-bold uppercase tracking-widest text-purple-300">
+            <ShoppingBag className="h-5 w-5 text-[#c026d3]" />
+            <span className="text-xs font-bold uppercase tracking-widest text-[#f0abfc]">
               LocalShore Brand Stores
             </span>
           </div>
@@ -64,13 +64,13 @@ function BrandsPage() {
 
           {/* Search */}
           <div className="mt-4 flex max-w-lg items-center gap-2 rounded-2xl bg-white/10 px-4 py-3 backdrop-blur-sm">
-            <Search className="h-4 w-4 text-purple-300" />
+            <Search className="h-4 w-4 text-[#f0abfc]" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search brands..."
-              className="w-full bg-transparent text-sm text-white outline-none placeholder:text-purple-300"
+              className="w-full bg-transparent text-sm text-white outline-none placeholder:text-[#f0abfc]"
             />
           </div>
         </m.div>
@@ -87,7 +87,7 @@ function BrandsPage() {
                   key={brand.id}
                   to="/brand/$brandId"
                   params={{ brandId: brand.id }}
-                  className="group shrink-0 w-48 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xs transition hover:shadow-md hover:border-purple-300"
+                  className="group shrink-0 w-48 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xs transition hover:shadow-md hover:border-[#f0abfc]"
                 >
                   <div className="relative aspect-[16/9] overflow-hidden">
                     <img
@@ -122,8 +122,8 @@ function BrandsPage() {
               onClick={() => setFilter(f)}
               className={`rounded-full px-4 py-2 text-xs font-bold capitalize transition ${
                 filter === f
-                  ? "bg-purple-700 text-white"
-                  : "bg-slate-100 text-slate-600 hover:bg-purple-50"
+                  ? "bg-[#981495] text-white"
+                  : "bg-slate-100 text-slate-600 hover:bg-[var(--sand)]"
               }`}
             >
               {f === "all" ? "All Brands" : "Featured"}
@@ -143,7 +143,7 @@ function BrandsPage() {
               <Link
                 to="/brand/$brandId"
                 params={{ brandId: brand.id }}
-                className="group block overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xs transition hover:shadow-md hover:border-purple-300"
+                className="group block overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xs transition hover:shadow-md hover:border-[#f0abfc]"
               >
                 <div className="relative aspect-[2/1] overflow-hidden">
                   <img
@@ -177,7 +177,7 @@ function BrandsPage() {
                         {brand.productCount} products
                       </p>
                     </div>
-                    <div className="flex items-center gap-1 rounded-lg bg-purple-50 px-3 py-1.5 text-xs font-bold text-purple-700 group-hover:bg-purple-700 group-hover:text-white transition">
+                    <div className="flex items-center gap-1 rounded-lg bg-[var(--sand)] px-3 py-1.5 text-xs font-bold text-[#981495] group-hover:bg-[#981495] group-hover:text-white transition">
                       Visit Store <ArrowRight className="h-3 w-3" />
                     </div>
                   </div>

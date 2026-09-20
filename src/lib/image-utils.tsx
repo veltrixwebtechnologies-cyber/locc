@@ -139,6 +139,52 @@ export function getFallbackProductImage(name?: string | null, category?: string 
     return "https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&w=800&q=80";
   }
 
+  if (
+    c.includes("electronics") ||
+    c.includes("mobile") ||
+    c.includes("tech") ||
+    n.includes("phone") ||
+    n.includes("laptop") ||
+    n.includes("headphone")
+  ) {
+    return "https://images.unsplash.com/photo-1498047996603-5c9c2f5e4b2f?auto=format&fit=crop&w=800&q=80";
+  }
+
+  if (
+    c.includes("restaurant") ||
+    c.includes("restaurants") ||
+    c.includes("food") ||
+    n.includes("restaurant") ||
+    n.includes("cafe")
+  ) {
+    return "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=800&q=80";
+  }
+
+  if (
+    c.includes("home") ||
+    c.includes("decor") ||
+    c.includes("furniture") ||
+    c.includes("kitchen")
+  ) {
+    return "https://images.unsplash.com/photo-1555041469-a586c61ea9bc?auto=format&fit=crop&w=800&q=80";
+  }
+
+  if (
+    c.includes("fruits_veg") ||
+    c.includes("produce") ||
+    c.includes("vegetable") ||
+    c.includes("palamuthir")
+  ) {
+    return "https://images.unsplash.com/photo-1610832958506-aa56368176cf?auto=format&fit=crop&w=800&q=80";
+  }
+
+  if (
+    c.includes("grocery") ||
+    c.includes("kirana")
+  ) {
+    return "https://images.unsplash.com/photo-1586201375761-83865001e31c?auto=format&fit=crop&w=800&q=80";
+  }
+
   return "https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=800&q=80";
 }
 

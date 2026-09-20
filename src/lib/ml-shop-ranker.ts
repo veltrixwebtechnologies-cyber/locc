@@ -1,4 +1,4 @@
-import { calculateDistanceKm } from './geo';
+import { calculateDistanceKm } from "./geo";
 
 export interface MLShopRankingInput {
   id: string;
@@ -17,12 +17,12 @@ export interface MLShopRankingInput {
 }
 
 export interface MLRankingWeights {
-  w_distance: number;      // default: 35
-  w_stock: number;         // default: 25
-  w_availability: number;  // default: 15
-  w_rating: number;        // default: 10
-  w_delivery_speed: number;// default: 10
-  w_velocity: number;      // default: 5
+  w_distance: number; // default: 35
+  w_stock: number; // default: 25
+  w_availability: number; // default: 15
+  w_rating: number; // default: 10
+  w_delivery_speed: number; // default: 10
+  w_velocity: number; // default: 5
 }
 
 export const DEFAULT_ML_WEIGHTS: MLRankingWeights = {
@@ -36,12 +36,12 @@ export const DEFAULT_ML_WEIGHTS: MLRankingWeights = {
 
 export interface MLRankedShopResult extends MLShopRankingInput {
   distance_km: number | null;
-  distance_score: number;       // 0-100
-  stock_score: number;          // 0-100
-  availability_score: number;   // 0-100
-  rating_score: number;         // 0-100
-  speed_score: number;          // 0-100
-  total_ml_score: number;       // 0-100
+  distance_score: number; // 0-100
+  stock_score: number; // 0-100
+  availability_score: number; // 0-100
+  rating_score: number; // 0-100
+  speed_score: number; // 0-100
+  total_ml_score: number; // 0-100
   explainability_tags: string[];
   estimated_eta_mins: number;
 }
@@ -52,34 +52,34 @@ export interface ParsedQueryIntent {
   category_intent: string | null;
   is_urgent: boolean;
   wants_fast_delivery: boolean;
-  price_sensitivity: 'low' | 'medium' | 'high' | 'neutral';
+  price_sensitivity: "low" | "medium" | "high" | "neutral";
 }
 
 /**
  * Parses user search query to detect intent and category triggers
  */
 export function parseQueryIntent(query: string): ParsedQueryIntent {
-  const norm = (query || '').toLowerCase().trim();
-  
+  const norm = (query || "").toLowerCase().trim();
+
   let category_intent: string | null = null;
   if (/shirt|t-shirt|pant|jeans|cloth|fashion|dress|shoe|footwear/i.test(norm)) {
-    category_intent = 'Fashion & Apparel';
+    category_intent = "Fashion & Apparel";
   } else if (/phone|mobile|laptop|electronic|headphone|gadget|repair/i.test(norm)) {
-    category_intent = 'Electronics & Tech Services';
+    category_intent = "Electronics & Tech Services";
   } else if (/milk|bread|egg|grocery|fruit|veg|food|snack/i.test(norm)) {
-    category_intent = 'Groceries & Daily Needs';
+    category_intent = "Groceries & Daily Needs";
   } else if (/medicine|pharma|doctor|tablet|health/i.test(norm)) {
-    category_intent = 'Pharmacy & Healthcare';
+    category_intent = "Pharmacy & Healthcare";
   }
 
   const is_urgent = /urgent|quick|fast|emergency|now|instant/i.test(norm);
   const wants_fast_delivery = is_urgent || /delivery|express/i.test(norm);
 
-  let price_sensitivity: ParsedQueryIntent['price_sensitivity'] = 'neutral';
+  let price_sensitivity: ParsedQueryIntent["price_sensitivity"] = "neutral";
   if (/cheap|discount|offer|budget|wholesale/i.test(norm)) {
-    price_sensitivity = 'high';
+    price_sensitivity = "high";
   } else if (/premium|luxury|original|brand/i.test(norm)) {
-    price_sensitivity = 'low';
+    price_sensitivity = "low";
   }
 
   return {
@@ -100,10 +100,10 @@ export function rankShopsWithML(
   userLat?: number | null,
   userLng?: number | null,
   query?: string,
-  customWeights: Partial<MLRankingWeights> = {}
+  customWeights: Partial<MLRankingWeights> = {},
 ): MLRankedShopResult[] {
   const weights: MLRankingWeights = { ...DEFAULT_ML_WEIGHTS, ...customWeights };
-  const intent = parseQueryIntent(query || '');
+  const intent = parseQueryIntent(query || "");
 
   // Adjust weights based on query intent
   if (intent.is_urgent) {
@@ -139,25 +139,30 @@ export function rankShopsWithML(
     const prepMins = shop.avg_prep_time_mins || 15;
     const distMins = distance_km ? Math.round((distance_km / 20) * 60) : 10;
     const totalEtaMins = prepMins + distMins;
-    const speed_score = Math.max(0, Math.min(100, 100 - (totalEtaMins * 2)));
+    const speed_score = Math.max(0, Math.min(100, 100 - totalEtaMins * 2));
 
     // 6. Weighted Total ML Score
-    const totalWeightSum = weights.w_distance + weights.w_stock + weights.w_availability + weights.w_rating + weights.w_delivery_speed + weights.w_velocity;
+    const totalWeightSum =
+      weights.w_distance +
+      weights.w_stock +
+      weights.w_availability +
+      weights.w_rating +
+      weights.w_delivery_speed +
+      weights.w_velocity;
     const total_ml_score = Math.round(
-      (
-        (distance_score * weights.w_distance) +
-        (stock_score * weights.w_stock) +
-        (availability_score * weights.w_availability) +
-        (rating_score * weights.w_rating) +
-        (speed_score * weights.w_delivery_speed) +
-        (75 * weights.w_velocity)
-      ) / totalWeightSum
+      (distance_score * weights.w_distance +
+        stock_score * weights.w_stock +
+        availability_score * weights.w_availability +
+        rating_score * weights.w_rating +
+        speed_score * weights.w_delivery_speed +
+        75 * weights.w_velocity) /
+        totalWeightSum,
     );
 
     // 7. Explainability Tags
     const tags: string[] = [];
-    if (availability_score === 100) tags.push('Open Now');
-    else tags.push('Closed');
+    if (availability_score === 100) tags.push("Open Now");
+    else tags.push("Closed");
 
     if (distance_km !== null) {
       if (distance_km < 1.5) tags.push(`Near You (${distance_km.toFixed(1)} km)`);
@@ -165,7 +170,7 @@ export function rankShopsWithML(
     }
 
     if (matchCount > 0) {
-      tags.push(`${matchCount} matching item${matchCount > 1 ? 's' : ''}`);
+      tags.push(`${matchCount} matching item${matchCount > 1 ? "s" : ""}`);
     }
 
     if (rating >= 4.5) {

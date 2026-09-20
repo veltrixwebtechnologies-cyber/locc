@@ -37,7 +37,7 @@ export function MarketplaceDiscovery({ products }: { products: MerchandisingProd
             <div className="mb-3 flex items-center justify-between">
               <div>
                 <p className="font-mono text-[10px] uppercase tracking-widest text-primary">
-                  Discover nearby
+                  Explore LocalShore
                 </p>
                 <h2 className="font-display text-lg font-bold text-foreground">
                   Frequently searched
@@ -73,7 +73,7 @@ export function MarketplaceDiscovery({ products }: { products: MerchandisingProd
           >
             <div>
               <p className="text-xs font-medium text-primary-foreground/80">
-                Trusted sellers near you
+                Trusted local sellers
               </p>
               <h3 className="mt-2 font-display text-2xl font-bold leading-tight">
                 Discover local picks
@@ -97,8 +97,8 @@ function SocialShoppingStrip() {
   const reduceMotion = useReducedMotion();
   const signals = [
     { icon: TrendingUp, label: "Trending now", detail: "Fresh picks shoppers are exploring" },
-    { icon: UsersRound, label: "Popular near you", detail: "Loved by local customers" },
-    { icon: Zap, label: "Just added", detail: "New products from nearby sellers" },
+    { icon: UsersRound, label: "Popular shops", detail: "Loved by local customers" },
+    { icon: Zap, label: "Just added", detail: "New products from local sellers" },
   ];
 
   return (
@@ -176,7 +176,7 @@ function DiscoveryProductCard({
         />
       </div>
       <div className="mt-3 flex flex-col justify-between flex-1">
-        <h3 className="line-clamp-1 text-sm font-bold text-slate-800 group-hover:text-purple-700 transition-colors">
+        <h3 className="line-clamp-1 text-sm font-bold text-slate-800 group-hover:text-[#981495] transition-colors">
           {product?.name ?? item.title}
         </h3>
         {sellingPrice !== null && (
@@ -184,7 +184,7 @@ function DiscoveryProductCard({
             <span className="text-sm font-black text-slate-900">₹{sellingPrice}</span>
           </div>
         )}
-        <p className="mt-0.5 text-xs font-black text-purple-700">Best Pick</p>
+        <p className="mt-0.5 text-xs font-black text-[#981495]">Best Pick</p>
       </div>
     </Link>
   );

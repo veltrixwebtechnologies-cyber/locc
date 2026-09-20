@@ -18,7 +18,7 @@ export const Route = createFileRoute("/explore")({ component: ExplorePage });
 
 const typeLabel: Record<TravelOpportunity["type"], { label: string; color: string }> = {
   culture: { label: "Culture & Heritage", color: "bg-amber-100 text-amber-800" },
-  retail: { label: "Retail & Shopping", color: "bg-purple-100 text-purple-800" },
+  retail: { label: "Retail & Shopping", color: "bg-[var(--sand)] text-[#981495]" },
   business: { label: "Business & Trade", color: "bg-blue-100 text-blue-800" },
   food: { label: "Food & Markets", color: "bg-orange-100 text-orange-800" },
   tech: { label: "Tech & Innovation", color: "bg-cyan-100 text-cyan-800" },
@@ -58,7 +58,7 @@ function ExplorePage() {
         <m.div
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mt-5 relative overflow-hidden rounded-3xl bg-gradient-to-br from-sky-800 via-blue-900 to-indigo-900 p-6 text-white shadow-xl sm:p-8"
+          className="mt-5 relative overflow-hidden rounded-3xl bg-gradient-to-br from-sky-800 via-blue-900 to-[#700b6e] p-6 text-white shadow-xl sm:p-8"
         >
           <div className="absolute top-0 right-0 w-48 h-48 opacity-10 text-8xl flex items-center justify-center">
             ✈️
@@ -99,8 +99,8 @@ function ExplorePage() {
               onClick={() => setFilter(t)}
               className={`shrink-0 rounded-full px-4 py-2 text-xs font-bold capitalize transition ${
                 filter === t
-                  ? "bg-purple-700 text-white"
-                  : "bg-slate-100 text-slate-600 hover:bg-purple-50"
+                  ? "bg-[#981495] text-white"
+                  : "bg-slate-100 text-slate-600 hover:bg-[var(--sand)]"
               }`}
             >
               {t === "all" ? "All Destinations" : typeLabel[t].label}
@@ -160,7 +160,7 @@ function ExplorePage() {
                     <p className="text-sm font-bold text-slate-900">{dest.priceRange}</p>
                   </div>
                   {dest.available ? (
-                    <button className="rounded-xl bg-purple-700 px-4 py-2 text-xs font-bold text-white hover:bg-purple-800 transition flex items-center gap-1">
+                    <button className="rounded-xl bg-[#981495] px-4 py-2 text-xs font-bold text-white hover:bg-[#981495] transition flex items-center gap-1">
                       Explore <ExternalLink className="h-3 w-3" />
                     </button>
                   ) : (
@@ -176,17 +176,17 @@ function ExplorePage() {
         </div>
 
         {/* CTA */}
-        <div className="mt-8 rounded-2xl border border-purple-200 bg-purple-50 p-6 text-center">
-          <Sparkles className="mx-auto h-6 w-6 text-purple-600" />
-          <h3 className="mt-2 font-display text-lg font-bold text-purple-900">
+        <div className="mt-8 rounded-2xl border border-[#f0abfc] bg-[var(--sand)] p-6 text-center">
+          <Sparkles className="mx-auto h-6 w-6 text-[#c026d3]" />
+          <h3 className="mt-2 font-display text-lg font-bold text-[#981495]">
             Earn Shore Points on travel!
           </h3>
-          <p className="mt-1 text-sm text-purple-700">
+          <p className="mt-1 text-sm text-[#981495]">
             Book through LocalShore Explore and earn up to 5x Shore Points on your travel bookings.
           </p>
           <Link
             to="/rewards"
-            className="mt-4 inline-flex items-center gap-1 rounded-xl bg-purple-700 px-5 py-2.5 text-xs font-bold text-white hover:bg-purple-800"
+            className="mt-4 inline-flex items-center gap-1 rounded-xl bg-[#981495] px-5 py-2.5 text-xs font-bold text-white hover:bg-[#981495]"
           >
             <Star className="h-3.5 w-3.5" /> View Your Rewards
           </Link>

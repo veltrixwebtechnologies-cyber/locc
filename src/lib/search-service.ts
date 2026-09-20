@@ -62,7 +62,8 @@ function normalizeForSearch(value: string): string {
 function stemWord(word: string): string {
   if (!word || word.length <= 3) return word;
   if (word.endsWith("ies")) return word.slice(0, -3) + "y";
-  if (word.endsWith("es") && !word.endsWith("ees") && !word.endsWith("ses")) return word.slice(0, -2);
+  if (word.endsWith("es") && !word.endsWith("ees") && !word.endsWith("ses"))
+    return word.slice(0, -2);
   if (word.endsWith("s") && !word.endsWith("ss") && !word.endsWith("us")) return word.slice(0, -1);
   return word;
 }
@@ -76,10 +77,7 @@ function compactForSearch(value: string): string {
 }
 
 function tokenizeForSearch(value: string): string[] {
-  return normalizeForSearch(value)
-    .split(/\s+/)
-    .filter(Boolean)
-    .map(collapseRepeatedLetters);
+  return normalizeForSearch(value).split(/\s+/).filter(Boolean).map(collapseRepeatedLetters);
 }
 
 function stemTokens(tokens: string[]): string[] {
@@ -145,7 +143,7 @@ function scoreTextMatch(query: string, values: string[]): number {
 
     const normalizedValue = normalizeForSearch(rawValue);
     if (normalizedValue === normalizedQuery) return 120;
-    
+
     let score = 0;
     if (normalizedValue.startsWith(normalizedQuery)) {
       score = 105;
@@ -326,7 +324,7 @@ export function searchCatalogItems(
   }
 
   return Array.from(map.values()).sort(
-    (a, b) => b.matchScore - a.matchScore || a.title.length - b.title.length
+    (a, b) => b.matchScore - a.matchScore || a.title.length - b.title.length,
   );
 }
 
@@ -416,4 +414,3 @@ export async function executeLocalShoreSearch(params: {
 
   return null;
 }
-

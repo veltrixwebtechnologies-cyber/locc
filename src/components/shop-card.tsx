@@ -1,6 +1,16 @@
 import React, { useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { Star, MapPin, Store as StoreIcon, ShieldCheck, Truck, ShoppingBag, Clock, ChevronRight, Award } from "lucide-react";
+import {
+  Star,
+  MapPin,
+  Store as StoreIcon,
+  ShieldCheck,
+  Truck,
+  ShoppingBag,
+  Clock,
+  ChevronRight,
+  Award,
+} from "lucide-react";
 import { resolveImageUrl, getFallbackProductImage } from "@/lib/image-utils";
 import { WishlistButton } from "@/components/wishlist-button";
 import { Badge } from "@/components/ui/badge";
@@ -18,6 +28,7 @@ export interface ShopCardData {
   closingTime?: string;
   openingTime?: string;
   matchingProductCount?: number;
+  featuredProductName?: string;
   startingPrice?: number;
   deliveryAvailable?: boolean;
   pickupAvailable?: boolean;
@@ -35,6 +46,21 @@ interface ShopCardProps {
   variant?: "compact" | "standard" | "wide";
 }
 
+const SHOP_CATEGORY_LABELS: Record<string, string> = {
+  fruits_veg: "Fresh Produce",
+  meat_fish: "Meat & Fish",
+  bakery: "Bakery & Sweets",
+  grocery: "Kirana & Grocery",
+  pharmacy: "Pharmacy & Care",
+  fashion: "Fashion & Apparel",
+  electronics: "Electronics & Mobiles",
+  home_kitchen: "Home & Kitchen",
+};
+
+function getShopCategoryLabel(category: string) {
+  return SHOP_CATEGORY_LABELS[category.toLowerCase()] ?? category.replaceAll("_", " ");
+}
+
 export function ShopCard({
   shop,
   searchQuery,
@@ -45,12 +71,17 @@ export function ShopCard({
 
   const isClosed = shop.isOpen === false;
   const statusText = isClosed
-    ? shop.openingTime ? `Opens ${shop.openingTime}` : "Closed"
-    : shop.closingTime ? `Closes ${shop.closingTime}` : "Open Now";
+    ? shop.openingTime
+      ? `Opens ${shop.openingTime}`
+      : "Closed"
+    : shop.closingTime
+      ? `Closes ${shop.closingTime}`
+      : "Open Now";
 
-  const resolvedImg = imgError || !shop.imageUrl
-    ? getFallbackProductImage(shop.name, shop.category)
-    : resolveImageUrl(shop.imageUrl, shop.name, shop.category);
+  const resolvedImg =
+    imgError || !shop.imageUrl
+      ? getFallbackProductImage(shop.name, shop.category)
+      : resolveImageUrl(shop.imageUrl, shop.name, shop.category);
 
   return (
     <div
@@ -63,7 +94,7 @@ export function ShopCard({
       } ${className}`}
     >
       {/* Top Image Banner */}
-      <div className="relative aspect-[16/10] w-full overflow-hidden bg-muted">
+      <div className="relative aspect-[16/10] max-[639px]:aspect-[16/7] w-full overflow-hidden bg-muted">
         <img
           src={resolvedImg}
           alt={shop.name}
@@ -107,7 +138,9 @@ export function ShopCard({
         <div className="absolute bottom-2.5 left-3 right-3 z-10 flex items-center justify-between text-white text-xs font-bold">
           <div className="flex items-center gap-1.5 bg-black/50 backdrop-blur-md px-2.5 py-1 rounded-full border border-white/20">
             <MapPin className="h-3 w-3 text-amber-400" />
-            <span>{shop.distanceKm !== undefined ? `${shop.distanceKm.toFixed(1)} km away` : "Local"}</span>
+            <span>
+              {shop.distanceKm !== undefined ? `${shop.distanceKm.toFixed(1)} km away` : "Local"}
+            </span>
           </div>
 
           <div
@@ -128,7 +161,7 @@ export function ShopCard({
       </div>
 
       {/* Card Content Body */}
-      <div className="p-4 flex-1 flex flex-col justify-between space-y-3">
+      <div className="p-4 max-[639px]:p-3 flex-1 flex flex-col justify-between space-y-3 max-[639px]:space-y-2">
         <div>
           {/* Trust & Verification Badges Row */}
           <div className="flex flex-wrap items-center gap-1.5 mb-1.5">
@@ -145,7 +178,7 @@ export function ShopCard({
               </Badge>
             )}
             <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
-              {shop.category}
+              {getShopCategoryLabel(shop.category)}
             </span>
           </div>
 
@@ -156,35 +189,43 @@ export function ShopCard({
             search={{ sq: searchQuery, category: undefined }}
             className="group/title block"
           >
-            <h3 className="text-lg font-extrabold text-foreground group-hover/title:text-primary transition-colors line-clamp-1 leading-snug">
+            <h3 className="text-lg max-[639px]:text-base font-extrabold text-foreground group-hover/title:text-primary transition-colors line-clamp-1 leading-snug">
               🏪 {shop.name}
             </h3>
           </Link>
 
           {shop.address && (
-            <p className="text-xs text-muted-foreground truncate mt-0.5 font-medium">
+            <p className="mt-1 line-clamp-2 break-words text-xs font-medium leading-relaxed text-muted-foreground">
               {shop.address}
             </p>
           )}
         </div>
 
         {/* Search Match Context (Relevant products & starting price) */}
-        <div className="bg-muted/50 rounded-2xl p-2.5 border border-border/50 space-y-1.5 text-xs">
+        <div className="bg-muted/50 rounded-2xl p-2.5 max-[639px]:p-2 border border-border/50 space-y-1.5 text-xs">
           {shop.matchingProductCount !== undefined && shop.matchingProductCount > 0 ? (
             <div className="flex items-center justify-between font-bold">
               <span className="text-primary flex items-center gap-1">
                 <ShoppingBag className="h-3.5 w-3.5" />
-                <span>{shop.matchingProductCount} matching product{shop.matchingProductCount > 1 ? "s" : ""}</span>
+                <span>
+                  {shop.matchingProductCount} matching product
+                  {shop.matchingProductCount > 1 ? "s" : ""}
+                </span>
               </span>
               {shop.startingPrice !== undefined && shop.startingPrice > 0 && (
                 <span className="text-foreground">
-                  From <strong className="font-extrabold text-sm">₹{shop.startingPrice.toLocaleString("en-IN")}</strong>
+                  From{" "}
+                  <strong className="font-extrabold text-sm">
+                    ₹{shop.startingPrice.toLocaleString("en-IN")}
+                  </strong>
                 </span>
               )}
             </div>
           ) : (
             <div className="flex items-center justify-between text-muted-foreground font-medium">
-              <span>Full store catalog listed</span>
+              <span className="truncate" title={shop.featuredProductName || "Full store catalog listed"}>
+                {shop.featuredProductName ? `Popular: ${shop.featuredProductName}` : "Full store catalog listed"}
+              </span>
               {shop.startingPrice !== undefined && shop.startingPrice > 0 && (
                 <span className="text-foreground font-bold">
                   From ₹{shop.startingPrice.toLocaleString("en-IN")}
@@ -197,7 +238,9 @@ export function ShopCard({
           <div className="flex items-center gap-3 pt-1 border-t border-border/40 text-[11px] font-extrabold text-muted-foreground">
             <span
               className={`flex items-center gap-1 ${
-                shop.deliveryAvailable !== false ? "text-emerald-600 dark:text-emerald-400" : "opacity-40"
+                shop.deliveryAvailable === true
+                  ? "text-emerald-600 dark:text-emerald-400"
+                  : "opacity-40"
               }`}
             >
               <Truck className="h-3.5 w-3.5" />
@@ -206,7 +249,7 @@ export function ShopCard({
             <span>•</span>
             <span
               className={`flex items-center gap-1 ${
-                shop.pickupAvailable !== false ? "text-indigo-600 dark:text-indigo-400" : "opacity-40"
+                shop.pickupAvailable === true ? "text-[#c026d3] dark:text-[#c026d3]" : "opacity-40"
               }`}
             >
               <ShoppingBag className="h-3.5 w-3.5" />
@@ -220,7 +263,7 @@ export function ShopCard({
           to="/store/$storeId"
           params={{ storeId: shop.id }}
           search={{ sq: searchQuery, category: undefined }}
-          className="w-full rounded-2xl bg-primary hover:bg-primary/90 text-primary-foreground py-2.5 px-4 text-xs font-extrabold flex items-center justify-center gap-2 shadow-md hover:shadow-lg active:scale-[0.98] transition-all duration-200"
+          className="w-full rounded-2xl bg-primary hover:bg-primary/90 text-primary-foreground py-2.5 max-[639px]:py-2 px-4 text-xs font-extrabold flex items-center justify-center gap-2 shadow-md hover:shadow-lg active:scale-[0.98] transition-all duration-200"
         >
           <StoreIcon className="h-3.5 w-3.5" />
           <span>View Local Shop</span>

@@ -27,8 +27,7 @@ export const processRazorpayWebhookFn = createServerFn({ method: "POST" })
   .handler(async ({ data }): Promise<WebhookProcessingResult> => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const admin = supabaseAdmin as any;
-    const webhookSecret =
-      process.env.RAZORPAY_WEBHOOK_SECRET || "localshore_webhook_secret_demo";
+    const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET || "localshore_webhook_secret_demo";
 
     // 1. Cryptographic HMAC SHA256 Signature Verification
     let isValidSignature = false;

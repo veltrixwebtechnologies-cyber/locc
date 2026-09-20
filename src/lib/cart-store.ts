@@ -1,5 +1,4 @@
 import { useSyncExternalStore } from "react";
-import { toast } from "sonner";
 
 export interface CartLine {
   productId: string;
@@ -68,6 +67,9 @@ export const cartStore = {
     product: { id: string; name: string; unit: string; price: number; stock?: number },
   ) {
     ensureHydrated();
+    if (product.stock !== undefined && (!Number.isFinite(product.stock) || product.stock <= 0)) {
+      return;
+    }
     const sameStore = state.storeId === storeId;
     const previousStoreName = !sameStore && state.lines.length > 0 ? state.storeName : null;
     const baseLines = sameStore ? state.lines : [];
@@ -102,9 +104,11 @@ export const cartStore = {
     let lines: CartLine[];
     if (qty <= 0) lines = state.lines.filter((l) => l.productId !== productId);
     else
-      lines = state.lines.map((l) =>
-        l.productId === productId ? { ...l, qty: Math.min(qty, l.availableStock ?? qty) } : l,
-      );
+      lines = state.lines
+        .map((l) =>
+          l.productId === productId ? { ...l, qty: Math.min(qty, l.availableStock ?? qty) } : l,
+        )
+        .filter((l) => l.qty > 0);
     state =
       lines.length === 0 ? { storeId: null, storeName: null, lines: [] } : { ...state, lines };
     persist();
@@ -118,21 +122,24 @@ export const cartStore = {
     // Keep persisted cart lines intact while checking stock. The server-side
     // place_order RPC is authoritative and must decide whether inventory is
     // still available at order time.
-    const lines = state.lines.map((line) => {
-      const reportedStock = stockByProduct[line.productId];
+    const lines = state.lines
+      .map((line) => {
+        const reportedStock = stockByProduct[line.productId];
 
-      // A missing row can be caused by catalog visibility or a transient query
-      // failure. Only explicit stock values may alter a persisted cart line.
-      if (reportedStock == null || !Number.isFinite(reportedStock)) {
-        return line;
-      }
+        // A missing row can be caused by catalog visibility or a transient query
+        // failure. Only explicit stock values may alter a persisted cart line.
+        if (reportedStock == null || !Number.isFinite(reportedStock)) {
+          return line;
+        }
 
-      const availableStock = Math.max(0, Math.floor(reportedStock));
-      return {
-        ...line,
-        availableStock,
-      };
-    });
+        const availableStock = Math.max(0, Math.floor(reportedStock));
+        return {
+          ...line,
+          availableStock,
+          qty: Math.min(line.qty, availableStock),
+        };
+      })
+      .filter((line) => line.qty > 0);
     const changed = lines.some(
       (line, index) =>
         line.qty !== state.lines[index]?.qty ||

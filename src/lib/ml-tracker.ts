@@ -1,12 +1,12 @@
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from "@/integrations/supabase/client";
 
-export type MLEventType = 
-  | 'search'
-  | 'shop_view'
-  | 'product_view'
-  | 'cart_add'
-  | 'checkout'
-  | 'recommendation_click';
+export type MLEventType =
+  | "search"
+  | "shop_view"
+  | "product_view"
+  | "cart_add"
+  | "checkout"
+  | "recommendation_click";
 
 export interface MLEventPayload {
   event_type: MLEventType;
@@ -30,17 +30,17 @@ class MLTracker {
   }
 
   private getOrCreateSessionId(): string {
-    if (typeof window === 'undefined') return 'server_session';
-    let sid = sessionStorage.getItem('ls_ml_session_id');
+    if (typeof window === "undefined") return "server_session";
+    let sid = sessionStorage.getItem("ls_ml_session_id");
     if (!sid) {
-      sid = 'sid_' + Math.random().toString(36).substring(2, 11) + '_' + Date.now();
-      sessionStorage.setItem('ls_ml_session_id', sid);
+      sid = "sid_" + Math.random().toString(36).substring(2, 11) + "_" + Date.now();
+      sessionStorage.setItem("ls_ml_session_id", sid);
     }
     return sid;
   }
 
   public track(payload: MLEventPayload): void {
-    if (typeof window === 'undefined' || MLTracker.isTableDisabled) return;
+    if (typeof window === "undefined" || MLTracker.isTableDisabled) return;
 
     this.queue.push({
       ...payload,
@@ -66,7 +66,9 @@ class MLTracker {
     this.queue = [];
 
     try {
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
       const userId = session?.user?.id || null;
 
       const records = eventsToFlush.map((evt) => ({
@@ -82,14 +84,14 @@ class MLTracker {
         metadata: evt.metadata || {},
       }));
 
-      const { error } = await (supabase as any).from('ml_user_events').insert(records);
+      const { error } = await (supabase as any).from("ml_user_events").insert(records);
       if (error) {
         if (
-          error.code === 'PGRST301' ||
-          error.code === '42P01' ||
+          error.code === "PGRST301" ||
+          error.code === "42P01" ||
           (error as any).status === 404 ||
-          error.message?.includes('404') ||
-          error.message?.includes('does not exist')
+          error.message?.includes("404") ||
+          error.message?.includes("does not exist")
         ) {
           MLTracker.isTableDisabled = true;
         }

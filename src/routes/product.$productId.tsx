@@ -39,6 +39,7 @@ import { isValidCoordinate, haversineDistanceKm } from "@/lib/geo";
 import { SearchShopRecommendations } from "@/components/search-shop-recommendations";
 import { NearbySimilarShopsWidget } from "@/components/nearby-similar-shops-widget";
 import { LottieLoading } from "@/components/ui/lottie-loading";
+import { RelatedProductsSection } from "@/components/related-products-section";
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -75,15 +76,44 @@ function ProductPage() {
 
         if (error) {
           console.error("Error fetching product from Supabase:", error);
-          return null;
+        } else if (data) {
+          void recordProductEvent(productId, "view");
+          void recordRecentProductView(productId);
+          return data as MerchandisingProduct;
         }
-
-        if (!data) return null;
-
-        void recordProductEvent(productId, "view");
-        void recordRecentProductView(productId);
-        return data as MerchandisingProduct;
       }
+
+      // Homepage/local catalog products use stable store-scoped ids rather
+      // than UUIDs. Resolve those products from the same catalog used by the
+      // cards so clicking a product never falls into a false unavailable state.
+      for (const [storeId, catalog] of Object.entries(productsByStore)) {
+        const mockProduct = catalog.find((entry) => entry.id === productId);
+        if (!mockProduct) continue;
+        const shop = stores.find((entry) => entry.id === storeId);
+        return {
+          id: mockProduct.id,
+          seller_id: storeId,
+          name: mockProduct.name,
+          brand: null,
+          brand_id: null,
+          brand_name: shop?.name ?? "LocalShore Partner",
+          category: mockProduct.category,
+          selling_price: mockProduct.price,
+          mrp: Math.round(mockProduct.price * 1.1),
+          discount_price: null,
+          discount_starts_at: null,
+          discount_ends_at: null,
+          clearance: false,
+          stock: mockProduct.stock ?? 20,
+          image_url: mockProduct.imageUrl ?? null,
+          created_at: "",
+          average_rating: shop?.rating ?? 4.7,
+          review_count: 0,
+          shop_name: shop?.name ?? "LocalShore Partner",
+          description: `${mockProduct.name} from ${shop?.name ?? "a verified LocalShore shop"}. Freshly listed for convenient neighborhood shopping.`,
+        } satisfies MerchandisingProduct;
+      }
+
       return null;
     },
   });
@@ -193,21 +223,6 @@ function ProductPage() {
           return data as MerchandisingProduct[];
         }
 
-        // Fallback: If no products in category, get general database products
-        let generalQuery = (supabase as any)
-          .from("public_merchandising_products")
-          .select("*")
-          .gt("stock", 0)
-          .limit(12);
-
-        if (isUuid) {
-          generalQuery = generalQuery.neq("id", productId);
-        }
-
-        const { data: generalData } = await generalQuery;
-        if (generalData && generalData.length > 0) {
-          return generalData as MerchandisingProduct[];
-        }
       } catch (err) {
         console.warn("Supabase similar products query failed:", err);
       }
@@ -230,6 +245,9 @@ function ProductPage() {
 
         if (isUuid) {
           query = query.neq("id", productId);
+        }
+        if (product.data?.category) {
+          query = query.eq("category", product.data.category);
         }
 
         const { data, error } = await query;
@@ -288,7 +306,7 @@ function ProductPage() {
           <div className="grid gap-8 lg:grid-cols-[minmax(0,1.15fr)_minmax(340px,0.85fr)] items-start">
             {/* Gallery Image Skeleton with Lottie Loading */}
             <div className="space-y-4">
-              <div className="relative flex min-h-[320px] sm:min-h-[380px] md:min-h-[420px] items-center justify-center rounded-2xl border border-purple-100/80 bg-gradient-to-br from-purple-50/50 via-white to-purple-50/30 p-6 shadow-sm overflow-hidden">
+              <div className="relative flex min-h-[320px] sm:min-h-[380px] md:min-h-[420px] items-center justify-center rounded-2xl border border-[var(--sand)]/80 bg-gradient-to-br from-[var(--sand)]/50 via-white to-[var(--sand)]/30 p-6 shadow-sm overflow-hidden">
                 <LottieLoading
                   message="Loading product details..."
                   subtext="Fetching live pricing & store inventory"
@@ -303,7 +321,7 @@ function ProductPage() {
             </div>
 
             {/* Product Meta & Pricing Card Skeleton */}
-            <div className="space-y-5 rounded-2xl border border-purple-100/80 bg-card p-6 shadow-sm">
+            <div className="space-y-5 rounded-2xl border border-[var(--sand)]/80 bg-card p-6 shadow-sm">
               <div className="premium-skeleton h-5 w-32 rounded-full" />
               <div className="premium-skeleton h-8 w-4/5 rounded-lg" />
               <div className="premium-skeleton h-4 w-1/3 rounded" />
@@ -348,6 +366,37 @@ function ProductPage() {
     originalMrp > currentPrice ? Math.round(((originalMrp - currentPrice) / originalMrp) * 100) : 0;
 
   const itemQtyInCart = cart.lines.find((line) => line.productId === item.id)?.qty ?? 0;
+  const localCatalogCandidates = Object.values(productsByStore)
+    .flat()
+    .map((candidate) => {
+      const shop = stores.find((store) => store.id === candidate.storeId);
+      return {
+        id: candidate.id,
+        seller_id: candidate.storeId,
+        name: candidate.name,
+        brand: null,
+        brand_id: null,
+        brand_name: shop?.name ?? null,
+        category: candidate.category,
+        selling_price: candidate.price,
+        mrp: candidate.price,
+        discount_price: null,
+        discount_starts_at: null,
+        discount_ends_at: null,
+        clearance: false,
+        stock: candidate.stock ?? 20,
+        image_url: candidate.imageUrl ?? null,
+        created_at: "",
+        average_rating: shop?.rating ?? 4.5,
+        review_count: 0,
+        shop_name: shop?.name ?? "LocalShore Partner",
+      } satisfies MerchandisingProduct;
+    });
+  const relatedCandidates = [
+    ...(similarProducts.data ?? []),
+    ...(topCategoryProducts.data ?? []),
+    ...localCatalogCandidates,
+  ];
 
   return (
     <AppShell>
@@ -439,8 +488,8 @@ function ProductPage() {
                         Key Features & Storage
                       </span>
                       <p className="text-xs leading-relaxed text-muted-foreground">
-                        Keep chilled for maximum crisp refreshment. Store in a cool, dry place away
-                        from direct sunlight. Serve cold.
+                        {item.description ||
+                          `Quality ${item.category || "local"} product, sourced from a verified LocalShore shop and packed for dependable neighborhood delivery.`}
                       </p>
                     </div>
 
@@ -476,6 +525,11 @@ function ProductPage() {
                       Sold by{" "}
                       <strong className="text-foreground font-semibold">{item.shop_name}</strong>
                     </p>
+                    {item.description && (
+                      <p className="mt-3 max-w-xl text-sm leading-relaxed text-muted-foreground">
+                        {item.description}
+                      </p>
+                    )}
                   </div>
                   <WishlistButton
                     productId={item.id}
@@ -637,6 +691,15 @@ function ProductPage() {
             </div>
           </div>
 
+          <section className="mt-8">
+            <RelatedProductsSection
+              sourceProduct={item}
+              candidates={relatedCandidates}
+              selectedShopId={item.seller_id}
+              selectedShopName={item.shop_name}
+            />
+          </section>
+
           {/* Section 1: Similar Products Horizontal Carousel Strip */}
           <section className="mt-12">
             <HorizontalProductStrip
@@ -657,7 +720,11 @@ function ProductPage() {
 
           {/* Section 3: Suggested Shops Horizontal Strip */}
           <section className="mt-10">
-            <SuggestedShopsStrip category={item.category} searchQuery={sq} currentShopId={item.seller_id} />
+            <SuggestedShopsStrip
+              category={item.category}
+              searchQuery={sq}
+              currentShopId={item.seller_id}
+            />
           </section>
 
           {/* Customer Reviews Section */}
@@ -811,29 +878,32 @@ function ProductGallery({
         ))}
       </div>
 
-      {/* Big Main Image Container */}
-      <m.div
-        layoutId={`product-image-${item.id}`}
-        className="relative order-1 flex min-h-[380px] md:min-h-[460px] items-center justify-center overflow-hidden rounded-2xl border border-[#ead9a8] bg-white p-8 shadow-sm sm:order-2"
-      >
+      {/* Discount label gets its own row so it never covers the product image. */}
+      <div className="order-1 flex min-w-0 flex-col gap-2 sm:order-2">
         {discountPercent > 0 && (
-          <span className="absolute left-4 top-4 rounded-md bg-blue-600 px-2.5 py-1 text-xs font-bold text-white shadow-xs">
+          <span className="w-fit rounded-md bg-blue-600 px-2.5 py-1 text-xs font-bold text-white shadow-xs">
             {discountPercent}% OFF
           </span>
         )}
 
-        <ProductThumb
-          src={activeImage}
-          alt={item.name}
-          category="grocery"
-          size="lg"
-          fit="contain"
-        />
+        {/* Big Main Image Container */}
+        <m.div
+          layoutId={`product-image-${item.id}`}
+          className="relative flex min-h-[380px] items-center justify-center overflow-hidden rounded-2xl border border-[#ead9a8] bg-white p-8 shadow-sm md:min-h-[460px]"
+        >
+          <ProductThumb
+            src={activeImage}
+            alt={item.name}
+            category="grocery"
+            size="lg"
+            fit="contain"
+          />
 
-        <span className="pointer-events-none absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full bg-background/90 px-3.5 py-1 text-[11px] font-semibold text-muted-foreground shadow-xs backdrop-blur">
-          {thumbnails[selectedIdx]?.label || "Product image"}
-        </span>
-      </m.div>
+          <span className="pointer-events-none absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full bg-background/90 px-3.5 py-1 text-[11px] font-semibold text-muted-foreground shadow-xs backdrop-blur">
+            {thumbnails[selectedIdx]?.label || "Product image"}
+          </span>
+        </m.div>
+      </div>
     </div>
   );
 }
@@ -1016,12 +1086,7 @@ function SuggestedShopsStrip({
   const containerRef = useRef<HTMLDivElement>(null);
 
   if (searchQuery && searchQuery.trim()) {
-    return (
-      <SearchShopRecommendations
-        searchQuery={searchQuery}
-        currentShopId={currentShopId}
-      />
-    );
+    return <SearchShopRecommendations searchQuery={searchQuery} currentShopId={currentShopId} />;
   }
 
   const scroll = (direction: "left" | "right") => {

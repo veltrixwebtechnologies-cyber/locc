@@ -72,7 +72,7 @@ function GiftCardsPage() {
               key={t.id}
               onClick={() => setTab(t.id)}
               className={`flex items-center gap-1.5 rounded-xl px-4 py-2 text-xs font-bold transition ${
-                tab === t.id ? "bg-purple-700 text-white" : "text-slate-600 hover:bg-purple-50"
+                tab === t.id ? "bg-[#981495] text-white" : "text-slate-600 hover:bg-[var(--sand)]"
               }`}
             >
               <t.icon className="h-3.5 w-3.5" /> {t.label}
@@ -94,8 +94,8 @@ function GiftCardsPage() {
                       onClick={() => setSelectedType(type.id)}
                       className={`rounded-2xl border p-3.5 text-left transition ${
                         selectedType === type.id
-                          ? "border-purple-300 bg-purple-50 ring-2 ring-purple-200"
-                          : "border-slate-200 bg-white hover:border-purple-200"
+                          ? "border-[#f0abfc] bg-[var(--sand)] ring-2 ring-[#f0abfc]"
+                          : "border-slate-200 bg-white hover:border-[#f0abfc]"
                       }`}
                     >
                       <span className="text-xl">{type.icon}</span>
@@ -119,8 +119,8 @@ function GiftCardsPage() {
                       }}
                       className={`relative rounded-xl px-5 py-2.5 text-sm font-bold transition ${
                         selectedAmount === d.value && !customAmount
-                          ? "bg-purple-700 text-white shadow-md"
-                          : "border border-slate-200 bg-white text-slate-700 hover:border-purple-300"
+                          ? "bg-[#981495] text-white shadow-md"
+                          : "border border-slate-200 bg-white text-slate-700 hover:border-[#f0abfc]"
                       }`}
                     >
                       {d.label}
@@ -153,7 +153,7 @@ function GiftCardsPage() {
                       onClick={() => setSelectedDesign(d)}
                       className={`aspect-[3/2] rounded-xl bg-gradient-to-br ${d.gradient} flex items-center justify-center text-2xl transition ring-offset-2 ${
                         selectedDesign.id === d.id
-                          ? "ring-2 ring-purple-500 scale-105"
+                          ? "ring-2 ring-[#c026d3] scale-105"
                           : "opacity-80 hover:opacity-100"
                       }`}
                     >
@@ -220,7 +220,7 @@ function GiftCardsPage() {
                   </div>
                 </m.div>
 
-                <button className="mt-4 w-full rounded-2xl bg-purple-700 py-3.5 text-sm font-bold text-white shadow-lg transition hover:bg-purple-800 active:scale-[0.98] flex items-center justify-center gap-2">
+                <button className="mt-4 w-full rounded-2xl bg-[#981495] py-3.5 text-sm font-bold text-white shadow-lg transition hover:bg-[#981495] active:scale-[0.98] flex items-center justify-center gap-2">
                   <Send className="h-4 w-4" />
                   Buy & Send Gift Card — ₹{amount.toLocaleString()}
                 </button>
@@ -240,7 +240,7 @@ function GiftCardsPage() {
                 <p className="mt-1 text-xs text-slate-500">Give someone a little local love.</p>
                 <button
                   onClick={() => setTab("buy")}
-                  className="mt-4 rounded-xl bg-purple-700 px-5 py-2.5 text-xs font-bold text-white"
+                  className="mt-4 rounded-xl bg-[#981495] px-5 py-2.5 text-xs font-bold text-white"
                 >
                   Buy a gift card
                 </button>

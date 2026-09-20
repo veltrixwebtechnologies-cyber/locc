@@ -1,6 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { type ProductFilterState, type FilteredProduct, type FacetResult } from "@/lib/filter-types";
+import {
+  type ProductFilterState,
+  type FilteredProduct,
+  type FacetResult,
+} from "@/lib/filter-types";
+import { useDeliveryLocation } from "@/lib/location-store";
+import { hasConfirmedCoordinates, CUSTOMER_VISIBILITY_RADIUS_KM } from "@/lib/location-visibility";
 
 // Module-level circuit breaker and in-memory cache for ultra-fast response
 let isProductRpcUnavailable = false;
@@ -23,13 +29,15 @@ function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
 }
 
 export function useProductFilters(filterState: ProductFilterState) {
+  const [deliveryLocation] = useDeliveryLocation();
   const productsQuery = useQuery<{ products: FilteredProduct[]; total: number }>({
-    queryKey: ["filter-products", filterState],
+    queryKey: ["filter-products", filterState, deliveryLocation?.lat, deliveryLocation?.lng],
     staleTime: 1000 * 60 * 2,
     gcTime: 1000 * 60 * 10,
     retry: false,
     placeholderData: (previousData) => previousData,
     queryFn: async () => {
+      if (!hasConfirmedCoordinates(deliveryLocation)) return { products: [], total: 0 };
       if (!isProductRpcUnavailable) {
         try {
           const rpcPromise = (supabase as any).rpc("filter_marketplace_products", {
@@ -45,10 +53,16 @@ export function useProductFilters(filterState: ProductFilterState) {
             p_open_now: filterState.openNow ?? null,
             p_brand_names: filterState.brands.length > 0 ? filterState.brands : null,
             p_shop_ids: filterState.shopIds.length > 0 ? filterState.shopIds : null,
-            p_attributes: filterState.attributes && Object.keys(filterState.attributes).length > 0 ? filterState.attributes : {},
+            p_attributes:
+              filterState.attributes && Object.keys(filterState.attributes).length > 0
+                ? filterState.attributes
+                : {},
             p_sort_by: filterState.sortBy || "relevance",
             p_limit: 24,
             p_offset: ((filterState.page || 1) - 1) * 24,
+            p_lat: deliveryLocation.lat,
+            p_lng: deliveryLocation.lng,
+            p_max_distance_km: CUSTOMER_VISIBILITY_RADIUS_KM,
           });
 
           const { data, error } = (await withTimeout(rpcPromise, 800)) as any;
@@ -67,12 +81,21 @@ export function useProductFilters(filterState: ProductFilterState) {
         }
       }
 
-      return await fallbackMerchandisingProducts(filterState);
+      // Never fall back to an unscoped catalog: that could expose distant shops.
+      return { products: [], total: 0 };
     },
   });
 
   const facetsQuery = useQuery<FacetResult>({
-    queryKey: ["filter-facets", filterState.category, filterState.query, filterState.minPrice, filterState.maxPrice, filterState.brands, filterState.attributes],
+    queryKey: [
+      "filter-facets",
+      filterState.category,
+      filterState.query,
+      filterState.minPrice,
+      filterState.maxPrice,
+      filterState.brands,
+      filterState.attributes,
+    ],
     staleTime: 1000 * 60 * 5,
     retry: false,
     queryFn: async () => {
@@ -146,10 +169,16 @@ const MOCK_MERCHANDISING_CATALOG: FilteredProduct[] = [
     selling_price: 799,
     discount_price: 799,
     stock: 25,
-    image_url: "https://images.unsplash.com/photo-1521572267360-ee0c2909d518?auto=format&fit=crop&w=600&q=75",
+    image_url:
+      "https://images.unsplash.com/photo-1521572267360-ee0c2909d518?auto=format&fit=crop&w=600&q=75",
     images: [],
     weight: "250g",
-    attributes: { color: ["Black", "Blue"], size: ["M", "L", "XL"], fabric: "Cotton", fit: "Oversized" },
+    attributes: {
+      color: ["Black", "Blue"],
+      size: ["M", "L", "XL"],
+      fabric: "Cotton",
+      fit: "Oversized",
+    },
     shop_name: "Trendz Fashion Hub",
     distance_km: 0.8,
     rating: 4.8,
@@ -175,10 +204,16 @@ const MOCK_MERCHANDISING_CATALOG: FilteredProduct[] = [
     selling_price: 699,
     discount_price: 699,
     stock: 18,
-    image_url: "https://images.unsplash.com/photo-1583743814966-8936f5b7be1a?auto=format&fit=crop&w=600&q=75",
+    image_url:
+      "https://images.unsplash.com/photo-1583743814966-8936f5b7be1a?auto=format&fit=crop&w=600&q=75",
     images: [],
     weight: "200g",
-    attributes: { color: ["White", "Black"], size: ["S", "M", "L"], fabric: "Cotton", fit: "Regular" },
+    attributes: {
+      color: ["White", "Black"],
+      size: ["S", "M", "L"],
+      fabric: "Cotton",
+      fit: "Regular",
+    },
     shop_name: "Kovai Sports & Readymades",
     distance_km: 1.2,
     rating: 4.6,
@@ -204,10 +239,16 @@ const MOCK_MERCHANDISING_CATALOG: FilteredProduct[] = [
     selling_price: 899,
     discount_price: 899,
     stock: 30,
-    image_url: "https://images.unsplash.com/photo-1618354691373-d851c5c3a990?auto=format&fit=crop&w=600&q=75",
+    image_url:
+      "https://images.unsplash.com/photo-1618354691373-d851c5c3a990?auto=format&fit=crop&w=600&q=75",
     images: [],
     weight: "220g",
-    attributes: { color: ["Blue", "Red"], size: ["M", "L", "XXL"], fabric: "Polyester", fit: "Slim" },
+    attributes: {
+      color: ["Blue", "Red"],
+      size: ["M", "L", "XXL"],
+      fabric: "Polyester",
+      fit: "Slim",
+    },
     shop_name: "Urban Style Menswear",
     distance_km: 2.1,
     rating: 4.7,
@@ -233,7 +274,8 @@ const MOCK_MERCHANDISING_CATALOG: FilteredProduct[] = [
     selling_price: 999,
     discount_price: 999,
     stock: 12,
-    image_url: "https://images.unsplash.com/photo-1503342217505-b0a15ec3261c?auto=format&fit=crop&w=600&q=75",
+    image_url:
+      "https://images.unsplash.com/photo-1503342217505-b0a15ec3261c?auto=format&fit=crop&w=600&q=75",
     images: [],
     weight: "230g",
     attributes: { color: ["Black", "White"], size: ["M", "L"], fabric: "Cotton", fit: "Oversized" },
@@ -262,10 +304,16 @@ const MOCK_MERCHANDISING_CATALOG: FilteredProduct[] = [
     selling_price: 1999,
     discount_price: 1999,
     stock: 20,
-    image_url: "https://images.unsplash.com/photo-1541099649105-f69ad21f3246?auto=format&fit=crop&w=600&q=75",
+    image_url:
+      "https://images.unsplash.com/photo-1541099649105-f69ad21f3246?auto=format&fit=crop&w=600&q=75",
     images: [],
     weight: "600g",
-    attributes: { color: ["Blue", "Black"], size: ["30", "32", "34"], fabric: "Denim", fit: "Slim" },
+    attributes: {
+      color: ["Blue", "Black"],
+      size: ["30", "32", "34"],
+      fabric: "Denim",
+      fit: "Slim",
+    },
     shop_name: "Trendz Fashion Hub",
     distance_km: 0.8,
     rating: 4.8,
@@ -291,7 +339,8 @@ const MOCK_MERCHANDISING_CATALOG: FilteredProduct[] = [
     selling_price: 8499,
     discount_price: 8499,
     stock: 8,
-    image_url: "https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&w=600&q=75",
+    image_url:
+      "https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&w=600&q=75",
     images: [],
     weight: "800g",
     attributes: { color: ["Red", "Gold"], fabric: "Silk" },
@@ -322,7 +371,8 @@ const MOCK_MERCHANDISING_CATALOG: FilteredProduct[] = [
     selling_price: 18999,
     discount_price: 18999,
     stock: 15,
-    image_url: "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?auto=format&fit=crop&w=600&q=75",
+    image_url:
+      "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?auto=format&fit=crop&w=600&q=75",
     images: [],
     weight: "190g",
     attributes: { ram: "8GB", storage: "128GB", network: "5G" },
@@ -351,7 +401,8 @@ const MOCK_MERCHANDISING_CATALOG: FilteredProduct[] = [
     selling_price: 119900,
     discount_price: 119900,
     stock: 10,
-    image_url: "https://images.unsplash.com/photo-1592750475338-74b7b21085ab?auto=format&fit=crop&w=600&q=75",
+    image_url:
+      "https://images.unsplash.com/photo-1592750475338-74b7b21085ab?auto=format&fit=crop&w=600&q=75",
     images: [],
     weight: "187g",
     attributes: { ram: "8GB", storage: "256GB", network: "5G" },
@@ -380,7 +431,8 @@ const MOCK_MERCHANDISING_CATALOG: FilteredProduct[] = [
     selling_price: 22999,
     discount_price: 22999,
     stock: 22,
-    image_url: "https://images.unsplash.com/photo-1598327105666-5b89351aff97?auto=format&fit=crop&w=600&q=75",
+    image_url:
+      "https://images.unsplash.com/photo-1598327105666-5b89351aff97?auto=format&fit=crop&w=600&q=75",
     images: [],
     weight: "184g",
     attributes: { ram: "8GB", storage: "128GB", network: "5G" },
@@ -409,7 +461,8 @@ const MOCK_MERCHANDISING_CATALOG: FilteredProduct[] = [
     selling_price: 15499,
     discount_price: 15499,
     stock: 28,
-    image_url: "https://images.unsplash.com/photo-1565849904461-04a58ad377e0?auto=format&fit=crop&w=600&q=75",
+    image_url:
+      "https://images.unsplash.com/photo-1565849904461-04a58ad377e0?auto=format&fit=crop&w=600&q=75",
     images: [],
     weight: "173g",
     attributes: { ram: "6GB", storage: "128GB", network: "5G" },
@@ -438,7 +491,8 @@ const MOCK_MERCHANDISING_CATALOG: FilteredProduct[] = [
     selling_price: 29999,
     discount_price: 29999,
     stock: 14,
-    image_url: "https://images.unsplash.com/photo-1546054454-aa26e2b734c7?auto=format&fit=crop&w=600&q=75",
+    image_url:
+      "https://images.unsplash.com/photo-1546054454-aa26e2b734c7?auto=format&fit=crop&w=600&q=75",
     images: [],
     weight: "196g",
     attributes: { ram: "12GB", storage: "256GB", network: "5G" },
@@ -467,7 +521,8 @@ const MOCK_MERCHANDISING_CATALOG: FilteredProduct[] = [
     selling_price: 11999,
     discount_price: 11999,
     stock: 20,
-    image_url: "https://images.unsplash.com/photo-1610945265064-0e34e5519bbf?auto=format&fit=crop&w=600&q=75",
+    image_url:
+      "https://images.unsplash.com/photo-1610945265064-0e34e5519bbf?auto=format&fit=crop&w=600&q=75",
     images: [],
     weight: "200g",
     attributes: { ram: "4GB", storage: "64GB", network: "4G" },
@@ -496,7 +551,8 @@ const MOCK_MERCHANDISING_CATALOG: FilteredProduct[] = [
     selling_price: 1499,
     discount_price: 1499,
     stock: 35,
-    image_url: "https://images.unsplash.com/photo-1590658268037-6bf12165a8df?auto=format&fit=crop&w=600&q=75",
+    image_url:
+      "https://images.unsplash.com/photo-1590658268037-6bf12165a8df?auto=format&fit=crop&w=600&q=75",
     images: [],
     weight: "45g",
     attributes: { color: ["Black"], network: "Bluetooth 5.3" },
@@ -527,7 +583,8 @@ const MOCK_MERCHANDISING_CATALOG: FilteredProduct[] = [
     selling_price: 450,
     discount_price: 450,
     stock: 50,
-    image_url: "https://images.unsplash.com/photo-1586201375761-83865001e31c?auto=format&fit=crop&w=600&q=75",
+    image_url:
+      "https://images.unsplash.com/photo-1586201375761-83865001e31c?auto=format&fit=crop&w=600&q=75",
     images: [],
     weight: "5kg",
     attributes: { pack_size: "5kg", organic: true, dietary: ["Vegetarian", "Vegan"] },
@@ -556,7 +613,8 @@ const MOCK_MERCHANDISING_CATALOG: FilteredProduct[] = [
     selling_price: 280,
     discount_price: 280,
     stock: 40,
-    image_url: "https://images.unsplash.com/photo-1615485290382-441e4d049cb5?auto=format&fit=crop&w=600&q=75",
+    image_url:
+      "https://images.unsplash.com/photo-1615485290382-441e4d049cb5?auto=format&fit=crop&w=600&q=75",
     images: [],
     weight: "1L",
     attributes: { pack_size: "1L", organic: true, dietary: ["Vegetarian", "Vegan"] },
@@ -587,7 +645,8 @@ const MOCK_MERCHANDISING_CATALOG: FilteredProduct[] = [
     selling_price: 340,
     discount_price: 340,
     stock: 30,
-    image_url: "https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=600&q=75",
+    image_url:
+      "https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=600&q=75",
     images: [],
     weight: "500g",
     attributes: { pack_size: "500g", dietary: ["Vegetarian"] },
@@ -616,7 +675,8 @@ const MOCK_MERCHANDISING_CATALOG: FilteredProduct[] = [
     selling_price: 120,
     discount_price: 120,
     stock: 20,
-    image_url: "https://images.unsplash.com/photo-1555507036-ab1f4038808a?auto=format&fit=crop&w=600&q=75",
+    image_url:
+      "https://images.unsplash.com/photo-1555507036-ab1f4038808a?auto=format&fit=crop&w=600&q=75",
     images: [],
     weight: "400g",
     attributes: { pack_size: "4 Pcs" },
@@ -647,7 +707,8 @@ const MOCK_MERCHANDISING_CATALOG: FilteredProduct[] = [
     selling_price: 280,
     discount_price: 280,
     stock: 40,
-    image_url: "https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?auto=format&fit=crop&w=600&q=75",
+    image_url:
+      "https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?auto=format&fit=crop&w=600&q=75",
     images: [],
     weight: "750g",
     attributes: { food_type: "Non-Veg", cuisine: ["Biryani", "Chettinad", "South Indian"] },
@@ -678,7 +739,8 @@ const MOCK_MERCHANDISING_CATALOG: FilteredProduct[] = [
     selling_price: 2499,
     discount_price: 2499,
     stock: 15,
-    image_url: "https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=600&q=75",
+    image_url:
+      "https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=600&q=75",
     images: [],
     weight: "450g",
     attributes: { color: ["Black", "Grey"], size: ["8", "9", "10"] },
@@ -709,7 +771,8 @@ const MOCK_MERCHANDISING_CATALOG: FilteredProduct[] = [
     selling_price: 1299,
     discount_price: 1299,
     stock: 10,
-    image_url: "https://images.unsplash.com/photo-1513519245088-0e12902e5a38?auto=format&fit=crop&w=600&q=75",
+    image_url:
+      "https://images.unsplash.com/photo-1513519245088-0e12902e5a38?auto=format&fit=crop&w=600&q=75",
     images: [],
     weight: "1.2kg",
     attributes: { material: "Brass", style: "Traditional" },
@@ -740,7 +803,8 @@ const MOCK_MERCHANDISING_CATALOG: FilteredProduct[] = [
     selling_price: 180,
     discount_price: 180,
     stock: 40,
-    image_url: "https://images.unsplash.com/photo-1553279768-865429fa0078?auto=format&fit=crop&w=600&q=75",
+    image_url:
+      "https://images.unsplash.com/photo-1553279768-865429fa0078?auto=format&fit=crop&w=600&q=75",
     images: [],
     weight: "1kg",
     attributes: { organic: true },
@@ -769,7 +833,8 @@ const MOCK_MERCHANDISING_CATALOG: FilteredProduct[] = [
     selling_price: 190,
     discount_price: 190,
     stock: 30,
-    image_url: "https://images.unsplash.com/photo-1610832958506-aa56368176cf?auto=format&fit=crop&w=600&q=75",
+    image_url:
+      "https://images.unsplash.com/photo-1610832958506-aa56368176cf?auto=format&fit=crop&w=600&q=75",
     images: [],
     weight: "1kg",
     attributes: { organic: true },
@@ -800,7 +865,8 @@ const MOCK_MERCHANDISING_CATALOG: FilteredProduct[] = [
     selling_price: 440,
     discount_price: 440,
     stock: 20,
-    image_url: "https://images.unsplash.com/photo-1607623814075-e51df1bdc82f?auto=format&fit=crop&w=600&q=75",
+    image_url:
+      "https://images.unsplash.com/photo-1607623814075-e51df1bdc82f?auto=format&fit=crop&w=600&q=75",
     images: [],
     weight: "500g",
     attributes: {},
@@ -829,7 +895,8 @@ const MOCK_MERCHANDISING_CATALOG: FilteredProduct[] = [
     selling_price: 580,
     discount_price: 580,
     stock: 15,
-    image_url: "https://images.unsplash.com/photo-1534422298391-e4f8c172dddb?auto=format&fit=crop&w=600&q=75",
+    image_url:
+      "https://images.unsplash.com/photo-1534422298391-e4f8c172dddb?auto=format&fit=crop&w=600&q=75",
     images: [],
     weight: "500g",
     attributes: {},
@@ -860,7 +927,8 @@ const MOCK_MERCHANDISING_CATALOG: FilteredProduct[] = [
     selling_price: 160,
     discount_price: 160,
     stock: 45,
-    image_url: "https://images.unsplash.com/photo-1596462502278-27bfdc403348?auto=format&fit=crop&w=600&q=75",
+    image_url:
+      "https://images.unsplash.com/photo-1596462502278-27bfdc403348?auto=format&fit=crop&w=600&q=75",
     images: [],
     weight: "200ml",
     attributes: { organic: true },
@@ -889,7 +957,8 @@ const MOCK_MERCHANDISING_CATALOG: FilteredProduct[] = [
     selling_price: 180,
     discount_price: 180,
     stock: 35,
-    image_url: "https://images.unsplash.com/photo-1556228720-195a672e8a03?auto=format&fit=crop&w=600&q=75",
+    image_url:
+      "https://images.unsplash.com/photo-1556228720-195a672e8a03?auto=format&fit=crop&w=600&q=75",
     images: [],
     weight: "150ml",
     attributes: {},
@@ -920,7 +989,8 @@ const MOCK_MERCHANDISING_CATALOG: FilteredProduct[] = [
     selling_price: 450,
     discount_price: 450,
     stock: 25,
-    image_url: "https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?auto=format&fit=crop&w=600&q=75",
+    image_url:
+      "https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?auto=format&fit=crop&w=600&q=75",
     images: [],
     weight: "120g",
     attributes: {},
@@ -951,7 +1021,8 @@ const MOCK_MERCHANDISING_CATALOG: FilteredProduct[] = [
     selling_price: 1150,
     discount_price: 1150,
     stock: 12,
-    image_url: "https://images.unsplash.com/photo-1517649763962-0c623266ddc0?auto=format&fit=crop&w=600&q=75",
+    image_url:
+      "https://images.unsplash.com/photo-1517649763962-0c623266ddc0?auto=format&fit=crop&w=600&q=75",
     images: [],
     weight: "1.1kg",
     attributes: {},
@@ -980,7 +1051,8 @@ const MOCK_MERCHANDISING_CATALOG: FilteredProduct[] = [
     selling_price: 499,
     discount_price: 499,
     stock: 18,
-    image_url: "https://images.unsplash.com/photo-1566576912321-d58ddd7a6088?auto=format&fit=crop&w=600&q=75",
+    image_url:
+      "https://images.unsplash.com/photo-1566576912321-d58ddd7a6088?auto=format&fit=crop&w=600&q=75",
     images: [],
     weight: "600g",
     attributes: {},
@@ -994,7 +1066,9 @@ const MOCK_MERCHANDISING_CATALOG: FilteredProduct[] = [
   },
 ];
 
-async function fallbackMerchandisingProducts(state: ProductFilterState): Promise<{ products: FilteredProduct[]; total: number }> {
+async function fallbackMerchandisingProducts(
+  state: ProductFilterState,
+): Promise<{ products: FilteredProduct[]; total: number }> {
   try {
     if (!cachedCatalogRows) {
       let rows: FilteredProduct[] = [];
@@ -1061,23 +1135,55 @@ async function fallbackMerchandisingProducts(state: ProductFilterState): Promise
         return (
           normProdCat.includes(normCat) ||
           normCat.includes(normProdCat) ||
-          (normCat.includes("fashion") && (normProdCat.includes("fashion") || normProdCat.includes("boutique"))) ||
-          ((normCat.includes("mobile") || normCat.includes("electronic")) && (normProdCat.includes("mobile") || normProdCat.includes("electronic"))) ||
+          (normCat.includes("fashion") &&
+            (normProdCat.includes("fashion") || normProdCat.includes("boutique"))) ||
+          ((normCat.includes("mobile") || normCat.includes("electronic")) &&
+            (normProdCat.includes("mobile") || normProdCat.includes("electronic"))) ||
           (normCat.includes("grocery") && normProdCat.includes("grocery")) ||
-          (normCat.includes("bakery") && (normProdCat.includes("bakery") || normProdCat.includes("sweet"))) ||
-          (normCat.includes("food") && (normProdCat.includes("food") || normProdCat.includes("restaurant"))) ||
+          (normCat.includes("bakery") &&
+            (normProdCat.includes("bakery") || normProdCat.includes("sweet"))) ||
+          (normCat.includes("food") &&
+            (normProdCat.includes("food") || normProdCat.includes("restaurant"))) ||
           (normCat.includes("footwear") && normProdCat.includes("footwear")) ||
-          ((normCat.includes("home") || normCat.includes("kitchen") || normCat.includes("furniture") || normCat.includes("decor")) &&
-            (normProdCat.includes("home") || normProdCat.includes("kitchen") || normProdCat.includes("furniture") || normProdCat.includes("decor"))) ||
-          ((normCat.includes("fresh") || normCat.includes("fruit") || normCat.includes("veg") || normCat.includes("palamuthir")) &&
-            (normProdCat.includes("fresh") || normProdCat.includes("fruit") || normProdCat.includes("veg") || normProdCat.includes("produce"))) ||
+          ((normCat.includes("home") ||
+            normCat.includes("kitchen") ||
+            normCat.includes("furniture") ||
+            normCat.includes("decor")) &&
+            (normProdCat.includes("home") ||
+              normProdCat.includes("kitchen") ||
+              normProdCat.includes("furniture") ||
+              normProdCat.includes("decor"))) ||
+          ((normCat.includes("fresh") ||
+            normCat.includes("fruit") ||
+            normCat.includes("veg") ||
+            normCat.includes("palamuthir")) &&
+            (normProdCat.includes("fresh") ||
+              normProdCat.includes("fruit") ||
+              normProdCat.includes("veg") ||
+              normProdCat.includes("produce"))) ||
           ((normCat.includes("meat") || normCat.includes("fish")) &&
-            (normProdCat.includes("meat") || normProdCat.includes("fish") || normProdCat.includes("chicken") || normProdCat.includes("mutton") || normProdCat.includes("seafood"))) ||
+            (normProdCat.includes("meat") ||
+              normProdCat.includes("fish") ||
+              normProdCat.includes("chicken") ||
+              normProdCat.includes("mutton") ||
+              normProdCat.includes("seafood"))) ||
           ((normCat.includes("pharmacy") || normCat.includes("medical")) &&
-            (normProdCat.includes("pharmacy") || normProdCat.includes("medical") || normProdCat.includes("otc") || normProdCat.includes("wellness"))) ||
-          (normCat.includes("beauty") && (normProdCat.includes("beauty") || normProdCat.includes("care") || normProdCat.includes("cosmetic"))) ||
-          ((normCat.includes("toy") || normCat.includes("sport") || normCat.includes("kid") || normCat.includes("baby")) &&
-            (normProdCat.includes("toy") || normProdCat.includes("sport") || normProdCat.includes("baby") || normProdCat.includes("kid"))) ||
+            (normProdCat.includes("pharmacy") ||
+              normProdCat.includes("medical") ||
+              normProdCat.includes("otc") ||
+              normProdCat.includes("wellness"))) ||
+          (normCat.includes("beauty") &&
+            (normProdCat.includes("beauty") ||
+              normProdCat.includes("care") ||
+              normProdCat.includes("cosmetic"))) ||
+          ((normCat.includes("toy") ||
+            normCat.includes("sport") ||
+            normCat.includes("kid") ||
+            normCat.includes("baby")) &&
+            (normProdCat.includes("toy") ||
+              normProdCat.includes("sport") ||
+              normProdCat.includes("baby") ||
+              normProdCat.includes("kid"))) ||
           (normCat.includes("favorite") && p.rating >= 4.7)
         );
       });
@@ -1087,16 +1193,32 @@ async function fallbackMerchandisingProducts(state: ProductFilterState): Promise
     if (state.subcategory && state.subcategory.trim()) {
       const normSub = state.subcategory.toLowerCase().replace(/[^a-z0-9]+/g, "");
       list = list.filter((p) => {
-        const fullText = `${p.name} ${p.category || ""} ${p.description || ""} ${JSON.stringify(p.attributes || {})}`.toLowerCase().replace(/[^a-z0-9]+/g, "");
-        
+        const fullText =
+          `${p.name} ${p.category || ""} ${p.description || ""} ${JSON.stringify(p.attributes || {})}`
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, "");
+
         if (normSub.includes("men") && !normSub.includes("women")) {
           // Men's clothing: exclude explicit women's wear/sarees/kurtis
-          return !fullText.includes("women") && !fullText.includes("saree") && !fullText.includes("kurti") && !fullText.includes("dress") && !fullText.includes("handloom");
+          return (
+            !fullText.includes("women") &&
+            !fullText.includes("saree") &&
+            !fullText.includes("kurti") &&
+            !fullText.includes("dress") &&
+            !fullText.includes("handloom")
+          );
         } else if (normSub.includes("women")) {
-          return fullText.includes("women") || fullText.includes("saree") || fullText.includes("kurti") || fullText.includes("dress");
+          return (
+            fullText.includes("women") ||
+            fullText.includes("saree") ||
+            fullText.includes("kurti") ||
+            fullText.includes("dress")
+          );
         } else {
           const stemmedSub = normSub.replace(/wear|clothing|apparel|store|shops|shop/g, "");
-          return fullText.includes(normSub) || (stemmedSub.length >= 3 && fullText.includes(stemmedSub));
+          return (
+            fullText.includes(normSub) || (stemmedSub.length >= 3 && fullText.includes(stemmedSub))
+          );
         }
       });
     }
@@ -1106,13 +1228,19 @@ async function fallbackMerchandisingProducts(state: ProductFilterState): Promise
       const normPt = state.productType.toLowerCase().replace(/[^a-z0-9]+/g, "");
       list = list.filter((p) => {
         const nameLower = p.name.toLowerCase().replace(/[^a-z0-9]+/g, "");
-        const attrStr = JSON.stringify(p.attributes || {}).toLowerCase().replace(/[^a-z0-9]+/g, "");
+        const attrStr = JSON.stringify(p.attributes || {})
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, "");
         const descLower = (p.description || "").toLowerCase().replace(/[^a-z0-9]+/g, "");
 
         if (normPt.includes("tshirt") || normPt.includes("t-shirt") || normPt.includes("tee")) {
           return (
-            nameLower.includes("tshirt") || nameLower.includes("tee") || nameLower.includes("crewneck") || nameLower.includes("polo") ||
-            attrStr.includes("tshirt") || descLower.includes("tshirt")
+            nameLower.includes("tshirt") ||
+            nameLower.includes("tee") ||
+            nameLower.includes("crewneck") ||
+            nameLower.includes("polo") ||
+            attrStr.includes("tshirt") ||
+            descLower.includes("tshirt")
           );
         } else if (normPt.includes("jean") || normPt.includes("denim")) {
           return nameLower.includes("jean") || nameLower.includes("denim");
@@ -1121,11 +1249,15 @@ async function fallbackMerchandisingProducts(state: ProductFilterState): Promise
         } else if (normPt.includes("shirt")) {
           return nameLower.includes("shirt");
         } else {
-          const stemmedPt = normPt.endsWith("s") && normPt.length > 3 ? normPt.slice(0, -1) : normPt;
+          const stemmedPt =
+            normPt.endsWith("s") && normPt.length > 3 ? normPt.slice(0, -1) : normPt;
           return (
-            nameLower.includes(normPt) || nameLower.includes(stemmedPt) ||
-            attrStr.includes(normPt) || attrStr.includes(stemmedPt) ||
-            descLower.includes(normPt) || descLower.includes(stemmedPt)
+            nameLower.includes(normPt) ||
+            nameLower.includes(stemmedPt) ||
+            attrStr.includes(normPt) ||
+            attrStr.includes(stemmedPt) ||
+            descLower.includes(normPt) ||
+            descLower.includes(stemmedPt)
           );
         }
       });
@@ -1142,13 +1274,19 @@ async function fallbackMerchandisingProducts(state: ProductFilterState): Promise
         .map((t) => (t.endsWith("s") && t.length > 3 ? t.slice(0, -1) : t)); // stemmed tokens
 
       list = list.filter((p) => {
-        const targetText = `${p.name} ${p.brand || ""} ${p.category || ""} ${p.description || ""} ${JSON.stringify(p.attributes || {})}`.toLowerCase();
+        const targetText =
+          `${p.name} ${p.brand || ""} ${p.category || ""} ${p.description || ""} ${JSON.stringify(p.attributes || {})}`.toLowerCase();
         const normTarget = targetText.replace(/[^a-z0-9]+/g, "");
-        const targetTokens = targetText.replace(/[^a-z0-9]+/g, " ").split(" ").filter(Boolean);
+        const targetTokens = targetText
+          .replace(/[^a-z0-9]+/g, " ")
+          .split(" ")
+          .filter(Boolean);
 
         return (
           normTarget.includes(cleanQ) ||
-          tokens.every((token) => targetTokens.some((tt) => tt.includes(token) || token.includes(tt)))
+          tokens.every((token) =>
+            targetTokens.some((tt) => tt.includes(token) || token.includes(tt)),
+          )
         );
       });
     }

@@ -23,7 +23,7 @@ export interface AppDownloadBannerConfig {
 
 export const DEFAULT_APP_BANNER_CONFIG: AppDownloadBannerConfig = {
   is_active: true,
-  theme_variant: "dark-navy",
+  theme_variant: "signature-orchid",
   badge1_text: "Special App Offer",
   badge2_text: "Exclusive Deals",
   headline_prefix: "Grab ",
@@ -86,7 +86,11 @@ export const AppDownloadBanner: React.FC<AppDownloadBannerProps> = ({
         if (!error && data && data.image_url) {
           try {
             const parsed = JSON.parse(data.image_url);
-            const merged = { ...DEFAULT_APP_BANNER_CONFIG, ...parsed, is_active: data.is_active ?? true };
+            const merged = {
+              ...DEFAULT_APP_BANNER_CONFIG,
+              ...parsed,
+              is_active: data.is_active ?? true,
+            };
             setConfig(merged);
             localStorage.setItem(APP_BANNER_CONFIG_KEY, JSON.stringify(merged));
           } catch {}
@@ -106,7 +110,7 @@ export const AppDownloadBanner: React.FC<AppDownloadBannerProps> = ({
     return null;
   }
 
-  const activeVariant = propVariant || config.theme_variant || "dark-navy";
+  const activeVariant = propVariant || config.theme_variant || "signature-orchid";
 
   const handleSendLink = (e: React.FormEvent) => {
     e.preventDefault();
@@ -130,8 +134,8 @@ export const AppDownloadBanner: React.FC<AppDownloadBannerProps> = ({
       <div
         className={`relative overflow-hidden rounded-3xl transition-all duration-300 shadow-2xl ${
           isOrchid
-            ? "bg-[#0f0618] border border-[#3b1254]"
-            : "bg-[#070a16] border border-[#1d2642]"
+            ? "bg-gradient-to-br from-[#5a0e62] via-[#981495] to-[#3a164f] border border-[#e3a4ea]/50"
+            : "bg-gradient-to-br from-[#4b185d] via-[#72206f] to-[#35204f] border border-[#d78be2]/40"
         }`}
       >
         {/* Subtle Ambient Background Gradient */}
@@ -139,19 +143,19 @@ export const AppDownloadBanner: React.FC<AppDownloadBannerProps> = ({
           className={`absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] ${
             isOrchid
               ? "from-[#38094d]/50 via-[#140624] to-[#080210]"
-              : "from-[#182348]/40 via-[#0a0e21] to-[#060813]"
+              : "from-[#b83ec4]/20 via-[#351547]/20 to-[#160e2b]/30"
           } opacity-95`}
         />
 
         {/* Ambient Glow Effects */}
         <div
           className={`absolute -top-20 -left-20 h-64 w-64 rounded-full blur-3xl ${
-            isOrchid ? "bg-purple-600/20" : "bg-amber-500/10"
+            isOrchid ? "bg-[#c026d3]/20" : "bg-[#f3d053]/10"
           }`}
         />
         <div
           className={`absolute -bottom-20 -right-20 h-64 w-64 rounded-full blur-3xl ${
-            isOrchid ? "bg-[#981495]/25" : "bg-indigo-600/15"
+            isOrchid ? "bg-[#981495]/25" : "bg-[#f0abfc]/15"
           }`}
         />
 
@@ -163,7 +167,7 @@ export const AppDownloadBanner: React.FC<AppDownloadBannerProps> = ({
                 className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold ${
                   isOrchid
                     ? "bg-[#2d093e] text-[#facc15] border border-[#6b1693]"
-                    : "bg-[#2a2208]/90 text-[#facc15] border border-[#52410a]"
+                    : "bg-[#3f1750]/70 text-[#facc15] border border-[#d48ce0]/40"
                 }`}
               >
                 <Sparkles className="h-3.5 w-3.5 text-[#facc15] animate-pulse" />
@@ -192,7 +196,10 @@ export const AppDownloadBanner: React.FC<AppDownloadBannerProps> = ({
             </p>
 
             {/* Mobile Number SMS Link Form */}
-            <form onSubmit={handleSendLink} className="pt-2 flex flex-col sm:flex-row gap-2.5 max-w-md">
+            <form
+              onSubmit={handleSendLink}
+              className="pt-2 flex flex-col sm:flex-row gap-2.5 max-w-md"
+            >
               <div className="relative flex-1">
                 <div className="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-slate-400 text-xs font-bold font-mono">
                   +91
@@ -206,7 +213,7 @@ export const AppDownloadBanner: React.FC<AppDownloadBannerProps> = ({
                   className={`w-full rounded-xl py-2.5 pl-12 pr-4 text-xs text-white placeholder-slate-500 outline-none transition-all font-mono shadow-inner ${
                     isOrchid
                       ? "bg-[#180a2b] border border-[#3b1763] focus:border-[#facc15] focus:ring-1 focus:ring-[#facc15]"
-                      : "bg-[#0e1428] border border-[#232c48] focus:border-[#facc15] focus:ring-1 focus:ring-[#facc15]"
+                      : "bg-[#351446]/70 border border-[#d98be0]/30 focus:border-[#facc15] focus:ring-1 focus:ring-[#facc15]"
                   }`}
                 />
               </div>
@@ -235,8 +242,8 @@ export const AppDownloadBanner: React.FC<AppDownloadBannerProps> = ({
             <div
               className={`relative rounded-2xl border backdrop-blur-md p-5 sm:p-6 shadow-2xl flex flex-col sm:flex-row items-center gap-5 ${
                 isOrchid
-                  ? "bg-[#1d0933]/80 border-[#3d1663]"
-                  : "bg-[#11162b]/80 border-[#232c4a]"
+                  ? "bg-[#3d124e]/75 border-[#e3a4ea]/40"
+                  : "bg-[#321743]/75 border-[#d98be0]/30"
               }`}
             >
               {/* Store Download Buttons Column */}
@@ -251,16 +258,24 @@ export const AppDownloadBanner: React.FC<AppDownloadBannerProps> = ({
                   className={`group flex items-center justify-between gap-3 rounded-xl p-2.5 transition-all shadow-md active:scale-98 border ${
                     isOrchid
                       ? "bg-[#140624] hover:bg-[#1d0933] border-[#311152] hover:border-[#5a1e94]"
-                      : "bg-[#0a0e1c] hover:bg-[#0f152a] border-[#1f2845] hover:border-[#35436e]"
+                      : "bg-[#271236]/80 hover:bg-[#3d174d] border-[#b76bc4]/25 hover:border-[#e3a4ea]/50"
                   }`}
                 >
                   <div className="flex items-center gap-2.5 min-w-0">
-                    <svg className="h-6 w-6 text-white shrink-0" viewBox="0 0 24 24" fill="currentColor">
+                    <svg
+                      className="h-6 w-6 text-white shrink-0"
+                      viewBox="0 0 24 24"
+                      fill="currentColor"
+                    >
                       <path d="M3.609 1.814L13.792 12 3.61 22.186a.996.996 0 0 1-.61-.92V2.734c0-.39.227-.743.609-.920zM15.207 13.414l2.56 2.56-11.892 6.84 9.332-9.4zM15.207 10.586L5.875 1.186l11.892 6.84-2.56 2.560zM16.62 12l2.99-1.725c.52-.3.52-.8 0-1.1L16.62 12z" />
                     </svg>
                     <div className="min-w-0 text-left">
-                      <div className="text-[8px] font-bold tracking-wider uppercase text-slate-400">GET IT ON</div>
-                      <div className="text-xs font-black text-white group-hover:text-[#facc15] transition-colors leading-tight">Google Play</div>
+                      <div className="text-[8px] font-bold tracking-wider uppercase text-slate-400">
+                        GET IT ON
+                      </div>
+                      <div className="text-xs font-black text-white group-hover:text-[#facc15] transition-colors leading-tight">
+                        Google Play
+                      </div>
                     </div>
                   </div>
                   <div className="text-right border-l border-white/10 pl-2.5 shrink-0">
@@ -268,7 +283,9 @@ export const AppDownloadBanner: React.FC<AppDownloadBannerProps> = ({
                       <Star className="h-3 w-3 fill-[#facc15] mr-0.5" />
                       {config.google_play_rating}
                     </div>
-                    <div className="text-[9px] text-slate-400 whitespace-nowrap">{config.google_play_downloads}</div>
+                    <div className="text-[9px] text-slate-400 whitespace-nowrap">
+                      {config.google_play_downloads}
+                    </div>
                   </div>
                 </a>
 
@@ -282,16 +299,24 @@ export const AppDownloadBanner: React.FC<AppDownloadBannerProps> = ({
                   className={`group flex items-center justify-between gap-3 rounded-xl p-2.5 transition-all shadow-md active:scale-98 border ${
                     isOrchid
                       ? "bg-[#140624] hover:bg-[#1d0933] border-[#311152] hover:border-[#5a1e94]"
-                      : "bg-[#0a0e1c] hover:bg-[#0f152a] border-[#1f2845] hover:border-[#35436e]"
+                      : "bg-[#271236]/80 hover:bg-[#3d174d] border-[#b76bc4]/25 hover:border-[#e3a4ea]/50"
                   }`}
                 >
                   <div className="flex items-center gap-2.5 min-w-0">
-                    <svg className="h-6 w-6 text-white shrink-0" viewBox="0 0 24 24" fill="currentColor">
+                    <svg
+                      className="h-6 w-6 text-white shrink-0"
+                      viewBox="0 0 24 24"
+                      fill="currentColor"
+                    >
                       <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M15.97 6.09c.66-.82 1.1-1.96.98-3.09-1 .04-2.17.67-2.88 1.49-.6.69-1.12 1.83-.98 2.94 1.12.09 2.22-.52 2.88-1.34z" />
                     </svg>
                     <div className="min-w-0 text-left">
-                      <div className="text-[8px] font-bold tracking-wider uppercase text-slate-400">DOWNLOAD ON THE</div>
-                      <div className="text-xs font-black text-white group-hover:text-[#facc15] transition-colors leading-tight">App Store</div>
+                      <div className="text-[8px] font-bold tracking-wider uppercase text-slate-400">
+                        DOWNLOAD ON THE
+                      </div>
+                      <div className="text-xs font-black text-white group-hover:text-[#facc15] transition-colors leading-tight">
+                        App Store
+                      </div>
                     </div>
                   </div>
                   <div className="text-right border-l border-white/10 pl-2.5 shrink-0">
@@ -299,7 +324,9 @@ export const AppDownloadBanner: React.FC<AppDownloadBannerProps> = ({
                       <Star className="h-3 w-3 fill-[#facc15] mr-0.5" />
                       {config.app_store_rating}
                     </div>
-                    <div className="text-[9px] text-slate-400 whitespace-nowrap">{config.app_store_downloads}</div>
+                    <div className="text-[9px] text-slate-400 whitespace-nowrap">
+                      {config.app_store_downloads}
+                    </div>
                   </div>
                 </a>
               </div>
@@ -312,7 +339,12 @@ export const AppDownloadBanner: React.FC<AppDownloadBannerProps> = ({
                 title="Click to expand QR Code"
               >
                 <div className="relative p-1 rounded-lg bg-slate-50 border border-slate-200">
-                  <svg className="w-24 h-24" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <svg
+                    className="w-24 h-24"
+                    viewBox="0 0 100 100"
+                    fill="none"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
                     {/* Background */}
                     <rect width="100" height="100" fill="white" rx="6" />
 
@@ -355,7 +387,7 @@ export const AppDownloadBanner: React.FC<AppDownloadBannerProps> = ({
                     <rect x="72" y="84" width="12" height="6" fill="black" rx="1" />
 
                     {/* Center Accent Dot */}
-                    <circle cx="50" cy="50" r="7" fill={isOrchid ? "#981495" : "#b91c1c"} />
+                    <circle cx="50" cy="50" r="7" fill="#981495" />
                   </svg>
                 </div>
                 <div className="mt-1 flex items-center gap-1 text-[9px] font-black text-slate-800 uppercase tracking-wider group-hover:text-primary transition-colors">
@@ -388,7 +420,12 @@ export const AppDownloadBanner: React.FC<AppDownloadBannerProps> = ({
               </button>
             </div>
             <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 flex justify-center">
-              <svg className="w-56 h-56" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <svg
+                className="w-56 h-56"
+                viewBox="0 0 100 100"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+              >
                 <rect width="100" height="100" fill="white" rx="6" />
                 <rect x="8" y="8" width="28" height="28" fill="black" rx="4" />
                 <rect x="14" y="14" width="16" height="16" fill="white" rx="2" />
@@ -432,4 +469,3 @@ export const AppDownloadBanner: React.FC<AppDownloadBannerProps> = ({
     </div>
   );
 };
-

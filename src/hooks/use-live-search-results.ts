@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useDeliveryLocation } from "@/lib/location-store";
 import { getInstantSearchResults, type SearchResultItem } from "@/lib/search-service";
-import { searchPublicCatalogServerFn } from "@/lib/catalog.server";
+import { hasConfirmedCoordinates, CUSTOMER_VISIBILITY_RADIUS_KM } from "@/lib/location-visibility";
 
 export function useLiveSearchResults(query: string) {
   const trimmedQuery = query.trim();
@@ -17,18 +17,24 @@ export function useLiveSearchResults(query: string) {
 
   // Synchronously compute instant local search results on every keystroke (0ms delay!)
   const localCatalogResults = useMemo(() => {
-    if (!trimmedQuery) return [];
+    if (!trimmedQuery || !hasConfirmedCoordinates(deliveryLocation)) return [];
     return getInstantSearchResults(trimmedQuery);
   }, [trimmedQuery]);
 
   const search = useQuery({
-    queryKey: ["marketplace-search-v2", debouncedQuery, deliveryLocation?.lat, deliveryLocation?.lng],
+    queryKey: [
+      "marketplace-search-v2",
+      debouncedQuery,
+      deliveryLocation?.lat,
+      deliveryLocation?.lng,
+    ],
     staleTime: 1000 * 60 * 5,
     gcTime: 1000 * 60 * 10,
     retry: 0,
     refetchOnWindowFocus: false,
-    enabled: debouncedQuery.length > 0,
+    enabled: debouncedQuery.length > 0 && hasConfirmedCoordinates(deliveryLocation),
     queryFn: async () => {
+      if (!hasConfirmedCoordinates(deliveryLocation)) return [];
       // 1. Try ML Search RPC first
       try {
         const { data: mlData, error: mlError } = await (supabase as any).rpc(
@@ -40,6 +46,7 @@ export function useLiveSearchResults(query: string) {
             p_limit: 24,
             p_offset: 0,
             p_scope: "all",
+            p_max_distance_km: CUSTOMER_VISIBILITY_RADIUS_KM,
           },
         );
 
@@ -57,37 +64,12 @@ export function useLiveSearchResults(query: string) {
           p_limit: 24,
           p_offset: 0,
           p_scope: "all",
+          p_max_distance_km: CUSTOMER_VISIBILITY_RADIUS_KM,
         });
         if (!error && data && data.length > 0) {
           return (data ?? []) as any[];
         }
       } catch (e) {}
-
-        // 3. Redis-cached public catalog search server function
-        try {
-          const res = await searchPublicCatalogServerFn({
-            data: { query: debouncedQuery, page: 1, limit: 20 },
-          });
-
-          if (res.results && res.results.length > 0) {
-            const dbResults: any[] = [];
-            for (const p of res.results) {
-              dbResults.push({
-                result_kind: "product",
-                result_id: p.id,
-                title: p.name,
-                subtitle: p.shop_name || p.category || "Product",
-                image_url: p.image_url,
-                url: `/product/${p.id}`,
-                shop_id: p.seller_id,
-                shop_name: p.shop_name,
-                price: p.selling_price,
-                match_score: 90,
-              });
-            }
-            return dbResults;
-          }
-        } catch (e) {}
 
       return [];
     },
@@ -125,7 +107,9 @@ export function useLiveSearchResults(query: string) {
     metadata: row.metadata ?? undefined,
     matchScore: Number(row.match_score ?? 0),
     mlScore: row.ml_score != null ? Number(row.ml_score) : undefined,
-    explainabilityTags: Array.isArray(row.explainability_tags) ? row.explainability_tags : undefined,
+    explainabilityTags: Array.isArray(row.explainability_tags)
+      ? row.explainability_tags
+      : undefined,
   }));
 
   const resultMap = new Map<string, SearchResultItem>();
@@ -144,11 +128,7 @@ export function useLiveSearchResults(query: string) {
 
   return {
     results,
-    isLoading:
-      trimmedQuery.length > 0 &&
-      results.length === 0 &&
-      search.isLoading,
+    isLoading: trimmedQuery.length > 0 && results.length === 0 && search.isLoading,
     error: search.error,
   };
 }
-

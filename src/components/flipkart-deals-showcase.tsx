@@ -257,14 +257,14 @@ export function FlipkartBannerRow() {
         </div>
 
         {/* Banner 3: Right - Kavya Book & Stationery Ad */}
-        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-purple-600 via-purple-700 to-indigo-800 p-5 text-white shadow-md md:col-span-3 flex flex-col justify-between h-full min-h-[220px] border border-purple-500/30">
+        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#c026d3] via-[#981495] to-[#981495] p-5 text-white shadow-md md:col-span-3 flex flex-col justify-between h-full min-h-[220px] border border-[#c026d3]/30">
           <div className="relative z-10">
-            <span className="inline-block rounded-full bg-white/20 px-2.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wider text-purple-100 border border-white/30 backdrop-blur-md">
+            <span className="inline-block rounded-full bg-white/20 px-2.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wider text-[var(--sand)] border border-white/30 backdrop-blur-md">
               Kavya Stationery
             </span>
             <h3 className="mt-2 text-lg font-black text-white sm:text-xl">School & Art Supplies</h3>
             <p className="mt-0.5 text-sm font-black text-[#F3D053]">Starting ₹49</p>
-            <p className="mt-1 text-[11px] text-purple-100 font-medium">
+            <p className="mt-1 text-[11px] text-[var(--sand)] font-medium">
               Classroom packs & craft kits
             </p>
           </div>
@@ -282,7 +282,7 @@ export function FlipkartBannerRow() {
                 }
               }, 80);
             }}
-            className="relative z-10 mt-4 inline-flex items-center gap-1.5 self-start rounded-xl bg-white px-3.5 py-2 text-xs font-extrabold text-purple-950 transition hover:bg-slate-100 shadow-sm"
+            className="relative z-10 mt-4 inline-flex items-center gap-1.5 self-start rounded-xl bg-white px-3.5 py-2 text-xs font-extrabold text-[#700b6e] transition hover:bg-slate-100 shadow-sm"
           >
             Order Supplies <ArrowRight className="h-3.5 w-3.5" />
           </Link>
@@ -348,11 +348,11 @@ export function FlipkartBestDealsShowcase({
   return (
     <section className="mx-auto max-w-7xl px-4 py-4 md:px-8">
       {/* Signature Light Luxury Card Container matching website footer grid */}
-      <div className="rounded-3xl border border-purple-200/80 bg-gradient-to-br from-purple-50/70 via-slate-50 to-purple-50/40 p-5 sm:p-6 shadow-xs text-slate-900">
+      <div className="rounded-3xl border border-[#f0abfc]/80 bg-gradient-to-br from-[var(--sand)]/70 via-slate-50 to-[var(--sand)]/40 p-5 sm:p-6 shadow-xs text-slate-900">
         {/* Header with Title + Arrow Button */}
         <div className="mb-5 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <span className="h-6 w-1.5 rounded-full bg-purple-600" />
+            <span className="h-6 w-1.5 rounded-full bg-[#c026d3]" />
             <h2 className="text-xl font-black text-slate-900 md:text-2xl tracking-tight">
               {title}
             </h2>
@@ -367,7 +367,7 @@ export function FlipkartBestDealsShowcase({
                 window.scrollTo({ top: Math.max(0, y), behavior: "smooth" });
               }
             }}
-            className="grid h-9 w-9 place-items-center rounded-full bg-white border border-slate-200 text-purple-700 shadow-xs transition hover:bg-purple-600 hover:text-white hover:scale-105"
+            className="grid h-9 w-9 place-items-center rounded-full bg-white border border-slate-200 text-[#981495] shadow-xs transition hover:bg-[#c026d3] hover:text-white hover:scale-105"
             aria-label="View all deals"
           >
             <ArrowRight className="h-4 w-4" />
@@ -409,7 +409,7 @@ export function FlipkartBestDealsShowcase({
 
                   {/* Body info */}
                   <div className="mt-3 flex flex-col justify-between flex-1">
-                    <h3 className="line-clamp-1 text-sm font-bold text-slate-800 group-hover:text-purple-700 transition-colors">
+                    <h3 className="line-clamp-1 text-sm font-bold text-slate-800 group-hover:text-[#981495] transition-colors">
                       {item.name}
                     </h3>
                     <div className="mt-1 flex items-baseline gap-2">
@@ -420,7 +420,7 @@ export function FlipkartBestDealsShowcase({
                         </span>
                       )}
                     </div>
-                    <p className="mt-0.5 text-xs font-black text-purple-700">{dealTag}</p>
+                    <p className="mt-0.5 text-xs font-black text-[#981495]">{dealTag}</p>
                   </div>
                 </Link>
               </m.div>
