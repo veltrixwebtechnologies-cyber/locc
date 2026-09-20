@@ -42,6 +42,7 @@ import { isTestEntity } from "@/lib/map-service/store-engine";
 import { useDeliveryLocation } from "@/lib/location-store";
 import { getCategoryByIdOrSlug, toStoreCategory, isStoreInCategory } from "@/lib/shop-categories";
 import { calculateHaversineDistanceKm } from "@/lib/map-service/providers";
+import { CUSTOMER_VISIBILITY_RADIUS_KM, hasConfirmedCoordinates } from "@/lib/location-visibility";
 import { rankShopsWithML } from "@/lib/ml-shop-ranker";
 import { LocalShoreOffers } from "@/components/localshore-offers";
 import { LiquidGlassCategorySelector } from "@/components/liquid-glass-category-selector";
@@ -82,31 +83,36 @@ function Home() {
   const locLng = deliveryLoc?.lng;
   const hasConfirmedLocation =
     typeof locLat === "number" && typeof locLng === "number" && isValidCoordinate(locLat, locLng);
+  const operationalZone = useQuery({
+    queryKey: ["customer-operational-zone", locLat, locLng],
+    enabled: hasConfirmedLocation,
+    staleTime: 1000 * 60 * 30,
+    retry: false,
+    queryFn: async () => {
+      const { data, error } = await (supabase as any).rpc("get_customer_operational_zone", {
+        p_lat: locLat,
+        p_lng: locLng,
+      });
+      if (error) throw error;
+      return data?.[0] ?? null;
+    },
+  });
   const [query, setQuery] = useState(search.q ?? "");
   const [cat, setCat] = useState<string>(search.category ?? "all");
   const approvedProducts = useQuery({
-    queryKey: ["approved-product-catalog"],
+    queryKey: ["homepage-visible-products", locLat, locLng],
     staleTime: 1000 * 60 * 5,
     gcTime: 1000 * 60 * 10,
     retry: 1,
     refetchOnWindowFocus: false,
     queryFn: async () => {
+      if (!hasConfirmedCoordinates(deliveryLoc)) return [];
       try {
-        const { data: catData, error: catError } = await (supabase as any)
-          .from("approved_product_catalog")
-          .select(
-            "id,seller_id,name,category,selling_price,image_url,stock,shop_name,business_type,city,state,address_line1",
-          )
-          .order("created_at", { ascending: false });
-        let data = catData;
-        if (catError) {
-          const fallback = await (supabase as any)
-            .from("products")
-            .select("id,seller_id,name,category,selling_price,image_url,stock")
-            .in("status", ["active", "approved"])
-            .order("created_at", { ascending: false });
-          data = fallback.data;
-        }
+        const { data, error } = await (supabase as any).rpc("get_customer_visible_products", {
+          p_lat: deliveryLoc.lat, p_lng: deliveryLoc.lng, p_query: null,
+          p_category_slug: null, p_limit: 100, p_offset: 0,
+        });
+        if (error) throw error;
         return (data ?? []).filter((p: any) => !isTestEntity(p.name));
       } catch (err) {
         console.warn("Products query fallback:", err);
@@ -116,18 +122,18 @@ function Home() {
   });
 
   const approvedVendors = useQuery({
-    queryKey: ["approved-vendors"],
+    queryKey: ["homepage-visible-shops", locLat, locLng],
     staleTime: 1000 * 60 * 5,
     gcTime: 1000 * 60 * 10,
     retry: 1,
     refetchOnWindowFocus: false,
     queryFn: async () => {
+      if (!hasConfirmedCoordinates(deliveryLoc)) return [];
       try {
-        const { data, error } = await (supabase as any)
-          .from("approved_vendor_catalog")
-          .select(
-            "id,shop_name,business_type,city,state,address_line1,category,shop_logo_path,shop_banner_path",
-          );
+        const { data, error } = await (supabase as any).rpc("get_customer_visible_shops", {
+          p_lat: deliveryLoc.lat, p_lng: deliveryLoc.lng, p_query: null,
+          p_category_slug: null, p_limit: 100, p_offset: 0,
+        });
         if (error) throw error;
         const rows = (data ?? []).filter((v: any) => !isTestEntity(v.shop_name));
         const paths = Array.from(
@@ -182,33 +188,15 @@ function Home() {
   }, [cat]);
 
   const filtered = useMemo(() => {
-    // Stage 1: browse without a customer location. Keep this deliberately
-    // limited and never attach distance/ETA values from seed data.
-    if (!hasConfirmedLocation) {
-      const normalizedQuery = query.trim().toLowerCase();
-      return stores
-        .slice(0, 8)
-        .filter((store) => {
-          if (activeFilter && !isStoreInCategory(store.category, activeFilter, store.rating)) {
-            return false;
-          }
-          if (!normalizedQuery) return true;
-          return `${store.name} ${store.tagline} ${store.category}`
-            .toLowerCase()
-            .includes(normalizedQuery);
-        })
-        .map((store) => ({ ...store, distanceKm: undefined }));
-    }
+    if (!hasConfirmedLocation) return [];
     const liveProducts = approvedProducts.data ?? [];
     const normalizedQuery = query.trim().toLowerCase();
-    const liveSellerIds = new Set(liveProducts.map((product: any) => product.seller_id));
     const liveVendorStores = (approvedVendors.data ?? [])
-      .filter((vendor: any) => liveSellerIds.has(vendor.id))
       .map((vendor: any, index: number) => {
         const vLat = Number(vendor.lat);
         const vLng = Number(vendor.lng);
         if (!isValidCoordinate(vLat, vLng)) return null;
-        const dKm = calculateHaversineDistanceKm(locLat, locLng, vLat, vLng);
+        const dKm = Number(vendor.distance_km ?? 0);
         return {
           ...APPROVED_STORE,
           id: vendor.id,
@@ -218,25 +206,16 @@ function Home() {
           address:
             [vendor.address_line1, vendor.city, vendor.state].filter(Boolean).join(", ") ||
             APPROVED_STORE.address,
-          imageUrl: vendor.storefront_image_url || APPROVED_STORE.imageUrl,
+          imageUrl:
+            vendor.storefront_image_url ||
+            getFallbackProductImage(vendor.shop_name, vendor.category || vendor.business_type),
           distanceKm: Number(dKm.toFixed(1)),
           etaMin: Math.max(10, Math.round(dKm * 5 + 10)),
         };
       });
-    const baseStores = stores.map((s) => {
-      const sLat = Number(s.lat);
-      const sLng = Number(s.lng);
-      if (!isValidCoordinate(sLat, sLng)) return null;
-      const dKm = calculateHaversineDistanceKm(locLat, locLng, sLat, sLng);
-      return {
-        ...s,
-        distanceKm: Number(dKm.toFixed(1)),
-        etaMin: Math.max(10, Math.round(dKm * 5 + 10)),
-      };
-    });
-    const allStores = (
-      liveVendorStores.length > 0 ? [...liveVendorStores, ...baseStores] : baseStores
-    ).filter((store): store is NonNullable<typeof store> => store !== null);
+    const allStores = liveVendorStores
+      .filter((store): store is NonNullable<typeof store> => store !== null)
+      .filter((store) => (store.distanceKm ?? Infinity) <= CUSTOMER_VISIBILITY_RADIUS_KM);
     const filteredList = allStores.filter((s) => {
       if (activeFilter && !isStoreInCategory(s.category, activeFilter, s.rating)) return false;
       if (
@@ -303,7 +282,8 @@ function Home() {
       discount_ends_at: null,
       clearance: false,
       stock: Number(product.stock ?? 20),
-      image_url: isValidImageUrl(product.image_url)
+      image_url: isValidImageUrl(product.image_url) &&
+        !product.image_url.includes("photo-1542838132-92c53300491e")
         ? product.image_url
         : getFallbackProductImage(product.name, product.category),
       created_at: "",
@@ -313,7 +293,7 @@ function Home() {
     }));
 
     const existingIds = new Set(liveProducts.map((product: MerchandisingProduct) => product.id));
-    const localFallback = Object.values(productsByStore)
+    const localFallback = hasConfirmedLocation ? [] : Object.values(productsByStore)
       .flat()
       .filter((product) => !existingIds.has(product.id))
       .map((product: (typeof productsByStore)[string][number]) => {
@@ -343,64 +323,12 @@ function Home() {
         };
       });
 
-    const allProducts = [...liveProducts, ...localFallback];
+    const allProducts = hasConfirmedLocation ? liveProducts : [];
 
-    // Filter by category or search query
-    const filteredProducts = allProducts.filter((product) => {
-      const store = stores.find((s) => s.id === product.seller_id);
-      const storeCat = store?.category || toStoreCategory(product.category);
-      const prodCat = toStoreCategory(product.category);
-
-      if (activeFilter) {
-        const matchesCategory =
-          isStoreInCategory(storeCat, activeFilter) ||
-          isStoreInCategory(prodCat, activeFilter) ||
-          isStoreInCategory(product.category, activeFilter) ||
-          (product.category &&
-            product.category.toLowerCase().includes(activeFilter.toLowerCase())) ||
-          (cat && product.category && product.category.toLowerCase().includes(cat.toLowerCase()));
-        if (!matchesCategory) return false;
-      }
-
-      if (query.trim()) {
-        const qWords = query
-          .trim()
-          .toLowerCase()
-          .split(/[\s&,/]+/)
-          .filter(Boolean);
-        const pName = product.name.toLowerCase();
-        const pCat = (product.category || "").toLowerCase();
-        const pShop = product.shop_name.toLowerCase();
-
-        const matchesQuery = qWords.some(
-          (w: string) => pName.includes(w) || pCat.includes(w) || pShop.includes(w),
-        );
-        if (!matchesQuery) return false;
-      }
-
-      return true;
-    });
-
-    // Intelligent fallback: If specific query returns 0 products under an active category,
-    // show all products in that category so the user always sees available products!
-    if (filteredProducts.length === 0 && activeFilter) {
-      return allProducts.filter((product) => {
-        const store = stores.find((s) => s.id === product.seller_id);
-        const storeCat = store?.category || toStoreCategory(product.category);
-        const prodCat = toStoreCategory(product.category);
-        return (
-          isStoreInCategory(storeCat, activeFilter) ||
-          isStoreInCategory(prodCat, activeFilter) ||
-          isStoreInCategory(product.category, activeFilter) ||
-          (product.category &&
-            product.category.toLowerCase().includes(activeFilter.toLowerCase())) ||
-          (cat && product.category && product.category.toLowerCase().includes(cat.toLowerCase()))
-        );
-      });
-    }
-
-    return filteredProducts;
-  }, [approvedProducts.data, activeFilter, cat, query]);
+    // Recommendations use the complete nearby catalog. Search and category
+    // filters narrow the nearby-shop list above, but do not empty this rail.
+    return allProducts;
+  }, [approvedProducts.data, hasConfirmedLocation]);
 
   const displayCategoryName = useMemo(() => getCategoryDisplayName(cat), [cat]);
 
@@ -419,34 +347,18 @@ function Home() {
 
       <LocalShoreOffers />
 
-      {/* The map is the core nearby-shopping discovery experience. */}
-      <div id="shops-section" className="scroll-mt-24 px-5 pt-6 md:px-8">
-        <LocalShoreMapExperience
-          initialQuery={query}
-          initialCategory={cat}
-          onQueryChange={(q) => {
-            startTransition(() => {
-              navigate({
-                search: (prev) => ({ ...prev, q: q || undefined }),
-                resetScroll: false,
-              });
-            });
-          }}
-          onCategoryChange={(c) => {
-            startTransition(() => {
-              navigate({
-                search: (prev) => ({ ...prev, category: c === "all" ? undefined : c }),
-                resetScroll: false,
-              });
-            });
-          }}
-        />
-      </div>
-
+      {/* Server-filtered nearby shops: always limited to the customer's 5 km radius. */}
       <section className="px-5 pb-8 md:px-8">
         <h2 className="mb-4 font-display text-xl font-bold text-foreground">
-          {hasConfirmedLocation ? "Shops near you" : "Recommended Shops"}
+          {hasConfirmedLocation
+            ? `Shops within ${CUSTOMER_VISIBILITY_RADIUS_KM} km around you`
+            : "Choose your location to see nearby shops"}
         </h2>
+        {hasConfirmedLocation && !deliveryLoc?.isGPS && (
+          <p className="-mt-2 mb-4 text-xs text-muted-foreground">
+            Around {deliveryLoc?.area || deliveryLoc?.label || operationalZone.data?.zone_name || "your selected location"} · based on your selected location.
+          </p>
+        )}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {filtered.slice(0, 8).map((store) => (
             <ShopCard
@@ -474,7 +386,7 @@ function Home() {
         </div>
       </section>
 
-      {/* Keep the yellow deal rail as the final homepage content before the footer. */}
+      {/* Yellow sliding deals rail */}
       <section aria-labelledby="highlighted-deals-heading" className="mt-2 pb-6 pt-2">
         <h2
           id="highlighted-deals-heading"
@@ -485,6 +397,7 @@ function Home() {
         <SwiggyTopDealsStrip />
       </section>
 
+      {/* Local shop picks below the deals rail */}
       <section aria-labelledby="local-products-heading" className="px-5 pb-8 md:px-8">
         <div className="flex items-end justify-between gap-3">
           <div>
@@ -520,6 +433,7 @@ function Home() {
             ))}
         </div>
       </section>
+
     </AppShell>
   );
 }

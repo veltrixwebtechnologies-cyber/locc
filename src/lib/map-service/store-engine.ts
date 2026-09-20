@@ -1,5 +1,4 @@
 import {
-  stores,
   productsByStore,
   type Store,
   type Product,
@@ -11,6 +10,7 @@ import { calculateHaversineDistanceKm } from "./providers";
 import { isValidCoordinate } from "@/lib/geo";
 import type { MapMarkerItem, MapFilterOptions, MapLocation } from "./types";
 import { isStoreInCategory, toStoreCategory } from "@/lib/shop-categories";
+import { CUSTOMER_VISIBILITY_RADIUS_KM } from "@/lib/location-visibility";
 
 export { toStoreCategory };
 
@@ -117,11 +117,11 @@ export function getMapMarkerItems(
   const query = (filters.query ?? "").trim().toLowerCase();
   const catFilter = filters.category && filters.category !== "all" ? filters.category : undefined;
 
-  // Build combined store map (preserving live vendors & mock stores)
+  // Build markers only from server-visible vendors.
   const storeMap = new Map<string, Store>();
 
   // 1. Add live vendors from Supabase (filtering out test vendors)
-  (liveVendors ?? []).forEach((vendor, idx) => {
+  (liveVendors ?? []).forEach((vendor) => {
     if (isTestEntity(vendor.shop_name)) return;
     storeMap.set(vendor.id, {
       ...APPROVED_STORE,
@@ -135,18 +135,11 @@ export function getMapMarkerItems(
       imageUrl: vendor.storefront_image_url || APPROVED_STORE.imageUrl,
       lat: vendor.lat,
       lng: vendor.lng,
-      distanceKm: 1 + idx * 0.3,
+      distanceKm: Number(vendor.distance_km),
       rating: 4.8,
       isOpen: true,
       etaMin: 20,
     });
-  });
-
-  // 2. Add mock stores
-  stores.forEach((store) => {
-    if (!storeMap.has(store.id)) {
-      storeMap.set(store.id, store);
-    }
   });
 
   const allStores = Array.from(storeMap.values());
@@ -169,7 +162,7 @@ export function getMapMarkerItems(
     );
 
     // Apply max distance filter (relative to active search location)
-    if (filters.maxDistanceKm !== undefined && computedDistanceKm > filters.maxDistanceKm) {
+    if (computedDistanceKm > CUSTOMER_VISIBILITY_RADIUS_KM) {
       return;
     }
 

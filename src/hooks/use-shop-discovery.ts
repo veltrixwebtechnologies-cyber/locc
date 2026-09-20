@@ -3,8 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useDeliveryLocation } from "@/lib/location-store";
 import { type ProductFilterState } from "@/lib/filter-types";
 import { type ShopCardData } from "@/components/shop-card";
-import { stores, type Store } from "@/lib/mock-data";
-import { isStoreInCategory } from "@/lib/shop-categories";
+import { hasConfirmedCoordinates, CUSTOMER_VISIBILITY_RADIUS_KM } from "@/lib/location-visibility";
 
 export function useShopDiscovery(filterState: ProductFilterState) {
   const [deliveryLoc] = useDeliveryLocation();
@@ -20,6 +19,7 @@ export function useShopDiscovery(filterState: ProductFilterState) {
     filterState.openNowOnly,
     filterState.deliveryAvailableOnly,
     filterState.pickupAvailableOnly,
+    CUSTOMER_VISIBILITY_RADIUS_KM,
     deliveryLoc?.lat,
     deliveryLoc?.lng,
   ];
@@ -30,123 +30,36 @@ export function useShopDiscovery(filterState: ProductFilterState) {
     gcTime: 1000 * 60 * 15,
     retry: false,
     queryFn: async () => {
-      let dbShops: ShopCardData[] = [];
-
-      try {
-        const { data: sellersData } = await (supabase as any)
-          .from("sellers")
-          .select(
-            "id, business_name, business_type, city, status, lat, lng, is_active, accepts_orders",
-          )
-          .in("status", ["approved", "active"]);
-
-        if (sellersData && sellersData.length > 0) {
-          dbShops = sellersData.map((s: any) => {
-            let dist: number | undefined = undefined;
-            if (s.lat && s.lng && deliveryLoc?.lat && deliveryLoc?.lng) {
-              dist = calculateDistanceKm(deliveryLoc.lat, deliveryLoc.lng, s.lat, s.lng);
-            }
-
-            return {
-              id: s.id,
-              name: s.business_name || "Local Shop",
-              category: s.business_type || "General Store",
-              imageUrl: null,
-              // Do not invent trust or pricing signals when the seller row does
-              // not contain them. Undefined distance must not pass a radius filter.
-              rating: 0,
-              distanceKm: dist,
-              isOpen: s.accepts_orders !== false,
-              matchingProductCount: 0,
-              isVerified: s.status === "approved",
-              city: s.city || "",
-            };
-          });
-        }
-      } catch (err) {
-        console.warn("Sellers DB query notice:", err);
-      }
-
-      const hasConfirmedLocation =
-        typeof deliveryLoc?.lat === "number" && typeof deliveryLoc?.lng === "number";
-      const catalogShops: ShopCardData[] = stores.map((store: Store) => ({
-        id: store.id,
-        name: store.name,
-        category: store.category,
-        imageUrl: store.imageUrl,
-        rating: store.rating,
-        distanceKm: hasConfirmedLocation
-          ? calculateDistanceKm(deliveryLoc!.lat, deliveryLoc!.lng, store.lat, store.lng)
-          : undefined,
-        isOpen: store.isOpen,
-        address: store.address,
-        city: "Coimbatore",
-        isVerified: true,
+      if (!hasConfirmedCoordinates(deliveryLoc)) return { shops: [], total: 0 };
+      const { data, error } = await (supabase as any).rpc("get_customer_visible_shops", {
+        p_lat: deliveryLoc.lat,
+        p_lng: deliveryLoc.lng,
+        p_query: filterState.query || null,
+        p_category_slug: filterState.category || null,
+        p_limit: 100,
+        p_offset: 0,
+      });
+      if (error) throw error;
+      let list: ShopCardData[] = (data ?? []).map((s: any) => ({
+        id: s.id,
+        name: s.shop_name || "Local Shop",
+        category: s.category || s.business_type || "General Store",
+        imageUrl: null,
+        rating: 0,
+        distanceKm: Number(s.distance_km),
+        isOpen: s.is_open !== false,
+        matchingProductCount: 0,
+        isVerified: s.is_verified === true,
+        city: s.city || "",
+        address: s.address_line1 || undefined,
       }));
 
-      // Live approved sellers take precedence by id; the local catalog keeps
-      // category/search pages useful when the database has no matching rows.
-      const shopsById = new Map<string, ShopCardData>();
-      catalogShops.forEach((shop) => shopsById.set(shop.id, shop));
-      dbShops.forEach((shop) => shopsById.set(shop.id, shop));
-      let list = Array.from(shopsById.values());
-
       const rawQ = (filterState.query || "").trim().toLowerCase();
-      const normCat = (filterState.category || "").toLowerCase().replace(/[^a-z0-9]+/g, "");
+      const hasConfirmedLocation = true;
 
-      // Category matching
-      if (normCat && normCat !== "all" && normCat !== "all-shops") {
-        list = list.filter((s) => {
-          const catLower = s.category.toLowerCase().replace(/[^a-z0-9]+/g, "");
-          return (
-            catLower.includes(normCat) ||
-            normCat.includes(catLower) ||
-            (normCat.includes("fashion") &&
-              (catLower.includes("fashion") || catLower.includes("boutique"))) ||
-            ((normCat.includes("mobile") || normCat.includes("electronic")) &&
-              (catLower.includes("mobile") ||
-                catLower.includes("electronic") ||
-                catLower.includes("tech"))) ||
-            (normCat.includes("grocery") && catLower.includes("grocery")) ||
-            (normCat.includes("bakery") &&
-              (catLower.includes("bakery") || catLower.includes("sweet"))) ||
-            (normCat.includes("food") &&
-              (catLower.includes("food") || catLower.includes("restaurant"))) ||
-            (normCat.includes("footwear") && catLower.includes("footwear")) ||
-            ((normCat.includes("home") ||
-              normCat.includes("decor") ||
-              normCat.includes("furniture") ||
-              normCat.includes("kitchen")) &&
-              (catLower.includes("home") ||
-                catLower.includes("decor") ||
-                catLower.includes("furniture") ||
-                catLower.includes("kitchen")))
-          );
-        });
-      }
-
-      // Query matching
-      if (rawQ) {
-        list = list.filter((s) => {
-          const shopText =
-            `${s.name} ${s.category} ${s.address || ""} ${s.city || ""}`.toLowerCase();
-          return (
-            shopText.includes(rawQ) ||
-            rawQ.split(" ").some((t) => t.length > 2 && shopText.includes(t))
-          );
-        });
-      }
-
-      // Filter: Distance
-      if (
-        hasConfirmedLocation &&
-        filterState.maxDistanceKm !== undefined &&
-        filterState.maxDistanceKm > 0
-      ) {
-        list = list.filter(
-          (s) => s.distanceKm !== undefined && s.distanceKm <= filterState.maxDistanceKm!,
-        );
-      }
+      // The server has already applied the mandatory 5 km radius. User filters
+      // can only narrow the returned set; they can never widen it.
+      list = list.filter((s) => (s.distanceKm ?? Infinity) <= CUSTOMER_VISIBILITY_RADIUS_KM);
 
       // Filter: Verified
       if (filterState.verifiedShopOnly) {
@@ -178,8 +91,7 @@ export function useShopDiscovery(filterState: ProductFilterState) {
         list = list.filter((s) => s.rating >= filterState.minRating!);
       }
 
-      // Unknown-location results are general recommendations. Confirmed
-      // results use distance buckets first, then availability/relevance.
+      // Confirmed results use distance buckets first, then availability/relevance.
       list.sort((a, b) => {
         let scoreA = 0;
         let scoreB = 0;
@@ -193,10 +105,8 @@ export function useShopDiscovery(filterState: ProductFilterState) {
         if (b.isOpen !== false) scoreB += 20;
 
         if (hasConfirmedLocation) {
-          const bucketA =
-            a.distanceKm === undefined ? 3 : a.distanceKm <= 2 ? 0 : a.distanceKm <= 5 ? 1 : 2;
-          const bucketB =
-            b.distanceKm === undefined ? 3 : b.distanceKm <= 2 ? 0 : b.distanceKm <= 5 ? 1 : 2;
+          const bucketA = a.distanceKm === undefined ? 3 : a.distanceKm <= 2 ? 0 : 1;
+          const bucketB = b.distanceKm === undefined ? 3 : b.distanceKm <= 2 ? 0 : 1;
           if (bucketA !== bucketB) return bucketA - bucketB;
           scoreA += Math.max(0, 30 - (a.distanceKm ?? 30) * 3);
           scoreB += Math.max(0, 30 - (b.distanceKm ?? 30) * 3);
@@ -217,18 +127,4 @@ export function useShopDiscovery(filterState: ProductFilterState) {
       return { shops: list, total: list.length };
     },
   });
-}
-
-function calculateDistanceKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
-  const R = 6371; // Earth radius in km
-  const dLat = ((lat2 - lat1) * Math.PI) / 180;
-  const dLon = ((lon2 - lon1) * Math.PI) / 180;
-  const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos((lat1 * Math.PI) / 180) *
-      Math.cos((lat2 * Math.PI) / 180) *
-      Math.sin(dLon / 2) *
-      Math.sin(dLon / 2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return Math.round(R * c * 10) / 10;
 }

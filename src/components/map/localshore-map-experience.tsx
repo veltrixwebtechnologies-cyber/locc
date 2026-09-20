@@ -32,6 +32,7 @@ import {
 } from "@/lib/location-store";
 import { getCategoryByIdOrSlug } from "@/lib/shop-categories";
 import { isValidCoordinate } from "@/lib/geo";
+import { CUSTOMER_VISIBILITY_RADIUS_KM, hasConfirmedCoordinates } from "@/lib/location-visibility";
 
 // Quick category filter tabs matching the reference design
 const QUICK_FILTERS = [
@@ -85,7 +86,7 @@ export function LocalShoreMapExperience({
   const [filters, setFilters] = useState<MapFilterOptions>({
     query: initialQuery,
     category: initialCategory !== "all" ? (initialCategory as any) : undefined,
-    maxDistanceKm: 25, // Show all verified local shops within 25 km radius
+    maxDistanceKm: CUSTOMER_VISIBILITY_RADIUS_KM,
   });
   const [selectedMarkerId, setSelectedMarkerId] = useState<string | null>(null);
   const [hoveredMarkerId, setHoveredMarkerId] = useState<string | null>(null);
@@ -102,26 +103,19 @@ export function LocalShoreMapExperience({
 
   // Query live Supabase approved vendor catalog & product catalog (cached across app)
   const approvedProducts = useQuery({
-    queryKey: ["approved-product-catalog"],
+    queryKey: ["customer-visible-products", deliveryLoc?.lat, deliveryLoc?.lng, query, initialCategory],
     staleTime: 1000 * 60 * 5,
     gcTime: 1000 * 60 * 10,
     retry: 1,
     refetchOnWindowFocus: false,
     queryFn: async () => {
+      if (!hasConfirmedCoordinates(deliveryLoc)) return [];
       try {
-        const { data: catData, error: catError } = await (supabase as any)
-          .from("approved_product_catalog")
-          .select(
-            "id,seller_id,name,category,selling_price,image_url,stock,shop_name,business_type,city,state,address_line1",
-          );
-        let data = catData;
-        if (catError) {
-          const fallback = await (supabase as any)
-            .from("products")
-            .select("id,seller_id,name,category,selling_price,image_url,stock")
-            .in("status", ["active", "approved"]);
-          data = fallback.data;
-        }
+        const { data, error } = await (supabase as any).rpc("get_customer_visible_products", {
+          p_lat: deliveryLoc.lat, p_lng: deliveryLoc.lng, p_query: query || null,
+          p_category_slug: initialCategory !== "all" ? initialCategory : null, p_limit: 100, p_offset: 0,
+        });
+        if (error) throw error;
         return (data ?? []).filter((p: any) => !isTestEntity(p.name));
       } catch (err) {
         console.warn("Map products query fallback:", err);
@@ -131,16 +125,19 @@ export function LocalShoreMapExperience({
   });
 
   const approvedVendors = useQuery({
-    queryKey: ["approved-vendors"],
+    queryKey: ["customer-visible-shops", deliveryLoc?.lat, deliveryLoc?.lng, query, initialCategory],
     staleTime: 1000 * 60 * 5,
     gcTime: 1000 * 60 * 10,
     retry: 1,
     refetchOnWindowFocus: false,
     queryFn: async () => {
+      if (!hasConfirmedCoordinates(deliveryLoc)) return [];
       try {
-        const { data } = await (supabase as any)
-          .from("approved_vendor_catalog")
-          .select("id,shop_name,business_type,city,state,address_line1,category,lat,lng");
+        const { data, error } = await (supabase as any).rpc("get_customer_visible_shops", {
+          p_lat: deliveryLoc.lat, p_lng: deliveryLoc.lng, p_query: query || null,
+          p_category_slug: initialCategory !== "all" ? initialCategory : null, p_limit: 100, p_offset: 0,
+        });
+        if (error) throw error;
         return (data ?? []).filter((v: any) => !isTestEntity(v.shop_name));
       } catch (err) {
         console.warn("Map vendors query fallback:", err);

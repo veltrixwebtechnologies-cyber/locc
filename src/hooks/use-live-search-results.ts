@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useDeliveryLocation } from "@/lib/location-store";
 import { getInstantSearchResults, type SearchResultItem } from "@/lib/search-service";
+import { hasConfirmedCoordinates, CUSTOMER_VISIBILITY_RADIUS_KM } from "@/lib/location-visibility";
 
 export function useLiveSearchResults(query: string) {
   const trimmedQuery = query.trim();
@@ -16,7 +17,7 @@ export function useLiveSearchResults(query: string) {
 
   // Synchronously compute instant local search results on every keystroke (0ms delay!)
   const localCatalogResults = useMemo(() => {
-    if (!trimmedQuery) return [];
+    if (!trimmedQuery || !hasConfirmedCoordinates(deliveryLocation)) return [];
     return getInstantSearchResults(trimmedQuery);
   }, [trimmedQuery]);
 
@@ -31,8 +32,9 @@ export function useLiveSearchResults(query: string) {
     gcTime: 1000 * 60 * 10,
     retry: 0,
     refetchOnWindowFocus: false,
-    enabled: debouncedQuery.length > 0,
+    enabled: debouncedQuery.length > 0 && hasConfirmedCoordinates(deliveryLocation),
     queryFn: async () => {
+      if (!hasConfirmedCoordinates(deliveryLocation)) return [];
       // 1. Try ML Search RPC first
       try {
         const { data: mlData, error: mlError } = await (supabase as any).rpc(
@@ -44,6 +46,7 @@ export function useLiveSearchResults(query: string) {
             p_limit: 24,
             p_offset: 0,
             p_scope: "all",
+            p_max_distance_km: CUSTOMER_VISIBILITY_RADIUS_KM,
           },
         );
 
@@ -61,68 +64,10 @@ export function useLiveSearchResults(query: string) {
           p_limit: 24,
           p_offset: 0,
           p_scope: "all",
+          p_max_distance_km: CUSTOMER_VISIBILITY_RADIUS_KM,
         });
         if (!error && data && data.length > 0) {
           return (data ?? []) as any[];
-        }
-      } catch (e) {}
-
-      // 3. Fallback to direct Supabase DB queries for products and shops
-      try {
-        const [prodRes, shopRes] = await Promise.all([
-          (supabase as any)
-            .from("approved_product_catalog")
-            .select("id, seller_id, name, category, selling_price, image_url, shop_name")
-            .or(
-              `name.ilike.%${debouncedQuery}%,category.ilike.%${debouncedQuery}%,shop_name.ilike.%${debouncedQuery}%`,
-            )
-            .limit(20),
-          (supabase as any)
-            .from("sellers")
-            .select("id, business_name, business_type, city, status")
-            .or(
-              `business_name.ilike.%${debouncedQuery}%,business_type.ilike.%${debouncedQuery}%,city.ilike.%${debouncedQuery}%`,
-            )
-            .limit(10),
-        ]);
-
-        const dbResults: any[] = [];
-
-        if (prodRes.data && prodRes.data.length > 0) {
-          for (const p of prodRes.data) {
-            dbResults.push({
-              result_kind: "product",
-              result_id: p.id,
-              title: p.name,
-              subtitle: p.shop_name || p.category || "Product",
-              image_url: p.image_url,
-              url: `/product/${p.id}`,
-              shop_id: p.seller_id,
-              shop_name: p.shop_name,
-              price: p.selling_price,
-              match_score: 90,
-            });
-          }
-        }
-
-        if (shopRes.data && shopRes.data.length > 0) {
-          for (const s of shopRes.data) {
-            dbResults.push({
-              result_kind: "shop",
-              result_id: s.id,
-              title: s.business_name || "Local Shop",
-              subtitle: s.business_type || s.city || "Shop",
-              image_url: null,
-              url: `/store/${s.id}`,
-              shop_id: s.id,
-              shop_name: s.business_name,
-              match_score: 95,
-            });
-          }
-        }
-
-        if (dbResults.length > 0) {
-          return dbResults;
         }
       } catch (e) {}
 

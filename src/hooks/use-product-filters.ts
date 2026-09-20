@@ -5,6 +5,8 @@ import {
   type FilteredProduct,
   type FacetResult,
 } from "@/lib/filter-types";
+import { useDeliveryLocation } from "@/lib/location-store";
+import { hasConfirmedCoordinates, CUSTOMER_VISIBILITY_RADIUS_KM } from "@/lib/location-visibility";
 
 // Module-level circuit breaker and in-memory cache for ultra-fast response
 let isProductRpcUnavailable = false;
@@ -27,13 +29,15 @@ function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
 }
 
 export function useProductFilters(filterState: ProductFilterState) {
+  const [deliveryLocation] = useDeliveryLocation();
   const productsQuery = useQuery<{ products: FilteredProduct[]; total: number }>({
-    queryKey: ["filter-products", filterState],
+    queryKey: ["filter-products", filterState, deliveryLocation?.lat, deliveryLocation?.lng],
     staleTime: 1000 * 60 * 2,
     gcTime: 1000 * 60 * 10,
     retry: false,
     placeholderData: (previousData) => previousData,
     queryFn: async () => {
+      if (!hasConfirmedCoordinates(deliveryLocation)) return { products: [], total: 0 };
       if (!isProductRpcUnavailable) {
         try {
           const rpcPromise = (supabase as any).rpc("filter_marketplace_products", {
@@ -56,6 +60,9 @@ export function useProductFilters(filterState: ProductFilterState) {
             p_sort_by: filterState.sortBy || "relevance",
             p_limit: 24,
             p_offset: ((filterState.page || 1) - 1) * 24,
+            p_lat: deliveryLocation.lat,
+            p_lng: deliveryLocation.lng,
+            p_max_distance_km: CUSTOMER_VISIBILITY_RADIUS_KM,
           });
 
           const { data, error } = (await withTimeout(rpcPromise, 800)) as any;
@@ -74,7 +81,8 @@ export function useProductFilters(filterState: ProductFilterState) {
         }
       }
 
-      return await fallbackMerchandisingProducts(filterState);
+      // Never fall back to an unscoped catalog: that could expose distant shops.
+      return { products: [], total: 0 };
     },
   });
 
