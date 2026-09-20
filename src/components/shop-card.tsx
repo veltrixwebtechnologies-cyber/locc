@@ -78,7 +78,7 @@ export function ShopCard({
       } ${className}`}
     >
       {/* Top Image Banner */}
-      <div className="relative aspect-[16/10] w-full overflow-hidden bg-muted">
+      <div className="relative aspect-[16/10] max-[639px]:aspect-[16/7] w-full overflow-hidden bg-muted">
         <img
           src={resolvedImg}
           alt={shop.name}
@@ -145,7 +145,7 @@ export function ShopCard({
       </div>
 
       {/* Card Content Body */}
-      <div className="p-4 flex-1 flex flex-col justify-between space-y-3">
+      <div className="p-4 max-[639px]:p-3 flex-1 flex flex-col justify-between space-y-3 max-[639px]:space-y-2">
         <div>
           {/* Trust & Verification Badges Row */}
           <div className="flex flex-wrap items-center gap-1.5 mb-1.5">
@@ -173,7 +173,7 @@ export function ShopCard({
             search={{ sq: searchQuery, category: undefined }}
             className="group/title block"
           >
-            <h3 className="text-lg font-extrabold text-foreground group-hover/title:text-primary transition-colors line-clamp-1 leading-snug">
+            <h3 className="text-lg max-[639px]:text-base font-extrabold text-foreground group-hover/title:text-primary transition-colors line-clamp-1 leading-snug">
               🏪 {shop.name}
             </h3>
           </Link>
@@ -186,7 +186,7 @@ export function ShopCard({
         </div>
 
         {/* Search Match Context (Relevant products & starting price) */}
-        <div className="bg-muted/50 rounded-2xl p-2.5 border border-border/50 space-y-1.5 text-xs">
+        <div className="bg-muted/50 rounded-2xl p-2.5 max-[639px]:p-2 border border-border/50 space-y-1.5 text-xs">
           {shop.matchingProductCount !== undefined && shop.matchingProductCount > 0 ? (
             <div className="flex items-center justify-between font-bold">
               <span className="text-primary flex items-center gap-1">
@@ -245,7 +245,7 @@ export function ShopCard({
           to="/store/$storeId"
           params={{ storeId: shop.id }}
           search={{ sq: searchQuery, category: undefined }}
-          className="w-full rounded-2xl bg-primary hover:bg-primary/90 text-primary-foreground py-2.5 px-4 text-xs font-extrabold flex items-center justify-center gap-2 shadow-md hover:shadow-lg active:scale-[0.98] transition-all duration-200"
+          className="w-full rounded-2xl bg-primary hover:bg-primary/90 text-primary-foreground py-2.5 max-[639px]:py-2 px-4 text-xs font-extrabold flex items-center justify-center gap-2 shadow-md hover:shadow-lg active:scale-[0.98] transition-all duration-200"
         >
           <StoreIcon className="h-3.5 w-3.5" />
           <span>View Local Shop</span>
