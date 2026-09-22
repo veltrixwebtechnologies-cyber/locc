@@ -8,14 +8,19 @@ import {
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
-import { useEffect, type ReactNode } from "react";
+import { lazy, Suspense, useEffect, type ReactNode } from "react";
 import { AnimatePresence, LazyMotion, MotionConfig, domAnimation, m } from "motion/react";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { pageVariants } from "@/components/motion/presets";
 import { Toaster } from "@/components/ui/sonner";
-import { PageLoadingScreen } from "@/components/ui/lottie-loading";
+
+const PageLoadingScreen = lazy(() =>
+  import("@/components/ui/lottie-loading").then((module) => ({
+    default: module.PageLoadingScreen,
+  })),
+);
 
 function NotFoundComponent() {
   return (
@@ -74,10 +79,18 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
 function PendingComponent() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
-      <PageLoadingScreen
-        message="Loading LocalShore..."
-        subtext="Sourcing from nearby neighborhood stores"
-      />
+      <Suspense
+        fallback={
+          <div className="text-center text-sm font-semibold text-muted-foreground">
+            Loading LocalShore…
+          </div>
+        }
+      >
+        <PageLoadingScreen
+          message="Loading LocalShore..."
+          subtext="Sourcing from nearby neighborhood stores"
+        />
+      </Suspense>
     </div>
   );
 }

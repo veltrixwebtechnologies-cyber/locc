@@ -44,6 +44,7 @@ interface ShopCardProps {
   searchQuery?: string;
   className?: string;
   variant?: "compact" | "standard" | "wide";
+  priority?: boolean;
 }
 
 const SHOP_CATEGORY_LABELS: Record<string, string> = {
@@ -66,6 +67,7 @@ export function ShopCard({
   searchQuery,
   className = "",
   variant = "standard",
+  priority = false,
 }: ShopCardProps) {
   const [imgError, setImgError] = useState(false);
 
@@ -85,7 +87,7 @@ export function ShopCard({
 
   return (
     <div
-      className={`group relative flex flex-col justify-between overflow-hidden rounded-3xl bg-card border border-border/80 shadow-md hover:shadow-xl hover:border-primary/40 transition-all duration-300 ${
+      className={`group relative flex min-h-[340px] flex-col justify-between overflow-hidden rounded-3xl bg-card border border-border/80 shadow-md hover:shadow-xl hover:border-primary/40 transition-all duration-300 ${
         variant === "compact"
           ? "w-[260px] sm:w-[280px] shrink-0"
           : variant === "wide"
@@ -98,7 +100,9 @@ export function ShopCard({
         <img
           src={resolvedImg}
           alt={shop.name}
-          loading="lazy"
+          loading={priority ? "eager" : "lazy"}
+          fetchPriority={priority ? "high" : "auto"}
+          decoding="async"
           onError={() => setImgError(true)}
           className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-500"
         />

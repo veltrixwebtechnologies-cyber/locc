@@ -155,6 +155,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         <Link
           to="/"
           search={{ category: undefined, q: undefined }}
+          onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
           className="flex shrink-0 items-center gap-2"
         >
           <img
@@ -304,6 +305,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           <Link
             to="/"
             search={{ category: undefined, q: undefined }}
+            onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
             className="flex shrink-0 items-center gap-2.5"
           >
             <m.img
@@ -745,13 +747,20 @@ function ShopperFooter() {
         <div className="grid gap-10 md:grid-cols-[1.25fr_1fr_1fr_1fr] lg:gap-16">
           <section className="space-y-3">
             <div className="flex items-center gap-2">
-              <img
-                src="/assets/localshore-logo.jpeg"
-                alt="LocalShore"
-                width={200}
-                height={68}
-                className="h-16 w-[220px] object-cover object-center mix-blend-multiply"
-              />
+              <Link
+                to="/"
+                search={{ category: undefined, q: undefined }}
+                onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+                aria-label="LocalShore home"
+              >
+                <img
+                  src="/assets/localshore-logo.jpeg"
+                  alt="LocalShore"
+                  width={200}
+                  height={68}
+                  className="h-16 w-[220px] object-cover object-center mix-blend-multiply"
+                />
+              </Link>
             </div>
             <p className="max-w-xs text-sm font-medium leading-relaxed">
               Everyday essentials and specialty products from verified neighborhood local sellers.

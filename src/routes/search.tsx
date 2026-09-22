@@ -224,14 +224,12 @@ function SwiggySearchPage() {
             <button
               type="button"
               onClick={() => {
-                if (query) {
-                  handleClearAll();
-                } else {
-                  window.history.back();
-                }
+                setQuery("");
+                void navigate({ to: "/", search: {} });
               }}
               className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-foreground/80 transition-colors hover:bg-muted"
               title="Back"
+              aria-label="Back to home"
             >
               <ChevronLeft className="w-6 h-6 stroke-[2.5]" />
             </button>
@@ -382,11 +380,11 @@ function SwiggySearchPage() {
               </div>
 
               {shopsLoading ? (
-                <div className="touch-scroll flex snap-x snap-mandatory gap-4 overflow-x-auto overscroll-x-contain pb-2">
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
                   {[1, 2, 3].map((i) => (
                     <div
                       key={i}
-                      className="w-[82vw] max-w-[320px] snap-start h-64 rounded-3xl bg-muted animate-pulse shrink-0 border hairline"
+                      className="h-64 w-full rounded-3xl border hairline bg-muted animate-pulse"
                     />
                   ))}
                 </div>
@@ -401,11 +399,12 @@ function SwiggySearchPage() {
                   </p>
                 </div>
               ) : (
-                <div className="touch-scroll -mx-1 flex min-w-0 snap-x snap-mandatory gap-3 overflow-x-auto overscroll-x-contain px-1 pb-2 md:mx-0 md:grid md:grid-cols-2 md:gap-4 md:overflow-visible md:px-0 md:pb-0 lg:grid-cols-3">
-                  {shops.map((shop) => (
-                    <div key={shop.id} className="w-[82vw] max-w-[340px] shrink-0 snap-start md:w-full md:max-w-none md:min-w-0">
+                <div className="grid min-w-0 grid-cols-1 gap-3 md:grid-cols-2 md:gap-4 lg:grid-cols-3">
+                  {shops.map((shop, index) => (
+                    <div key={shop.id} className="w-full min-w-0">
                       <ShopCard
                         shop={shop}
+                        priority={index === 0}
                         searchQuery={query}
                         variant="compact"
                         className="w-full max-w-none md:w-full"

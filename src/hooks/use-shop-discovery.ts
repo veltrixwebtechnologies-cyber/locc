@@ -4,7 +4,7 @@ import { useDeliveryLocation } from "@/lib/location-store";
 import { type ProductFilterState } from "@/lib/filter-types";
 import { type ShopCardData } from "@/components/shop-card";
 import { hasConfirmedCoordinates, CUSTOMER_VISIBILITY_RADIUS_KM } from "@/lib/location-visibility";
-import { catalogCategoryKey } from "@/lib/shop-categories";
+import { catalogCategoryKey, isStoreInCategory } from "@/lib/shop-categories";
 
 export function useShopDiscovery(filterState: ProductFilterState) {
   const [deliveryLoc] = useDeliveryLocation();
@@ -59,8 +59,18 @@ export function useShopDiscovery(filterState: ProductFilterState) {
       const hasConfirmedLocation = true;
 
       // The server has already applied the mandatory 5 km radius. User filters
-      // can only narrow the returned set; they can never widen it.
+      // can only narrow the returned set; they can never widen it. Apply the
+      // selected category here as well so a broad RPC response cannot leak
+      // unrelated shops into a category-specific listing.
       list = list.filter((s) => (s.distanceKm ?? Infinity) <= CUSTOMER_VISIBILITY_RADIUS_KM);
+
+      if (
+        filterState.category &&
+        filterState.category !== "all" &&
+        filterState.category !== "all-shops"
+      ) {
+        list = list.filter((s) => isStoreInCategory(s.category, filterState.category!));
+      }
 
       // Filter: Verified
       if (filterState.verifiedShopOnly) {

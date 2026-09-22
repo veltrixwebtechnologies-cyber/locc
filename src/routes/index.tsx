@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useMemo, useState, startTransition } from "react";
+import { lazy, Suspense, useEffect, useMemo, useState, startTransition } from "react";
 import { Search } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { AwningCard } from "@/components/awning-card";
@@ -28,7 +28,6 @@ import {
   Swiggy99StoreSection,
 } from "@/components/swiggy-inspiration-sections";
 import { ReferenceHomeHero } from "@/components/reference-home-hero";
-import { LocalShoreMapExperience } from "@/components/map/localshore-map-experience";
 import { isValidCoordinate } from "@/lib/geo";
 import {
   FlipkartCategoryStrip,
@@ -43,6 +42,12 @@ import { useDeliveryLocation } from "@/lib/location-store";
 import { getCategoryByIdOrSlug, toStoreCategory, isStoreInCategory } from "@/lib/shop-categories";
 import { calculateHaversineDistanceKm } from "@/lib/map-service/providers";
 import { CUSTOMER_VISIBILITY_RADIUS_KM, hasConfirmedCoordinates } from "@/lib/location-visibility";
+
+const LocalShoreMapExperience = lazy(() =>
+  import("@/components/map/localshore-map-experience").then((module) => ({
+    default: module.LocalShoreMapExperience,
+  })),
+);
 
 const DEMO_SHOP_FEATURES: Partial<Record<StoreCategory, { name: string; imageUrl: string }>> = {
   fruits_veg: { name: "Tomato", imageUrl: "https://images.unsplash.com/photo-1546094096-0df4bcaaa337?auto=format&fit=crop&w=640&q=80" },
@@ -414,9 +419,10 @@ function Home() {
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {nearbyLoading
             ? Array.from({ length: 8 }, (_, index) => <ShopCardSkeleton key={`shop-skeleton-${index}`} />)
-            : filtered.slice(0, 8).map((store) => (
+            : filtered.slice(0, 8).map((store, index) => (
             <ShopCard
               key={store.id}
+              priority={index === 0}
               shop={{
                 id: store.id,
                 name: store.name,
@@ -507,10 +513,18 @@ function Home() {
           >
             Close map
           </button>
-          <LocalShoreMapExperience
-            initialMapOpen
-            onCloseMap={() => setIsNearbyMapOpen(false)}
-          />
+          <Suspense
+            fallback={
+              <div className="grid min-h-screen place-items-center text-sm font-semibold text-muted-foreground">
+                Loading nearby map…
+              </div>
+            }
+          >
+            <LocalShoreMapExperience
+              initialMapOpen
+              onCloseMap={() => setIsNearbyMapOpen(false)}
+            />
+          </Suspense>
         </div>
       )}
 
@@ -532,7 +546,7 @@ function EmptyState() {
 function ShopCardSkeleton() {
   return (
     <div
-      className="animate-pulse overflow-hidden rounded-3xl border border-border/70 bg-card shadow-sm"
+      className="min-h-[340px] animate-pulse overflow-hidden rounded-3xl border border-border/70 bg-card shadow-sm"
       aria-hidden="true"
     >
       <div className="aspect-[16/10] max-[639px]:aspect-[16/7] bg-muted" />
