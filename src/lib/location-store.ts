@@ -218,6 +218,46 @@ export function useLocationState(): LocationState {
 
 let locationRevision = 0;
 let activeGPSRequest: Promise<DeliveryLocation> | null = null;
+let liveCustomerWatchId: number | null = null;
+
+function startLiveCustomerLocationUpdates() {
+  if (typeof window === "undefined" || !navigator.geolocation) return;
+  if (liveCustomerWatchId !== null) {
+    navigator.geolocation.clearWatch(liveCustomerWatchId);
+  }
+
+  liveCustomerWatchId = navigator.geolocation.watchPosition(
+    (position) => {
+      if (!hasFreshPreciseGPSFix(position)) return;
+      const current = getActiveDeliveryLocation();
+      if (!current?.isGPS) return;
+
+      setActiveDeliveryLocation(
+        {
+          ...current,
+          id: `gps-${Date.now()}`,
+          lat: position.coords.latitude,
+          lng: position.coords.longitude,
+          accuracy: position.coords.accuracy,
+        },
+        { confirmed: true },
+      );
+      bestGPSFix = {
+        lat: position.coords.latitude,
+        lng: position.coords.longitude,
+        accuracy: position.coords.accuracy,
+        timestamp: position.timestamp,
+      };
+      setGPSStatus("ok");
+    },
+    (error) => {
+      if (error.code === 1) {
+        setGPSStatus("denied", "Location permission was denied.");
+      }
+    },
+    { enableHighAccuracy: true, maximumAge: 10_000, timeout: 15_000 },
+  );
+}
 
 export function setActiveDeliveryLocation(
   loc: DeliveryLocation,
@@ -444,6 +484,7 @@ export async function detectCurrentGPSLocation(options?: {
     // discovery. It immediately enables location-aware shop ranking.
     setActiveDeliveryLocation(newLoc, { confirmed: true });
     setGPSStatus("ok");
+    startLiveCustomerLocationUpdates();
 
     if (!silent) {
       const toastDesc =

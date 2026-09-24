@@ -3,7 +3,6 @@ import { useState } from "react";
 import { AppShell } from "@/components/app-shell";
 import {
   ChevronRight,
-  Search,
   MessageSquare,
   HelpCircle,
   Package,
@@ -21,7 +20,6 @@ import { toast } from "sonner";
 export const Route = createFileRoute("/customer-care")({ component: CustomerCarePage });
 
 function CustomerCarePage() {
-  const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<SupportCategory | null>(null);
   const [faqOpen, setFaqOpen] = useState<number | null>(null);
   const [ticketSubject, setTicketSubject] = useState("");
@@ -29,33 +27,31 @@ function CustomerCarePage() {
   const [showTicketForm, setShowTicketForm] = useState(false);
   const [submittingTicket, setSubmittingTicket] = useState(false);
 
-  const filteredFaqs = searchQuery.trim()
-    ? SUPPORT_FAQS.filter(
-        (f) =>
-          f.q.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          f.a.toLowerCase().includes(searchQuery.toLowerCase()),
-      )
-    : SUPPORT_FAQS;
+  const filteredFaqs = SUPPORT_FAQS;
 
   const submitTicket = async () => {
     const subject = ticketSubject.trim();
     const body = ticketMessage.trim();
-    if (!subject || !body) {
-      toast.error("Add a subject and describe how we can help.");
+    if (subject.length < 3) {
+      toast.error("Enter a subject with at least 3 characters.");
+      return;
+    }
+    if (body.length < 10) {
+      toast.error("Describe your issue with at least 10 characters.");
       return;
     }
 
     setSubmittingTicket(true);
     try {
       const { data: authData, error: authError } = await supabase.auth.getUser();
-      if (authError) throw authError;
-      if (!authData.user) {
+      const userId = authData.user?.id?.trim();
+      if (authError || !userId) {
         toast.error("Please sign in before contacting customer care.");
         return;
       }
 
       const { error } = await (supabase as any).from("support_tickets").insert({
-        user_id: authData.user.id,
+        user_id: userId,
         raised_by: "customer",
         subject,
         body,
@@ -72,7 +68,15 @@ function CustomerCarePage() {
       setShowTicketForm(false);
     } catch (error) {
       console.error("Customer Care ticket submission failed", error);
-      toast.error(error instanceof Error ? error.message : "Could not send your request. Please try again.");
+      const details = error as { code?: string; message?: string };
+      const errorMessage = details?.message?.toLowerCase() ?? "";
+      if (errorMessage.includes('relation "notifications"') || errorMessage.includes("notifications")) {
+        toast.error("Support notifications are not configured correctly. Please contact support.");
+      } else if (details?.code === "23502" || errorMessage.includes("user_id")) {
+        toast.error("Your sign-in session is incomplete. Please sign out and sign in again.");
+      } else {
+        toast.error("Could not send your request. Please try again.");
+      }
     } finally {
       setSubmittingTicket(false);
     }
@@ -104,21 +108,7 @@ function CustomerCarePage() {
           <h1 className="mt-3 font-display text-3xl font-extrabold sm:text-4xl">
             How can we help you?
           </h1>
-          <p className="mt-2 max-w-lg text-sm text-[#f0abfc]">
-            Search for answers, browse categories, or raise a support ticket.
-          </p>
 
-          {/* Search */}
-          <div className="mt-4 flex items-center gap-2 rounded-2xl bg-white/10 px-4 py-3 backdrop-blur-sm">
-            <Search className="h-4 w-4 text-[#f0abfc]" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search help topics..."
-              className="w-full bg-transparent text-sm text-white outline-none placeholder:text-[#f0abfc]"
-            />
-          </div>
         </m.div>
 
         {/* Support Categories Grid */}
@@ -173,20 +163,6 @@ function CustomerCarePage() {
                   )}
                 </div>
               ))}
-              {filteredFaqs.length === 0 && (
-                <div className="rounded-2xl border border-dashed border-slate-200 p-6 text-center">
-                  <p className="text-sm text-slate-500">No results found for "{searchQuery}"</p>
-                  <button
-                    onClick={() => {
-                      setShowTicketForm(true);
-                      setSearchQuery("");
-                    }}
-                    className="mt-2 text-xs font-bold text-[#981495] underline"
-                  >
-                    Raise a support ticket instead
-                  </button>
-                </div>
-              )}
             </div>
           </section>
 
@@ -208,12 +184,16 @@ function CustomerCarePage() {
                     <input
                       type="text"
                       placeholder="Subject"
+                      minLength={3}
+                      required
                       value={ticketSubject}
                       onChange={(e) => setTicketSubject(e.target.value)}
                       className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm placeholder:text-slate-400"
                     />
                     <textarea
                       placeholder="Describe your issue in detail..."
+                      minLength={10}
+                      required
                       value={ticketMessage}
                       onChange={(e) => setTicketMessage(e.target.value)}
                       rows={4}

@@ -245,6 +245,10 @@ export function PromoCarousel() {
     if (activeIndex >= visibleCampaigns.length) setActiveIndex(0);
   }, [activeIndex, visibleCampaigns.length]);
 
+  const showRelative = (offset: number) => {
+    setActiveIndex((current) => (current + offset + visibleCampaigns.length) % visibleCampaigns.length);
+  };
+
   const show = (index: number) => {
     setActiveIndex((index + visibleCampaigns.length) % visibleCampaigns.length);
   };
@@ -263,19 +267,19 @@ export function PromoCarousel() {
         if (!event.currentTarget.contains(event.relatedTarget)) setPaused(false);
       }}
       onKeyDown={(event) => {
-        if (event.key === "ArrowLeft") show(activeIndex - 1);
-        if (event.key === "ArrowRight") show(activeIndex + 1);
+        if (event.key === "ArrowLeft") showRelative(-1);
+        if (event.key === "ArrowRight") showRelative(1);
       }}
     >
-      <div className="group relative overflow-hidden rounded-xl bg-card shadow-md ring-1 ring-black/[0.06]">
-        <AnimatePresence mode="wait" initial={false}>
+      <div className="group relative min-h-[208px] overflow-hidden rounded-xl bg-card shadow-md ring-1 ring-black/[0.06] md:min-h-[310px]">
+        <AnimatePresence mode="sync" initial={false}>
           <m.article
             key={campaign.id}
             initial={reduceMotion ? false : { opacity: 0, x: 28 }}
             animate={{ opacity: 1, x: 0 }}
             exit={reduceMotion ? undefined : { opacity: 0, x: -28 }}
             transition={{ duration: 0.38, ease: [0.22, 1, 0.36, 1] }}
-            className="grid min-h-[208px] grid-cols-[1.08fr_0.92fr] md:min-h-[310px]"
+            className="absolute inset-0 grid min-h-[208px] grid-cols-[1.08fr_0.92fr] md:min-h-[310px]"
             style={{ backgroundColor: campaign.background }}
           >
             <div className="relative z-[1] flex min-w-0 flex-col items-start justify-center px-5 py-8 md:px-12">
@@ -339,16 +343,24 @@ export function PromoCarousel() {
         <button
           type="button"
           aria-label="Previous promotion"
-          onClick={() => show(activeIndex - 1)}
-          className="absolute left-2 top-1/2 grid h-8 w-8 -translate-y-1/2 place-items-center rounded-full bg-background/95 text-foreground opacity-100 shadow-md transition-all hover:scale-105 md:opacity-0 md:group-hover:opacity-100 md:focus:opacity-100"
+          onClick={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            showRelative(-1);
+          }}
+          className="absolute left-2 top-1/2 z-30 grid h-8 w-8 -translate-y-1/2 place-items-center rounded-full bg-background/95 text-foreground opacity-100 shadow-md transition-all hover:scale-105 md:opacity-0 md:group-hover:opacity-100 md:focus:opacity-100"
         >
           <ChevronLeft className="h-4 w-4" />
         </button>
         <button
           type="button"
           aria-label="Next promotion"
-          onClick={() => show(activeIndex + 1)}
-          className="absolute right-2 top-1/2 grid h-8 w-8 -translate-y-1/2 place-items-center rounded-full bg-background/95 text-foreground opacity-100 shadow-md transition-all hover:scale-105 md:opacity-0 md:group-hover:opacity-100 md:focus:opacity-100"
+          onClick={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            showRelative(1);
+          }}
+          className="absolute right-2 top-1/2 z-30 grid h-8 w-8 -translate-y-1/2 place-items-center rounded-full bg-background/95 text-foreground opacity-100 shadow-md transition-all hover:scale-105 md:opacity-0 md:group-hover:opacity-100 md:focus:opacity-100"
         >
           <ChevronRight className="h-4 w-4" />
         </button>

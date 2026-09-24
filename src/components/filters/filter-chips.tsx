@@ -10,6 +10,7 @@ interface FilterChipsProps {
   onRemoveBrand: (brand: string) => void;
   onRemovePrice: () => void;
   onRemoveRating: () => void;
+  onRemoveDistance: () => void;
   onRemoveBoolean: (key: "inStock" | "onSale" | "openNow") => void;
   onClearAll: () => void;
 }
@@ -20,6 +21,7 @@ export function FilterChips({
   onRemoveBrand,
   onRemovePrice,
   onRemoveRating,
+  onRemoveDistance,
   onRemoveBoolean,
   onClearAll,
 }: FilterChipsProps) {
@@ -27,13 +29,14 @@ export function FilterChips({
     (filterState.minPrice !== undefined && filterState.minPrice > 0) ||
     (filterState.maxPrice !== undefined && filterState.maxPrice < 10000);
   const hasRating = filterState.minRating !== undefined && filterState.minRating > 0;
+  const hasDistance = filterState.maxDistanceKm !== undefined;
   const hasBrands = filterState.brands.length > 0;
   const hasBooleans = filterState.inStock || filterState.onSale || filterState.openNow;
   const hasAttributes = Object.values(filterState.attributes).some(
     (vals) => vals && vals.length > 0,
   );
 
-  const hasAnyFilter = hasPrice || hasRating || hasBrands || hasBooleans || hasAttributes;
+  const hasAnyFilter = hasPrice || hasRating || hasDistance || hasBrands || hasBooleans || hasAttributes;
 
   if (!hasAnyFilter) return null;
 
@@ -93,6 +96,15 @@ export function FilterChips({
             className="hover:text-destructive transition-colors"
             title="Remove rating filter"
           >
+            <X className="h-3 w-3 stroke-[2.5]" />
+          </button>
+        </Badge>
+      )}
+
+      {hasDistance && (
+        <Badge variant="secondary" className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium">
+          <span>Within {filterState.maxDistanceKm} km</span>
+          <button type="button" onClick={onRemoveDistance} title="Remove distance filter">
             <X className="h-3 w-3 stroke-[2.5]" />
           </button>
         </Badge>

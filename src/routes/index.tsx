@@ -233,11 +233,13 @@ function Home() {
       featuredProductBySeller.set(product.seller_id, product);
     }
     const liveVendorStores = (approvedVendors.data ?? [])
-      .map((vendor: any, index: number) => {
+      .map((vendor: any) => {
         const vLat = Number(vendor.lat);
         const vLng = Number(vendor.lng);
         if (!isValidCoordinate(vLat, vLng)) return null;
-        const dKm = Number(vendor.distance_km ?? 0);
+        // Calculate from the selected delivery point instead of trusting a
+        // possibly stale RPC distance or treating a missing distance as 0.
+        const dKm = calculateHaversineDistanceKm(deliveryLoc.lat, deliveryLoc.lng, vLat, vLng);
         const featuredProduct = featuredProductBySeller.get(vendor.id);
         // The RPC's `category` is derived from a product row and can be stale or
         // miscategorized. Seller.business_type is the authoritative shop category.

@@ -202,6 +202,10 @@ function SwiggySearchPage() {
     updateFilterState({ minRating: undefined, page: 1 });
   };
 
+  const handleRemoveDistance = () => {
+    updateFilterState({ maxDistanceKm: undefined, page: 1 });
+  };
+
   const handleRemoveBoolean = (key: "inStock" | "onSale" | "openNow") => {
     updateFilterState({ [key]: false, page: 1 });
   };
@@ -282,6 +286,7 @@ function SwiggySearchPage() {
           onRemoveBrand={handleRemoveBrand}
           onRemovePrice={handleRemovePrice}
           onRemoveRating={handleRemoveRating}
+          onRemoveDistance={handleRemoveDistance}
           onRemoveBoolean={handleRemoveBoolean}
           onClearAll={handleClearAll}
         />

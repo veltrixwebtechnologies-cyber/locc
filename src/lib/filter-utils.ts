@@ -11,6 +11,8 @@ export const KNOWN_URL_PARAMS = new Set([
   "min_price",
   "maxPrice",
   "max_price",
+  "maxDistance",
+  "max_distance",
   "rating",
   "min_rating",
   "inStock",
@@ -81,6 +83,11 @@ export function parseFilterParams(searchParams: Record<string, unknown>): Produc
   const maxPrice =
     maxPriceStr !== undefined && !isNaN(Number(maxPriceStr)) ? Number(maxPriceStr) : undefined;
 
+  const distanceStr =
+    cleanString(searchParams.maxDistance) || cleanString(searchParams.max_distance);
+  const maxDistanceKm =
+    distanceStr !== undefined && !isNaN(Number(distanceStr)) ? Number(distanceStr) : undefined;
+
   const ratingStr = cleanString(searchParams.rating) || cleanString(searchParams.min_rating);
   const minRating =
     ratingStr !== undefined && !isNaN(Number(ratingStr)) ? Number(ratingStr) : undefined;
@@ -105,6 +112,7 @@ export function parseFilterParams(searchParams: Record<string, unknown>): Produc
     query,
     minPrice,
     maxPrice,
+    maxDistanceKm,
     minRating,
     inStock,
     onSale,
@@ -136,6 +144,9 @@ export function serializeFilterParams(
   if (state.query && state.query.trim()) result.q = state.query.trim();
   if (state.minPrice !== undefined && state.minPrice > 0) result.minPrice = String(state.minPrice);
   if (state.maxPrice !== undefined && state.maxPrice > 0) result.maxPrice = String(state.maxPrice);
+  if (state.maxDistanceKm !== undefined && state.maxDistanceKm > 0) {
+    result.maxDistance = String(state.maxDistanceKm);
+  }
   if (state.minRating !== undefined && state.minRating > 0) result.rating = String(state.minRating);
   if (state.inStock) result.inStock = "true";
   if (state.onSale) result.onSale = "true";

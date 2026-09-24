@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { useState, type ReactNode } from "react";
+import { useRef, useState, type ReactNode } from "react";
 import { ChevronDown, ChevronRight, Menu, PackageSearch, X, Tag, Headphones } from "lucide-react";
 import { deliveryCategories } from "@/lib/mock-data";
 import { scrollToShops } from "@/lib/scroll-utils";
@@ -281,8 +281,30 @@ const imageFor = (categoryId: string) =>
 export function CategoryMegaMenu() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [activeGroup, setActiveGroup] = useState<string | null>(null);
+  const closeTimerRef = useRef<number | null>(null);
+
+  const cancelClose = () => {
+    if (closeTimerRef.current !== null) {
+      window.clearTimeout(closeTimerRef.current);
+      closeTimerRef.current = null;
+    }
+  };
+
+  const openGroup = (groupId: string) => {
+    cancelClose();
+    setActiveGroup(groupId);
+  };
+
+  const scheduleClose = () => {
+    cancelClose();
+    closeTimerRef.current = window.setTimeout(() => {
+      setActiveGroup(null);
+      closeTimerRef.current = null;
+    }, 160);
+  };
 
   const handleCategoryClick = () => {
+    cancelClose();
     setActiveGroup(null);
     scrollToShops();
   };
@@ -291,7 +313,7 @@ export function CategoryMegaMenu() {
     <>
       <div
         className="relative z-40 hidden w-full border-b border-[var(--sand)]/90 bg-white/95 text-slate-800 shadow-2xs backdrop-blur-md md:block"
-        onMouseLeave={() => setActiveGroup(null)}
+        onMouseLeave={scheduleClose}
       >
         <div className="flex h-11 w-full items-center gap-1.5 px-4 md:px-6 lg:px-10 xl:px-12">
           {/* 1. ALL CATEGORIES BUTTON */}
@@ -319,7 +341,7 @@ export function CategoryMegaMenu() {
                 <div
                   key={group.id}
                   className="shrink-0"
-                  onMouseEnter={() => setActiveGroup(group.id)}
+                  onMouseEnter={() => openGroup(group.id)}
                 >
                   <Link
                     to="/search"
@@ -398,14 +420,16 @@ export function CategoryMegaMenu() {
 
             return (
               <div
-                className="absolute left-1/2 top-full z-50 w-full -translate-x-1/2 pt-2 transition-all duration-200"
-                onMouseEnter={() => setActiveGroup(group.id)}
-                onMouseLeave={() => setActiveGroup(null)}
+                className="pointer-events-none absolute left-1/2 top-full z-50 w-full -translate-x-1/2 pt-2 transition-all duration-200"
               >
                 <div className="relative mx-auto w-[min(1100px,calc(100vw-1rem))]">
                   <div className="absolute left-1/2 top-[-5px] z-20 h-3.5 w-3.5 -translate-x-1/2 rotate-45 border-l border-t border-slate-200 bg-white shadow-xs" />
 
-                  <div className="max-h-[min(70vh,620px)] overflow-y-auto overflow-x-hidden rounded-2xl border border-[#eadff0] bg-white text-slate-900 shadow-[0_20px_50px_-10px_rgba(30,10,50,0.25)]">
+                  <div
+                    className="pointer-events-auto max-h-[min(70vh,620px)] overflow-y-auto overflow-x-hidden rounded-2xl border border-[#eadff0] bg-white text-slate-900 shadow-[0_20px_50px_-10px_rgba(30,10,50,0.25)]"
+                    onMouseEnter={() => openGroup(group.id)}
+                    onMouseLeave={scheduleClose}
+                  >
                     <div className="grid grid-cols-1 sm:grid-cols-[1fr_1.2fr]">
                       <div className="flex flex-col justify-between bg-gradient-to-br from-amber-50/90 via-orange-50/40 to-amber-100/60 p-5 border-r border-slate-100">
                         <div>

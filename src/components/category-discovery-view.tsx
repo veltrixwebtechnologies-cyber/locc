@@ -35,6 +35,7 @@ import {
   INITIAL_FILTER_STATE,
   type ActiveFilterState,
 } from "@/lib/dynamic-filter-engine";
+import { CUSTOMER_VISIBILITY_RADIUS_KM } from "@/lib/location-visibility";
 import { DynamicFilterBar } from "@/components/dynamic-filter-bar";
 
 export function CategoryDiscoveryView({
@@ -172,7 +173,8 @@ export function CategoryDiscoveryView({
           distanceKm: Number(computedDistanceKm.toFixed(1)),
           etaMin: computedEta,
         };
-      });
+      })
+      .filter((s) => s.distanceKm <= CUSTOMER_VISIBILITY_RADIUS_KM);
 
     // Filter by Shop Category using centralized matching engine
     if (activeCategory && activeCategory !== "all" && activeCategory !== "all-shops") {

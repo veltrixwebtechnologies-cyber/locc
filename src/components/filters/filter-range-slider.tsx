@@ -33,7 +33,11 @@ export function FilterRangeSlider({
   // Debounced callback
   useEffect(() => {
     const handler = setTimeout(() => {
-      if (range[0] !== currentMin || range[1] !== currentMax) {
+      // Do not emit the component's default bounds as an active filter on mount.
+      // Only emit after the user changes the range.
+      const normalizedMin = currentMin ?? safeMin;
+      const normalizedMax = currentMax ?? safeMax;
+      if (range[0] !== normalizedMin || range[1] !== normalizedMax) {
         onChange(range[0], range[1]);
       }
     }, 400);
@@ -43,9 +47,8 @@ export function FilterRangeSlider({
 
   return (
     <div className="space-y-4 py-2">
-      <div className="flex items-center justify-between text-xs font-semibold text-foreground">
-        <span>₹{range[0].toLocaleString("en-IN")}</span>
-        <span>₹{range[1].toLocaleString("en-IN")}</span>
+      <div className="text-sm font-extrabold tracking-tight text-foreground">
+        ₹{range[0].toLocaleString("en-IN")} – ₹{range[1].toLocaleString("en-IN")}
       </div>
 
       <Slider
@@ -54,12 +57,12 @@ export function FilterRangeSlider({
         step={50}
         value={range}
         onValueChange={(val) => setRange([val[0], val[1]])}
-        className="w-full"
+        className="w-full py-2 [&_[data-slot=slider-track]]:h-1.5 [&_[data-slot=slider-range]]:bg-[#286aa6] [&_[data-slot=slider-thumb]]:h-7 [&_[data-slot=slider-thumb]]:w-7 [&_[data-slot=slider-thumb]]:border-4 [&_[data-slot=slider-thumb]]:border-white [&_[data-slot=slider-thumb]]:bg-[#286aa6] [&_[data-slot=slider-thumb]]:shadow-[0_3px_9px_rgba(15,23,42,0.25)]"
       />
 
       <div className="grid grid-cols-2 gap-2 pt-1">
         <div>
-          <Label className="text-[10px] text-muted-foreground uppercase font-bold">Min (₹)</Label>
+          <Label className="text-[10px] font-bold uppercase text-muted-foreground">Min (₹)</Label>
           <Input
             type="number"
             min={safeMin}
@@ -67,13 +70,14 @@ export function FilterRangeSlider({
             value={range[0]}
             onChange={(e) => {
               const val = Number(e.target.value);
-              setRange([val, range[1]]);
+              if (!Number.isFinite(val)) return;
+              setRange([Math.max(safeMin, Math.min(val, range[1])), range[1]]);
             }}
-            className="h-8 text-xs font-medium"
+            className="h-9 rounded-xl bg-background text-xs font-semibold shadow-sm"
           />
         </div>
         <div>
-          <Label className="text-[10px] text-muted-foreground uppercase font-bold">Max (₹)</Label>
+          <Label className="text-[10px] font-bold uppercase text-muted-foreground">Max (₹)</Label>
           <Input
             type="number"
             min={range[0]}
@@ -81,9 +85,10 @@ export function FilterRangeSlider({
             value={range[1]}
             onChange={(e) => {
               const val = Number(e.target.value);
-              setRange([range[0], val]);
+              if (!Number.isFinite(val)) return;
+              setRange([range[0], Math.min(safeMax, Math.max(val, range[0]))]);
             }}
-            className="h-8 text-xs font-medium"
+            className="h-9 rounded-xl bg-background text-xs font-semibold shadow-sm"
           />
         </div>
       </div>

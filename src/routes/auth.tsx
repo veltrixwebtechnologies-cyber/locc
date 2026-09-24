@@ -33,6 +33,11 @@ export const Route = createFileRoute("/auth")({
 
 type Mode = "phone" | "email" | "password";
 type AuthIntent = "login" | "signup";
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+function isValidEmail(email: string) {
+  return EMAIL_PATTERN.test(email.trim());
+}
 
 function authErrorMessage(error: unknown, fallback: string) {
   if (typeof error === "string" && error.trim()) return error;
@@ -71,6 +76,14 @@ function authFriendlyError(error: unknown, fallback: string) {
     return "Invalid verification code. Check the code and try again.";
   if (message.includes("rate") || message.includes("too many") || message.includes("limit"))
     return "Too many attempts. Wait a moment and try again.";
+  if (
+    message.includes("invalid login credentials") ||
+    message.includes("user not found") ||
+    message.includes("email not found") ||
+    message.includes("unauthorized")
+  ) {
+    return "Wrong email or password. Enter an authorized email and try again.";
+  }
   if (message.includes("network") || message.includes("fetch"))
     return "Network error. Check your connection and try again.";
   return fallback;
@@ -153,7 +166,9 @@ function AuthPage() {
   }, []);
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event) => {
       if (event === "PASSWORD_RECOVERY") {
         setPasswordRecovery(true);
         setMode("password");
@@ -313,8 +328,8 @@ function AuthPage() {
       setError("Enter your full name to create an account.");
       return;
     }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      setError("Enter a valid email address.");
+    if (!isValidEmail(email)) {
+      setError("Wrong email. Enter a valid authorized email address.");
       return;
     }
     setError(null);
@@ -418,6 +433,10 @@ function AuthPage() {
       setError("Please fill in all required fields.");
       return;
     }
+    if (!isValidEmail(email)) {
+      setError("Wrong email. Enter a valid authorized email address.");
+      return;
+    }
     if (intent === "signup" && name.trim().length < 2) {
       setError("Enter your full name to create an account.");
       return;
@@ -455,7 +474,9 @@ function AuthPage() {
       setError(
         authFriendlyError(
           err,
-          intent === "signup" ? "Could not create account." : "Invalid email or password.",
+          intent === "signup"
+            ? "Could not create account. Check that your email is authorized."
+            : "Wrong email or password. Enter an authorized email and try again.",
         ),
       );
     } finally {
@@ -467,6 +488,10 @@ function AuthPage() {
     e.preventDefault();
     if (!email.trim()) {
       setError("Please enter your email address.");
+      return;
+    }
+    if (!isValidEmail(email)) {
+      setError("Wrong email. Enter a valid authorized email address.");
       return;
     }
     setError(null);
@@ -842,7 +867,6 @@ function AuthPage() {
                       type="text"
                       value={name}
                       onChange={(e) => setName(e.target.value)}
-                      placeholder="John Doe"
                       autoComplete="name"
                       className="w-full rounded-2xl bg-slate-50 border border-slate-200 px-4 py-3 text-sm font-medium outline-none focus:border-[#981495] focus:bg-white focus:ring-4 focus:ring-[#981495]/10 transition"
                     />
@@ -865,7 +889,6 @@ function AuthPage() {
                       maxLength={14}
                       value={phone}
                       onChange={(e) => setPhone(e.target.value.replace(/\D/g, ""))}
-                      placeholder="98765 43210"
                       className="w-full border-0 bg-transparent font-mono text-base font-bold text-slate-900 outline-none ring-0 shadow-none tracking-wider placeholder:font-normal placeholder:text-slate-400 focus:outline-none focus:ring-0 focus:shadow-none focus-visible:outline-none focus-visible:ring-0 focus-visible:shadow-none"
                       autoFocus
                     />
@@ -988,7 +1011,6 @@ function AuthPage() {
                       type="text"
                       value={name}
                       onChange={(e) => setName(e.target.value)}
-                      placeholder="John Doe"
                       autoComplete="name"
                       className="w-full rounded-2xl bg-slate-50 border border-slate-200 px-4 py-3 text-sm font-medium outline-none focus:border-[#981495] focus:bg-white focus:ring-4 focus:ring-[#981495]/10 transition"
                     />
@@ -1006,7 +1028,6 @@ function AuthPage() {
                       autoComplete="email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      placeholder="you@example.com"
                       className="w-full border-0 bg-transparent text-sm font-semibold text-slate-900 outline-none ring-0 shadow-none placeholder:font-normal placeholder:text-slate-400 focus:outline-none focus:ring-0 focus:shadow-none focus-visible:outline-none focus-visible:ring-0 focus-visible:shadow-none"
                       autoFocus
                     />
@@ -1117,21 +1138,48 @@ function AuthPage() {
           ) : /* PASSWORD FLOW FORM */
           passwordRecovery ? (
             <form onSubmit={updateRecoveredPassword} className="mt-5 space-y-4">
-              <p className="text-sm font-semibold text-slate-600">Choose a new password for your account.</p>
+              <p className="text-sm font-semibold text-slate-600">
+                Choose a new password for your account.
+              </p>
               <div>
                 <label className="mb-1 block text-xs font-bold text-slate-700">New password</label>
-                <input type="password" autoComplete="new-password" minLength={8} required value={newPassword}
-                  onChange={(event) => setNewPassword(event.target.value)} placeholder="At least 8 characters"
-                  className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium outline-none transition focus:border-[#981495] focus:bg-white focus:ring-4 focus:ring-[#981495]/10" />
+                <input
+                  type="password"
+                  autoComplete="new-password"
+                  minLength={8}
+                  required
+                  value={newPassword}
+                  onChange={(event) => setNewPassword(event.target.value)}
+                  className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium outline-none transition focus:border-[#981495] focus:bg-white focus:ring-4 focus:ring-[#981495]/10"
+                />
               </div>
               <div>
-                <label className="mb-1 block text-xs font-bold text-slate-700">Confirm new password</label>
-                <input type="password" autoComplete="new-password" minLength={8} required value={confirmNewPassword}
-                  onChange={(event) => setConfirmNewPassword(event.target.value)} placeholder="Enter it again"
-                  className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium outline-none transition focus:border-[#981495] focus:bg-white focus:ring-4 focus:ring-[#981495]/10" />
+                <label className="mb-1 block text-xs font-bold text-slate-700">
+                  Confirm new password
+                </label>
+                <input
+                  type="password"
+                  autoComplete="new-password"
+                  minLength={8}
+                  required
+                  value={confirmNewPassword}
+                  onChange={(event) => setConfirmNewPassword(event.target.value)}
+                  className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium outline-none transition focus:border-[#981495] focus:bg-white focus:ring-4 focus:ring-[#981495]/10"
+                />
               </div>
-              {error && <div role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3 text-xs font-bold text-red-600">{error}</div>}
-              <button type="submit" disabled={loading} className="w-full rounded-2xl bg-gradient-to-r from-[#981495] to-[#700b6e] px-5 py-3.5 text-sm font-extrabold text-white shadow-md disabled:opacity-60">
+              {error && (
+                <div
+                  role="alert"
+                  className="rounded-xl border border-red-200 bg-red-50 p-3 text-xs font-bold text-red-600"
+                >
+                  {error}
+                </div>
+              )}
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full rounded-2xl bg-gradient-to-r from-[#981495] to-[#700b6e] px-5 py-3.5 text-sm font-extrabold text-white shadow-md disabled:opacity-60"
+              >
                 {loading ? "Updating password…" : "Update password"}
               </button>
             </form>
@@ -1146,7 +1194,6 @@ function AuthPage() {
                     autoComplete="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="you@example.com"
                     className="w-full border-0 bg-transparent text-sm font-semibold text-slate-900 outline-none ring-0 shadow-none placeholder:font-normal placeholder:text-slate-400 focus:outline-none focus:ring-0 focus:shadow-none focus-visible:outline-none focus-visible:ring-0 focus-visible:shadow-none"
                     autoFocus
                   />
@@ -1199,7 +1246,6 @@ function AuthPage() {
                     type="text"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    placeholder="John Doe"
                     autoComplete="name"
                     className="w-full rounded-2xl bg-slate-50 border border-slate-200 px-4 py-3 text-sm font-medium outline-none focus:border-[#981495] focus:bg-white focus:ring-4 focus:ring-[#981495]/10 transition"
                   />
@@ -1215,7 +1261,6 @@ function AuthPage() {
                     autoComplete="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="you@example.com"
                     className="w-full border-0 bg-transparent text-sm font-semibold text-slate-900 outline-none ring-0 shadow-none placeholder:font-normal placeholder:text-slate-400 focus:outline-none focus:ring-0 focus:shadow-none focus-visible:outline-none focus-visible:ring-0 focus-visible:shadow-none"
                   />
                 </div>
@@ -1242,7 +1287,6 @@ function AuthPage() {
                     type={showPassword ? "text" : "password"}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    placeholder="••••••••"
                     className="w-full rounded-2xl bg-slate-50 border border-slate-200 pl-4 pr-11 py-3 text-sm font-medium outline-none focus:border-[#981495] focus:bg-white focus:ring-4 focus:ring-[#981495]/10 transition"
                     required
                   />

@@ -60,7 +60,7 @@ export function useProductFilters(filterState: ProductFilterState) {
             p_offset: ((filterState.page || 1) - 1) * 24,
             p_lat: deliveryLocation.lat,
             p_lng: deliveryLocation.lng,
-            p_max_distance_km: CUSTOMER_VISIBILITY_RADIUS_KM,
+            p_max_distance_km: filterState.maxDistanceKm ?? CUSTOMER_VISIBILITY_RADIUS_KM,
           });
 
           const { data, error } = (await withTimeout(rpcPromise, 8000)) as any;
@@ -72,7 +72,8 @@ export function useProductFilters(filterState: ProductFilterState) {
             const products = ((data as FilteredProduct[]) || []).filter((product) =>
               product.distance_km != null &&
               Number.isFinite(Number(product.distance_km)) &&
-              Number(product.distance_km) <= CUSTOMER_VISIBILITY_RADIUS_KM &&
+              Number(product.distance_km) <=
+                (filterState.maxDistanceKm ?? CUSTOMER_VISIBILITY_RADIUS_KM) &&
               (!filterState.category || isStoreInCategory(product.category, filterState.category)),
             );
             const total = products.length > 0 ? Number(products[0].total_count) : 0;
