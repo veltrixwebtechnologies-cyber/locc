@@ -180,6 +180,7 @@ function categoryFromLink(link: string | null) {
 export function PromoCarousel() {
   const reduceMotion = useReducedMotion();
   const [activeIndex, setActiveIndex] = useState(0);
+  const [direction, setDirection] = useState(1);
   const [paused, setPaused] = useState(false);
   const bannerQuery = useQuery({
     queryKey: ["homepage-banners"],
@@ -236,6 +237,7 @@ export function PromoCarousel() {
   useEffect(() => {
     if (paused || reduceMotion) return;
     const timer = window.setInterval(() => {
+      setDirection(1);
       setActiveIndex((current) => (current + 1) % visibleCampaigns.length);
     }, 4500);
     return () => window.clearInterval(timer);
@@ -246,10 +248,14 @@ export function PromoCarousel() {
   }, [activeIndex, visibleCampaigns.length]);
 
   const showRelative = (offset: number) => {
-    setActiveIndex((current) => (current + offset + visibleCampaigns.length) % visibleCampaigns.length);
+    setDirection(offset < 0 ? -1 : 1);
+    setActiveIndex(
+      (current) => (current + offset + visibleCampaigns.length) % visibleCampaigns.length,
+    );
   };
 
   const show = (index: number) => {
+    setDirection(index < activeIndex ? -1 : 1);
     setActiveIndex((index + visibleCampaigns.length) % visibleCampaigns.length);
   };
 
@@ -275,9 +281,15 @@ export function PromoCarousel() {
         <AnimatePresence mode="sync" initial={false}>
           <m.article
             key={campaign.id}
-            initial={reduceMotion ? false : { opacity: 0, x: 28 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={reduceMotion ? undefined : { opacity: 0, x: -28 }}
+            custom={direction}
+            initial={reduceMotion ? false : "enter"}
+            animate="center"
+            exit={reduceMotion ? undefined : "exit"}
+            variants={{
+              enter: (slideDirection: number) => ({ opacity: 0, x: slideDirection * 28 }),
+              center: { opacity: 1, x: 0 },
+              exit: (slideDirection: number) => ({ opacity: 0, x: slideDirection * -28 }),
+            }}
             transition={{ duration: 0.38, ease: [0.22, 1, 0.36, 1] }}
             className="absolute inset-0 grid min-h-[208px] grid-cols-[1.08fr_0.92fr] md:min-h-[310px]"
             style={{ backgroundColor: campaign.background }}
@@ -348,7 +360,10 @@ export function PromoCarousel() {
             event.stopPropagation();
             showRelative(-1);
           }}
-          className="absolute left-2 top-1/2 z-30 grid h-8 w-8 -translate-y-1/2 place-items-center rounded-full bg-background/95 text-foreground opacity-100 shadow-md transition-all hover:scale-105 md:opacity-0 md:group-hover:opacity-100 md:focus:opacity-100"
+          whileHover={reduceMotion ? undefined : { scale: 1.05 }}
+          whileTap={reduceMotion ? undefined : { scale: 0.95 }}
+          transition={{ type: "spring", stiffness: 420, damping: 28 }}
+          className="absolute left-2 top-1/2 z-30 grid h-8 w-8 -translate-y-1/2 place-items-center rounded-full bg-background/95 text-foreground opacity-100 shadow-md transition-opacity md:opacity-0 md:group-hover:opacity-100 md:focus:opacity-100"
         >
           <ChevronLeft className="h-4 w-4" />
         </button>
@@ -360,7 +375,10 @@ export function PromoCarousel() {
             event.stopPropagation();
             showRelative(1);
           }}
-          className="absolute right-2 top-1/2 z-30 grid h-8 w-8 -translate-y-1/2 place-items-center rounded-full bg-background/95 text-foreground opacity-100 shadow-md transition-all hover:scale-105 md:opacity-0 md:group-hover:opacity-100 md:focus:opacity-100"
+          whileHover={reduceMotion ? undefined : { scale: 1.05 }}
+          whileTap={reduceMotion ? undefined : { scale: 0.95 }}
+          transition={{ type: "spring", stiffness: 420, damping: 28 }}
+          className="absolute right-2 top-1/2 z-30 grid h-8 w-8 -translate-y-1/2 place-items-center rounded-full bg-background/95 text-foreground opacity-100 shadow-md transition-opacity md:opacity-0 md:group-hover:opacity-100 md:focus:opacity-100"
         >
           <ChevronRight className="h-4 w-4" />
         </button>

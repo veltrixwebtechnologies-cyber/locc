@@ -45,6 +45,8 @@ const HEADER_SEARCH_PLACEHOLDERS = [
 ];
 
 const OPEN_LOCATION_MODAL_EVENT = "localshore_open_location_modal";
+const SELLER_HUB_URL =
+  import.meta.env.VITE_SELLER_HUB_URL || "https://vendor-admin-6f5h.vercel.app/";
 
 function requestLocationModal() {
   if (typeof window !== "undefined") {
@@ -469,7 +471,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               <span>Customer Care</span>
             </Link>
             <a
-              href={import.meta.env.VITE_SELLER_HUB_URL || "https://vendor-admin-6f5h.vercel.app/"}
+              href={SELLER_HUB_URL}
               aria-label="Become a Seller"
               target="_blank"
               rel="noopener noreferrer"
@@ -808,12 +810,14 @@ function ShopperFooter() {
             <h4 className="pt-3 font-display text-base font-extrabold tracking-tight text-slate-900">
               Partner With Us
             </h4>
-            <Link
-              to="/help?topic=sell"
+            <a
+              href={SELLER_HUB_URL}
+              target="_blank"
+              rel="noopener noreferrer"
               className="block text-sm font-medium transition-all duration-200 hover:-translate-y-0.5 hover:text-[#981495]"
             >
               Become a Seller
-            </Link>
+            </a>
           </section>
 
           <section className="space-y-3">
