@@ -37,7 +37,7 @@ export function ReferenceHomeHero() {
           decoding="async"
           className="absolute bottom-0 right-[-5%] z-10 h-[68%] w-[48%] object-contain object-center sm:right-[7%] sm:h-full sm:w-[46%] lg:right-[10%] lg:w-[42%]"
         />
-        <p className="absolute right-5 top-1/2 z-10 hidden max-w-[150px] -translate-y-1/2 rotate-[-8deg] text-center font-handwriting text-2xl font-bold leading-[1.05] tracking-wide text-white/95 lg:block">
+        <p className="absolute right-5 top-1/2 z-10 hidden max-w-[150px] -translate-y-1/2 rotate-[-8deg] text-center font-display text-2xl font-black leading-[1.05] tracking-tight text-white/95 lg:block">
           Local shops.<br />
           Real people.<br />
           Better together.

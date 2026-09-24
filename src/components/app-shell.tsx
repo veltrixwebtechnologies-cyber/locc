@@ -469,7 +469,10 @@ export function AppShell({ children }: { children: ReactNode }) {
               <span>Customer Care</span>
             </Link>
             <a
-              href={import.meta.env.VITE_SELLER_HUB_URL || "/seller"}
+              href={import.meta.env.VITE_SELLER_HUB_URL || "https://vendor-admin-6f5h.vercel.app/"}
+              aria-label="Become a Seller"
+              target="_blank"
+              rel="noopener noreferrer"
               className="inline-flex items-center rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 text-xs font-bold text-primary transition-colors hover:bg-primary/10 lg:text-sm"
             >
               Become a Seller
@@ -805,8 +808,11 @@ function ShopperFooter() {
             <h4 className="pt-3 font-display text-base font-extrabold tracking-tight text-slate-900">
               Partner With Us
             </h4>
-            <Link to="/help?topic=sell" className="block text-sm font-medium hover:text-[#981495]">
-              Sell on LocalShore
+            <Link
+              to="/help?topic=sell"
+              className="block text-sm font-medium transition-all duration-200 hover:-translate-y-0.5 hover:text-[#981495]"
+            >
+              Become a Seller
             </Link>
           </section>
 
@@ -828,7 +834,7 @@ function ShopperFooter() {
               {["in", "◎", "f", "p", "𝕏"].map((icon) => (
                 <span
                   key={icon}
-                  className="grid h-7 w-7 place-items-center rounded-full border border-slate-300 bg-white"
+                  className="grid h-7 w-7 place-items-center rounded-full border border-slate-300 bg-white transition-all duration-200 ease-out hover:-translate-y-1 hover:scale-110 hover:border-[#981495] hover:bg-[#981495] hover:text-white hover:shadow-[0_8px_16px_rgba(152,20,149,0.22)] active:translate-y-0 active:scale-95"
                 >
                   {icon}
                 </span>
@@ -843,7 +849,7 @@ function ShopperFooter() {
             <Link
               to="/"
               search={{ category: undefined, q: undefined }}
-              className="font-semibold text-[#981495] hover:underline"
+              className="font-semibold text-[#981495] transition-all duration-200 hover:-translate-y-0.5 hover:underline"
             >
               Browse all
             </Link>
@@ -855,7 +861,7 @@ function ShopperFooter() {
                   key={label}
                   to="/"
                   search={{ category: undefined, q: label }}
-                  className="hover:text-[#981495]"
+                  className="transition-all duration-200 hover:-translate-y-0.5 hover:text-[#981495]"
                 >
                   {label}
                 </Link>
@@ -866,7 +872,7 @@ function ShopperFooter() {
               Shop better with the LocalShore app
             </span>
             <div className="flex items-center gap-2">
-            <span className="flex h-11 w-[112px] shrink-0 items-center justify-center gap-1.5 rounded-lg bg-black px-2 text-white shadow-sm">
+              <span className="flex h-11 w-[112px] shrink-0 items-center justify-center gap-1.5 rounded-lg bg-black px-2 text-white shadow-sm transition-all duration-200 ease-out hover:-translate-y-1 hover:scale-105 hover:shadow-[0_10px_18px_rgba(0,0,0,0.22)] active:translate-y-0 active:scale-95">
               <span className="text-lg">●</span>
               <span className="whitespace-nowrap text-[8px] leading-tight">
                 DOWNLOAD ON THE
@@ -874,7 +880,7 @@ function ShopperFooter() {
                 <strong className="text-xs">App Store</strong>
               </span>
             </span>
-            <span className="flex h-11 w-[112px] shrink-0 items-center justify-center gap-1.5 rounded-lg bg-black px-2 text-white shadow-sm">
+            <span className="flex h-11 w-[112px] shrink-0 items-center justify-center gap-1.5 rounded-lg bg-black px-2 text-white shadow-sm transition-all duration-200 ease-out hover:-translate-y-1 hover:scale-105 hover:shadow-[0_10px_18px_rgba(0,0,0,0.22)] active:translate-y-0 active:scale-95">
               <span className="text-lg text-[#3ddc84]">▶</span>
               <span className="whitespace-nowrap text-[8px] leading-tight">
                 GET IT ON

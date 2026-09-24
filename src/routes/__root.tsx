@@ -153,6 +153,7 @@ function RootComponent() {
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   return (
     <QueryClientProvider client={queryClient}>
+      <SwipeBackNavigation />
       <LazyMotion features={domAnimation}>
         <MotionConfig reducedMotion="user">
           <AnimatePresence mode="wait" initial={false}>
@@ -171,4 +172,74 @@ function RootComponent() {
       <Toaster richColors position="bottom-center" />
     </QueryClientProvider>
   );
+}
+
+function SwipeBackNavigation() {
+  const pathname = useRouterState({ select: (state) => state.location.pathname });
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    let startX = 0;
+    let startY = 0;
+    let tracking = false;
+
+    const isIgnoredTarget = (target: EventTarget | null) => {
+      const element = target instanceof HTMLElement ? target : null;
+      return Boolean(
+        element?.closest(
+          "input, textarea, select, button, a, [role='button'], [data-no-swipe-back], .leaflet-container",
+        ),
+      );
+    };
+
+    const onTouchStart = (event: TouchEvent) => {
+      if (event.touches.length !== 1 || pathname === "/" || isIgnoredTarget(event.target)) {
+        tracking = false;
+        return;
+      }
+      const touch = event.touches[0];
+      if (!touch || touch.clientX > 32) {
+        tracking = false;
+        return;
+      }
+      startX = touch.clientX;
+      startY = touch.clientY;
+      tracking = true;
+    };
+
+    const onTouchMove = (event: TouchEvent) => {
+      if (!tracking || event.touches.length !== 1) return;
+      const touch = event.touches[0];
+      if (!touch) return;
+      const deltaX = touch.clientX - startX;
+      const deltaY = Math.abs(touch.clientY - startY);
+      if (deltaX <= 0 || deltaX < deltaY) {
+        tracking = false;
+        return;
+      }
+      if (deltaX > 12) event.preventDefault();
+    };
+
+    const onTouchEnd = (event: TouchEvent) => {
+      if (!tracking) return;
+      tracking = false;
+      const touch = event.changedTouches[0];
+      if (!touch) return;
+      const deltaX = touch.clientX - startX;
+      const deltaY = Math.abs(touch.clientY - startY);
+      if (deltaX >= 80 && deltaX > deltaY * 1.35) window.history.back();
+    };
+
+    document.addEventListener("touchstart", onTouchStart, { passive: true });
+    document.addEventListener("touchmove", onTouchMove, { passive: false });
+    document.addEventListener("touchend", onTouchEnd, { passive: true });
+    return () => {
+      document.removeEventListener("touchstart", onTouchStart);
+      document.removeEventListener("touchmove", onTouchMove);
+      document.removeEventListener("touchend", onTouchEnd);
+    };
+  }, [pathname]);
+
+  return null;
 }

@@ -62,7 +62,11 @@ export function useShopDiscovery(filterState: ProductFilterState) {
       // can only narrow the returned set; they can never widen it. Apply the
       // selected category here as well so a broad RPC response cannot leak
       // unrelated shops into a category-specific listing.
-      list = list.filter((s) => (s.distanceKm ?? Infinity) <= CUSTOMER_VISIBILITY_RADIUS_KM);
+      list = list.filter(
+        (s) =>
+          (s.distanceKm ?? Infinity) <=
+          (filterState.maxDistanceKm ?? CUSTOMER_VISIBILITY_RADIUS_KM),
+      );
 
       if (
         filterState.category &&
