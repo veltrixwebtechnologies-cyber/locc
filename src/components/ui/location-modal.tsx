@@ -254,6 +254,11 @@ export function LocationModal({ isOpen, onClose }: LocationModalProps) {
               <LocationMapPicker
                 initialLat={activeLocation?.lat ?? recentFix?.lat}
                 initialLng={activeLocation?.lng ?? recentFix?.lng}
+                requiresManualConfirmation={
+                  !activeLocation &&
+                  !!recentFix &&
+                  recentFix.accuracy > MAX_CUSTOMER_DELIVERY_ACCURACY_M
+                }
                 onSelectLocation={handleMapLocationSelect}
                 onBack={() => setViewMode("quick")}
               />

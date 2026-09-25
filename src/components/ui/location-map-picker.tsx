@@ -16,6 +16,7 @@ import { toast } from "sonner";
 interface LocationMapPickerProps {
   initialLat?: number;
   initialLng?: number;
+  requiresManualConfirmation?: boolean;
   onSelectLocation: (loc: DeliveryLocation) => void;
   onBack?: () => void;
 }
@@ -23,6 +24,7 @@ interface LocationMapPickerProps {
 export function LocationMapPicker({
   initialLat,
   initialLng,
+  requiresManualConfirmation = false,
   onSelectLocation,
   onBack,
 }: LocationMapPickerProps) {
@@ -34,6 +36,7 @@ export function LocationMapPicker({
   const initialCoords = parseCoordinates(initialLat, initialLng);
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(initialCoords);
   const [mapStart, setMapStart] = useState<{ lat: number; lng: number } | null>(initialCoords);
+  const [hasPositionedPin, setHasPositionedPin] = useState(!requiresManualConfirmation);
   const [mapError, setMapError] = useState("");
 
   const [addressDetails, setAddressDetails] = useState<{
@@ -100,6 +103,7 @@ export function LocationMapPicker({
   const handlePositionChange = useCallback(
     (lat: number, lng: number, flyTo = false) => {
       setCoords({ lat, lng });
+      setHasPositionedPin(true);
       setMapStart((previous) => previous ?? { lat, lng });
 
       if (mapRef.current) {
@@ -380,7 +384,9 @@ export function LocationMapPicker({
 
         {/* Floating hint label */}
         <div className="absolute top-16 left-1/2 -translate-x-1/2 z-[400] pointer-events-none rounded-full bg-slate-900/80 px-3 py-1 text-[11px] font-semibold text-white shadow-lg backdrop-blur-sm">
-          Tap or drag marker to change location
+          {requiresManualConfirmation && !hasPositionedPin
+            ? "Move the pin to your exact entrance"
+            : "Tap or drag marker to change location"}
         </div>
       </div>
 
@@ -408,11 +414,11 @@ export function LocationMapPicker({
         <button
           type="button"
           onClick={handleConfirm}
-          disabled={isGeocoding || !coords}
+          disabled={isGeocoding || !coords || !hasPositionedPin}
           className="w-full flex items-center justify-center gap-2 rounded-2xl bg-[#981495] hover:bg-[#7b1078] active:scale-[0.99] text-white py-3.5 px-4 font-black text-sm shadow-lg shadow-[#981495]/20 transition-all cursor-pointer disabled:opacity-60"
         >
           <Check className="h-4 w-4 stroke-[3]" />
-          Confirm Selected Location
+          {hasPositionedPin ? "Confirm Selected Location" : "Move pin to confirm exact location"}
         </button>
       </div>
     </div>
