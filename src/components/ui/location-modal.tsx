@@ -84,7 +84,9 @@ export function LocationModal({ isOpen, onClose }: LocationModalProps) {
       await detectCurrentGPSLocation({ silent: false });
       onClose();
     } catch {
-      // Inline error banner handles user feedback
+      // A browser/laptop may only provide a coarse or unavailable fix. Move
+      // directly to the precise, user-confirmed map pin flow.
+      setViewMode("map");
     } finally {
       setIsLocating(false);
     }

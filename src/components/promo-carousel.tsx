@@ -352,7 +352,7 @@ export function PromoCarousel() {
           {String(visibleCampaigns.length).padStart(2, "0")}
         </span>
 
-        <button
+        <m.button
           type="button"
           aria-label="Previous promotion"
           onClick={(event) => {
@@ -366,8 +366,8 @@ export function PromoCarousel() {
           className="absolute left-2 top-1/2 z-30 grid h-8 w-8 -translate-y-1/2 place-items-center rounded-full bg-background/95 text-foreground opacity-100 shadow-md transition-opacity md:opacity-0 md:group-hover:opacity-100 md:focus:opacity-100"
         >
           <ChevronLeft className="h-4 w-4" />
-        </button>
-        <button
+        </m.button>
+        <m.button
           type="button"
           aria-label="Next promotion"
           onClick={(event) => {
@@ -381,7 +381,7 @@ export function PromoCarousel() {
           className="absolute right-2 top-1/2 z-30 grid h-8 w-8 -translate-y-1/2 place-items-center rounded-full bg-background/95 text-foreground opacity-100 shadow-md transition-opacity md:opacity-0 md:group-hover:opacity-100 md:focus:opacity-100"
         >
           <ChevronRight className="h-4 w-4" />
-        </button>
+        </m.button>
 
         <div className="absolute bottom-3 left-1/2 flex -translate-x-1/2 gap-1.5 rounded-full bg-background/90 px-2.5 py-1.5 shadow-sm backdrop-blur-sm">
           {visibleCampaigns.map((item, index) => (
