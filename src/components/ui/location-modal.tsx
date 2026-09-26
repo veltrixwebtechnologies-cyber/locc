@@ -30,6 +30,7 @@ import {
   detectCurrentGPSLocation,
   commitDetectedLocation,
   getPopularAreasForLocation,
+  MAX_APPROXIMATE_GPS_PREVIEW_ACCURACY_M,
   type DeliveryLocation,
 } from "@/lib/location-store";
 import { geocodeSearch } from "@/lib/map-service/providers";
@@ -120,9 +121,16 @@ export function LocationModal({ isOpen, onClose }: LocationModalProps) {
       });
       setPendingGPSLocation(detected);
       setMapOrigin("gps");
-      toast.success("Location detected", {
-        description: `${detected.area || detected.label} · Accuracy ±${Math.round(detected.accuracy ?? 0)}m`,
-      });
+      const accuracy = detected.accuracy ?? 0;
+      if (accuracy <= MAX_CUSTOMER_DELIVERY_ACCURACY_M) {
+        toast.success("Precise location detected", {
+          description: `${detected.area || detected.label} · Accuracy ±${Math.round(accuracy)}m`,
+        });
+      } else {
+        toast.info("Approximate location found", {
+          description: `Accuracy ±${Math.round(accuracy)}m. Adjust the pin to your entrance before saving.`,
+        });
+      }
     } catch (error) {
       if (import.meta.env?.DEV) console.warn("[LocalShore GPS] modal request failed", error);
       // Keep the saved address and show the GPS error with explicit choices.
@@ -393,7 +401,7 @@ export function LocationModal({ isOpen, onClose }: LocationModalProps) {
               )}
 
               {/* DETECTING LOCATION LOADING STATE */}
-              {isLocating || (locationState === "DETECTING_LOCATION" && !activeLocation) ? (
+              {isLocating ? (
                 <div className="space-y-3 rounded-2xl border border-[#f0abfc] bg-[var(--sand)]/90 p-5 text-center">
                   <div className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-[#981495] text-white shadow-lg animate-pulse">
                     <Loader2 className="h-6 w-6 animate-spin" />
@@ -405,7 +413,7 @@ export function LocationModal({ isOpen, onClose }: LocationModalProps) {
                     <p className="text-xs text-slate-600 font-medium mt-0.5" role="status">
                       {gpsStatusState.fix
                         ? gpsStatusState.fix.accuracy > MAX_CUSTOMER_DELIVERY_ACCURACY_M
-                          ? "Waiting for a more accurate reading…"
+                          ? `Current reading ±${Math.round(gpsStatusState.fix.accuracy)}m. Waiting for a better fix (up to ±${MAX_APPROXIMATE_GPS_PREVIEW_ACCURACY_M}m)…`
                           : "Looking up your address…"
                         : "Requesting your device’s location. Allow browser access when prompted; this can take up to 15 seconds."}
                     </p>
@@ -438,9 +446,10 @@ export function LocationModal({ isOpen, onClose }: LocationModalProps) {
                             : "Unable to get your location"}
                         </p>
                         <p className="text-amber-800">
-                          {gpsStatusState.status === "imprecise"
-                            ? "Your device returned an approximate area. Retry with precise device location enabled, or search for your address and adjust the map pin."
-                            : gpsStatusState.errorMessage || "Allow location access, then retry. You can also search or drop a pin on the map."}
+                          {gpsStatusState.errorMessage ||
+                            (gpsStatusState.status === "imprecise"
+                              ? "Your device returned only a broad estimate. Turn on precise device location and Wi-Fi, retry, or search for your address and place the pin at your entrance."
+                              : "Allow location access, then retry. You can also search or drop a pin on the map.")}
                           {activeLocation ? " Your selected address has not changed." : ""}
                         </p>
                         <div className="mt-2 flex flex-wrap gap-2">

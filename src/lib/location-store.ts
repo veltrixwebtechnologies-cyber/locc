@@ -74,6 +74,9 @@ export interface GPSFix {
   timestamp: number;
 }
 let bestGPSFix: GPSFix | null = null;
+// Coarse Wi-Fi/IP geolocation can be tens or hundreds of kilometres off.
+// Such a result is not useful as a map starting point or delivery preview.
+export const MAX_APPROXIMATE_GPS_PREVIEW_ACCURACY_M = 5_000;
 
 function hasFreshGPSFix(position: GeolocationPosition, now = Date.now()): boolean {
   return (
@@ -172,8 +175,10 @@ function setGPSStatus(status: GPSStatus, errorMessage: string | null = null) {
   gpsErrorMessage = errorMessage;
   if (status === "detecting") {
     currentState = "DETECTING_LOCATION";
-  } else if (status === "ok" && activeLocation) {
-    currentState = "LOCATION_SELECTED";
+  } else if (status === "ok") {
+    // A successfully acquired GPS preview is not saved yet, but acquisition
+    // has finished. Do not leave consumers stuck in DETECTING_LOCATION.
+    currentState = activeLocation ? "LOCATION_SELECTED" : "NO_LOCATION_SELECTED";
   } else if (
     status === "denied" ||
     status === "unavailable" ||
@@ -497,6 +502,11 @@ export async function detectCurrentGPSLocation(options?: {
     if (!hasFreshGPSFix(position) || (!allowApproximate && !hasFreshPreciseGPSFix(position)))
       throw new Error("Location is invalid or out of date. Refresh and try again.");
     const { latitude: lat, longitude: lng, accuracy } = position.coords;
+    if (allowApproximate && accuracy > MAX_APPROXIMATE_GPS_PREVIEW_ACCURACY_M) {
+      throw new Error(
+        `Your device reported an accuracy radius of ±${Math.round(accuracy)}m, which is too broad to locate your delivery area. Turn on device location and Wi-Fi, retry, or choose your entrance on the map.`,
+      );
+    }
     let area = `Device location (${lat.toFixed(6)}, ${lng.toFixed(6)})`;
     let city = "";
     let label = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
@@ -609,7 +619,7 @@ export async function detectCurrentGPSLocation(options?: {
         fail(
           bestGPSFix ? "imprecise" : "timeout",
           bestGPSFix
-            ? "Your device returned an approximate area. Enable precise device location and Wi-Fi, or confirm your entrance on the map."
+            ? `Your device's best reading was only accurate to about ±${Math.round(bestGPSFix.accuracy)}m. Enable precise device location and Wi-Fi, retry, or choose your entrance on the map.`
             : "Your device did not return a current location. Check browser permission and device location services, then retry or choose your entrance on the map.",
         ),
       15000,
@@ -635,7 +645,10 @@ export async function detectCurrentGPSLocation(options?: {
           // A precise fix is preferred, but map/manual-pin flows explicitly
           // allow an approximate first fix so the user can adjust the pin
           // instead of waiting forever on desktop Wi-Fi/IP geolocation.
-          if (!allowApproximate && !hasFreshPreciseGPSFix(position)) return;
+          if (
+            !hasFreshPreciseGPSFix(position) &&
+            (!allowApproximate || position.coords.accuracy > MAX_APPROXIMATE_GPS_PREVIEW_ACCURACY_M)
+          ) return;
           cleanup();
           processPosition(position).then(resolve, (error) => {
             if (requestRevision === locationRevision) {
