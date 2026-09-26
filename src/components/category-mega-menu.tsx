@@ -272,7 +272,11 @@ const legacyMenuGroups = [
   },
 ];
 
-export const menuGroups = LOCALSHORE_MENU_GROUPS;
+// Keep grocery and café categories available in the catalog data, but omit
+// them from the primary navigation as requested.
+export const menuGroups = LOCALSHORE_MENU_GROUPS.filter(
+  (group) => !["grocery", "cafes"].includes(group.id),
+);
 
 const imageFor = (categoryId: string) =>
   deliveryCategories.find((category) => category.id === categoryId)?.imageUrl ??
@@ -338,11 +342,7 @@ export function CategoryMegaMenu() {
               const isOpen = activeGroup === group.id;
 
               return (
-                <div
-                  key={group.id}
-                  className="shrink-0"
-                  onMouseEnter={() => openGroup(group.id)}
-                >
+                <div key={group.id} className="shrink-0" onMouseEnter={() => openGroup(group.id)}>
                   <Link
                     to="/search"
                     search={{ category: group.categoryId }}
@@ -374,7 +374,9 @@ export function CategoryMegaMenu() {
               to="/best-shops"
               className="group inline-flex h-7 items-center gap-1.5 rounded-lg bg-[#fff4cf] px-2.5 font-bold text-[#805b00] transition hover:-translate-y-0.5 hover:bg-[#ffe9a0]"
             >
-              <span className="grid h-5 w-5 place-items-center rounded-md bg-white/80 text-xs shadow-sm">🏆</span>
+              <span className="grid h-5 w-5 place-items-center rounded-md bg-white/80 text-xs shadow-sm">
+                🏆
+              </span>
               <span>Best Shops</span>
             </Link>
             <span className="h-4 w-px bg-[#eadff3]" aria-hidden="true" />
@@ -382,7 +384,9 @@ export function CategoryMegaMenu() {
               to="/brands"
               className="inline-flex h-7 items-center gap-1.5 rounded-lg px-2.5 font-bold text-[#981495] transition hover:-translate-y-0.5 hover:bg-[#fce7f9]"
             >
-              <span className="grid h-5 w-5 place-items-center rounded-md bg-[#fce7f9] text-xs">🛍️</span>
+              <span className="grid h-5 w-5 place-items-center rounded-md bg-[#fce7f9] text-xs">
+                🛍️
+              </span>
               <span>Brands</span>
             </Link>
             <span className="h-4 w-px bg-[#eadff3]" aria-hidden="true" />
@@ -390,7 +394,9 @@ export function CategoryMegaMenu() {
               to="/explore"
               className="inline-flex h-7 items-center gap-1.5 rounded-lg px-2.5 font-bold text-[#16606b] transition hover:-translate-y-0.5 hover:bg-[#e3f8f5]"
             >
-              <span className="grid h-5 w-5 place-items-center rounded-md bg-[#e3f8f5] text-xs">✈️</span>
+              <span className="grid h-5 w-5 place-items-center rounded-md bg-[#e3f8f5] text-xs">
+                ✈️
+              </span>
               <span>Explore</span>
             </Link>
             <span className="h-4 w-px bg-[#eadff3]" aria-hidden="true" />
@@ -398,7 +404,9 @@ export function CategoryMegaMenu() {
               to="/customer-care"
               className="inline-flex h-7 items-center gap-1.5 rounded-lg px-2.5 font-bold text-[#6d356d] transition hover:-translate-y-0.5 hover:bg-[#f6eafa]"
             >
-              <span className="grid h-5 w-5 place-items-center rounded-md bg-[#f6eafa]"><Headphones className="h-3.5 w-3.5 text-[#981495]" /></span>
+              <span className="grid h-5 w-5 place-items-center rounded-md bg-[#f6eafa]">
+                <Headphones className="h-3.5 w-3.5 text-[#981495]" />
+              </span>
               Customer Care
             </Link>
           </div>
@@ -419,9 +427,7 @@ export function CategoryMegaMenu() {
               } satisfies CategoryPromo);
 
             return (
-              <div
-                className="pointer-events-none absolute left-1/2 top-full z-50 w-full -translate-x-1/2 pt-2 transition-all duration-200"
-              >
+              <div className="pointer-events-none absolute left-1/2 top-full z-50 w-full -translate-x-1/2 pt-2 transition-all duration-200">
                 <div className="relative mx-auto w-[min(1100px,calc(100vw-1rem))]">
                   <div className="absolute left-1/2 top-[-5px] z-20 h-3.5 w-3.5 -translate-x-1/2 rotate-45 border-l border-t border-slate-200 bg-white shadow-xs" />
 
@@ -565,11 +571,6 @@ export function CategoryMegaMenu() {
             <div className="flex-1 divide-y divide-border overflow-y-auto">
               <DrawerSection title="🛒 Essentials & Daily Provisions">
                 <DrawerLink
-                  label="Kirana & Grocery"
-                  category="kirana-grocery"
-                  onClick={() => setDrawerOpen(false)}
-                />
-                <DrawerLink
                   label="Supermarkets"
                   category="supermarkets"
                   onClick={() => setDrawerOpen(false)}
@@ -605,11 +606,6 @@ export function CategoryMegaMenu() {
                 <DrawerLink
                   label="Restaurants"
                   category="restaurants"
-                  onClick={() => setDrawerOpen(false)}
-                />
-                <DrawerLink
-                  label="Cafés & Tea Shops"
-                  category="cafes-tea-shops"
                   onClick={() => setDrawerOpen(false)}
                 />
               </DrawerSection>
@@ -843,7 +839,6 @@ export function MobileCategoryStrip({ sticky = false }: { sticky?: boolean }) {
             { label: "Fresh Produce", searchParams: { category: "fruits_veg" } },
             { label: "Meat & Fish", searchParams: { category: "meat_fish" } },
             { label: "Bakery & Sweets", searchParams: { category: "bakery" } },
-            { label: "Kirana & Grocery", searchParams: { category: "grocery" } },
             { label: "Pharmacy & Care", searchParams: { category: "pharmacy" } },
             { label: "Fashion & Apparel", searchParams: { category: "fashion" } },
             { label: "💄 Beauty", searchParams: { category: "beauty" } },
@@ -900,11 +895,6 @@ export function MobileCategoryStrip({ sticky = false }: { sticky?: boolean }) {
             <div className="flex-1 divide-y divide-border overflow-y-auto">
               <DrawerSection title="🛒 Essentials & Daily Provisions">
                 <DrawerLink
-                  label="Kirana & Grocery"
-                  category="kirana-grocery"
-                  onClick={() => setDrawerOpen(false)}
-                />
-                <DrawerLink
                   label="Supermarkets"
                   category="supermarkets"
                   onClick={() => setDrawerOpen(false)}
@@ -940,11 +930,6 @@ export function MobileCategoryStrip({ sticky = false }: { sticky?: boolean }) {
                 <DrawerLink
                   label="Restaurants"
                   category="restaurants"
-                  onClick={() => setDrawerOpen(false)}
-                />
-                <DrawerLink
-                  label="Cafés & Tea Shops"
-                  category="cafes-tea-shops"
                   onClick={() => setDrawerOpen(false)}
                 />
               </DrawerSection>

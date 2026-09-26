@@ -86,25 +86,42 @@ test("customer GPS waits for a fresh precise fix and preserves newer selections 
       "detecting",
       "transient watch timeout allows recovery",
     );
-    success(fix(20));
+    success(fix(8));
     const location = await first;
     assert.deepEqual(await joined, location);
     assert.equal(location.lat, 12.97);
     assert.equal(store.getGPSStatus().status, "ok");
     assert.ok(cleared.includes(7));
 
+    const liveCallback = success;
+    const latestTimestamp = location.capturedAt + 1;
+    liveCallback({ ...fix(8), timestamp: latestTimestamp });
+    assert.equal(store.getActiveDeliveryLocation().capturedAt, latestTimestamp);
+    liveCallback({ ...fix(5), timestamp: location.capturedAt });
+    assert.equal(store.getActiveDeliveryLocation().accuracy, 8, "older readings cannot replace a newer live fix");
+    liveCallback({ ...fix(16000), timestamp: latestTimestamp + 1 });
+    assert.equal(store.getActiveDeliveryLocation().accuracy, 8, "coarse live estimates cannot replace precise coordinates");
+
     const denied = store.detectCurrentGPSLocation();
+    liveCallback({ ...fix(5), timestamp: latestTimestamp + 2 });
+    assert.equal(store.getGPSStatus().status, "detecting", "callbacks from a stopped watch cannot interrupt a fresh acquisition");
     failure({ code: 1 });
     await assert.rejects(denied, /Allow location access/);
     assert.equal(store.getLocationState(), "LOCATION_SELECTED");
     assert.equal(store.getGPSStatus().status, "denied");
 
     store.clearActiveDeliveryLocation();
+    const previewRequest = store.detectCurrentGPSLocation({ silent: true, commit: false });
+    success(fix(8));
+    const previewLocation = await previewRequest;
+    assert.equal(previewLocation.lat, 12.97);
+    assert.equal(store.getActiveDeliveryLocation(), null, "GPS preview is not saved before confirmation");
+
     const coarse = store.detectCurrentGPSLocation();
     success(fix(1500));
     success(fix(4000));
     assert.equal(store.getGPSStatus().fix.accuracy, 1500, "retain the best available fix");
-    const coarseRejected = assert.rejects(coarse, /accuracy radius of 1500m/);
+    const coarseRejected = assert.rejects(coarse, /approximate area/);
     expireGPS();
     await coarseRejected;
     assert.equal(store.getGPSStatus().status, "imprecise");
@@ -123,11 +140,11 @@ test("customer GPS waits for a fresh precise fix and preserves newer selections 
 
     const previousWatches = watches;
     store.initAutoGPSLocation();
-    assert.equal(watches, previousWatches + 1, "old session failure cannot prevent automatic GPS");
+    assert.equal(watches, previousWatches, "startup must not request location permission");
     store.initAutoGPSLocation();
-    assert.equal(watches, previousWatches + 1, "mounting twice does not duplicate GPS");
+    assert.equal(watches, previousWatches, "repeated startup does not request location permission");
     const autoRequest = store.detectCurrentGPSLocation();
-    success(fix(12));
+    success(fix(8));
     await autoRequest;
     assert.equal(store.getGPSStatus().status, "ok");
     assert.equal(timers.size, 0);
@@ -141,7 +158,8 @@ test("customer GPS waits for a fresh precise fix and preserves newer selections 
       city: "City",
     };
     store.setActiveDeliveryLocation(manual);
-    success(fix(20));
+    assert.equal(store.getGPSStatus().fix, null, "a manual selection discards the previous GPS estimate");
+    success(fix(8));
     await assert.rejects(pending, /selection changed/);
     assert.equal(store.getActiveDeliveryLocation().id, "manual");
     assert.equal(store.getLocationState(), "LOCATION_SELECTED");

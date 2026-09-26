@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { useCart, cartTotals } from "@/lib/cart-store";
 import { useAuth } from "@/lib/auth-store";
+import { useLocalShoreRoles } from "@/lib/roles-store";
 import { CategoryMegaMenu, MobileCategoryStrip } from "@/components/category-mega-menu";
 import { AnimatedSearchPlaceholder } from "@/components/ui/animated-search-placeholder";
 import { Fragment, type ReactNode, useEffect, useState, useRef } from "react";
@@ -47,6 +48,8 @@ const HEADER_SEARCH_PLACEHOLDERS = [
 const OPEN_LOCATION_MODAL_EVENT = "localshore_open_location_modal";
 const SELLER_HUB_URL =
   import.meta.env.VITE_SELLER_HUB_URL || "https://vendor-admin-6f5h.vercel.app/";
+const DELIVERY_HUB_URL =
+  import.meta.env.VITE_DELIVERY_HUB_URL || "https://delivery-hub-lilac.vercel.app/";
 
 function requestLocationModal() {
   if (typeof window !== "undefined") {
@@ -59,6 +62,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
   const cart = useCart();
   const auth = useAuth();
+  const roleState = useLocalShoreRoles();
   const wishlist = useWishlist();
   const wishlistProducts = useWishlistProducts();
   const [deliveryLocation] = useDeliveryLocation();
@@ -96,7 +100,9 @@ export function AppShell({ children }: { children: ReactNode }) {
   // /auth. Catch the recovery event at the app shell so the token session is
   // established before navigating to the password form.
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event) => {
       if (event === "PASSWORD_RECOVERY" && pathname !== "/auth") {
         void navigate({ to: "/auth", search: { flow: "password-recovery" } });
       }
@@ -472,12 +478,27 @@ export function AppShell({ children }: { children: ReactNode }) {
             </Link>
             <a
               href={SELLER_HUB_URL}
-              aria-label="Become a Seller"
+              aria-label={roleState.hasRole("seller") ? "Open SellerHub" : "Become a Seller"}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 text-xs font-bold text-primary transition-colors hover:bg-primary/10 lg:text-sm"
             >
-              Become a Seller
+              {roleState.hasRole("seller") ? "Open SellerHub" : "Become a Seller"}
+            </a>
+            <a
+              href={DELIVERY_HUB_URL}
+              aria-label={
+                roleState.hasRole("delivery_partner")
+                  ? "Open Delivery Hub"
+                  : "Become a Delivery Partner"
+              }
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center rounded-lg border border-foreground/10 bg-background px-3 py-2 text-xs font-bold text-foreground transition-colors hover:bg-muted lg:text-sm"
+            >
+              {roleState.hasRole("delivery_partner")
+                ? "Open Delivery Hub"
+                : "Become a Delivery Partner"}
             </a>
             <DropdownMenu open={profileMenuOpen} onOpenChange={setProfileMenuOpen}>
               <DropdownMenuTrigger asChild>
@@ -746,6 +767,8 @@ const footerCategories = [
 ];
 
 function ShopperFooter() {
+  const roleState = useLocalShoreRoles();
+
   return (
     <footer className="mt-16 border-t border-[#e2dff0] bg-[#f2f2f7] px-5 pb-8 pt-12 text-slate-600 md:px-8 lg:px-10">
       <div className="mx-auto max-w-[1240px]">
@@ -816,7 +839,17 @@ function ShopperFooter() {
               rel="noopener noreferrer"
               className="block text-sm font-medium transition-all duration-200 hover:-translate-y-0.5 hover:text-[#981495]"
             >
-              Become a Seller
+              {roleState.hasRole("seller") ? "Open SellerHub" : "Become a Seller"}
+            </a>
+            <a
+              href={DELIVERY_HUB_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="block text-sm font-medium transition-all duration-200 hover:-translate-y-0.5 hover:text-[#981495]"
+            >
+              {roleState.hasRole("delivery_partner")
+                ? "Open Delivery Hub"
+                : "Become a Delivery Partner"}
             </a>
           </section>
 
@@ -849,7 +882,9 @@ function ShopperFooter() {
 
         <div className="mt-10 flex flex-col items-center justify-between gap-7 border-t border-slate-400/70 pt-7 md:flex-row md:gap-5">
           <div className="flex max-w-[340px] flex-wrap items-center justify-center gap-x-4 gap-y-2 text-xs md:max-w-none md:justify-start">
-            <span className="w-full text-center font-bold text-slate-800 md:w-auto">Shop by need</span>
+            <span className="w-full text-center font-bold text-slate-800 md:w-auto">
+              Shop by need
+            </span>
             <Link
               to="/"
               search={{ category: undefined, q: undefined }}
@@ -877,21 +912,21 @@ function ShopperFooter() {
             </span>
             <div className="flex items-center gap-2">
               <span className="flex h-11 w-[112px] shrink-0 items-center justify-center gap-1.5 rounded-lg bg-black px-2 text-white shadow-sm transition-all duration-200 ease-out hover:-translate-y-1 hover:scale-105 hover:shadow-[0_10px_18px_rgba(0,0,0,0.22)] active:translate-y-0 active:scale-95">
-              <span className="text-lg">●</span>
-              <span className="whitespace-nowrap text-[8px] leading-tight">
-                DOWNLOAD ON THE
-                <br />
-                <strong className="text-xs">App Store</strong>
+                <span className="text-lg">●</span>
+                <span className="whitespace-nowrap text-[8px] leading-tight">
+                  DOWNLOAD ON THE
+                  <br />
+                  <strong className="text-xs">App Store</strong>
+                </span>
               </span>
-            </span>
-            <span className="flex h-11 w-[112px] shrink-0 items-center justify-center gap-1.5 rounded-lg bg-black px-2 text-white shadow-sm transition-all duration-200 ease-out hover:-translate-y-1 hover:scale-105 hover:shadow-[0_10px_18px_rgba(0,0,0,0.22)] active:translate-y-0 active:scale-95">
-              <span className="text-lg text-[#3ddc84]">▶</span>
-              <span className="whitespace-nowrap text-[8px] leading-tight">
-                GET IT ON
-                <br />
-                <strong className="text-xs">Google Play</strong>
+              <span className="flex h-11 w-[112px] shrink-0 items-center justify-center gap-1.5 rounded-lg bg-black px-2 text-white shadow-sm transition-all duration-200 ease-out hover:-translate-y-1 hover:scale-105 hover:shadow-[0_10px_18px_rgba(0,0,0,0.22)] active:translate-y-0 active:scale-95">
+                <span className="text-lg text-[#3ddc84]">▶</span>
+                <span className="whitespace-nowrap text-[8px] leading-tight">
+                  GET IT ON
+                  <br />
+                  <strong className="text-xs">Google Play</strong>
+                </span>
               </span>
-            </span>
             </div>
           </div>
         </div>

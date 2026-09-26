@@ -8,7 +8,7 @@ import { MapPin, LocateFixed, Search, Loader2, Navigation, Check, ArrowLeft } fr
 import { getMapTileConfig } from "@/lib/map-provider";
 import { detectCurrentGPSLocation, type DeliveryLocation } from "@/lib/location-store";
 import { isValidCoordinate } from "@/lib/geo";
-import { parseCoordinates } from "@/lib/coordinates";
+import { MAX_CUSTOMER_DELIVERY_ACCURACY_M, parseCoordinates } from "@/lib/coordinates";
 import { resolveNominatimAddress } from "@/lib/location-address";
 import { geocodeSearch } from "@/lib/map-service/providers";
 import { toast } from "sonner";
@@ -16,6 +16,7 @@ import { toast } from "sonner";
 interface LocationMapPickerProps {
   initialLat?: number;
   initialLng?: number;
+  initialAccuracy?: number;
   requiresManualConfirmation?: boolean;
   onSelectLocation: (loc: DeliveryLocation) => void;
   onBack?: () => void;
@@ -24,6 +25,7 @@ interface LocationMapPickerProps {
 export function LocationMapPicker({
   initialLat,
   initialLng,
+  initialAccuracy,
   requiresManualConfirmation = false,
   onSelectLocation,
   onBack,
@@ -32,6 +34,9 @@ export function LocationMapPicker({
   const mapRef = useRef<any>(null);
   const markerRef = useRef<any>(null);
   const LRef = useRef<any>(null);
+  const uncertaintyRef = useRef<any>(null);
+  const initialAccuracyRef = useRef(initialAccuracy);
+  const addressRequestRef = useRef(0);
 
   const initialCoords = parseCoordinates(initialLat, initialLng);
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(initialCoords);
@@ -59,6 +64,7 @@ export function LocationMapPicker({
 
   // Reverse geocode lat/lng to human address via Nominatim
   const performReverseGeocode = useCallback(async (lat: number, lng: number) => {
+    const request = ++addressRequestRef.current;
     setIsGeocoding(true);
     try {
       const params = new URLSearchParams({
@@ -70,10 +76,12 @@ export function LocationMapPicker({
       });
       const res = await fetch(`https://nominatim.openstreetmap.org/reverse?${params.toString()}`, {
         headers: { "Accept-Language": "en" },
+        signal: AbortSignal.timeout(4000),
       });
 
       if (res.ok) {
         const data = await res.json();
+        if (request !== addressRequestRef.current) return;
         if (data && data.display_name) {
           const resolved = resolveNominatimAddress(data);
 
@@ -91,6 +99,7 @@ export function LocationMapPicker({
       console.warn("Map picker reverse geocode fallback", err);
     }
 
+    if (request !== addressRequestRef.current) return;
     setAddressDetails({
       area: `Location (${lat.toFixed(4)}, ${lng.toFixed(4)})`,
       city: "",
@@ -102,16 +111,20 @@ export function LocationMapPicker({
   // Update map pin position & reverse geocode
   const handlePositionChange = useCallback(
     (lat: number, lng: number, flyTo = false) => {
+      addressRequestRef.current++;
+      setIsGeocoding(true);
       setCoords({ lat, lng });
       setHasPositionedPin(true);
       setMapStart((previous) => previous ?? { lat, lng });
 
       if (mapRef.current) {
+        uncertaintyRef.current?.remove();
+        uncertaintyRef.current = null;
         if (markerRef.current) {
           markerRef.current.setLatLng([lat, lng]);
         }
         if (flyTo) {
-          mapRef.current.flyTo([lat, lng], 17, { animate: true, duration: 1 });
+          mapRef.current.setView([lat, lng], Math.min(18, mapRef.current.getMaxZoom()));
         }
       }
 
@@ -127,12 +140,16 @@ export function LocationMapPicker({
     if (mapStart || typeof window === "undefined") return;
     let cancelled = false;
     setMapError("");
-    detectCurrentGPSLocation({ silent: true })
+    detectCurrentGPSLocation({ silent: true, commit: false, allowApproximate: true })
       .then((location) => {
         if (!cancelled && isValidCoordinate(location.lat, location.lng)) {
           const next = { lat: location.lat, lng: location.lng };
           setMapStart(next);
           setCoords(next);
+          setHasPositionedPin(
+            typeof location.accuracy === "number" &&
+              location.accuracy <= MAX_CUSTOMER_DELIVERY_ACCURACY_M,
+          );
         }
       })
       .catch((error) => {
@@ -162,28 +179,21 @@ export function LocationMapPicker({
         LRef.current = L;
 
         // Custom map marker pin SVG icon
-        const pinHtml = `
-          <div class="relative group">
-            <div class="absolute -inset-2 bg-[#c026d3]/30 rounded-full animate-ping"></div>
-            <div class="relative w-9 h-9 bg-[#981495] text-white rounded-full flex items-center justify-center shadow-xl border-2 border-white transform -translate-x-1/2 -translate-y-full hover:scale-110 transition-transform">
-              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/>
-                <circle cx="12" cy="10" r="3"/>
-              </svg>
-            </div>
-          </div>
-        `;
+        const pinHtml = `<svg width="36" height="44" viewBox="0 0 36 44" xmlns="http://www.w3.org/2000/svg">
+          <path d="M18 43C15 37 2 26 2 18a16 16 0 1 1 32 0c0 8-13 19-16 25Z" fill="#981495" stroke="white" stroke-width="2"/>
+          <circle cx="18" cy="18" r="6" fill="white"/>
+        </svg>`;
 
         const customIcon = L.divIcon({
           html: pinHtml,
           className: "custom-map-pin",
-          iconSize: [36, 36],
-          iconAnchor: [18, 36],
+          iconSize: [36, 44],
+          iconAnchor: [18, 44],
         });
 
         const map = L.map(mapContainerRef.current, {
           center: [mapStart.lat, mapStart.lng],
-          zoom: 16,
+          zoom: 18,
           maxZoom: 19,
           zoomControl: false,
         });
@@ -191,6 +201,7 @@ export function LocationMapPicker({
         L.control.zoom({ position: "bottomright" }).addTo(map);
 
         const tileConfig = getMapTileConfig();
+        map.setMaxZoom(tileConfig.maxZoom);
         L.tileLayer(tileConfig.url, {
           maxZoom: tileConfig.maxZoom,
           subdomains: tileConfig.subdomains,
@@ -204,10 +215,31 @@ export function LocationMapPicker({
 
         markerRef.current = marker;
         mapRef.current = map;
+        const accuracy = initialAccuracyRef.current;
+        if (typeof accuracy === "number" && Number.isFinite(accuracy) && accuracy > 10) {
+          const circle = L.circle([mapStart.lat, mapStart.lng], {
+            radius: accuracy, color: "#b45309", fillOpacity: 0.08, interactive: false,
+          }).addTo(map);
+          uncertaintyRef.current = circle;
+          map.fitBounds(circle.getBounds(), { padding: [16, 16], maxZoom: 16 });
+        }
 
         // Click anywhere on map to reposition pin
         map.on("click", (e: any) => {
           handlePositionChange(e.latlng.lat, e.latlng.lng, true);
+        });
+
+        // On touch devices, dragging the map is easier than dragging a small
+        // marker. Use the map center as the selected point after every pan.
+        map.on("move", () => {
+          const center = map.getCenter();
+          // Keep the pin visually attached to the map center throughout the
+          // drag, rather than waiting for the gesture to finish.
+          marker.setLatLng(center);
+        });
+        map.on("moveend", () => {
+          const center = map.getCenter();
+          handlePositionChange(center.lat, center.lng, false);
         });
 
         // Drag marker end event
@@ -229,6 +261,7 @@ export function LocationMapPicker({
 
     return () => {
       cancelled = true;
+      addressRequestRef.current++;
       if (geocodeTimeoutRef.current) clearTimeout(geocodeTimeoutRef.current);
       if (mapRef.current) {
         mapRef.current.remove();
@@ -241,14 +274,35 @@ export function LocationMapPicker({
   const handleGPSLocate = async () => {
     setIsLocating(true);
     try {
-      const gpsLoc = await detectCurrentGPSLocation({ silent: true });
+      const gpsLoc = await detectCurrentGPSLocation({
+        silent: false,
+        commit: false,
+        allowApproximate: true,
+      });
       if (gpsLoc && isValidCoordinate(gpsLoc.lat, gpsLoc.lng)) {
+        initialAccuracyRef.current = gpsLoc.accuracy ?? undefined;
         setMapStart({ lat: gpsLoc.lat, lng: gpsLoc.lng });
+        setHasPositionedPin(
+          typeof gpsLoc.accuracy === "number" &&
+            gpsLoc.accuracy <= MAX_CUSTOMER_DELIVERY_ACCURACY_M,
+        );
         handlePositionChange(gpsLoc.lat, gpsLoc.lng, true);
-        toast.success("Map centered on your GPS location!");
+        toast.success(
+          gpsLoc.accuracy && gpsLoc.accuracy <= MAX_CUSTOMER_DELIVERY_ACCURACY_M
+            ? "Precise GPS location found"
+            : "Approximate GPS location found",
+          {
+            description:
+              gpsLoc.accuracy && gpsLoc.accuracy > MAX_CUSTOMER_DELIVERY_ACCURACY_M
+                ? "Move the map or pin to your exact entrance, then confirm."
+                : "The map is centered on your current location.",
+          },
+        );
       }
-    } catch {
-      toast.error("Failed to acquire GPS location. Tap map to select manually.");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Location is unavailable.";
+      setMapError(message);
+      toast.error("Could not get your device location", { description: message });
     } finally {
       setIsLocating(false);
     }
@@ -292,7 +346,7 @@ export function LocationMapPicker({
   };
 
   const handleConfirm = () => {
-    if (!coords || !isValidCoordinate(coords.lat, coords.lng)) return;
+    if (!coords || isGeocoding || !hasPositionedPin || !isValidCoordinate(coords.lat, coords.lng)) return;
     const finalLocation: DeliveryLocation = {
       id: `manual-map-${Date.now()}`,
       label: addressDetails.label || `${addressDetails.area}, ${addressDetails.city}`,
@@ -306,9 +360,9 @@ export function LocationMapPicker({
   };
 
   return (
-    <div className="flex flex-col h-full w-full relative overflow-hidden rounded-2xl">
+    <div className="flex flex-col w-full relative shrink-0 rounded-2xl">
       {/* Map Search Bar & Back Button */}
-      <div className="absolute top-3 left-3 right-3 z-[400] flex flex-col gap-2">
+      <div className="relative z-[1000] flex shrink-0 flex-col gap-2 bg-white pb-3">
         <div className="flex items-center gap-2">
           {onBack && (
             <button
@@ -352,7 +406,7 @@ export function LocationMapPicker({
       </div>
 
       {/* Leaflet Map Canvas */}
-      <div className="relative w-full h-[280px] sm:h-[340px] bg-slate-100">
+      <div className="relative isolate w-full h-[280px] sm:h-[340px] shrink-0 overflow-hidden rounded-xl bg-slate-100">
         {mapStart ? (
           <div ref={mapContainerRef} className="w-full h-full" />
         ) : (
@@ -373,7 +427,7 @@ export function LocationMapPicker({
           onClick={handleGPSLocate}
           disabled={isLocating}
           title="Center on current GPS position"
-          className="absolute bottom-4 right-3 z-[400] grid h-11 w-11 place-items-center rounded-2xl bg-white/95 text-[#981495] shadow-xl backdrop-blur-md border border-slate-100 hover:bg-[var(--sand)] hover:scale-105 active:scale-95 transition-all cursor-pointer"
+          className="absolute bottom-6 left-3 z-[1000] grid h-11 w-11 place-items-center rounded-2xl bg-white/95 text-[#981495] shadow-xl backdrop-blur-md border border-slate-100 hover:bg-[var(--sand)] transition-colors cursor-pointer"
         >
           {isLocating ? (
             <Loader2 className="h-5 w-5 animate-spin" />
@@ -383,10 +437,10 @@ export function LocationMapPicker({
         </button>
 
         {/* Floating hint label */}
-        <div className="absolute top-16 left-1/2 -translate-x-1/2 z-[400] pointer-events-none rounded-full bg-slate-900/80 px-3 py-1 text-[11px] font-semibold text-white shadow-lg backdrop-blur-sm">
+        <div className="absolute top-3 left-3 right-3 z-[1000] pointer-events-none rounded-xl bg-slate-900/80 px-3 py-1 text-center text-[11px] font-semibold text-white shadow-lg">
           {requiresManualConfirmation && !hasPositionedPin
             ? "Move the pin to your exact entrance"
-            : "Tap or drag marker to change location"}
+            : "Tap the map, drag the map, or drag the pin to your exact entrance"}
         </div>
       </div>
 
@@ -402,12 +456,18 @@ export function LocationMapPicker({
           </div>
           <div className="flex-1 min-w-0">
             <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider block">
-              Selected Delivery Area
+              {hasPositionedPin ? "Selected delivery point" : "Unconfirmed device estimate"}
             </span>
             <h4 className="text-sm font-black text-slate-900 truncate leading-snug">
               {addressDetails.area}
             </h4>
             <p className="text-xs text-slate-500 font-medium truncate">{addressDetails.label}</p>
+            {coords && (
+              <p className="mt-1 text-[11px] font-medium tabular-nums text-slate-500" aria-live="polite">
+                Pin: {coords.lat.toFixed(6)}, {coords.lng.toFixed(6)}
+                {isGeocoding ? " · Updating address…" : ""}
+              </p>
+            )}
           </div>
         </div>
 

@@ -33,10 +33,11 @@ import { ProductThumb } from "@/components/product-thumb";
 import { recordProductEvent, recordRecentProductView } from "@/lib/merchandising";
 import { WishlistButton } from "@/components/wishlist-button";
 import { flyProductToCart } from "@/lib/fly-to-cart";
-import { resolveImageUrl } from "@/lib/image-utils";
+import { getFallbackShopImage, resolveImageUrl } from "@/lib/image-utils";
 import { useDeliveryLocation } from "@/lib/location-store";
 import { isValidCoordinate, haversineDistanceKm } from "@/lib/geo";
 import { m } from "motion/react";
+import { toast } from "sonner";
 import { SearchShopRecommendations } from "@/components/search-shop-recommendations";
 import { calculateDynamicETA } from "@/lib/ml-eta-engine";
 import { useMLTracker } from "@/hooks/use-ml-tracker";
@@ -49,7 +50,12 @@ const isUuid = (value: string) =>
   // RFC 4122 version/variant bits. Match the UUID format, not those bit flags.
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
 
-import { CATEGORY_PHOTOS, toStoreCategory } from "@/lib/shop-categories";
+import {
+  CATEGORY_PHOTOS,
+  catalogCategoryKey,
+  getCategoryByIdOrSlug,
+  toStoreCategory,
+} from "@/lib/shop-categories";
 import { isTestEntity } from "@/lib/map-service/store-engine";
 import { LottieLoading } from "@/components/ui/lottie-loading";
 import { RelatedProductsSection } from "@/components/related-products-section";
@@ -92,10 +98,12 @@ function getCategoryIcon(_catName: string) {
 
 function StorePage() {
   const loaded = Route.useLoaderData() as { store: Store; products: Product[] };
+  const searchParams = Route.useSearch();
+  const requestedCategory = catalogCategoryKey(searchParams.category);
   const approved = useQuery({
     // Bump the key so a previously cached cross-seller result cannot survive the
     // seller-ID scoping fix in this query.
-    queryKey: ["approved-store-v3", loaded.store.id],
+    queryKey: ["approved-store-v4", loaded.store.id, requestedCategory],
     enabled: loaded.store.id === APPROVED_STORE.id || isUuid(loaded.store.id),
     queryFn: async () => {
       let productQuery = (supabase as any)
@@ -207,9 +215,27 @@ function StorePage() {
 
       const isLocalShoreZoneDemo = /^LocalShore\s+(?:Demo\s+)?(?:CBE|BLR)-\d{2}\b/i.test(storeName || "");
       const expectedDemoCategory = toStoreCategory(storeCategory);
-      const storeProducts = isLocalShoreZoneDemo
-        ? products.filter((product) => product.category.toLowerCase() === expectedDemoCategory)
-        : products;
+      const demoIdentity = (storeName || "").match(
+        /^LocalShore\s+((?:CBE|BLR)-\d{2})\s+.+?\s+Shop\s+(\d+)$/i,
+      );
+      const contextualCategory = requestedCategory
+        ? toStoreCategory(requestedCategory)
+        : expectedDemoCategory;
+      const contextualCategoryName = getCategoryByIdOrSlug(contextualCategory).name.replace(
+        /\s+shops?$/i,
+        "",
+      );
+      const contextualStoreName =
+        isLocalShoreZoneDemo && requestedCategory && demoIdentity
+          ? `LocalShore ${demoIdentity[1]} ${contextualCategoryName} Shop ${demoIdentity[2]}`
+          : storeName;
+      const storeProducts = requestedCategory
+        ? products.filter(
+            (product) => product.category.toLowerCase() === requestedCategory.toLowerCase(),
+          )
+        : isLocalShoreZoneDemo
+          ? products.filter((product) => product.category.toLowerCase() === expectedDemoCategory)
+          : products;
 
       return {
         products: storeProducts,
@@ -217,11 +243,15 @@ function StorePage() {
           ? ({
               ...APPROVED_STORE,
               id: vendor.id,
-              name: storeName || APPROVED_STORE.name,
-              category: toStoreCategory(storeCategory),
+              name: contextualStoreName || APPROVED_STORE.name,
+              category: contextualCategory,
               tagline: storeTagline || "Approved local vendor",
               address: storeAddress || APPROVED_STORE.address,
-              imageUrl,
+              imageUrl:
+                requestedCategory
+                  ? CATEGORY_PHOTOS[contextualCategory] ||
+                    getFallbackShopImage(contextualCategory, vendor.id)
+                  : imageUrl,
             } as Store)
           : null,
       };
@@ -240,7 +270,6 @@ function StorePage() {
   ) as Product[];
 
   const navigate = useNavigate();
-  const searchParams = Route.useSearch();
   const sq = searchParams.sq || "";
   const [query, setQuery] = useState(sq);
   const [selectedCategory, setSelectedCategory] = useState<string>(searchParams.category || "all");
@@ -351,6 +380,22 @@ function StorePage() {
   }, [products, selectedCategory, query, minPrice, maxPrice, sortBy]);
 
   const qtyOf = (id: string) => cart.lines.find((l) => l.productId === id)?.qty ?? 0;
+
+  const addProductToCart = (product: Product, event?: React.MouseEvent<HTMLButtonElement>) => {
+    event?.preventDefault();
+    event?.stopPropagation();
+
+    // Add to the cart before starting the optional animation. A browser that
+    // does not support the animation must never prevent the cart mutation.
+    cartStore.add(product.storeId || store.id, product.shopName || store.name, product);
+    void recordProductEvent(product.id, "add_to_cart");
+    try {
+      flyProductToCart(product.id);
+    } catch {
+      // The visual animation is optional; cart state is already updated.
+    }
+    toast.success(`${product.name} added to cart`);
+  };
 
   const recommendationCandidates = useMemo(
     () => products.map((product) => adaptMockProduct(product)),
@@ -758,7 +803,10 @@ function StorePage() {
                         <ProductThumb
                           src={p.imageUrl}
                           alt={p.name}
-                          category={store.category}
+                          // Validate the image against the product's own
+                          // category. The shop can be opened from a category
+                          // result even when its legacy store category differs.
+                          category={p.category as Store["category"]}
                           size="lg"
                         />
 
@@ -767,11 +815,7 @@ function StorePage() {
                           {q === 0 ? (
                             <button
                               type="button"
-                              onClick={() => {
-                                void recordProductEvent(p.id, "add_to_cart");
-                                flyProductToCart(p.id);
-                                cartStore.add(p.storeId || store.id, p.shopName || store.name, p);
-                              }}
+                              onClick={(event) => addProductToCart(p, event)}
                               className="rounded-lg bg-[#fffafd] border border-emerald-600 text-emerald-700 hover:bg-emerald-600 hover:text-white px-3.5 py-1 text-xs font-black uppercase tracking-wider shadow-sm transition-all active:scale-95 cursor-pointer flex items-center gap-1"
                             >
                               <span>ADD</span>
@@ -780,11 +824,7 @@ function StorePage() {
                             <QtyStepper
                               qty={q}
                               max={p.stock}
-                              onAdd={() => {
-                                void recordProductEvent(p.id, "add_to_cart");
-                                flyProductToCart(p.id);
-                                cartStore.add(p.storeId || store.id, p.shopName || store.name, p);
-                              }}
+                              onAdd={() => addProductToCart(p)}
                               onChange={(n) => cartStore.setQty(p.id, n)}
                               addClassName="rounded-lg bg-emerald-700 text-white px-2 py-0.5 text-xs font-bold shadow-sm"
                             />

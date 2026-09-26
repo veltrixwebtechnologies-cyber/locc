@@ -24,6 +24,15 @@ function categoryFor(product: MerchandisingProduct): StoreCategory {
   if (category.includes("elect") || category.includes("mobile")) return "electronics";
   if (category.includes("bak")) return "bakery";
   if (category.includes("meat") || category.includes("fish")) return "meat_fish";
+  if (category.includes("home") || category.includes("kitchen")) return "home_kitchen";
+  if (category.includes("furniture") || category.includes("decor")) return "furniture";
+  if (category.includes("hardware")) return "hardware";
+  if (category.includes("book") || category.includes("stationery")) return "books_stationery";
+  if (category.includes("sport")) return "sports";
+  if (category.includes("toy") || category.includes("baby")) return "toys";
+  if (category.includes("gift")) return "gifts";
+  if (category.includes("flower")) return "flowers";
+  if (category.includes("pet")) return "pet_shops";
   return "grocery";
 }
 

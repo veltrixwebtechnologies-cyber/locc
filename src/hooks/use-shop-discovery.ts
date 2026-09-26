@@ -44,7 +44,14 @@ export function useShopDiscovery(filterState: ProductFilterState) {
       let list: ShopCardData[] = (data ?? []).map((s: any) => ({
         id: s.id,
         name: s.shop_name || "Local Shop",
-        category: s.category || s.business_type || "General Store",
+        // The RPC has already filtered by the requested category. Preserve
+        // that canonical key for the UI instead of trusting a representative
+        // product category returned for a multi-category shop.
+        category:
+          catalogCategoryKey(filterState.category) ||
+          s.category ||
+          s.business_type ||
+          "General Store",
         imageUrl: null,
         rating: 0,
         distanceKm: Number(s.distance_km),

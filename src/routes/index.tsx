@@ -116,20 +116,6 @@ function Home() {
   const locLng = deliveryLoc?.lng;
   const hasConfirmedLocation =
     typeof locLat === "number" && typeof locLng === "number" && isValidCoordinate(locLat, locLng);
-  const operationalZone = useQuery({
-    queryKey: ["customer-operational-zone", locLat, locLng],
-    enabled: hasConfirmedLocation,
-    staleTime: 1000 * 60 * 30,
-    retry: false,
-    queryFn: async () => {
-      const { data, error } = await (supabase as any).rpc("get_customer_operational_zone", {
-        p_lat: locLat,
-        p_lng: locLng,
-      });
-      if (error) throw error;
-      return data?.[0] ?? null;
-    },
-  });
   const [query, setQuery] = useState(search.q ?? "");
   const [cat, setCat] = useState<string>(search.category ?? "all");
   const approvedProducts = useQuery({
@@ -397,7 +383,12 @@ function Home() {
       <ReferenceHomeHero />
 
       {/* Image-led category navigation sits directly beneath the Orchid hero. */}
-      <LiquidGlassCategorySelector />
+      <LiquidGlassCategorySelector
+        nearbyShops={approvedVendors.data ?? []}
+        nearbyProducts={approvedProducts.data ?? []}
+        isLoading={nearbyLoading}
+        hasConfirmedLocation={hasConfirmedLocation}
+      />
 
       {/* Existing promotional ads restored below the coded reference-style front page. */}
       <PromoCarousel />
@@ -415,13 +406,13 @@ function Home() {
         </h2>
         {hasConfirmedLocation && !deliveryLoc?.isGPS && (
           <p className="-mt-2 mb-4 text-xs text-muted-foreground">
-            Around {deliveryLoc?.area || deliveryLoc?.label || operationalZone.data?.zone_name || "your selected location"} · based on your selected location.
+            Around {deliveryLoc?.area || deliveryLoc?.label || "your selected location"} · based on your selected location.
           </p>
         )}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {nearbyLoading
             ? Array.from({ length: 8 }, (_, index) => <ShopCardSkeleton key={`shop-skeleton-${index}`} />)
-            : filtered.slice(0, 8).map((store, index) => (
+            : filtered.map((store, index) => (
             <ShopCard
               key={store.id}
               priority={index === 0}
@@ -460,7 +451,7 @@ function Home() {
         <SwiggyTopDealsStrip />
       </section>
 
-      {/* Local shop picks below the deals rail */}
+      {/* In-stock products from shops near the customer's selected point. */}
       <section aria-labelledby="local-products-heading" className="px-5 pb-8 md:px-8">
         <div className="flex items-end justify-between gap-3">
           <div>
@@ -468,10 +459,14 @@ function Home() {
               id="local-products-heading"
               className="font-display text-xl font-bold text-foreground"
             >
-              Popular picks from local shops
+              {hasConfirmedLocation
+                ? `Products near ${deliveryLoc?.area || deliveryLoc?.label || "you"}`
+                : "Choose a location to see nearby products"}
             </h2>
             <p className="mt-1 text-xs font-medium text-muted-foreground">
-              Fresh products available from different neighborhood sellers
+              {hasConfirmedLocation
+                ? `In-stock products from shops within ${CUSTOMER_VISIBILITY_RADIUS_KM} km of your selected location`
+                : "Select an address or use your current location to find nearby shops and products."}
             </p>
           </div>
           <Link
@@ -491,18 +486,19 @@ function Home() {
                   aria-hidden="true"
                 />
               ))
-            : Array.from(
-            new Map(
-              homepageProducts
-                .filter((product) => product.stock > 0)
-                .map((product) => [product.seller_id, product]),
-            ).values(),
-          )
+            : homepageProducts
+            .filter((product) => product.stock > 0)
             .slice(0, 8)
             .map((product) => (
               <ProductCard key={product.id} product={product} compact />
             ))}
         </div>
+        {!nearbyLoading && hasConfirmedLocation && homepageProducts.every((product) => product.stock <= 0) && (
+          <p className="mt-4 rounded-xl border border-border bg-card px-4 py-3 text-sm text-muted-foreground">
+            No in-stock products were found within {CUSTOMER_VISIBILITY_RADIUS_KM} km of this location yet.
+            Try choosing a nearby point or widening your search area.
+          </p>
+        )}
       </section>
 
       {isNearbyMapOpen && (

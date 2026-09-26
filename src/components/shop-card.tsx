@@ -11,7 +11,7 @@ import {
   ChevronRight,
   Award,
 } from "lucide-react";
-import { resolveImageUrl, getFallbackProductImage } from "@/lib/image-utils";
+import { resolveImageUrl, getFallbackShopImage } from "@/lib/image-utils";
 import { WishlistButton } from "@/components/wishlist-button";
 import { Badge } from "@/components/ui/badge";
 
@@ -82,7 +82,7 @@ export function ShopCard({
 
   const resolvedImg =
     imgError || !shop.imageUrl
-      ? getFallbackProductImage(shop.name, shop.category)
+      ? getFallbackShopImage(shop.category, shop.id)
       : resolveImageUrl(shop.imageUrl, shop.name, shop.category);
 
   return (
@@ -190,7 +190,7 @@ export function ShopCard({
           <Link
             to="/store/$storeId"
             params={{ storeId: shop.id }}
-            search={{ sq: searchQuery, category: undefined }}
+            search={{ sq: searchQuery, category: shop.category || undefined }}
             className="group/title block"
           >
             <h3 className="text-lg max-[639px]:text-base font-extrabold text-foreground group-hover/title:text-primary transition-colors line-clamp-1 leading-snug">
@@ -266,7 +266,7 @@ export function ShopCard({
         <Link
           to="/store/$storeId"
           params={{ storeId: shop.id }}
-          search={{ sq: searchQuery, category: undefined }}
+          search={{ sq: searchQuery, category: shop.category || undefined }}
           className="w-full rounded-2xl bg-primary hover:bg-primary/90 text-primary-foreground py-2.5 max-[639px]:py-2 px-4 text-xs font-extrabold flex items-center justify-center gap-2 shadow-md hover:shadow-lg active:scale-[0.98] transition-all duration-200"
         >
           <StoreIcon className="h-3.5 w-3.5" />

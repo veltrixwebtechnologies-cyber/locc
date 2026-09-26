@@ -160,13 +160,15 @@ export function LocalShoreMapExperience({
       approvedVendors.data ?? [],
     );
 
-    // Keep the homepage focused: show a maximum of eight unique shops.
+    // Keep one marker per shop, but show every shop returned for the
+    // customer's confirmed point. The database applies the authoritative
+    // 5 km visibility radius; the UI must not hide additional nearby shops.
     const seenShopIds = new Set<string>();
     return markers.filter((marker) => {
       if (seenShopIds.has(marker.shopId)) return false;
       seenShopIds.add(marker.shopId);
       return true;
-    }).slice(0, 8);
+    });
   }, [userLocation, filters, approvedProducts.data, approvedVendors.data]);
 
   // Handle Geocoding Search for Map Locations

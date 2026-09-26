@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Link, useRouterState } from "@tanstack/react-router";
 import {
   Grid,
@@ -43,6 +43,8 @@ export type LiquidCategory = {
   searchCategory?: string;
   to?: string;
   badge?: string;
+  featuredProduct?: string;
+  featuredShop?: string;
 };
 
 export const LIQUID_CATEGORIES: LiquidCategory[] = [
@@ -60,6 +62,8 @@ export const LIQUID_CATEGORIES: LiquidCategory[] = [
     imageUrl:
       "https://images.unsplash.com/photo-1610832958506-aa56368176cf?auto=format&fit=crop&w=240&q=80",
     searchCategory: "fruits_veg",
+    featuredProduct: "Organic tender coconut",
+    featuredShop: "Kovilmedu Organic Palamuthir Nilayam",
   },
   {
     id: "meat_fish",
@@ -68,6 +72,8 @@ export const LIQUID_CATEGORIES: LiquidCategory[] = [
     imageUrl:
       "https://images.unsplash.com/photo-1607623814075-e51df1bdc82f?auto=format&fit=crop&w=240&q=80",
     searchCategory: "meat_fish",
+    featuredProduct: "Country chicken & fresh cuts",
+    featuredShop: "Kongu Country Mutton",
   },
   {
     id: "bakery_sweets",
@@ -76,6 +82,8 @@ export const LIQUID_CATEGORIES: LiquidCategory[] = [
     imageUrl:
       "https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=240&q=80",
     searchCategory: "bakery",
+    featuredProduct: "Mysurpa & hot puffs",
+    featuredShop: "Roja Bakes & Sweets",
   },
   {
     id: "grocery",
@@ -84,6 +92,8 @@ export const LIQUID_CATEGORIES: LiquidCategory[] = [
     imageUrl:
       "https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=240&q=80",
     searchCategory: "grocery",
+    featuredProduct: "Rice, pulses & cooking essentials",
+    featuredShop: "Roja Supermarket & Kirana",
   },
   {
     id: "pharmacy",
@@ -92,6 +102,8 @@ export const LIQUID_CATEGORIES: LiquidCategory[] = [
     imageUrl:
       "https://images.unsplash.com/photo-1587854692152-cbe660dbde88?auto=format&fit=crop&w=240&q=80",
     searchCategory: "pharmacy",
+    featuredProduct: "OTC medicines & wellness care",
+    featuredShop: "Kovilmedu Care Medicals",
   },
   {
     id: "restaurants",
@@ -100,6 +112,8 @@ export const LIQUID_CATEGORIES: LiquidCategory[] = [
     imageUrl:
       "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=240&q=80",
     searchCategory: "restaurants",
+    featuredProduct: "Kongu meals & biryani",
+    featuredShop: "Haribhavanam",
   },
   {
     id: "cafes",
@@ -108,6 +122,8 @@ export const LIQUID_CATEGORIES: LiquidCategory[] = [
     imageUrl:
       "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?auto=format&fit=crop&w=240&q=80",
     searchCategory: "cafes",
+    featuredProduct: "Filter coffee & tea",
+    featuredShop: "Kumbakonam Degree Filter Coffee & Tea",
   },
   {
     id: "fashion",
@@ -116,6 +132,8 @@ export const LIQUID_CATEGORIES: LiquidCategory[] = [
     imageUrl:
       "https://images.unsplash.com/photo-1445205170230-053b83016050?auto=format&fit=crop&w=240&q=80",
     searchCategory: "fashion",
+    featuredProduct: "Cotton wear & ethnic styles",
+    featuredShop: "Sri Saravana Textiles",
   },
   {
     id: "boutiques",
@@ -124,6 +142,8 @@ export const LIQUID_CATEGORIES: LiquidCategory[] = [
     imageUrl:
       "https://images.unsplash.com/photo-1558769132-cb1aea458c5e?auto=format&fit=crop&w=240&q=80",
     searchCategory: "boutiques",
+    featuredProduct: "Designer sarees & custom wear",
+    featuredShop: "Ananya Designer Boutique",
   },
   {
     id: "footwear",
@@ -132,6 +152,8 @@ export const LIQUID_CATEGORIES: LiquidCategory[] = [
     imageUrl:
       "https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=240&q=80",
     searchCategory: "footwear",
+    featuredProduct: "Everyday shoes & leather sandals",
+    featuredShop: "Walkwell Footwear & Leather Shoes",
   },
   {
     id: "jewellery",
@@ -140,6 +162,8 @@ export const LIQUID_CATEGORIES: LiquidCategory[] = [
     imageUrl:
       "https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?auto=format&fit=crop&w=240&q=80",
     searchCategory: "jewellery",
+    featuredProduct: "Gold-plated jhumka sets",
+    featuredShop: "Meenakshi Jewellery & Gift Corner",
   },
   {
     id: "electronics",
@@ -148,6 +172,8 @@ export const LIQUID_CATEGORIES: LiquidCategory[] = [
     imageUrl:
       "https://images.unsplash.com/photo-1496181133206-80ce9b88a853?auto=format&fit=crop&w=240&q=80",
     searchCategory: "electronics",
+    featuredProduct: "Smart TVs & home electronics",
+    featuredShop: "Vasanth Electronics & Smart TVs",
   },
   {
     id: "mobile",
@@ -280,7 +306,63 @@ export const LIQUID_CATEGORIES: LiquidCategory[] = [
   },
 ];
 
-export function LiquidGlassCategorySelector({ variant = "image" }: { variant?: "image" | "pill" }) {
+type NearbyShop = {
+  id?: string;
+  seller_id?: string;
+  shop_name?: string | null;
+  category?: string | null;
+  distance_km?: number | null;
+};
+
+type NearbyProduct = {
+  seller_id?: string;
+  shop_name?: string | null;
+  category?: string | null;
+  distance_km?: number | null;
+};
+
+const normalizeCategory = (value: unknown) =>
+  String(value ?? "")
+    .trim()
+    .toLowerCase()
+    .replace(/&/g, "and")
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_|_$/g, "");
+
+const categoryAliases: Record<string, string[]> = {
+  fruits_veg: ["fresh", "fruit", "fruits", "vegetable", "vegetables", "fruits_vegetables"],
+  meat_fish: ["meat", "fish", "chicken", "mutton", "seafood"],
+  bakery: ["bakery_sweets", "sweets", "bakes"],
+  grocery: ["kirana", "groceries", "staples"],
+  pharmacy: ["medical", "medicals", "health", "personal_care"],
+  restaurants: ["restaurant", "dining", "food"],
+  cafes: ["cafe", "coffee", "tea"],
+  jewellery: ["jewelry", "gifts", "gift_shops"],
+};
+
+const categoryMatches = (category: LiquidCategory, value: unknown) => {
+  const wanted = normalizeCategory(category.searchCategory ?? category.id);
+  const actual = normalizeCategory(value);
+  if (!wanted || !actual) return false;
+  if (actual === wanted || actual.includes(wanted) || wanted.includes(actual)) return true;
+  return (categoryAliases[wanted] ?? []).some(
+    (alias) => actual === alias || actual.includes(alias) || alias.includes(actual),
+  );
+};
+
+export function LiquidGlassCategorySelector({
+  variant = "image",
+  nearbyShops = [],
+  nearbyProducts = [],
+  isLoading = false,
+  hasConfirmedLocation = false,
+}: {
+  variant?: "image" | "pill";
+  nearbyShops?: NearbyShop[];
+  nearbyProducts?: NearbyProduct[];
+  isLoading?: boolean;
+  hasConfirmedLocation?: boolean;
+}) {
   const isPillLayout = variant === "pill";
   const routerLocation = useRouterState({
     select: (s) => ({
@@ -290,6 +372,46 @@ export function LiquidGlassCategorySelector({ variant = "image" }: { variant?: "
   });
 
   const [showAll, setShowAll] = useState(false);
+
+  const nearbyByCategory = useMemo(() => {
+    const result = new Map<string, string[]>();
+
+    for (const category of LIQUID_CATEGORIES) {
+      if (!category.searchCategory) continue;
+      const shops = new Map<string, { name: string; distance: number }>();
+
+      for (const product of nearbyProducts) {
+        if (!categoryMatches(category, product.category)) continue;
+        const name = String(product.shop_name ?? "").trim();
+        if (!name) continue;
+        const key = String(product.seller_id ?? name).toLowerCase();
+        const distance = Number(product.distance_km ?? Number.POSITIVE_INFINITY);
+        if (!shops.has(key) || distance < (shops.get(key)?.distance ?? Number.POSITIVE_INFINITY)) {
+          shops.set(key, { name, distance });
+        }
+      }
+
+      for (const shop of nearbyShops) {
+        if (!categoryMatches(category, shop.category)) continue;
+        const name = String(shop.shop_name ?? "").trim();
+        if (!name) continue;
+        const key = String(shop.seller_id ?? shop.id ?? name).toLowerCase();
+        const distance = Number(shop.distance_km ?? Number.POSITIVE_INFINITY);
+        if (!shops.has(key) || distance < (shops.get(key)?.distance ?? Number.POSITIVE_INFINITY)) {
+          shops.set(key, { name, distance });
+        }
+      }
+
+      result.set(
+        category.id,
+        [...shops.values()]
+          .sort((a, b) => a.distance - b.distance || a.name.localeCompare(b.name))
+          .map((shop) => shop.name),
+      );
+    }
+
+    return result;
+  }, [nearbyProducts, nearbyShops]);
   // Determine active category based on URL
   const currentCategoryParam = routerLocation.search?.category;
   const currentPath = routerLocation.pathname;
@@ -351,6 +473,18 @@ export function LiquidGlassCategorySelector({ variant = "image" }: { variant?: "
             {visibleCategories.map((cat) => {
               const isActive = activeId === cat.id;
               const Icon = cat.icon;
+              const nearbyShopNames = nearbyByCategory.get(cat.id) ?? [];
+              const nearbyShopSummary = hasConfirmedLocation
+                ? isLoading
+                  ? "Finding nearby shops…"
+                  : nearbyShopNames.length > 0
+                    ? `${nearbyShopNames.length} nearby shop${nearbyShopNames.length === 1 ? "" : "s"}`
+                    : "No nearby shops yet"
+                : cat.featuredShop;
+              const nearbyShopNamesSummary = hasConfirmedLocation && nearbyShopNames.length > 0
+                ? nearbyShopNames.slice(0, 2).join(" · ") +
+                  (nearbyShopNames.length > 2 ? ` +${nearbyShopNames.length - 2} more` : "")
+                : cat.featuredProduct;
 
               const targetLink = cat.to
                 ? { to: cat.to, search: {} }
@@ -394,10 +528,21 @@ export function LiquidGlassCategorySelector({ variant = "image" }: { variant?: "
                           className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
                         />
                         <span className="absolute inset-0 bg-transparent" />
+                        <span className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/80 via-black/35 to-transparent" />
                       </span>
                       <span className="absolute left-3 top-2.5 z-10 max-w-[86%] text-left text-sm font-bold leading-[1.05] text-white drop-shadow-md sm:left-4 sm:top-3 sm:text-xl">
                         {cat.label}
                       </span>
+                      {(cat.featuredProduct || hasConfirmedLocation) && (
+                        <span className="absolute bottom-2.5 left-3 right-3 z-10 text-left text-[9px] leading-tight text-white/95 sm:left-4 sm:right-4 sm:text-[11px]">
+                          <span className="block truncate font-semibold" title={nearbyShopNamesSummary}>
+                            {nearbyShopNamesSummary}
+                          </span>
+                          <span className="mt-0.5 block truncate text-[8px] text-white/75 sm:text-[10px]" title={nearbyShopSummary}>
+                            {nearbyShopSummary}
+                          </span>
+                        </span>
+                      )}
                     </>
                   )}
                   {cat.badge && (
