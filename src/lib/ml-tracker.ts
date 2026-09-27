@@ -31,10 +31,11 @@ class MLTracker {
 
   private getOrCreateSessionId(): string {
     if (typeof window === "undefined") return "server_session";
-    let sid = sessionStorage.getItem("ls_ml_session_id");
+    let sid: string | null = null;
+    try { sid = sessionStorage.getItem("ls_ml_session_id"); } catch { /* Optional analytics. */ }
     if (!sid) {
       sid = "sid_" + Math.random().toString(36).substring(2, 11) + "_" + Date.now();
-      sessionStorage.setItem("ls_ml_session_id", sid);
+      try { sessionStorage.setItem("ls_ml_session_id", sid); } catch { /* Keep in memory. */ }
     }
     return sid;
   }
@@ -79,8 +80,8 @@ class MLTracker {
         shop_id: evt.shop_id || null,
         product_id: evt.product_id || null,
         category_name: evt.category_name || null,
-        lat: evt.lat || null,
-        lng: evt.lng || null,
+        lat: evt.lat ?? null,
+        lng: evt.lng ?? null,
         metadata: evt.metadata || {},
       }));
 
@@ -88,6 +89,7 @@ class MLTracker {
       if (error) {
         if (
           error.code === "PGRST301" ||
+          error.code === "PGRST205" ||
           error.code === "42P01" ||
           (error as any).status === 404 ||
           error.message?.includes("404") ||

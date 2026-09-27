@@ -72,15 +72,14 @@ function resolveImage(imageUrl: string) {
 export function LocalShoreOffers() {
   const navigate = useNavigate();
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
-  const offersQuery = useQuery({
+  const offersQuery = useQuery<typeof fallbackOffers>({
     queryKey: ["localshore-offer-cards", "shopper"],
     queryFn: async () => {
       const { data, error } = await (supabase as any).from("localshore_offer_cards").select("*").order("sort_order").order("created_at");
       if (error) return fallbackOffers;
       return data.map((offer: any) => ({ ...offer, image: resolveImage(offer.image_url), icon: iconByCategory[offer.category as keyof typeof iconByCategory] || ShoppingBag }));
     },
-    staleTime: 5000,
-    refetchInterval: 5000,
+    staleTime: 1000 * 60 * 5,
   });
   const offers = offersQuery.data ?? fallbackOffers;
 

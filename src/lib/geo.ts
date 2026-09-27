@@ -62,9 +62,12 @@ export function haversineDistanceKm(
 ): number {
   const dLat = toRad(lat2 - lat1);
   const dLon = toRad(lon2 - lon1);
-  const a =
+  const rawA =
     Math.sin(dLat / 2) ** 2 +
     Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
+  // Floating point rounding can move `a` infinitesimally outside [0, 1],
+  // which would otherwise make sqrt(1 - a) return NaN near antipodal points.
+  const a = Math.min(1, Math.max(0, rawA));
   return (2 * EARTH_RADIUS_M * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))) / 1000;
 }
 

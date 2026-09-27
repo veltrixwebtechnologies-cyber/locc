@@ -6,6 +6,7 @@ const { deliveryLocationSignature: signature, isConfirmedDeliveryLocation: confi
   "src/lib/delivery-location.ts",
 );
 const routing = await load("src/lib/map-service/delivery-routing.ts");
+const geo = await load("src/lib/geo.ts");
 test("checkout confirmation belongs to the exact address and pin, never the default map centre", () => {
   const pin = { lat: 11, lng: 76 },
     token = signature("House A", pin);
@@ -37,4 +38,14 @@ test("customer map uses segment distance, not distance to vertices", () => {
       [76.01, 11],
     ]) < 0.01,
   );
+});
+test("Haversine distance returns symmetric kilometre distances", () => {
+  const eastbound = geo.haversineDistanceKm(0, 0, 0, 1);
+  const westbound = geo.haversineDistanceKm(0, 1, 0, 0);
+  assert.ok(Math.abs(eastbound - 111.195) < 0.01);
+  assert.equal(eastbound, westbound);
+  assert.equal(geo.haversineDistanceKm(11.0168, 76.9558, 11.0168, 76.9558), 0);
+});
+test("Haversine distance remains finite for antipodal coordinates", () => {
+  assert.ok(Number.isFinite(geo.haversineDistanceKm(0, 0, 0, 180)));
 });

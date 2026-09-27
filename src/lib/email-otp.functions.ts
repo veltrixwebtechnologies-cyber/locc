@@ -29,6 +29,11 @@ export const sendResendEmailOtp = createServerFn({ method: "POST" })
     return { email: data.email.trim().toLowerCase(), name: data.name?.trim() ?? "" };
   })
   .handler(async ({ data }) => {
+    const lovableKey = process.env.LOVABLE_API_KEY;
+    const resendKey = process.env.RESEND_API_KEY;
+    if (!resendKey || !lovableKey) {
+      throw new Error("Email service is not configured. Please use another sign-in method.");
+    }
     // 1. Redis Rate Limit (5 attempts per 10 minutes) - Fail-Closed for Security
     const { redisRateLimit } = await import("@/lib/redis.server");
     const rateCheck = await redisRateLimit(`otp:${data.email}`, 5, 600);
@@ -47,8 +52,8 @@ export const sendResendEmailOtp = createServerFn({ method: "POST" })
     if (allowed === false) {
       throw new Error("Too many verification requests. Try again later.");
     }
-    if (limitError) {
-      console.warn("consume_customer_otp_rate_limit warning:", limitError);
+    if (limitError || allowed !== true) {
+      throw new Error("Verification is temporarily unavailable. Please try again later.");
     }
 
     // Cooldown check
@@ -78,14 +83,6 @@ export const sendResendEmailOtp = createServerFn({ method: "POST" })
       .from("email_otps")
       .insert({ email: data.email, code_hash, expires_at });
     if (insertErr) throw new Error("Could not create login code. Try again.");
-
-    const lovableKey = process.env.LOVABLE_API_KEY;
-    const resendKey = process.env.RESEND_API_KEY;
-    if (!resendKey) {
-      console.log(`[DEV MODE] Customer login code for ${data.email}: ${code}`);
-      return { sent: true };
-    }
-    if (!lovableKey) throw new Error("Email service not configured.");
 
     const res = await fetch("https://connector-gateway.lovable.dev/resend/emails", {
       method: "POST",

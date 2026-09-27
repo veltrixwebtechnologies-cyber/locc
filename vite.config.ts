@@ -8,6 +8,11 @@ import { defineConfig } from "@lovable.dev/vite-tanstack-config";
 
 export default defineConfig({
   vite: {
+    // Lazy storefront routes import this CommonJS loader. Prebundle it at
+    // startup so first navigation never depends on late dependency discovery.
+    optimizeDeps: {
+      include: ["lottie-web"],
+    },
     server: {
       headers: {
         "content-security-policy":

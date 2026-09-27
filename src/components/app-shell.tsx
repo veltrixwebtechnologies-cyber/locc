@@ -51,7 +51,7 @@ const SELLER_HUB_URL =
 const DELIVERY_HUB_URL =
   import.meta.env.VITE_DELIVERY_HUB_URL || "https://delivery-hub-lilac.vercel.app/";
 
-function requestLocationModal() {
+export function requestLocationModal() {
   if (typeof window !== "undefined") {
     window.dispatchEvent(new CustomEvent(OPEN_LOCATION_MODAL_EVENT));
   }
@@ -59,6 +59,7 @@ function requestLocationModal() {
 
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const urlQuery = useRouterState({ select: (s) => (s.location.search as { q?: string }).q });
   const navigate = useNavigate();
   const cart = useCart();
   const auth = useAuth();
@@ -71,6 +72,9 @@ export function AppShell({ children }: { children: ReactNode }) {
   const [scrolled, setScrolled] = useState(false);
   const [headerQuery, setHeaderQuery] = useState("");
   const [searchFocused, setSearchFocused] = useState(false);
+  useEffect(() => {
+    setHeaderQuery(typeof urlQuery === "string" ? urlQuery : "");
+  }, [urlQuery, pathname]);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const { itemCount, subtotal } = cartTotals(cart.lines);
@@ -308,7 +312,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         }`}
       >
         {/* Full-width container with edge-to-edge padding */}
-        <div className="flex h-[72px] w-full items-center gap-4 lg:gap-6 px-4 md:px-6 lg:px-10 xl:px-12">
+        <div className="flex h-[72px] w-full items-center gap-2 2xl:gap-6 px-4 md:px-6 lg:px-8 2xl:px-12">
           {/* Logo (Far-left content boundary) */}
           <Link
             to="/"
@@ -375,7 +379,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           <m.form
             animate={{ scale: searchFocused ? 1.01 : 1 }}
             transition={{ type: "spring", stiffness: 420, damping: 34 }}
-            className="relative flex min-w-[200px] flex-1 items-center gap-2.5 rounded-full border hairline bg-slate-50/90 px-4 py-2.5 transition-colors focus-within:border-primary/50 focus-within:bg-background focus-within:ring-2 focus-within:ring-primary/10 shadow-2xs"
+            className="relative flex min-w-0 flex-1 items-center gap-2.5 rounded-full border hairline bg-slate-50/90 px-4 py-2.5 transition-colors focus-within:border-primary/50 focus-within:bg-background focus-within:ring-2 focus-within:ring-primary/10 shadow-2xs"
             onSubmit={(event) => {
               event.preventDefault();
               setSearchFocused(false);
@@ -387,9 +391,16 @@ export function AppShell({ children }: { children: ReactNode }) {
               });
             }}
             onFocus={() => setSearchFocused(true)}
-            onBlur={() => window.setTimeout(() => setSearchFocused(false), 200)}
+            onBlur={(event) => {
+              if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setSearchFocused(false);
+            }}
+            onKeyDown={(event) => {
+              if (event.key === "Escape") setSearchFocused(false);
+            }}
           >
-            <Search className="h-4 w-4 shrink-0 text-muted-foreground" />
+            <button type="submit" aria-label="Submit search" className="shrink-0 rounded-full p-1 text-muted-foreground hover:text-primary">
+              <Search className="h-4 w-4" />
+            </button>
             <div className="relative min-w-0 flex-1">
               <AnimatedSearchPlaceholder
                 phrases={HEADER_SEARCH_PLACEHOLDERS}

@@ -116,7 +116,8 @@ export function filterStoreByState(store: Store, state: ActiveFilterState): bool
   }
 
   // Max Distance
-  if (state.maxDistanceKm != null && store.distanceKm > state.maxDistanceKm) {
+  if (state.maxDistanceKm != null &&
+      (store.distanceKm == null || !Number.isFinite(store.distanceKm) || store.distanceKm < 0 || store.distanceKm > state.maxDistanceKm)) {
     return false;
   }
 

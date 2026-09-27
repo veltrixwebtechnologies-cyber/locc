@@ -36,6 +36,12 @@ function cleanString(val: unknown): string | undefined {
   return str.length > 0 ? str : undefined;
 }
 
+function nonNegativeNumber(value: string | undefined): number | undefined {
+  if (value === undefined) return undefined;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : undefined;
+}
+
 export function parseFilterParams(searchParams: Record<string, unknown>): ProductFilterState {
   const brandRaw = cleanString(searchParams.brand);
   const brands = brandRaw
@@ -77,20 +83,20 @@ export function parseFilterParams(searchParams: Record<string, unknown>): Produc
 
   const minPriceStr = cleanString(searchParams.minPrice) || cleanString(searchParams.min_price);
   const minPrice =
-    minPriceStr !== undefined && !isNaN(Number(minPriceStr)) ? Number(minPriceStr) : undefined;
+    nonNegativeNumber(minPriceStr);
 
   const maxPriceStr = cleanString(searchParams.maxPrice) || cleanString(searchParams.max_price);
   const maxPrice =
-    maxPriceStr !== undefined && !isNaN(Number(maxPriceStr)) ? Number(maxPriceStr) : undefined;
+    nonNegativeNumber(maxPriceStr);
 
   const distanceStr =
     cleanString(searchParams.maxDistance) || cleanString(searchParams.max_distance);
   const maxDistanceKm =
-    distanceStr !== undefined && !isNaN(Number(distanceStr)) ? Number(distanceStr) : undefined;
+    nonNegativeNumber(distanceStr);
 
   const ratingStr = cleanString(searchParams.rating) || cleanString(searchParams.min_rating);
   const minRating =
-    ratingStr !== undefined && !isNaN(Number(ratingStr)) ? Number(ratingStr) : undefined;
+    nonNegativeNumber(ratingStr);
 
   const inStockStr = cleanString(searchParams.inStock) || cleanString(searchParams.in_stock);
   const inStock = inStockStr === "true";
@@ -103,7 +109,8 @@ export function parseFilterParams(searchParams: Record<string, unknown>): Produc
 
   const sortBy = cleanString(searchParams.sort) || "relevance";
   const pageStr = cleanString(searchParams.page);
-  const page = pageStr && !isNaN(Number(pageStr)) ? Number(pageStr) : 1;
+  const pageNumber = nonNegativeNumber(pageStr);
+  const page = pageNumber !== undefined && Number.isSafeInteger(pageNumber) && pageNumber >= 1 ? pageNumber : 1;
 
   return {
     category,
@@ -122,12 +129,7 @@ export function parseFilterParams(searchParams: Record<string, unknown>): Produc
     shopTypes: [],
     attributes,
     sortBy: typeof searchParams.sort === "string" ? searchParams.sort : "relevance",
-    page:
-      typeof searchParams.page === "string"
-        ? Number(searchParams.page)
-        : typeof searchParams.page === "number"
-          ? searchParams.page
-          : 1,
+    page,
   };
 }
 

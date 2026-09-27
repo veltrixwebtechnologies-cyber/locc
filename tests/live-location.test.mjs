@@ -121,7 +121,7 @@ test("customer GPS waits for a fresh precise fix and preserves newer selections 
     success(fix(1500));
     success(fix(4000));
     assert.equal(store.getGPSStatus().fix.accuracy, 1500, "retain the best available fix");
-    const coarseRejected = assert.rejects(coarse, /approximate area/);
+    const coarseRejected = assert.rejects(coarse, /best reading was only accurate/);
     expireGPS();
     await coarseRejected;
     assert.equal(store.getGPSStatus().status, "imprecise");

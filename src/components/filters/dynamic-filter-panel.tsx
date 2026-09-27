@@ -13,6 +13,7 @@ import {
   type ProductFilterState,
   type FacetResult,
 } from "@/lib/filter-types";
+import { SHOP_DISCOVERY_RADIUS_OPTIONS_KM } from "@/lib/location-visibility";
 import {
   Star,
   RotateCcw,
@@ -394,18 +395,15 @@ export function DynamicFilterPanel({
                 </div>
               </AccordionTrigger>
               <AccordionContent className="pt-1 pb-3">
-                <div className="grid grid-cols-4 gap-1.5 text-xs font-bold">
-                  {[1, 2, 5, 10].map((dist) => {
-                    const isSelected = filterState.maxDistanceKm === dist;
+                <div className="grid grid-cols-3 gap-1.5 text-xs font-bold">
+                  {SHOP_DISCOVERY_RADIUS_OPTIONS_KM.map((dist) => {
+                    const isSelected = (filterState.maxDistanceKm ?? 7) === dist;
                     return (
                       <button
                         key={`dist-${dist}`}
                         type="button"
                         onClick={() =>
-                          onUpdateState({
-                            maxDistanceKm: isSelected ? undefined : dist,
-                            page: 1,
-                          })
+                          onUpdateState({ maxDistanceKm: dist, page: 1 })
                         }
                         className={`py-1.5 rounded-lg border text-center transition-all ${
                           isSelected

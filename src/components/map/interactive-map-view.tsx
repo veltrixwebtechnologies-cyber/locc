@@ -609,7 +609,7 @@ function escapeAttribute(value: string): string {
 
 function markerPillMarkup(marker: MapMarkerItem): string {
   const image = isValidImageUrl(marker.productImage)
-    ? marker.productImage
+    ? marker.productImage!
     : getFallbackProductImage(marker.productName, marker.category);
   return `
     <img class="marker-shop-image" src="${escapeAttribute(image)}" alt="" aria-hidden="true" />

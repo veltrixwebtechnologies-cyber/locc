@@ -44,17 +44,22 @@ function setState(next: AuthState) {
 function ensureAuthSubscription() {
   if (initialized || typeof window === "undefined") return;
   initialized = true;
+  let authRevision = 0;
   supabase.auth.onAuthStateChange((event, session) => {
-    if (event === "SIGNED_OUT" || (!session && state.id !== null)) {
+    authRevision++;
+    if (event === "SIGNED_OUT" || (state.id !== null && state.id !== (session?.user?.id ?? null))) {
       cartStore.clear();
     }
     setState(fromUser(session?.user ?? null));
   });
+  const initialRevision = authRevision;
   void supabase.auth.getSession().then(({ data }) => {
-    if (!data.session) {
-      cartStore.clear();
-    }
+    // A guest session is normal: preserve its basket. Ignore a stale initial
+    // read if a newer sign-in/sign-out event has already updated the state.
+    if (authRevision !== initialRevision) return;
     setState(fromUser(data.session?.user ?? null));
+  }).catch(() => {
+    // Temporary auth connectivity failure must not erase a local basket.
   });
 }
 

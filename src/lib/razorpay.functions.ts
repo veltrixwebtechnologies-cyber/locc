@@ -1,6 +1,8 @@
 import { parseCoordinates } from "./coordinates";
 import { createServerFn } from "@tanstack/react-start";
 import { createHmac, timingSafeEqual } from "crypto";
+import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { validatePaymentItems, assertCapturedPayment } from "./payment-validation";
 
 export interface CreateRazorpayOrderInput {
   items: Array<{ product_id: string; qty: number }>;
@@ -58,16 +60,15 @@ function getRazorpayCredentials() {
   return { keyId, keySecret };
 }
 
-const isUuid = (val: string) =>
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(val);
-
 /**
  * 1. CREATE RAZORPAY ORDER (SERVER-SIDE ONLY)
  * Recalculates authoritative order amounts from DB and issues a secure Razorpay order.
  * Amount is converted strictly to paise (1 INR = 100 paise).
  */
 export const createRazorpayOrderFn = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((data: CreateRazorpayOrderInput) => {
+    validatePaymentItems(data?.items);
     if (!data?.items || !Array.isArray(data.items) || data.items.length === 0) {
       throw new Error("Cart items are required to create a payment order.");
     }
@@ -79,7 +80,7 @@ export const createRazorpayOrderFn = createServerFn({ method: "POST" })
     }
     return data;
   })
-  .handler(async ({ data }): Promise<CreateRazorpayOrderResult> => {
+  .handler(async ({ data, context }): Promise<CreateRazorpayOrderResult> => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const admin = supabaseAdmin as any;
     const { keyId, keySecret } = getRazorpayCredentials();
@@ -90,14 +91,11 @@ export const createRazorpayOrderFn = createServerFn({ method: "POST" })
     }
 
     const requestedProductIds = data.items.map((i) => i.product_id);
-    if (!requestedProductIds.every(isUuid)) {
-      throw new Error("One or more cart items have invalid product IDs.");
-    }
 
     // 1. Calculate authoritative totals server-side from database
     const { data: dbProducts, error: prodErr } = await admin
       .from("products")
-      .select("id, selling_price, name, stock, is_active")
+      .select("id, seller_id, selling_price, name, stock, status")
       .in("id", requestedProductIds);
 
     if (prodErr || !dbProducts || dbProducts.length !== requestedProductIds.length) {
@@ -106,8 +104,11 @@ export const createRazorpayOrderFn = createServerFn({ method: "POST" })
     }
 
     const priceMap = new Map<string, number>();
+    if (new Set(dbProducts.map((p: any) => p.seller_id)).size !== 1) throw new Error("Checkout must contain products from one shop");
     (dbProducts || []).forEach((p: any) => {
-      if (!p.is_active) {
+      const quantity = data.items.find(item => item.product_id === p.id)!.qty;
+      if (!["active", "approved"].includes(p.status) || !Number.isFinite(p.stock) || p.stock < quantity ||
+        p.selling_price == null || !Number.isFinite(Number(p.selling_price)) || Number(p.selling_price) < 0) {
         throw new Error(`Product '${p.name}' is currently unavailable.`);
       }
       priceMap.set(p.id, Number(p.selling_price || 0));
@@ -124,28 +125,34 @@ export const createRazorpayOrderFn = createServerFn({ method: "POST" })
 
     let shippingFee = 25;
     let discountAmount = 0;
+    let quotedTotal: number | undefined;
 
     // Server-side coupon evaluation
     if (data.coupon_code && data.coupon_code.trim()) {
       try {
-        const { data: couponQuote } = await admin.rpc("quote_coupon", {
-          p_coupon_code: data.coupon_code.trim(),
+        const { data: couponQuote, error: quoteError } = await (context.supabase as any).rpc("quote_coupon", {
+          p_code: data.coupon_code.trim(),
           p_items: data.items,
         });
 
+        if (quoteError || !couponQuote) throw new Error("Coupon could not be verified");
         if (couponQuote) {
           shippingFee = Number((couponQuote as any).shipping_fee ?? 25);
           discountAmount = Number((couponQuote as any).discount_amount ?? 0);
+          quotedTotal = Number(couponQuote.total);
+          if (!Number.isFinite(quotedTotal) || quotedTotal < 0) throw new Error("Invalid coupon quote");
         }
       } catch (err) {
-        console.warn("[razorpay] Coupon server quote warning:", err);
+        throw new Error("Coupon could not be verified. Remove it or try again.");
       }
     }
 
-    const totalInr = Math.max(0, subtotal + shippingFee - discountAmount);
+    // In free-shipping quotes discount_amount describes the waived fee; the
+    // authoritative total already accounts for it and must not subtract it twice.
+    const totalInr = quotedTotal ?? (subtotal + shippingFee - discountAmount);
     const amountPaise = Math.round(totalInr * 100);
 
-    if (amountPaise <= 0) {
+    if (!Number.isSafeInteger(amountPaise) || amountPaise <= 0) {
       throw new Error("Invalid order total amount.");
     }
 
@@ -185,20 +192,26 @@ export const createRazorpayOrderFn = createServerFn({ method: "POST" })
 
     // 3. Create payment attempt row in database
     let attemptId = "";
-    const { data: attemptRow, error: attemptErr } = await admin.rpc("create_payment_attempt", {
-      p_provider_order_id: razorpayOrderId,
-      p_amount: totalInr,
-      p_amount_paise: amountPaise,
-      p_currency: "INR",
-      p_raw_payload: {
+    const { data: attemptRow, error: attemptErr } = await admin.from("payment_attempts").insert({
+      user_id: context.userId,
+      provider: "razorpay",
+      status: "created",
+      provider_order_id: razorpayOrderId,
+      amount: totalInr,
+      amount_paise: amountPaise,
+      currency: "INR",
+      raw_payload: {
         items: data.items,
         coupon_code: data.coupon_code,
         address: data.address,
+        customer_latitude: data.customer_latitude,
+        customer_longitude: data.customer_longitude,
       },
-    });
+    }).select("id").single();
 
     if (attemptErr) {
       console.error("[razorpay] create_payment_attempt RPC failed:", attemptErr);
+      throw new Error("Unable to save payment attempt. Payment has not been initiated.");
     } else if (attemptRow) {
       attemptId = (attemptRow as any).id;
     }
@@ -218,6 +231,7 @@ export const createRazorpayOrderFn = createServerFn({ method: "POST" })
  * Cryptographically verifies HMAC SHA256 signature before placing order.
  */
 export const verifyRazorpayPaymentFn = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((data: VerifyRazorpayPaymentInput) => {
     if (!data?.razorpay_order_id || !data?.razorpay_payment_id || !data?.razorpay_signature) {
       throw new Error("Missing required Razorpay payment verification parameters.");
@@ -230,13 +244,24 @@ export const verifyRazorpayPaymentFn = createServerFn({ method: "POST" })
     }
     return data;
   })
-  .handler(async ({ data }): Promise<VerifyRazorpayPaymentResult> => {
+  .handler(async ({ data, context }): Promise<VerifyRazorpayPaymentResult> => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const admin = supabaseAdmin as any;
-    const { keySecret } = getRazorpayCredentials();
+    const { keyId, keySecret } = getRazorpayCredentials();
 
     if (!keySecret) {
       throw new Error("Payment service is temporarily unavailable. Server secret is missing.");
+    }
+
+    const { data: attempt, error: attemptError } = await admin.from("payment_attempts")
+      .select("*").eq("provider_order_id", data.razorpay_order_id).eq("user_id", context.userId).maybeSingle();
+    if (attemptError || !attempt || (data.payment_attempt_id && data.payment_attempt_id !== attempt.id)) {
+      throw new Error("Payment attempt not found for this customer");
+    }
+    const saved = attempt.raw_payload;
+    validatePaymentItems(saved?.items);
+    if (!saved.address || !parseCoordinates(saved.customer_latitude, saved.customer_longitude)) {
+      throw new Error("Saved payment destination is invalid. Contact support.");
     }
 
     // 1. Verify Cryptographic HMAC SHA256 Signature
@@ -262,31 +287,31 @@ export const verifyRazorpayPaymentFn = createServerFn({ method: "POST" })
         paymentId: data.razorpay_payment_id,
       });
 
-      try {
-        await admin.rpc("finalize_verified_payment", {
-          p_provider_order_id: data.razorpay_order_id,
-          p_provider_payment_id: data.razorpay_payment_id,
-          p_provider_signature: data.razorpay_signature,
-          p_order_id: null,
-          p_status: "failed",
-        });
-      } catch {}
-
       throw new Error("Payment verification failed. Cryptographic signature invalid.");
     }
 
+    const paymentResponse = await fetch(`https://api.razorpay.com/v1/payments/${encodeURIComponent(data.razorpay_payment_id)}`, {
+      headers: { Authorization: `Basic ${Buffer.from(`${keyId}:${keySecret}`).toString("base64")}` },
+    });
+    if (!paymentResponse.ok) throw new Error("Unable to verify captured payment. Try again or contact support.");
+    assertCapturedPayment(await paymentResponse.json(), {
+      paymentId: data.razorpay_payment_id, orderId: data.razorpay_order_id, amountPaise: Number(attempt.amount_paise),
+    });
+
     // 2. Place LocalShore Order via authoritative place_order_once RPC
-    const request_id = `rzp_${data.razorpay_payment_id}`;
-    const { data: rpcCreated, error: rpcErr } = await admin.rpc("place_order_once", {
+    // place_order_once expects a UUID; the persisted attempt is stable across
+    // retries and prevents duplicate orders for the same payment attempt.
+    const request_id = attempt.id;
+    const { data: rpcCreated, error: rpcErr } = await (context.supabase as any).rpc("place_order_once", {
       p_request_id: request_id,
       p_buyer_name: data.buyer_name,
       p_buyer_phone: data.buyer_phone ?? null,
-      p_buyer_address: data.buyer_address,
-      p_items: data.items,
+      p_buyer_address: saved.address,
+      p_items: saved.items,
       p_payment_method: "card",
-      p_coupon_code: data.coupon_code ?? null,
-      p_customer_latitude: data.customer_latitude ?? null,
-      p_customer_longitude: data.customer_longitude ?? null,
+      p_coupon_code: saved.coupon_code ?? null,
+      p_customer_latitude: saved.customer_latitude,
+      p_customer_longitude: saved.customer_longitude,
     });
 
     if (rpcErr || !rpcCreated?.id) {
@@ -294,28 +319,18 @@ export const verifyRazorpayPaymentFn = createServerFn({ method: "POST" })
       throw new Error("Order creation failed during payment verification. Please contact support.");
     }
 
-    // 3. Update order payment status and finalize payment attempt in database
-    try {
-      await admin
-        .from("orders")
-        .update({
-          payment_status: "paid",
-          payment_reference: data.razorpay_payment_id,
-          payment_currency: "INR",
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", rpcCreated.id);
-
-      await admin.rpc("finalize_verified_payment", {
+    if (Math.round(Number(rpcCreated.total) * 100) !== Number(attempt.amount_paise)) {
+      throw new Error("Order total differs from the captured payment. Contact support for reconciliation.");
+    }
+    // Do not report success if the authoritative payment update fails.
+    const { error: finalizeError } = await admin.rpc("finalize_verified_payment", {
         p_provider_order_id: data.razorpay_order_id,
         p_provider_payment_id: data.razorpay_payment_id,
         p_provider_signature: data.razorpay_signature,
         p_order_id: rpcCreated.id,
         p_status: "captured",
-      });
-    } catch (dbErr) {
-      console.error("[razorpay] Notice updating order payment status:", dbErr);
-    }
+    });
+    if (finalizeError) throw new Error("Payment received but order confirmation is pending. Contact support.");
 
     return {
       success: true,
