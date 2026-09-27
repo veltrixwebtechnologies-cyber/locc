@@ -103,7 +103,7 @@ function StorePage() {
   const approved = useQuery({
     // Bump the key so a previously cached cross-seller result cannot survive the
     // seller-ID scoping fix in this query.
-    queryKey: ["approved-store-v4", loaded.store.id, requestedCategory],
+    queryKey: ["approved-store-v5", loaded.store.id, requestedCategory],
     enabled: loaded.store.id === APPROVED_STORE.id || isUuid(loaded.store.id),
     queryFn: async () => {
       let productQuery = (supabase as any)
@@ -164,7 +164,7 @@ function StorePage() {
       let { data: vendor } = await (supabase as any)
         .from("approved_vendor_catalog")
         .select(
-          "id,shop_name,business_type,city,state,address_line1,category,shop_logo_path,shop_banner_path",
+          "id,shop_name,business_type,city,state,address_line1,category,shop_logo_path,shop_banner_path,lat,lng",
         )
         .eq("id", loaded.store.id)
         .maybeSingle();
@@ -189,11 +189,13 @@ function StorePage() {
       }
 
       if (!vendor) {
-        const { data: rawSellerData } = await (supabase as any)
+        const { data: rawSellerData, error: sellerError } = await (supabase as any)
           .from("sellers")
           .select("*")
           .eq("id", loaded.store.id)
           .maybeSingle();
+
+        if (sellerError) throw sellerError;
 
         const sellerData = rawSellerData as any;
         if (sellerData) {
@@ -209,29 +211,19 @@ function StorePage() {
           vendor = {
             id: sellerData.id,
             shop_name: storeName,
+            lat: sellerData.lat,
+            lng: sellerData.lng,
           };
         }
       }
 
       const isLocalShoreZoneDemo = /^LocalShore\s+(?:Demo\s+)?(?:CBE|BLR)-\d{2}\b/i.test(storeName || "");
       const expectedDemoCategory = toStoreCategory(storeCategory);
-      const demoIdentity = (storeName || "").match(
-        /^LocalShore\s+((?:CBE|BLR)-\d{2})\s+.+?\s+Shop\s+(\d+)$/i,
-      );
-      const contextualCategory = requestedCategory
-        ? toStoreCategory(requestedCategory)
-        : expectedDemoCategory;
-      const contextualCategoryName = getCategoryByIdOrSlug(contextualCategory).name.replace(
-        /\s+shops?$/i,
-        "",
-      );
-      const contextualStoreName =
-        isLocalShoreZoneDemo && requestedCategory && demoIdentity
-          ? `LocalShore ${demoIdentity[1]} ${contextualCategoryName} Shop ${demoIdentity[2]}`
-          : storeName;
+      // A category URL is a product filter, never a new shop identity.
+      const contextualCategory = expectedDemoCategory;
       const storeProducts = requestedCategory
         ? products.filter(
-            (product) => product.category.toLowerCase() === requestedCategory.toLowerCase(),
+            (product) => catalogCategoryKey(product.category) === requestedCategory,
           )
         : isLocalShoreZoneDemo
           ? products.filter((product) => product.category.toLowerCase() === expectedDemoCategory)
@@ -243,15 +235,13 @@ function StorePage() {
           ? ({
               ...APPROVED_STORE,
               id: vendor.id,
-              name: contextualStoreName || APPROVED_STORE.name,
+              name: storeName || "Local shop",
+              lat: isValidCoordinate(vendor.lat, vendor.lng) ? Number(vendor.lat) : NaN,
+              lng: isValidCoordinate(vendor.lat, vendor.lng) ? Number(vendor.lng) : NaN,
               category: contextualCategory,
               tagline: storeTagline || "Approved local vendor",
               address: storeAddress || APPROVED_STORE.address,
-              imageUrl:
-                requestedCategory
-                  ? CATEGORY_PHOTOS[contextualCategory] ||
-                    getFallbackShopImage(contextualCategory, vendor.id)
-                  : imageUrl,
+              imageUrl,
             } as Store)
           : null,
       };
@@ -282,10 +272,12 @@ function StorePage() {
   const [showFilters, setShowFilters] = useState(false);
 
   useEffect(() => {
-    if (sq && sq !== query) {
-      setQuery(sq);
-    }
-  }, [sq]);
+    setQuery(sq);
+  }, [sq, loaded.store.id]);
+
+  useEffect(() => {
+    setSelectedCategory(searchParams.category || "all");
+  }, [searchParams.category, loaded.store.id]);
 
   const cart = useCart();
   const totals = cartTotals(cart.lines);
@@ -300,12 +292,9 @@ function StorePage() {
     typeof deliveryLoc.lat === "number" &&
     typeof deliveryLoc.lng === "number" &&
     isValidCoordinate(deliveryLoc.lat, deliveryLoc.lng)
-      ? Math.max(
-          0.1,
-          Math.round(
+      ? Math.round(
             haversineDistanceKm(store.lat, store.lng, deliveryLoc.lat, deliveryLoc.lng) * 10,
-          ) / 10,
-        )
+          ) / 10
       : undefined;
 
   const { trackShopView } = useMLTracker();
@@ -403,6 +392,19 @@ function StorePage() {
   );
   const recommendationSource = recommendationCandidates[0];
 
+  if (isLiveSellerStore && approved.isPending) {
+    return <div className="grid min-h-screen place-items-center" role="status">Loading shop…</div>;
+  }
+  if (isLiveSellerStore && (approved.isError || !approved.data?.store)) {
+    return <div className="grid min-h-screen place-items-center p-6 text-center"><div role="alert">
+      <h1 className="text-xl font-bold">{approved.isError ? "We couldn’t load this shop" : "Shop not found"}</h1>
+      {approved.isError && <button className="m-3 rounded-lg bg-primary px-4 py-2 text-primary-foreground" onClick={() => void approved.refetch()}>Try again</button>}
+      <Link to="/" search={{category:undefined,q:undefined}} className="block mt-3 underline">Back to shops</Link>
+    </div></div>;
+  }
+
+  const isDemoShop = /\(Demo\)|^LocalShore\s+(?:Demo\s+)?(?:CBE|BLR)-/i.test(store.name);
+
   return (
     <div className="min-h-screen bg-[#f3edf5] pb-32 pt-3 sm:pt-5">
       <div className="mx-auto max-w-[1500px] px-3 sm:px-6 lg:px-8">
@@ -443,7 +445,7 @@ function StorePage() {
           <div className="absolute top-4 right-4 z-20">
             <div className="inline-flex items-center gap-1.5 rounded-full bg-[#fffafd]/95 backdrop-blur-md px-3.5 py-1.5 text-xs font-black text-slate-900 shadow-xl border border-[#f0abfc]/80">
               <ShieldCheck className="h-4 w-4 text-[#981495] fill-[#981495]/20" />
-              <span>Verified Store</span>
+              <span>{isDemoShop ? "Demo shop" : "Local shop"}</span>
             </div>
           </div>
 
@@ -484,7 +486,7 @@ function StorePage() {
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2 mb-1">
                 <span className="inline-flex items-center gap-1 rounded-full bg-[var(--sand)]/90 px-2.5 py-0.5 text-[10px] font-bold text-[#981495] border border-[#f0abfc]">
-                  Verified Shoreline Merchant
+                  {isDemoShop ? "Demo catalog — sample products" : "LocalShore Merchant"}
                 </span>
               </div>
 
@@ -506,16 +508,16 @@ function StorePage() {
 
                 <div className="flex items-center gap-1 rounded-full bg-emerald-50/90 px-2.5 py-1 text-emerald-800 border border-emerald-200/70 shadow-2xs">
                   <Clock className="h-3.5 w-3.5 text-emerald-600" />
-                  <span>{store.isOpen ? "Open now · 9:00 AM – 9:30 PM" : "Closed"}</span>
+                  <span>{isLiveSellerStore ? "Check opening hours with shop" : store.isOpen ? "Open now" : "Closed"}</span>
                 </div>
 
-                <div className="flex items-center gap-1 rounded-full bg-[var(--sand)]/90 px-2.5 py-1 text-[#700b6e] border border-[#f0abfc]/70 shadow-2xs">
+                {!isLiveSellerStore && <div className="flex items-center gap-1 rounded-full bg-[var(--sand)]/90 px-2.5 py-1 text-[#700b6e] border border-[#f0abfc]/70 shadow-2xs">
                   <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
                   <span>{store.rating.toFixed(1)}</span>
                   <span className="text-[#981495]/80 font-normal">
                     ({Math.floor(store.rating * 240)} reviews)
                   </span>
-                </div>
+                </div>}
 
                 {deliveryLoc && computedDistanceKm !== undefined && (
                   <div className="flex items-center gap-1 rounded-full bg-[var(--sand)]/90 px-2.5 py-1 text-[#981495] border border-[#f0abfc]/80 shadow-2xs">

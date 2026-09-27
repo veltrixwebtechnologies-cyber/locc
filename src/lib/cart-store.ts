@@ -18,11 +18,31 @@ interface CartState {
 
 const KEY = "localshore.cart.v1";
 
+export function sanitizeCart(value: unknown): CartState {
+  const empty: CartState = { storeId: null, storeName: null, lines: [] };
+  if (!value || typeof value !== "object") return empty;
+  const cart = value as Partial<CartState>;
+  if (typeof cart.storeId !== "string" || !cart.storeId || !Array.isArray(cart.lines)) return empty;
+  const seen = new Set<string>();
+  const lines = cart.lines.filter((line) => {
+    if (!line || typeof line !== "object" || typeof line.productId !== "string" ||
+      !line.productId || seen.has(line.productId) || line.storeId !== cart.storeId ||
+      typeof line.name !== "string" || typeof line.unit !== "string" ||
+      !Number.isFinite(line.price) || line.price < 0 ||
+      !Number.isSafeInteger(line.qty) || line.qty <= 0 ||
+      (line.availableStock !== undefined && (!Number.isSafeInteger(line.availableStock) || line.availableStock < 0))) return false;
+    seen.add(line.productId);
+    return true;
+  }).map(line => ({ ...line, qty: Math.min(line.qty, line.availableStock ?? line.qty) }))
+    .filter(line => line.qty > 0);
+  return lines.length ? { storeId: cart.storeId, storeName: typeof cart.storeName === "string" ? cart.storeName : "Local shop", lines } : empty;
+}
+
 const load = (): CartState => {
   if (typeof window === "undefined") return { storeId: null, storeName: null, lines: [] };
   try {
     const raw = window.localStorage.getItem(KEY);
-    if (raw) return JSON.parse(raw);
+    if (raw) return sanitizeCart(JSON.parse(raw));
   } catch {
     return { storeId: null, storeName: null, lines: [] };
   }
@@ -36,7 +56,11 @@ const listeners = new Set<() => void>();
 
 const persist = () => {
   if (typeof window !== "undefined") {
-    window.localStorage.setItem(KEY, JSON.stringify(state));
+    try {
+      window.localStorage.setItem(KEY, JSON.stringify(state));
+    } catch {
+      // Restricted storage must not prevent in-memory cart updates.
+    }
   }
   listeners.forEach((l) => l());
 };
@@ -67,7 +91,8 @@ export const cartStore = {
     product: { id: string; name: string; unit: string; price: number; stock?: number },
   ) {
     ensureHydrated();
-    if (product.stock !== undefined && (!Number.isFinite(product.stock) || product.stock <= 0)) {
+    if (!storeId || !product.id || !Number.isFinite(product.price) || product.price < 0) return;
+    if (product.stock !== undefined && (!Number.isSafeInteger(product.stock) || product.stock <= 0)) {
       return;
     }
     const sameStore = state.storeId === storeId;
@@ -101,6 +126,7 @@ export const cartStore = {
   },
   setQty(productId: string, qty: number) {
     ensureHydrated();
+    if (!Number.isSafeInteger(qty)) return;
     let lines: CartLine[];
     if (qty <= 0) lines = state.lines.filter((l) => l.productId !== productId);
     else
@@ -140,13 +166,13 @@ export const cartStore = {
         };
       })
       .filter((line) => line.qty > 0);
-    const changed = lines.some(
+    const changed = lines.length !== state.lines.length || lines.some(
       (line, index) =>
         line.qty !== state.lines[index]?.qty ||
         line.availableStock !== state.lines[index]?.availableStock,
     );
     if (!changed) return false;
-    state = { ...state, lines };
+    state = lines.length ? { ...state, lines } : { storeId: null, storeName: null, lines: [] };
     persist();
     return true;
   },

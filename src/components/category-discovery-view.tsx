@@ -170,7 +170,9 @@ export function CategoryDiscoveryView({
 
         return {
           ...s,
-          distanceKm: Number(computedDistanceKm.toFixed(1)),
+          // Preserve precision for radius filtering/sorting. The card formats
+          // this value for display, but rounding here can leak >5 km shops.
+          distanceKm: computedDistanceKm,
           etaMin: computedEta,
         };
       })

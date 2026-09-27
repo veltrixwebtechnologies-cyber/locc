@@ -25,7 +25,7 @@ import { OtpInput, OTP_LENGTH } from "@/components/auth/otp-input";
 
 export const Route = createFileRoute("/auth")({
   component: AuthPage,
-  validateSearch: (s: Record<string, unknown>) => ({
+  validateSearch: (s: Record<string, unknown>): { redirect?: string; flow?: string } => ({
     redirect: typeof s.redirect === "string" ? s.redirect : undefined,
     flow: typeof s.flow === "string" ? s.flow : undefined,
   }),

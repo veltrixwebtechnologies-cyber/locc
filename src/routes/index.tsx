@@ -39,9 +39,13 @@ import { scrollToShops } from "@/lib/scroll-utils";
 import { EcosystemMerchandisingStrips } from "@/components/ecosystem-merchandising-strips";
 import { isTestEntity } from "@/lib/map-service/store-engine";
 import { useDeliveryLocation } from "@/lib/location-store";
-import { getCategoryByIdOrSlug, toStoreCategory, isStoreInCategory } from "@/lib/shop-categories";
-import { calculateHaversineDistanceKm } from "@/lib/map-service/providers";
-import { CUSTOMER_VISIBILITY_RADIUS_KM, hasConfirmedCoordinates } from "@/lib/location-visibility";
+import { getCategoryByIdOrSlug, toStoreCategory, isStoreInCategory, catalogCategoryKey } from "@/lib/shop-categories";
+import { discoverShops } from "@/lib/shop-discovery";
+import {
+  CUSTOMER_VISIBILITY_RADIUS_KM,
+  DEFAULT_SHOP_DISCOVERY_RADIUS_KM,
+  hasConfirmedCoordinates,
+} from "@/lib/location-visibility";
 
 const LocalShoreMapExperience = lazy(() =>
   import("@/components/map/localshore-map-experience").then((module) => ({
@@ -59,7 +63,6 @@ const DEMO_SHOP_FEATURES: Partial<Record<StoreCategory, { name: string; imageUrl
   electronics: { name: "Smartphones", imageUrl: "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?auto=format&fit=crop&w=640&q=80" },
   home_kitchen: { name: "Cookware", imageUrl: "https://images.unsplash.com/photo-1556911220-e15b29be8c8f?auto=format&fit=crop&w=640&q=80" },
 };
-import { rankShopsWithML } from "@/lib/ml-shop-ranker";
 import { LocalShoreOffers } from "@/components/localshore-offers";
 import { LiquidGlassCategorySelector } from "@/components/liquid-glass-category-selector";
 import { PopularBrandsCarousel } from "@/components/popular-brands-carousel";
@@ -141,20 +144,20 @@ function Home() {
   });
 
   const approvedVendors = useQuery({
-    queryKey: ["homepage-visible-shops", locLat, locLng],
+    queryKey: ["homepage-visible-shops-v4", locLat, locLng, search.category, query],
     staleTime: 1000 * 60 * 5,
     gcTime: 1000 * 60 * 10,
     retry: 1,
     refetchOnWindowFocus: false,
     queryFn: async () => {
-      if (!hasConfirmedCoordinates(deliveryLoc)) return [];
-      try {
-        const { data, error } = await (supabase as any).rpc("get_customer_visible_shops", {
-          p_lat: deliveryLoc.lat, p_lng: deliveryLoc.lng, p_query: null,
-          p_category_slug: null, p_limit: 100, p_offset: 0,
+      if (!deliveryLoc || !hasConfirmedCoordinates(deliveryLoc)) return {
+        shops: [], effectiveRadiusKm: DEFAULT_SHOP_DISCOVERY_RADIUS_KM, legacyMode: false,
+      };
+        const discovery = await discoverShops((name, args) => (supabase as any).rpc(name, args), {
+          lat: deliveryLoc.lat, lng: deliveryLoc.lng, query: query.trim() || null,
+          category: catalogCategoryKey(search.category), radiusKm: DEFAULT_SHOP_DISCOVERY_RADIUS_KM,
         });
-        if (error) throw error;
-        const rows = (data ?? []).filter((v: any) => !isTestEntity(v.shop_name));
+        const rows = discovery.shops.filter((v) => !isTestEntity(v.shop_name));
         const paths = Array.from(
           new Set(
             rows
@@ -175,17 +178,13 @@ function Home() {
             console.warn("Storage signed url query skipped:", storageErr);
           }
         }
-        return rows.map((vendor: any) => ({
+        return { ...discovery, shops: rows.map((vendor: any) => ({
           ...vendor,
           storefront_image_url:
             signedByPath.get(vendor.shop_banner_path) ??
             signedByPath.get(vendor.shop_logo_path) ??
             null,
-        }));
-      } catch (err) {
-        console.warn("Vendors query fallback:", err);
-        return [];
-      }
+        })) };
     },
   });
 
@@ -218,14 +217,13 @@ function Home() {
       if (Number(product.stock ?? 1) <= 0) continue;
       featuredProductBySeller.set(product.seller_id, product);
     }
-    const liveVendorStores = (approvedVendors.data ?? [])
+    const liveVendorStores = (approvedVendors.data?.shops ?? [])
       .map((vendor: any) => {
         const vLat = Number(vendor.lat);
         const vLng = Number(vendor.lng);
         if (!isValidCoordinate(vLat, vLng)) return null;
-        // Calculate from the selected delivery point instead of trusting a
-        // possibly stale RPC distance or treating a missing distance as 0.
-        const dKm = calculateHaversineDistanceKm(deliveryLoc.lat, deliveryLoc.lng, vLat, vLng);
+        const dKm = Number(vendor.distance_km);
+        if (!Number.isFinite(dKm) || dKm < 0) return null;
         const featuredProduct = featuredProductBySeller.get(vendor.id);
         // The RPC's `category` is derived from a product row and can be stale or
         // miscategorized. Seller.business_type is the authoritative shop category.
@@ -241,6 +239,10 @@ function Home() {
           ...APPROVED_STORE,
           id: vendor.id,
           name: vendor.shop_name || APPROVED_STORE.name,
+          // Keep the server's coordinates and distance together.
+          lat: vLat,
+          lng: vLng,
+          isOpen: vendor.is_open === true,
           tagline: vendor.business_type || "Approved local vendor",
           category: storeCategory,
           address:
@@ -252,13 +254,19 @@ function Home() {
             vendor.storefront_image_url ||
             getFallbackProductImage(vendor.shop_name, vendor.category || vendor.business_type),
           featuredProductName: demoFeature?.name || featuredProduct?.name,
-          distanceKm: Number(dKm.toFixed(1)),
+          isFallback: vendor.is_fallback === true,
+          fallbackZoneName: vendor.fallback_zone_name || vendor.zone_name,
+          // Keep full precision for cutoff/sorting; cards format to 1 decimal.
+          distanceKm: dKm,
           etaMin: Math.max(10, Math.round(dKm * 5 + 10)),
         };
       });
     const allStores = liveVendorStores
       .filter((store): store is NonNullable<typeof store> => store !== null)
-      .filter((store) => (store.distanceKm ?? Infinity) <= CUSTOMER_VISIBILITY_RADIUS_KM);
+      .filter((store) =>
+        store.isFallback === true ||
+        (store.distanceKm ?? Infinity) <= DEFAULT_SHOP_DISCOVERY_RADIUS_KM,
+      );
     const filteredList = allStores.filter((s) => {
       if (activeFilter && !isStoreInCategory(s.category, activeFilter, s.rating)) return false;
       if (
@@ -277,29 +285,7 @@ function Home() {
       return true;
     });
 
-    const mlRanked = rankShopsWithML(
-      filteredList.map((s) => ({
-        id: s.id,
-        name: s.name,
-        category: s.category,
-        lat: s.lat,
-        lng: s.lng,
-        rating: s.rating,
-        is_open: true,
-      })),
-      locLat,
-      locLng,
-      query,
-    );
-
-    const mlScoreById = new Map(mlRanked.map((r) => [r.id, r.total_ml_score]));
-
-    return filteredList.sort((a, b) => {
-      const scoreA = mlScoreById.get(a.id) ?? 50;
-      const scoreB = mlScoreById.get(b.id) ?? 50;
-      if (scoreB !== scoreA) return scoreB - scoreA;
-      return a.distanceKm - b.distanceKm;
-    });
+    return filteredList.sort((a, b) => a.distanceKm - b.distanceKm);
   }, [
     activeFilter,
     query,
@@ -376,6 +362,14 @@ function Home() {
   const displayCategoryName = useMemo(() => getCategoryDisplayName(cat), [cat]);
   const nearbyLoading =
     hasConfirmedLocation && (approvedVendors.isLoading || approvedProducts.isLoading);
+  const homeFallbackZoneNames = Array.from(
+    new Set(
+      (approvedVendors.data?.shops ?? [])
+        .filter((vendor: any) => vendor.is_fallback)
+        .map((vendor: any) => vendor.fallback_zone_name || vendor.zone_name)
+        .filter(Boolean),
+    ),
+  ) as string[];
 
   return (
     <AppShell>
@@ -384,7 +378,7 @@ function Home() {
 
       {/* Image-led category navigation sits directly beneath the Orchid hero. */}
       <LiquidGlassCategorySelector
-        nearbyShops={approvedVendors.data ?? []}
+        nearbyShops={approvedVendors.data?.shops ?? []}
         nearbyProducts={approvedProducts.data ?? []}
         isLoading={nearbyLoading}
         hasConfirmedLocation={hasConfirmedLocation}
@@ -397,13 +391,18 @@ function Home() {
 
       <LocalShoreOffers />
 
-      {/* Server-filtered nearby shops: always limited to the customer's 5 km radius. */}
+      {/* Server-filtered nearby shops with adjacent-zone fallback when sparse. */}
       <section id="shops-section" className="px-5 pb-8 md:px-8">
         <h2 className="mb-4 font-display text-xl font-bold text-foreground">
           {hasConfirmedLocation
-            ? `Shops within ${CUSTOMER_VISIBILITY_RADIUS_KM} km around you`
+            ? `Shops within ${approvedVendors.data?.effectiveRadiusKm ?? DEFAULT_SHOP_DISCOVERY_RADIUS_KM} km around you`
             : "Choose your location to see nearby shops"}
         </h2>
+        {homeFallbackZoneNames.length > 0 && (
+          <p className="-mt-2 mb-4 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-950">
+            Expanded search to nearby zones · {homeFallbackZoneNames.join(", ")}
+          </p>
+        )}
         {hasConfirmedLocation && !deliveryLoc?.isGPS && (
           <p className="-mt-2 mb-4 text-xs text-muted-foreground">
             Around {deliveryLoc?.area || deliveryLoc?.label || "your selected location"} · based on your selected location.
@@ -424,6 +423,8 @@ function Home() {
                 featuredProductName: store.featuredProductName,
                 rating: store.rating,
                 distanceKm: store.distanceKm,
+                isFallback: store.isFallback,
+                fallbackZoneName: store.fallbackZoneName,
                 isOpen: store.isOpen,
                 address: store.address,
                 description: store.tagline,
@@ -432,7 +433,13 @@ function Home() {
               className="h-full max-w-none"
             />
           ))}
-          {!nearbyLoading && filtered.length === 0 && (
+          {approvedVendors.isError && (
+            <div className="col-span-full rounded-xl border border-amber-300 bg-amber-50 p-4 text-amber-950" role="alert">
+              <p>We couldn’t load nearby shops. Please try again.</p>
+              <button className="mt-2 rounded-lg px-3 py-2 font-semibold underline focus-visible:outline focus-visible:outline-2" onClick={() => void approvedVendors.refetch()}>Retry shops</button>
+            </div>
+          )}
+          {!nearbyLoading && !approvedVendors.isError && filtered.length === 0 && (
             <div className="col-span-full">
               <EmptyState />
             </div>

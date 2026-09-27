@@ -39,6 +39,7 @@ import { toast } from "sonner";
 import { AnimatePresence, m } from "motion/react";
 import type { Order } from "@/lib/orders-store";
 import { createRazorpayOrderFn, verifyRazorpayPaymentFn } from "@/lib/razorpay.functions";
+import { useShopCoordinates } from "@/hooks/use-shop-coordinates";
 
 function loadRazorpaySDK(): Promise<boolean> {
   return new Promise((resolve) => {
@@ -138,8 +139,12 @@ function CheckoutPage() {
           ...APPROVED_STORE,
           id: cart.storeId,
           name: cart.storeName ?? "Local Shore shop",
+          lat: NaN,
+          lng: NaN,
         }
       : null);
+  const shopCoordinates = useShopCoordinates(cart.storeId);
+  const shopPin = shopCoordinates.data ?? knownStore;
   const navigate = useNavigate();
   const reverseGeocodeFn = useServerFn(reverseGeocode);
 
@@ -215,28 +220,19 @@ function CheckoutPage() {
   const [paymentStatusText, setPaymentStatusText] = useState("");
 
   const computedDistanceKm =
-    store &&
-    typeof store.lat === "number" &&
-    typeof store.lng === "number" &&
-    isValidCoordinate(store.lat, store.lng) &&
+    shopPin &&
+    isValidCoordinate(shopPin.lat, shopPin.lng) &&
     pinCoords &&
     isValidCoordinate(pinCoords.lat, pinCoords.lng)
-      ? Math.max(
-          0.1,
-          Math.round(haversineDistanceKm(store.lat, store.lng, pinCoords.lat, pinCoords.lng) * 10) /
-            10,
-        )
-      : (store?.distanceKm ?? 1.2);
+      ? haversineDistanceKm(shopPin.lat, shopPin.lng, pinCoords.lat, pinCoords.lng)
+      : NaN;
 
   const computedEtaMin =
-    store &&
-    typeof store.lat === "number" &&
-    typeof store.lng === "number" &&
-    isValidCoordinate(store.lat, store.lng) &&
+    Number.isFinite(computedDistanceKm) &&
     pinCoords &&
     isValidCoordinate(pinCoords.lat, pinCoords.lng)
       ? Math.max(10, Math.round(computedDistanceKm * 5 + 10))
-      : (store?.etaMin ?? 25);
+      : NaN;
 
   // States for payment gateway flow
   const [paymentStep, setPaymentStep] = useState<"idle" | "authorizing">("idle");
@@ -576,7 +572,7 @@ function CheckoutPage() {
   }, [showOrderSuccess, placedOrder, navigate]);
 
   const rawDeliveryFee =
-    totals.subtotal > 0 ? (store ? Math.round(20 + computedDistanceKm * 6) : 25) : 0;
+    totals.subtotal > 0 ? (Number.isFinite(computedDistanceKm) ? Math.round(20 + computedDistanceKm * 6) : 25) : 0;
 
   const billBreakdown = calculateBillBreakdown({
     subtotal: totals.subtotal,
@@ -620,13 +616,13 @@ function CheckoutPage() {
       ? `Current location · ${currentAddressLine}`
       : currentAddressLine;
   const locationSignature = deliveryLocationSignature(selectedAddressLine, pinCoords);
-  const canPlace = isConfirmedDeliveryLocation(
+  const pinConfirmed = isConfirmedDeliveryLocation(
     selectedAddressLine,
     pinCoords,
     !!pinCoords,
     confirmedLocation,
   );
-  const pinConfirmed = canPlace;
+  const canPlace = pinConfirmed && Number.isFinite(computedDistanceKm);
 
   const applyCoupon = async (codeToApply?: string) => {
     const code = (codeToApply || couponCode).trim().toUpperCase();
@@ -727,6 +723,7 @@ function CheckoutPage() {
           key: keyToUse,
           amount: rzpOrder.amount_paise,
           currency: rzpOrder.currency || "INR",
+          order_id: rzpOrder.razorpay_order_id,
           name: "LocalShore Marketplace",
           description: `Order from ${store.name}`,
           handler: async function (response: any) {
@@ -805,9 +802,7 @@ function CheckoutPage() {
           theme: { color: "#2A6F77" },
         };
 
-        if (rzpOrder.razorpay_order_id && !rzpOrder.razorpay_order_id.startsWith("order_test_")) {
-          options.order_id = rzpOrder.razorpay_order_id;
-        }
+        if (!rzpOrder.razorpay_order_id) throw new Error("Payment order is missing. Please try again.");
 
         const razorpayInstance = new (window as any).Razorpay(options);
         razorpayInstance.on("payment.failed", function (response: any) {
@@ -818,8 +813,7 @@ function CheckoutPage() {
         });
 
         razorpayInstance.open();
-        setIsPlacing(false);
-        setPaymentStep("idle");
+        // Keep the checkout locked until the payment succeeds, fails or closes.
       } else {
         toast.error("Failed to load Razorpay payment SDK.");
         setIsPlacing(false);
@@ -1328,10 +1322,12 @@ function CheckoutPage() {
         <div className="mb-2 flex items-center justify-between text-xs text-muted-foreground font-sans">
           <span className="font-bold text-foreground">{store?.name}</span>
           <span>
-            {computedDistanceKm.toFixed(1)} km · ~{computedEtaMin} min
+            {Number.isFinite(computedDistanceKm) ? `${computedDistanceKm.toFixed(1)} km straight-line · ~${computedEtaMin} min` : "Waiting for valid shop and delivery pins"}
           </span>
         </div>
         <Row label={`Item subtotal (${totals.itemCount})`} value={`₹${totals.subtotal}`} />
+        {shopCoordinates.isError && <p role="alert" className="text-sm text-red-700">Shop location could not be loaded. <button type="button" className="underline" onClick={() => void shopCoordinates.refetch()}>Retry shop location</button></p>}
+        {shopCoordinates.isSuccess && !shopPin && <p role="alert" className="text-sm text-amber-800">This shop needs a valid map pin before delivery can be confirmed.</p>}
         <Row label="Govt. Taxes & GST (5% incl.)" value={`₹${billBreakdown.gstAmount}`} />
         <Row
           label="Delivery fee"

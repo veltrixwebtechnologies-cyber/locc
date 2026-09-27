@@ -9,7 +9,7 @@ import {
   Store as StoreIcon,
   ChevronRight,
 } from "lucide-react";
-import { AppShell } from "@/components/app-shell";
+import { AppShell, requestLocationModal } from "@/components/app-shell";
 import { Button } from "@/components/ui/button";
 import { useMLTracker } from "@/hooks/use-ml-tracker";
 import { parseQueryIntent } from "@/lib/ml-shop-ranker";
@@ -28,6 +28,7 @@ import { useDeliveryLocation } from "@/lib/location-store";
 import type { MerchandisingProduct } from "@/lib/merchandising";
 import { RelatedProductsSection } from "@/components/related-products-section";
 import { productsByStore, stores } from "@/lib/mock-data";
+import { DEFAULT_SHOP_DISCOVERY_RADIUS_KM, hasConfirmedCoordinates } from "@/lib/location-visibility";
 
 export const Route = createFileRoute("/search")({
   component: SwiggySearchPage,
@@ -55,7 +56,7 @@ function SwiggySearchPage() {
   const navigate = useNavigate();
   const filterState = useMemo(() => parseFilterParams(rawSearch), [rawSearch]);
   const [deliveryLocation] = useDeliveryLocation();
-  const hasConfirmedLocation = deliveryLocation !== null;
+  const hasConfirmedLocation = hasConfirmedCoordinates(deliveryLocation);
 
   const [query, setQuery] = useState(filterState.query || "");
   const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
@@ -67,11 +68,12 @@ function SwiggySearchPage() {
   );
 
   // Shop Discovery Engine (Local Shops matching search/filters)
-  const { data: shopData, isLoading: shopsLoading } = useShopDiscovery(filterState);
+  const { data: shopData, isLoading: shopsLoading, isError: shopsError, refetch: retryShops } = useShopDiscovery(filterState);
   const shops = shopData?.shops ?? [];
+  const shopRadiusKm = shopData?.effectiveRadiusKm ?? filterState.maxDistanceKm ?? DEFAULT_SHOP_DISCOVERY_RADIUS_KM;
 
   // Product Filters Engine
-  const { products, total, loading, facets } = useProductFilters(filterState);
+  const { products, total, loading, facets, error: productsError, refetch: retryProducts } = useProductFilters(filterState);
 
   const intent = parseQueryIntent(query);
 
@@ -370,13 +372,15 @@ function SwiggySearchPage() {
                   <div className="mt-1 h-0.5 w-10 bg-primary rounded-full" />
                   {deliveryLocation && (
                     <p className="mt-1 text-[11px] font-medium text-muted-foreground">
-                      Within 5 km of {deliveryLocation.area || deliveryLocation.label}
+                      Within {shopRadiusKm} km of {deliveryLocation.area || deliveryLocation.label}
                     </p>
                   )}
                 </div>
 
                 <Link
-                  to="/best-shops"
+                  to="/"
+                  search={{ category: undefined, q: undefined }}
+                  hash="shops-section"
                   className="text-xs font-extrabold text-primary hover:underline flex items-center gap-1 bg-primary/10 px-3 py-1.5 rounded-full border border-primary/20 transition-all"
                 >
                   <span>View All Shops</span>
@@ -384,7 +388,24 @@ function SwiggySearchPage() {
                 </Link>
               </div>
 
-              {shopsLoading ? (
+              {shopData?.legacyMode && (filterState.maxDistanceKm ?? DEFAULT_SHOP_DISCOVERY_RADIUS_KM) > shopRadiusKm && (
+                <p className="text-sm text-muted-foreground" role="status">Showing shops within {shopRadiusKm} km. Wider-area search is temporarily unavailable.</p>
+              )}
+              {shopData?.expanded && (
+                <div className="rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-950" role="status">
+                  Expanded search to nearby zones
+                  {shopData.fallbackZoneNames.length > 0
+                    ? ` · ${shopData.fallbackZoneNames.join(", ")}`
+                    : ""}
+                </div>
+              )}
+
+              {!hasConfirmedLocation ? (
+                <div className="rounded-xl border border-primary/20 bg-primary/5 p-5 text-center" role="status">
+                  <p className="font-bold">Select your delivery location to find nearby shops</p>
+                  <button onClick={requestLocationModal} className="mt-3 rounded-lg bg-primary px-4 py-2 text-primary-foreground focus-visible:outline focus-visible:outline-2">Set location</button>
+                </div>
+              ) : shopsLoading ? (
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
                   {[1, 2, 3].map((i) => (
                     <div
@@ -392,6 +413,11 @@ function SwiggySearchPage() {
                       className="h-64 w-full rounded-3xl border hairline bg-muted animate-pulse"
                     />
                   ))}
+                </div>
+              ) : shopsError ? (
+                <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-amber-950" role="alert">
+                  <p>We couldn’t load nearby shops. Please try again.</p>
+                  <button className="mt-2 rounded-lg px-3 py-2 font-semibold underline focus-visible:outline focus-visible:outline-2" onClick={() => void retryShops()}>Retry shops</button>
                 </div>
               ) : shops.length === 0 ? (
                 <div className="bg-card border hairline rounded-2xl p-6 text-center">
@@ -448,6 +474,11 @@ function SwiggySearchPage() {
                     subtext="Applying category attributes & verified shop filters"
                     size="md"
                   />
+                </div>
+              ) : productsError ? (
+                <div role="alert" className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-amber-950">
+                  <p>We couldn’t load products. Your filters have been kept.</p>
+                  <button className="mt-2 rounded-lg px-3 py-2 font-semibold underline" onClick={() => void retryProducts()}>Retry products</button>
                 </div>
               ) : products.length === 0 ? (
                 <div className="text-center py-12 bg-card border hairline rounded-2xl p-8">

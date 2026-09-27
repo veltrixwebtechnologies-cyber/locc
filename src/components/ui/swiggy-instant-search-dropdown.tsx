@@ -44,7 +44,7 @@ export function SwiggyInstantSearchDropdown({
 }: SwiggyInstantSearchDropdownProps) {
   const navigate = useNavigate();
 
-  const { results, isLoading } = useLiveSearchResults(query);
+  const { results, isLoading, error, needsLocation, retry } = useLiveSearchResults(query);
 
   const handleResultClick = (item: SearchResultItem) => {
     if (onSelectResult) onSelectResult();
@@ -54,10 +54,10 @@ export function SwiggyInstantSearchDropdown({
       void navigate({
         to: "/store/$storeId",
         params: { storeId },
-        search: { sq: query, category: undefined },
+        search: { sq: undefined, category: undefined },
       });
     } else if (targetUrl.startsWith("/product/")) {
-      const productId = item.id.replace(/^prod-/, "") || targetUrl.replace("/product/", "");
+      const productId = targetUrl.slice("/product/".length).split("?")[0];
       void navigate({ to: "/product/$productId", params: { productId }, search: { sq: query } });
     } else {
       void navigate({ to: item.url as any });
@@ -71,22 +71,20 @@ export function SwiggyInstantSearchDropdown({
       >
         <div className="flex items-center justify-between pb-2 mb-2 border-b border-border/50">
           <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-            Popular Searches
+            Search nearby shops and products
           </span>
         </div>
         <div className="space-y-1">
           {[
-            { label: "Haribhavanam", cat: "Restaurant" },
-            { label: "Chicken Harissa", cat: "Dish" },
-            { label: "Paneer Hariyali", cat: "Dish" },
-            { label: "Flour & Masala Mill", cat: "Shop" },
-            { label: "Fresh Bakery & Puffs", cat: "Shop" },
+            { label: "Grocery", cat: "Category" },
+            { label: "Bakery", cat: "Category" },
+            { label: "Pharmacy", cat: "Category" },
           ].map((item) => (
             <button
               key={item.label}
               type="button"
-              onMouseDown={(e) => {
-                e.preventDefault();
+              onClick={() => {
+                onSelectResult?.();
                 void navigate({ to: "/search", search: { q: item.label } });
               }}
               className="flex items-center justify-between w-full px-3 py-2 text-left rounded-xl hover:bg-muted/80 transition-colors text-sm group"
@@ -101,6 +99,22 @@ export function SwiggyInstantSearchDropdown({
             </button>
           ))}
         </div>
+      </div>
+    );
+  }
+
+  if (needsLocation || error) {
+    return (
+      <div className={`rounded-2xl border bg-background p-5 shadow-xl ${className}`} role="status">
+        <p className="text-sm">{needsLocation
+          ? "Select your delivery location to search nearby shops."
+          : "Search could not load. Please try again."}</p>
+        <button type="button" className="mt-2 text-sm font-semibold text-primary"
+          onClick={() => needsLocation
+            ? window.dispatchEvent(new CustomEvent("localshore_open_location_modal"))
+            : void retry()}>
+          {needsLocation ? "Set location" : "Retry search"}
+        </button>
       </div>
     );
   }
@@ -125,7 +139,7 @@ export function SwiggyInstantSearchDropdown({
         <ShoppingBag className="w-10 h-10 mx-auto mb-2 text-muted-foreground/50 stroke-1" />
         <p className="text-sm font-semibold text-foreground">No matches found for "{query}"</p>
         <p className="text-xs text-muted-foreground mt-1">
-          Try searching for restaurants like "Haribhavanam" or dishes like "Harissa"
+          Try part of the shop name, or check your selected delivery location.
         </p>
       </div>
     );
@@ -240,12 +254,10 @@ function SearchResultRow({
   onClick: () => void;
 }) {
   return (
-    <div
-      onMouseDown={(e) => {
-        e.preventDefault();
-        onClick();
-      }}
-      className="flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-muted/80 active:bg-muted transition-colors cursor-pointer group"
+    <button
+      type="button"
+      onClick={onClick}
+      className="flex w-full text-left items-center gap-3 px-3 py-2 rounded-xl hover:bg-muted/80 active:bg-muted transition-colors cursor-pointer group"
     >
       <div className="relative w-10 h-10 rounded-xl overflow-hidden bg-muted shrink-0 border border-border/40 shadow-xs">
         <img
@@ -253,8 +265,8 @@ function SearchResultRow({
           alt={item.title}
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
           onError={(e) => {
-            (e.target as HTMLImageElement).src =
-              "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=150&q=75";
+            e.currentTarget.onerror = null;
+            e.currentTarget.src = "/placeholder.svg";
           }}
         />
       </div>
@@ -270,6 +282,6 @@ function SearchResultRow({
       </div>
 
       <ChevronRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all" />
-    </div>
+    </button>
   );
 }

@@ -27,6 +27,7 @@ import {
 } from "lucide-react";
 import { m, AnimatePresence } from "motion/react";
 import { CartRelatedProducts } from "@/components/related-products-section";
+import { useShopCoordinates } from "@/hooks/use-shop-coordinates";
 import { ProductThumb } from "@/components/product-thumb";
 
 const cartCatalog = Object.values(productsByStore).flat();
@@ -57,40 +58,33 @@ function CartPage() {
   const store =
     knownStore ??
     (cart.storeId && cart.lines.length > 0
-      ? { ...APPROVED_STORE, id: cart.storeId, name: cart.storeName ?? "Local Shore shop" }
+      ? { ...APPROVED_STORE, id: cart.storeId, name: cart.storeName ?? "Local Shore shop", lat: NaN, lng: NaN }
       : null);
 
+  const shopCoordinates = useShopCoordinates(cart.storeId);
+  const shopPin = shopCoordinates.data ?? knownStore;
+
   const computedDistanceKm =
-    store &&
-    typeof store.lat === "number" &&
-    typeof store.lng === "number" &&
-    isValidCoordinate(store.lat, store.lng) &&
+    shopPin &&
+    isValidCoordinate(shopPin.lat, shopPin.lng) &&
     deliveryLoc &&
     typeof deliveryLoc.lat === "number" &&
     typeof deliveryLoc.lng === "number" &&
     isValidCoordinate(deliveryLoc.lat, deliveryLoc.lng)
-      ? Math.max(
-          0.1,
-          Math.round(
-            haversineDistanceKm(store.lat, store.lng, deliveryLoc!.lat, deliveryLoc!.lng) * 10,
-          ) / 10,
-        )
-      : (store?.distanceKm ?? 1.2);
+      ? haversineDistanceKm(shopPin.lat, shopPin.lng, deliveryLoc.lat, deliveryLoc.lng)
+      : NaN;
 
   const computedEtaMin =
-    store &&
-    typeof store.lat === "number" &&
-    typeof store.lng === "number" &&
-    isValidCoordinate(store.lat, store.lng) &&
+    Number.isFinite(computedDistanceKm) &&
     deliveryLoc &&
     typeof deliveryLoc.lat === "number" &&
     typeof deliveryLoc.lng === "number" &&
     isValidCoordinate(deliveryLoc.lat, deliveryLoc.lng)
       ? Math.max(10, Math.round(computedDistanceKm * 5 + 10))
-      : (store?.etaMin ?? 25);
+      : NaN;
 
   const rawDeliveryFee =
-    totals.subtotal > 0 ? (store ? Math.round(20 + computedDistanceKm * 6) : 25) : 0;
+    totals.subtotal > 0 ? (Number.isFinite(computedDistanceKm) ? Math.round(20 + computedDistanceKm * 6) : 25) : 0;
   const freeDeliveryTarget = 500;
   const freeDeliveryRemaining = Math.max(0, freeDeliveryTarget - totals.subtotal);
   const freeDeliveryProgress = Math.min(
@@ -151,7 +145,7 @@ function CartPage() {
             Delivering to {deliveryLoc?.area || deliveryLoc?.label || "Select your location"}
           </span>
           <span className="inline-flex shrink-0 items-center gap-1.5">
-            <Zap className="h-3.5 w-3.5 text-primary" />~{computedEtaMin} min delivery
+            <Zap className="h-3.5 w-3.5 text-primary" />{Number.isFinite(computedEtaMin) ? `~${computedEtaMin} min estimated delivery` : "Set location for delivery estimate"}
           </span>
           <span className="inline-flex shrink-0 items-center gap-1.5">
             <ShieldCheck className="h-3.5 w-3.5 text-primary" />
@@ -201,12 +195,12 @@ function CartPage() {
                       <p className="text-[11px] font-medium text-muted-foreground">Ordering from</p>
                       <p className="truncate font-bold text-foreground">{store.name}</p>
                       <p className="text-xs text-muted-foreground">
-                        {computedDistanceKm.toFixed(1)} km · est. {computedEtaMin} min
+                        {Number.isFinite(computedDistanceKm) ? `${computedDistanceKm.toFixed(1)} km straight-line · est. ${computedEtaMin} min` : "Shop distance unavailable until both pins are known"}
                       </p>
                     </div>
                     <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-emerald-50 border border-emerald-200 px-2.5 py-1 text-[11px] font-semibold text-emerald-700">
                       <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                      Open now
+                      Check shop availability
                     </span>
                     <button className="ml-1 hidden text-muted-foreground hover:text-foreground sm:block">
                       <ArrowRight className="h-4 w-4" />

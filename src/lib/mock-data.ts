@@ -1575,7 +1575,7 @@ const categoryCoverageSeeds: Array<{
   names: [string, string, string];
   tagline: string;
   imageUrl: string;
-}> = [
+}> = ([
   [
     "fruits_veg",
     ["Pappampatti Fresh Farm", "Green Basket Fruits", "Morning Harvest Veggies"],
@@ -1618,7 +1618,7 @@ const categoryCoverageSeeds: Array<{
     "Filter coffee, tea, juices and quick bites",
     "photo-1501339847302-ac426a4a7cbb",
   ],
-].map(([category, names, tagline, imageId]) => ({
+] satisfies Array<[StoreCategory, [string, string, string], string, string]>).map(([category, names, tagline, imageId]) => ({
   category: category as StoreCategory,
   names: names as [string, string, string],
   tagline,

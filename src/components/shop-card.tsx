@@ -37,6 +37,8 @@ export interface ShopCardData {
   address?: string;
   city?: string;
   description?: string;
+  isFallback?: boolean;
+  fallbackZoneName?: string;
 }
 
 interface ShopCardProps {
@@ -142,8 +144,12 @@ export function ShopCard({
         <div className="absolute bottom-2.5 left-3 right-3 z-10 flex items-center justify-between text-white text-xs font-bold">
           <div className="flex items-center gap-1.5 bg-black/50 backdrop-blur-md px-2.5 py-1 rounded-full border border-white/20">
             <MapPin className="h-3 w-3 text-amber-400" />
-            <span>
-              {shop.distanceKm !== undefined ? `${shop.distanceKm.toFixed(1)} km away` : "Local"}
+            <span title="Straight-line distance from your selected delivery pin to the shop pin; road distance may be longer.">
+              {typeof shop.distanceKm === "number" && Number.isFinite(shop.distanceKm) && shop.distanceKm >= 0
+                ? shop.distanceKm < 0.1
+                  ? "<0.1 km away"
+                  : `${shop.distanceKm.toFixed(1)} km away`
+                : "Distance unavailable"}
             </span>
           </div>
 
@@ -169,6 +175,11 @@ export function ShopCard({
         <div>
           {/* Trust & Verification Badges Row */}
           <div className="flex flex-wrap items-center gap-1.5 mb-1.5">
+            {shop.isFallback && (
+              <Badge className="bg-amber-100 text-amber-900 border-amber-300 text-[10px] font-extrabold px-2 py-0.5 rounded-md">
+                Nearby zone{shop.fallbackZoneName ? ` · ${shop.fallbackZoneName}` : ""}
+              </Badge>
+            )}
             {shop.isVerified && (
               <Badge className="bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/30 text-[10px] font-extrabold px-2 py-0.5 rounded-md flex items-center gap-1">
                 <ShieldCheck className="h-3 w-3 text-emerald-600" />
@@ -190,7 +201,7 @@ export function ShopCard({
           <Link
             to="/store/$storeId"
             params={{ storeId: shop.id }}
-            search={{ sq: searchQuery, category: shop.category || undefined }}
+            search={{ sq: undefined, category: shop.category || undefined }}
             className="group/title block"
           >
             <h3 className="text-lg max-[639px]:text-base font-extrabold text-foreground group-hover/title:text-primary transition-colors line-clamp-1 leading-snug">
@@ -266,7 +277,7 @@ export function ShopCard({
         <Link
           to="/store/$storeId"
           params={{ storeId: shop.id }}
-          search={{ sq: searchQuery, category: shop.category || undefined }}
+          search={{ sq: undefined, category: shop.category || undefined }}
           className="w-full rounded-2xl bg-primary hover:bg-primary/90 text-primary-foreground py-2.5 max-[639px]:py-2 px-4 text-xs font-extrabold flex items-center justify-center gap-2 shadow-md hover:shadow-lg active:scale-[0.98] transition-all duration-200"
         >
           <StoreIcon className="h-3.5 w-3.5" />

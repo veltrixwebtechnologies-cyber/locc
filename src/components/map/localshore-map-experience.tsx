@@ -188,13 +188,13 @@ export function LocalShoreMapExperience({
     const loc: MapLocation = {
       lat: result.lat,
       lng: result.lng,
-      label: result.placeName.split(",")[0],
+      label: String(result.placeName || result.label || "Selected location").split(",")[0],
     };
     setUserLocation(loc);
     setActiveDeliveryLocation({
       id: `map-search-${Date.now()}`,
-      label: result.placeName || result.label || loc.label,
-      area: loc.label,
+      label: result.placeName || result.label || loc.label || "Selected location",
+      area: loc.label || "Selected location",
       city: (result.placeName || "").split(",").slice(1, 3).join(", ").trim(),
       lat: loc.lat,
       lng: loc.lng,

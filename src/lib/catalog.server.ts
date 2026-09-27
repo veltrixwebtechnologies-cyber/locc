@@ -11,6 +11,9 @@
 import { createServerFn } from "@tanstack/react-start";
 import { redisGet, redisSet, redisGetVersion, hashFilters, redisRateLimit } from "@/lib/redis.server";
 import { isTestEntity } from "@/lib/map-service/store-engine";
+import { isValidCoordinate } from "./geo";
+import { discoverShops } from "./shop-discovery";
+import { catalogCategoryKey } from "./shop-categories";
 
 export type SortOrder =
   | "popularity"
@@ -87,13 +90,16 @@ export const fetchPublicShopsServerFn = createServerFn({ method: "POST" })
   .inputValidator((data: FetchShopsInput) => data || {})
   .handler(async ({ data }) => {
     const category = data.category || "all";
-    const userLat = Number(data.lat) || 11.0285;
-    const userLng = Number(data.lng) || 76.9258;
-    const locBucket = `loc:${userLat.toFixed(2)}_${userLng.toFixed(2)}`;
+    if (typeof data.lat !== "number" || typeof data.lng !== "number" || !isValidCoordinate(data.lat, data.lng)) {
+      throw new Error("Select your delivery location before searching shops");
+    }
+    const userLat = data.lat;
+    const userLng = data.lng;
+    const locBucket = `loc-v2:${userLat}_${userLng}`;
     const sort = data.sort || "relevance";
     const page = Math.max(1, data.page || 1);
     const limit = Math.max(1, Math.min(100, data.limit || 20));
-    const filterHash = hashFilters(data.filters || {});
+    const filterHash = hashFilters({ ...data.filters, query: data.query });
 
     // Read current catalog version namespace
     const shopsVer = await redisGetVersion("version:shops");
@@ -119,9 +125,10 @@ export const fetchPublicShopsServerFn = createServerFn({ method: "POST" })
     let shops: any[] = [];
 
     try {
-      const { data: vendors } = await (supabaseAdmin as any)
-        .from("approved_vendor_catalog")
-        .select("id, shop_name, business_type, city, state, address_line1, category, lat, lng");
+      const discovery = await discoverShops((name, args) => (supabaseAdmin as any).rpc(name, args), {
+        lat: userLat, lng: userLng, category: catalogCategoryKey(category), query: data.query || null, radiusKm: 7,
+      });
+      const vendors = discovery.shops;
 
       shops = (vendors ?? [])
         .filter((v: any) => !isTestEntity(v.shop_name))
@@ -132,12 +139,13 @@ export const fetchPublicShopsServerFn = createServerFn({ method: "POST" })
           category: v.category || "grocery",
           address: [v.address_line1, v.city, v.state].filter(Boolean).join(", "),
           imageUrl: v.storefront_image_url || "https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=300&q=75",
-          lat: Number(v.lat) || userLat,
-          lng: Number(v.lng) || userLng,
-          rating: 4.8,
-          isOpen: true,
-          distanceKm: 1.2,
-          etaMin: 20,
+          lat: Number(v.lat),
+          lng: Number(v.lng),
+          rating: 0,
+          isOpen: v.is_open === true,
+          distanceKm: v.distance_km,
+          isFallback: v.is_fallback,
+          zoneName: v.zone_name,
         }));
 
       // Apply Sort Order in Server Function
@@ -154,6 +162,7 @@ export const fetchPublicShopsServerFn = createServerFn({ method: "POST" })
       shops = shops.slice(start, start + limit);
     } catch (err) {
       console.error("[Catalog Server] Error fetching vendors from Supabase:", err);
+      throw new Error("Unable to load nearby shops. Please try again.");
     }
 
     // 3. Populate Redis Cache (TTL: 180s = 3 mins)
