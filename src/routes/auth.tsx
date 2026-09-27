@@ -572,14 +572,15 @@ function AuthPage() {
           <Link
             to="/"
             search={{ category: undefined, q: undefined }}
-            className="inline-flex items-center gap-3.5 group"
+            className="inline-flex items-center group"
           >
-            <span className="grid h-11 w-11 place-items-center rounded-2xl bg-white/15 backdrop-blur-md border border-white/20 text-white font-black text-base shadow-md group-hover:scale-105 transition-transform">
-              LS
-            </span>
-            <span className="font-display font-extrabold text-2xl xl:text-3xl tracking-tight text-white">
-              LocalShore
-            </span>
+            <img
+              src="/assets/localshore-logo.jpeg"
+              alt="LocalShore"
+              width={260}
+              height={138}
+              className="h-14 w-[245px] rounded-xl bg-white object-contain px-2 py-1 shadow-md transition-transform group-hover:scale-[1.02]"
+            />
           </Link>
         </div>
 
@@ -739,12 +740,15 @@ function AuthPage() {
           <Link
             to="/"
             search={{ category: undefined, q: undefined }}
-            className="lg:hidden inline-flex items-center gap-2"
+            className="lg:hidden inline-flex items-center"
           >
-            <span className="grid h-9 w-9 place-items-center rounded-xl bg-[#981495] text-white font-black text-xs shadow-sm">
-              LS
-            </span>
-            <span className="font-black text-xl tracking-tight text-slate-900">LocalShore</span>
+            <img
+              src="/assets/localshore-logo.jpeg"
+              alt="LocalShore"
+              width={210}
+              height={112}
+              className="h-11 w-[190px] object-contain object-left"
+            />
           </Link>
 
           {/* Security Pill */}
