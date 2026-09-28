@@ -385,14 +385,18 @@ function Home() {
       />
 
       {/* Existing promotional ads restored below the coded reference-style front page. */}
-      <PromoCarousel />
-      <SwiggyFeaturedBanner />
-      <PopularBrandsCarousel />
+      <div className="[content-visibility:auto] [contain-intrinsic-size:0_700px]">
+        <PromoCarousel />
+        <SwiggyFeaturedBanner />
+        <PopularBrandsCarousel />
+      </div>
 
-      <LocalShoreOffers />
+      <div className="[content-visibility:auto] [contain-intrinsic-size:0_320px]">
+        <LocalShoreOffers />
+      </div>
 
       {/* Server-filtered nearby shops with adjacent-zone fallback when sparse. */}
-      <section id="shops-section" className="px-5 pb-8 md:px-8">
+      <section id="shops-section" className="[content-visibility:auto] [contain-intrinsic-size:0_900px] px-5 pb-8 md:px-8">
         <h2 className="mb-4 font-display text-xl font-bold text-foreground">
           {hasConfirmedLocation
             ? `Shops within ${approvedVendors.data?.effectiveRadiusKm ?? DEFAULT_SHOP_DISCOVERY_RADIUS_KM} km around you`
@@ -448,7 +452,7 @@ function Home() {
       </section>
 
       {/* Yellow sliding deals rail */}
-      <section aria-labelledby="highlighted-deals-heading" className="mt-2 pb-6 pt-2">
+      <section aria-labelledby="highlighted-deals-heading" className="[content-visibility:auto] [contain-intrinsic-size:0_180px] mt-2 pb-6 pt-2">
         <h2
           id="highlighted-deals-heading"
           className="px-5 pb-1 font-display text-lg font-bold text-foreground md:px-8 md:text-2xl"
@@ -459,7 +463,7 @@ function Home() {
       </section>
 
       {/* In-stock products from shops near the customer's selected point. */}
-      <section aria-labelledby="local-products-heading" className="px-5 pb-8 md:px-8">
+      <section aria-labelledby="local-products-heading" className="[content-visibility:auto] [contain-intrinsic-size:0_700px] px-5 pb-8 md:px-8">
         <div className="flex items-end justify-between gap-3">
           <div>
             <h2

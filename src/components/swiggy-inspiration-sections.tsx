@@ -11,7 +11,21 @@ function useSlowAutoScroll<T extends HTMLDivElement>(speed = 0.55) {
   const scrollRef = useRef<T>(null);
   const [isPaused, setIsPaused] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
+  const [canAnimate, setCanAnimate] = useState(false);
   const posRef = useRef(0);
+
+  useEffect(() => {
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const coarse = window.matchMedia("(pointer: coarse)");
+    const update = () => setCanAnimate(!reduced.matches && !coarse.matches);
+    update();
+    reduced.addEventListener?.("change", update);
+    coarse.addEventListener?.("change", update);
+    return () => {
+      reduced.removeEventListener?.("change", update);
+      coarse.removeEventListener?.("change", update);
+    };
+  }, []);
 
   useEffect(() => {
     const el = scrollRef.current;
@@ -30,7 +44,7 @@ function useSlowAutoScroll<T extends HTMLDivElement>(speed = 0.55) {
 
   useEffect(() => {
     const el = scrollRef.current;
-    if (!el || !isVisible || isPaused) return;
+    if (!el || !isVisible || isPaused || !canAnimate || document.visibilityState === "hidden") return;
 
     posRef.current = el.scrollLeft;
     let animId: number;
@@ -53,7 +67,7 @@ function useSlowAutoScroll<T extends HTMLDivElement>(speed = 0.55) {
 
     animId = requestAnimationFrame(step);
     return () => cancelAnimationFrame(animId);
-  }, [isPaused, isVisible, speed]);
+  }, [canAnimate, isPaused, isVisible, speed]);
 
   return {
     scrollRef,
@@ -115,7 +129,7 @@ export function SwiggyTopDealsStrip() {
   const { scrollRef, pauseHandlers } = useSlowAutoScroll<HTMLDivElement>(0.55);
 
   // Triple items array for infinite seamless looping
-  const tripleDeals = useMemo(() => [...deals, ...deals, ...deals], [deals]);
+  const tripleDeals = useMemo(() => [...deals, ...deals, ...deals], []);
 
   return (
     <div className="w-full overflow-hidden py-3" {...pauseHandlers}>
@@ -156,6 +170,8 @@ export function SwiggyTopDealsStrip() {
                 <img
                   src={deal.image}
                   alt={deal.title}
+                  loading={index < deals.length ? "eager" : "lazy"}
+                  decoding="async"
                   className="h-full w-full object-cover rounded-full border-4 border-white/30 shadow-md scale-110 group-hover:scale-115 transition-transform duration-500"
                 />
               </div>
@@ -232,7 +248,7 @@ export function SwiggyFeaturedBanner() {
   const { scrollRef, pauseHandlers } = useSlowAutoScroll<HTMLDivElement>(0.55);
 
   // Triple items array for infinite seamless looping
-  const tripleAdBanners = useMemo(() => [...adBanners, ...adBanners, ...adBanners], [adBanners]);
+  const tripleAdBanners = useMemo(() => [...adBanners, ...adBanners, ...adBanners], []);
 
   return (
     <div className="w-full overflow-hidden py-3" {...pauseHandlers}>
@@ -273,7 +289,13 @@ export function SwiggyFeaturedBanner() {
 
               {/* Right Image + Floating Merchant Logo Badge */}
               <div className="relative shrink-0 w-[130px] sm:w-[160px] h-[105px] sm:h-[120px] rounded-2xl overflow-hidden bg-slate-100 border border-white/80 shadow-xs">
-                <img src={ad.image} alt={ad.merchant} className="h-full w-full object-cover" />
+                <img
+                  src={ad.image}
+                  alt={ad.merchant}
+                  loading={index < adBanners.length ? "eager" : "lazy"}
+                  decoding="async"
+                  className="h-full w-full object-cover"
+                />
 
                 {/* Floating Rounded Merchant Logo Badge (Top Right) */}
                 <div className="absolute top-2 right-2 flex items-center gap-1 rounded-xl bg-white/95 backdrop-blur-xs px-2 py-1 shadow-md border border-slate-100">

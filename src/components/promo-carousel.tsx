@@ -214,8 +214,10 @@ export function PromoCarousel() {
         return [];
       }
     },
-    staleTime: 5_000,
-    refetchInterval: 5_000,
+    staleTime: 5 * 60_000,
+    // Banners are merchandising content, not live operational data. Polling
+    // every five seconds caused avoidable network work and homepage rerenders.
+    refetchInterval: 5 * 60_000,
   });
   const adminCampaigns: Campaign[] = (bannerQuery.data ?? []).map((banner, index) => {
     const palette = campaignPalette[index % campaignPalette.length];

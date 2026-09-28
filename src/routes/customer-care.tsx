@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { AppShell } from "@/components/app-shell";
 import {
   ChevronRight,
@@ -16,16 +16,24 @@ import { m } from "motion/react";
 import { SUPPORT_CATEGORIES, SUPPORT_FAQS, type SupportCategory } from "@/lib/platform-data";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useAuth } from "@/lib/auth-store";
 
 export const Route = createFileRoute("/customer-care")({ component: CustomerCarePage });
 
 function CustomerCarePage() {
+  const auth = useAuth();
+  const ticketRef = useRef<HTMLElement>(null);
   const [selectedCategory, setSelectedCategory] = useState<SupportCategory | null>(null);
   const [faqOpen, setFaqOpen] = useState<number | null>(null);
   const [ticketSubject, setTicketSubject] = useState("");
   const [ticketMessage, setTicketMessage] = useState("");
   const [showTicketForm, setShowTicketForm] = useState(false);
   const [submittingTicket, setSubmittingTicket] = useState(false);
+
+  const openTicketForm = () => {
+    setShowTicketForm(true);
+    window.setTimeout(() => ticketRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
+  };
 
   const filteredFaqs = SUPPORT_FAQS;
 
@@ -113,14 +121,18 @@ function CustomerCarePage() {
 
         {/* Support Categories Grid */}
         <section className="mt-6">
-          <h2 className="text-sm font-bold text-slate-900">What do you need help with?</h2>
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="text-sm font-bold text-slate-900">What do you need help with?</h2>
+            <span className="text-[11px] font-bold text-[#981495]">Step 1 of 3</span>
+          </div>
+          <p className="mt-1 text-xs text-slate-500">Choose the issue that best matches your problem. We’ll guide you to the next step.</p>
           <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
             {SUPPORT_CATEGORIES.map((cat) => (
               <button
                 key={cat.id}
                 onClick={() => {
                   setSelectedCategory(cat);
-                  setShowTicketForm(true);
+                  openTicketForm();
                 }}
                 className={`rounded-2xl border p-3.5 text-left transition hover:border-[#f0abfc] hover:shadow-xs ${
                   selectedCategory?.id === cat.id
@@ -167,13 +179,14 @@ function CustomerCarePage() {
           </section>
 
           {/* Ticket Form / Contact */}
-          <section className="lg:col-span-2">
+          <section ref={ticketRef} className="scroll-mt-24 lg:col-span-2">
             <div className="sticky top-28 space-y-4">
               {showTicketForm ? (
                 <div className="rounded-2xl border border-[#f0abfc] bg-white p-5 shadow-xs">
                   <div className="flex items-center gap-2">
                     <MessageSquare className="h-4 w-4 text-[#981495]" />
                     <h3 className="text-sm font-bold text-slate-900">Raise a Ticket</h3>
+                    <span className="ml-auto rounded-full bg-[var(--sand)] px-2 py-1 text-[10px] font-extrabold text-[#981495]">Step 2 of 3</span>
                   </div>
                   {selectedCategory && (
                     <p className="mt-1 text-[11px] text-slate-500">
@@ -207,15 +220,24 @@ function CustomerCarePage() {
                     <button
                       type="button"
                       onClick={() => void submitTicket()}
-                      disabled={submittingTicket}
+                      disabled={submittingTicket || !auth.id}
                       className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#981495] py-3 text-sm font-bold text-white shadow-md transition hover:bg-[#700b6e] disabled:cursor-wait disabled:opacity-60"
                     >
-                      <Send className="h-4 w-4" /> {submittingTicket ? "Sending…" : "Submit Ticket"}
+                      <Send className="h-4 w-4" /> {submittingTicket ? "Sending…" : auth.id ? "Submit Ticket" : "Sign in to submit"}
                     </button>
+                    {!auth.id && (
+                      <Link
+                        to="/auth"
+                        search={{ redirect: "/customer-care" }}
+                        className="mt-2 block text-center text-xs font-bold text-[#981495] hover:underline"
+                      >
+                        Sign in to continue with Customer Care
+                      </Link>
+                    )}
                   </div>
                   <div className="mt-3 flex items-center gap-2 text-[11px] text-slate-500">
                     <Clock className="h-3 w-3" />
-                    <span>Estimated response: within 2 hours</span>
+                    <span>Step 3: Submit and get a response within 2 hours</span>
                   </div>
                 </div>
               ) : (
@@ -226,7 +248,7 @@ function CustomerCarePage() {
                     Select a category or raise a ticket.
                   </p>
                   <button
-                    onClick={() => setShowTicketForm(true)}
+                    onClick={openTicketForm}
                     className="mt-4 rounded-xl bg-[#981495] px-5 py-2.5 text-xs font-bold text-white"
                   >
                     Contact Support

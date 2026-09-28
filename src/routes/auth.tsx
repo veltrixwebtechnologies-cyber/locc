@@ -92,7 +92,7 @@ function authFriendlyError(error: unknown, fallback: string) {
 function AuthPage() {
   const navigate = useNavigate();
   const { redirect, flow } = Route.useSearch();
-  const [mode, setMode] = useState<Mode>("phone");
+  const [mode, setMode] = useState<Mode>("password");
   const [intent, setIntent] = useState<AuthIntent>("login");
 
   // Phone flow states
@@ -178,6 +178,27 @@ function AuthPage() {
     });
     return () => subscription.unsubscribe();
   }, []);
+
+  // Supabase may return a recovery session through either a hash token or a
+  // PKCE `code`, depending on the project's auth configuration. Explicitly
+  // process the code path so password reset works in both configurations.
+  useEffect(() => {
+    if (flow !== "password-recovery" || typeof window === "undefined") return;
+
+    const code = new URLSearchParams(window.location.search).get("code");
+    if (!code) return;
+
+    void supabase.auth.exchangeCodeForSession(code).then(({ error: exchangeError }) => {
+      if (exchangeError) {
+        console.error("Password recovery session error", exchangeError);
+        setError("This password reset link is invalid or expired. Request a new link.");
+        return;
+      }
+      setPasswordRecovery(true);
+      setMode("password");
+      window.history.replaceState({}, document.title, `${window.location.pathname}?flow=password-recovery`);
+    });
+  }, [flow]);
 
   useEffect(() => {
     let active = true;
@@ -557,12 +578,12 @@ function AuthPage() {
   };
 
   return (
-    // STRICT TRUE FULL-VIEWPORT CONTAINER (No outer card, No outer bg-slate, 100vw x 100vh)
-    <div className="w-screen h-screen min-h-[100dvh] overflow-hidden bg-white flex flex-col lg:flex-row font-sans">
+    <div className="min-h-[100dvh] w-full overflow-y-auto bg-[#f5f7fc] bg-[radial-gradient(circle_at_8%_18%,rgba(152,20,149,0.08),transparent_28%),radial-gradient(circle_at_92%_10%,rgba(99,102,241,0.08),transparent_26%)] p-0 font-sans lg:flex lg:items-center lg:justify-center lg:overflow-hidden lg:p-8">
+      <div className="flex min-h-[100dvh] w-full max-w-[1280px] flex-col overflow-hidden bg-white shadow-none lg:h-[calc(100dvh-4rem)] lg:max-h-[860px] lg:min-h-0 lg:flex-row lg:rounded-[32px] lg:shadow-[0_24px_80px_rgba(52,20,82,0.16)]">
       {/* =================================================================== */}
       {/* LEFT PANEL: 48% Width Full Viewport Signature Orchid Brand Panel   */}
       {/* =================================================================== */}
-      <aside className="hidden lg:flex lg:w-[48%] xl:w-[46%] h-full bg-gradient-to-br from-[#730d70] via-[#5c095a] to-[#420440] text-white p-10 xl:p-14 flex-col justify-between relative overflow-y-auto shrink-0 select-none">
+      <aside className="hidden h-full min-h-0 shrink-0 select-none flex-col justify-between overflow-hidden bg-gradient-to-br from-[#730d70] via-[#5c095a] to-[#420440] p-8 text-white lg:flex lg:w-[48%] lg:rounded-l-[32px] xl:w-[46%] xl:p-10">
         {/* Soft radial orchid illumination behind content */}
         <div className="absolute top-1/4 left-1/3 -translate-x-1/2 -translate-y-1/2 w-[32rem] h-[32rem] bg-[#c026d3]/20 rounded-full blur-[100px] pointer-events-none" />
         <div className="absolute bottom-10 right-10 w-[24rem] h-[24rem] bg-[#981495]/25 rounded-full blur-[90px] pointer-events-none" />
@@ -579,13 +600,13 @@ function AuthPage() {
               alt="LocalShore"
               width={260}
               height={138}
-              className="h-14 w-[245px] rounded-xl bg-white object-contain px-2 py-1 shadow-md transition-transform group-hover:scale-[1.02]"
+              className="h-14 w-[245px] rounded-xl bg-white object-cover object-center shadow-md transition-transform group-hover:scale-[1.02]"
             />
           </Link>
         </div>
 
         {/* MIDDLE: Eyebrow + Powerful Headline + Benefits */}
-        <div className="relative z-10 my-auto py-8 space-y-7">
+        <div className="relative z-10 my-auto py-4 space-y-5">
           {/* Eyebrow */}
           <div>
             <span className="text-[11px] font-black uppercase tracking-widest text-[#f0abfc] bg-white/10 px-4 py-1.5 rounded-full border border-white/12 backdrop-blur-md inline-flex items-center gap-1.5">
@@ -609,10 +630,10 @@ function AuthPage() {
           </div>
 
           {/* 3 Premium Feature Rows */}
-          <div className="space-y-4.5 pt-2">
+          <div className="space-y-3 pt-1">
             {/* Feature 1 */}
             <div className="flex items-start gap-4 group">
-              <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-white/12 border border-white/20 text-fuchsia-200 shadow-md shadow-black/10 backdrop-blur-md group-hover:scale-105 transition-transform shadow-[0_0_20px_rgba(240,171,252,0.18)]">
+              <div className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-white/12 border border-white/20 text-fuchsia-200 shadow-md shadow-black/10 backdrop-blur-md group-hover:scale-105 transition-transform shadow-[0_0_20px_rgba(240,171,252,0.18)]">
                 <Store className="h-5.5 w-5.5 text-white" />
               </div>
               <div>
@@ -625,7 +646,7 @@ function AuthPage() {
 
             {/* Feature 2 */}
             <div className="flex items-start gap-4 group">
-              <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-white/12 border border-white/20 text-fuchsia-200 shadow-md shadow-black/10 backdrop-blur-md group-hover:scale-105 transition-transform shadow-[0_0_20px_rgba(240,171,252,0.18)]">
+              <div className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-white/12 border border-white/20 text-fuchsia-200 shadow-md shadow-black/10 backdrop-blur-md group-hover:scale-105 transition-transform shadow-[0_0_20px_rgba(240,171,252,0.18)]">
                 <Truck className="h-5.5 w-5.5 text-white" />
               </div>
               <div>
@@ -638,7 +659,7 @@ function AuthPage() {
 
             {/* Feature 3 */}
             <div className="flex items-start gap-4 group">
-              <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-white/12 border border-white/20 text-fuchsia-200 shadow-md shadow-black/10 backdrop-blur-md group-hover:scale-105 transition-transform shadow-[0_0_20px_rgba(240,171,252,0.18)]">
+              <div className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-white/12 border border-white/20 text-fuchsia-200 shadow-md shadow-black/10 backdrop-blur-md group-hover:scale-105 transition-transform shadow-[0_0_20px_rgba(240,171,252,0.18)]">
                 <ShieldCheck className="h-5.5 w-5.5 text-white" />
               </div>
               <div>
@@ -652,9 +673,9 @@ function AuthPage() {
         </div>
 
         {/* BOTTOM SECTION: Enlarged Local Shop Delivery Visual + Security Card */}
-        <div className="relative z-10 space-y-4 pt-4">
+        <div className="relative z-10 space-y-3 pt-2">
           {/* Visual Delivery Scene Canvas Card */}
-          <div className="relative w-full rounded-2xl bg-[#420440]/75 border border-white/15 p-5 overflow-hidden backdrop-blur-md shadow-2xl">
+          <div className="relative w-full rounded-2xl bg-[#420440]/75 border border-white/15 p-4 overflow-hidden backdrop-blur-md shadow-2xl">
             {/* Top Ribbon Banner */}
             <div className="flex items-center justify-between text-[11px] font-black uppercase tracking-wider text-fuchsia-200 pb-2.5 border-b border-white/10 mb-3.5">
               <span className="flex items-center gap-1.5 text-white">
@@ -673,7 +694,7 @@ function AuthPage() {
             </div>
 
             {/* Scene Canvas */}
-            <div className="relative h-24 w-full flex items-center justify-between px-3">
+            <div className="relative h-20 w-full flex items-center justify-between px-3">
               {/* Left Node: Local Shop */}
               <div className="relative z-10 flex flex-col items-center">
                 <div className="grid h-12 w-12 place-items-center rounded-2xl bg-gradient-to-tr from-[#981495] to-[#c026d3] text-white shadow-xl shadow-[#981495]/50 border border-white/20">
@@ -733,7 +754,7 @@ function AuthPage() {
       {/* =================================================================== */}
       {/* RIGHT PANEL: 52% Width Full Viewport Authentication Form Container  */}
       {/* =================================================================== */}
-      <main className="w-full lg:w-[52%] xl:w-[54%] h-full bg-white p-6 sm:p-10 lg:p-14 xl:p-16 flex flex-col justify-between overflow-y-auto shrink-0">
+      <main className="h-full min-h-0 w-full shrink-0 overflow-y-auto bg-white p-6 lg:w-[52%] lg:overflow-hidden lg:rounded-r-[32px] sm:p-10 lg:p-14 xl:w-[54%] xl:p-16">
         {/* TOP RIGHT: Security Badge & Mobile Back Link */}
         <div className="flex items-center justify-between w-full max-w-[500px] mx-auto">
           {/* Mobile Header Logo */}
@@ -747,7 +768,7 @@ function AuthPage() {
               alt="LocalShore"
               width={210}
               height={112}
-              className="h-11 w-[190px] object-contain object-left"
+              className="h-11 w-[190px] object-cover object-center"
             />
           </Link>
 
@@ -776,10 +797,14 @@ function AuthPage() {
           {/* Form Title & Subheading */}
           <div className="text-left">
             <h2 className="font-display text-2xl sm:text-3xl xl:text-4xl font-black tracking-tight text-slate-900">
-              {intent === "signup" ? "Create your account" : "Sign in to your account"}
+              {intent === "signup" ? "Create your account" : "Welcome back!"}
             </h2>
             <p className="mt-2 text-xs sm:text-sm font-medium text-slate-500 leading-relaxed">
-              {mode === "phone"
+              {mode === "password"
+                ? passwordRecovery
+                  ? "Create a new password to secure your account."
+                  : "Sign in to your account to continue"
+                : mode === "phone"
                 ? step === "phone"
                   ? `We'll send you an ${OTP_LENGTH}-digit code via SMS to sign in securely.`
                   : `Enter the ${OTP_LENGTH}-digit verification code sent to ${countryCode} ${phone}.`
@@ -819,7 +844,7 @@ function AuthPage() {
           </div>
 
           {/* SEGMENTED CONTROL 2: Phone vs Email vs Password */}
-          <div className="mt-3 grid grid-cols-3 gap-1 rounded-2xl bg-slate-100/90 p-1.5 border border-slate-200/60">
+          <div className="mt-3 hidden grid-cols-3 gap-1 rounded-2xl bg-slate-100/90 p-1.5 border border-slate-200/60">
             <button
               type="button"
               onClick={() => switchMode("phone")}
@@ -1327,7 +1352,7 @@ function AuthPage() {
                   </>
                 ) : (
                   <>
-                    <span>{intent === "signup" ? "Create Account" : "Sign In"}</span>
+                    <span>{intent === "signup" ? "Create Account" : "Login"}</span>
                     <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
                   </>
                 )}
@@ -1348,18 +1373,23 @@ function AuthPage() {
           {/* Secondary Button: Switch Auth Mode */}
           <button
             type="button"
-            onClick={() => switchMode(mode === "phone" ? "email" : "phone")}
+            onClick={() => switchMode(mode === "password" ? "email" : mode === "phone" ? "email" : "phone")}
             className="w-full inline-flex items-center justify-center gap-2.5 rounded-2xl border border-slate-200 bg-white hover:bg-[#fdf2fe]/50 text-slate-800 font-bold py-3.5 px-4 text-xs sm:text-sm shadow-2xs transition-all hover:border-[#f0abfc]/70 cursor-pointer"
           >
-            {mode === "phone" ? (
+            {mode === "password" ? (
               <>
                 <Mail className="h-4 w-4 text-[#981495]" />
                 <span>Continue with Email</span>
               </>
+            ) : mode === "phone" ? (
+              <>
+                <Mail className="h-4 w-4 text-[#981495]" />
+                <span>Continue with Email OTP</span>
+              </>
             ) : (
               <>
                 <Phone className="h-4 w-4 text-[#981495]" />
-                <span>Continue with Phone</span>
+                <span>Continue with Phone OTP</span>
               </>
             )}
           </button>
@@ -1418,6 +1448,7 @@ function AuthPage() {
           </div>
         </div>
       </main>
+      </div>
     </div>
   );
 }
