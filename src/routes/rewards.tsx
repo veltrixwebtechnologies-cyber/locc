@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { AppShell } from "@/components/app-shell";
+import { useAuth } from "@/lib/auth-store";
 import {
   Sparkles,
   Gift,
@@ -48,6 +49,7 @@ const txSign = (type: RewardTransaction["type"]) => {
 };
 
 function RewardsPage() {
+  const auth = useAuth();
   const s = SAMPLE_REWARDS_SUMMARY;
   const currentTier = REWARD_TIERS.find((t) => t.id === s.currentTier)!;
   const nextTier = REWARD_TIERS.find((t) => t.id === s.nextTier)!;
@@ -63,6 +65,44 @@ function RewardsPage() {
       : SAMPLE_REWARD_HISTORY.filter((t) => t.type === historyFilter);
 
   const visibleActions = showAllActions ? REWARD_ACTIONS : REWARD_ACTIONS.slice(0, 4);
+
+  if (!auth.id) {
+    return (
+      <AppShell>
+        <div className="mx-auto flex min-h-[calc(100dvh-9rem)] max-w-xl items-center justify-center px-4 py-10 sm:px-6">
+          <section className="w-full rounded-3xl border border-[#eadff0] bg-white p-8 text-center shadow-sm sm:p-10">
+            <div className="mx-auto grid h-16 w-16 place-items-center rounded-2xl bg-[var(--sand)] text-[#981495]">
+              <Sparkles className="h-8 w-8" />
+            </div>
+            <p className="mt-5 text-xs font-extrabold uppercase tracking-[0.18em] text-[#981495]">
+              LocalShore Rewards
+            </p>
+            <h1 className="mt-2 font-display text-2xl font-extrabold text-slate-900 sm:text-3xl">
+              Sign in to view your rewards
+            </h1>
+            <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-slate-500">
+              Your Shore Points, membership tier, reward history, and redemption options are private to your account.
+            </p>
+            <Link
+              to="/auth"
+              search={{ redirect: "/rewards" }}
+              className="mt-7 inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#981495] px-6 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-[#700b6e]"
+            >
+              Sign in to continue
+              <ArrowRight className="h-4 w-4" />
+            </Link>
+            <Link
+              to="/"
+              search={{ category: undefined, q: undefined }}
+              className="mt-4 block text-sm font-semibold text-slate-500 hover:text-[#981495]"
+            >
+              Continue shopping as guest
+            </Link>
+          </section>
+        </div>
+      </AppShell>
+    );
+  }
 
   return (
     <AppShell>
