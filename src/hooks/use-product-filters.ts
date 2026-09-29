@@ -67,6 +67,92 @@ export function useProductFilters(filterState: ProductFilterState) {
 
           if (error) {
             console.warn("RPC filter_marketplace_products unavailable:", error);
+            // Some deployed Supabase environments have not applied the
+            // marketplace-filter migration yet. The existing customer feed is
+            // still location scoped; use it only for this missing-RPC case.
+            if (error.code === "PGRST202") {
+              const { data: visibleRows, error: fallbackError } = await (supabase as any).rpc(
+                "get_customer_visible_products",
+                {
+                  p_lat: deliveryLocation.lat,
+                  p_lng: deliveryLocation.lng,
+                  p_query: filterState.query ?? null,
+                  p_category_slug: catalogCategoryKey(filterState.category),
+                  p_limit: 1000,
+                  p_offset: 0,
+                },
+              );
+              if (fallbackError) throw fallbackError;
+
+              const maxDistanceKm = filterState.maxDistanceKm ?? CUSTOMER_VISIBILITY_RADIUS_KM;
+              let fallbackProducts = ((visibleRows ?? []) as any[])
+                .filter((product) => {
+                  const distanceKm = Number(product.distance_km);
+                  const price = Number(product.selling_price ?? product.price);
+                  const stock = Number(product.stock ?? 0);
+                  return (
+                    product.distance_km != null &&
+                    Number.isFinite(distanceKm) &&
+                    distanceKm >= 0 &&
+                    distanceKm <= maxDistanceKm &&
+                    (!filterState.category || isStoreInCategory(product.category, filterState.category)) &&
+                    (filterState.minPrice == null || price >= filterState.minPrice) &&
+                    (filterState.maxPrice == null || price <= filterState.maxPrice) &&
+                    (!filterState.inStock && !filterState.inStockOnly || stock > 0) &&
+                    (!filterState.shopIds.length || filterState.shopIds.includes(product.seller_id)) &&
+                    (!filterState.brands.length || filterState.brands.includes(product.brand_name || product.brand)) &&
+                    (!filterState.attributes || Object.keys(filterState.attributes).length === 0) &&
+                    (!filterState.subcategory && !filterState.productType) &&
+                    (!filterState.onSale && !filterState.minDiscountPercent) &&
+                    (!filterState.minRating || Number(product.rating ?? 0) >= filterState.minRating)
+                  );
+                })
+                .map((product) => {
+                  const price = Number(product.selling_price ?? product.price ?? 0);
+                  return {
+                    id: String(product.id),
+                    seller_id: String(product.seller_id),
+                    name: String(product.name || "Local product"),
+                    sku: "",
+                    brand: product.brand ?? null,
+                    brand_id: product.brand_id ?? null,
+                    brand_name: product.brand_name ?? null,
+                    category: String(product.category || product.business_type || ""),
+                    category_id: null,
+                    subcategory_id: null,
+                    product_type_id: null,
+                    description: product.description ?? "",
+                    mrp: Number(product.mrp ?? price),
+                    selling_price: price,
+                    discount_price: null,
+                    stock: Number(product.stock ?? 0),
+                    image_url: String(product.image_url || ""),
+                    images: product.image_url ? [product.image_url] : [],
+                    weight: product.weight ?? null,
+                    attributes: {},
+                    shop_name: String(product.shop_name || "Local shop"),
+                    distance_km: Number(product.distance_km),
+                    rating: Number(product.rating ?? 0),
+                    review_count: Number(product.review_count ?? 0),
+                    is_open: product.is_open === true,
+                    is_verified: product.is_verified === true,
+                    accepts_orders: true,
+                    total_count: 0,
+                  } satisfies FilteredProduct;
+                });
+
+              if (filterState.sortBy === "distance_asc") {
+                fallbackProducts.sort((a, b) => Number(a.distance_km) - Number(b.distance_km));
+              } else if (filterState.sortBy === "price_asc") {
+                fallbackProducts.sort((a, b) => a.selling_price - b.selling_price);
+              } else if (filterState.sortBy === "price_desc") {
+                fallbackProducts.sort((a, b) => b.selling_price - a.selling_price);
+              }
+              const total = fallbackProducts.length;
+              fallbackProducts = fallbackProducts.slice(((filterState.page || 1) - 1) * 24, (filterState.page || 1) * 24);
+              fallbackProducts.forEach((product) => { product.total_count = total; });
+              return { products: fallbackProducts, total };
+            }
             throw error;
           } else if (data) {
             const products = ((data as FilteredProduct[]) || []).filter((product) =>

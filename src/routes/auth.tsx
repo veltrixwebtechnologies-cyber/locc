@@ -844,7 +844,7 @@ function AuthPage() {
           </div>
 
           {/* SEGMENTED CONTROL 2: Phone vs Email vs Password */}
-          <div className="mt-3 hidden grid-cols-3 gap-1 rounded-2xl bg-slate-100/90 p-1.5 border border-slate-200/60">
+          <div className="mt-3 grid grid-cols-3 gap-1 rounded-2xl bg-slate-100/90 p-1.5 border border-slate-200/60">
             <button
               type="button"
               onClick={() => switchMode("phone")}

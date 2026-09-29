@@ -238,8 +238,8 @@ export function ShopCard({
             </div>
           ) : (
             <div className="flex items-center justify-between text-muted-foreground font-medium">
-              <span className="truncate" title={shop.featuredProductName || "Full store catalog listed"}>
-                {shop.featuredProductName ? `Popular: ${shop.featuredProductName}` : "Full store catalog listed"}
+              <span className="truncate" title={shop.featuredProductName || "Browse shop catalog"}>
+                {shop.featuredProductName ? `Available: ${shop.featuredProductName}` : "Browse shop catalog"}
               </span>
               {shop.startingPrice !== undefined && shop.startingPrice > 0 && (
                 <span className="text-foreground font-bold">

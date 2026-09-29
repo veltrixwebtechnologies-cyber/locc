@@ -77,7 +77,7 @@ export const Route = createFileRoute("/")({
     links: [
       {
         rel: "preload",
-        href: "/assets/shoreline-rider-cutout.webp",
+        href: "/assets/localshore-home-banner.png",
         as: "image",
         fetchPriority: "high",
       },

@@ -47,12 +47,42 @@ export function useShopDiscovery(filterState: ProductFilterState) {
       if (!deliveryLoc || !hasConfirmedCoordinates(deliveryLoc)) {
         return { shops: [], total: 0, expanded: false, fallbackZoneNames: [], primaryZoneName: null, effectiveRadiusKm: radiusKm, legacyMode: false };
       }
-      const discovery = await discoverShops((name, args) => (supabase as any).rpc(name, args), {
-        lat: deliveryLoc.lat, lng: deliveryLoc.lng,
-        query: filterState.query || null,
-        category: catalogCategoryKey(filterState.category), radiusKm,
-      });
+      const [discovery, visibleProductsResult] = await Promise.all([
+        discoverShops((name, args) => (supabase as any).rpc(name, args), {
+          lat: deliveryLoc.lat, lng: deliveryLoc.lng,
+          query: filterState.query || null,
+          category: catalogCategoryKey(filterState.category), radiusKm,
+        }),
+        // Shop discovery returns shops only. Read the existing customer-visible
+        // product feed once and join by seller ID so cards show real inventory,
+        // rather than claiming a catalog is listed when the card has no items.
+        (supabase as any).rpc("get_customer_visible_products", {
+          p_lat: deliveryLoc.lat,
+          p_lng: deliveryLoc.lng,
+          p_query: null,
+          p_category_slug: catalogCategoryKey(filterState.category),
+          p_limit: 200,
+          p_offset: 0,
+        }),
+      ]);
       const data = discovery.shops;
+      const productsBySeller = new Map<string, Array<{ name: string; price: number }>>();
+      if (visibleProductsResult.error) {
+        console.warn("Could not load shop-card product highlights:", visibleProductsResult.error);
+      } else if (Array.isArray(visibleProductsResult.data)) {
+        const discoveredShopIds = new Set(data.map((shop) => shop.id));
+        for (const product of visibleProductsResult.data as any[]) {
+          const sellerId = String(product.seller_id || "");
+          if (!discoveredShopIds.has(sellerId) || !product.name) continue;
+          const productCategory = catalogCategoryKey(product.category);
+          const seller = data.find((shop) => shop.id === sellerId);
+          const sellerCategory = catalogCategoryKey(seller?.business_type || seller?.category);
+          if (sellerCategory && productCategory !== sellerCategory) continue;
+          const rows = productsBySeller.get(sellerId) ?? [];
+          rows.push({ name: String(product.name), price: Number(product.selling_price ?? product.price) });
+          productsBySeller.set(sellerId, rows);
+        }
+      }
       let list: ShopCardData[] = (data ?? []).map((s: any) => ({
         id: s.id,
         name: s.shop_name || "Local Shop",
@@ -68,7 +98,11 @@ export function useShopDiscovery(filterState: ProductFilterState) {
         rating: 0,
         distanceKm: Number(s.distance_km),
         isOpen: s.is_open !== false,
-        matchingProductCount: 0,
+        featuredProductName: productsBySeller.get(s.id)?.[0]?.name,
+        startingPrice: productsBySeller.get(s.id)
+          ?.map((product) => product.price)
+          .filter((price) => Number.isFinite(price) && price > 0)
+          .sort((a, b) => a - b)[0],
         isVerified: s.is_verified === true,
         city: s.city || "",
         address: s.address_line1 || undefined,
