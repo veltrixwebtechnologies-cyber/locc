@@ -2,6 +2,8 @@ import { useSyncExternalStore } from "react";
 
 export interface CartLine {
   productId: string;
+  /** Database order_items.id; present only for persisted order lines. */
+  orderItemId?: string;
   storeId: string;
   name: string;
   unit: string;

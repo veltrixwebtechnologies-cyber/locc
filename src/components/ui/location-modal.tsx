@@ -121,6 +121,9 @@ export function LocationModal({ isOpen, onClose }: LocationModalProps) {
       });
       setPendingGPSLocation(detected);
       setMapOrigin("gps");
+      // Move straight to the map preview so the customer can see and adjust
+      // the live position before confirming the delivery entrance.
+      setViewMode("map");
       const accuracy = detected.accuracy ?? 0;
       if (accuracy <= MAX_CUSTOMER_DELIVERY_ACCURACY_M) {
         toast.success("Precise location detected", {
@@ -270,7 +273,7 @@ export function LocationModal({ isOpen, onClose }: LocationModalProps) {
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 10 }}
           transition={{ type: "spring", stiffness: 350, damping: 28 }}
-          className="relative my-auto flex max-h-[calc(100dvh-1rem)] w-full max-w-xl flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white p-3 shadow-[0_24px_80px_rgba(15,23,42,0.24)] sm:max-h-[min(760px,calc(100dvh-2rem))] sm:rounded-3xl sm:p-5 md:p-6"
+          className={`relative my-auto flex max-h-[calc(100dvh-1rem)] w-full flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white p-3 shadow-[0_24px_80px_rgba(15,23,42,0.24)] sm:max-h-[min(760px,calc(100dvh-2rem))] sm:rounded-3xl sm:p-5 md:p-6 ${viewMode === "map" ? "max-w-5xl md:max-h-[min(820px,calc(100dvh-2rem))]" : "max-w-xl"}`}
         >
           {/* Header */}
           <div className="flex shrink-0 items-start justify-between gap-3 border-b border-slate-100 pb-3">
@@ -332,7 +335,7 @@ export function LocationModal({ isOpen, onClose }: LocationModalProps) {
 
           {/* Body Content */}
           {viewMode === "map" ? (
-            <div className="min-h-0 flex-1 overflow-y-auto pt-3">
+            <div className="min-h-0 flex-1 overflow-y-auto pt-3 md:overflow-hidden">
               {mapFix && mapFix.accuracy > MAX_CUSTOMER_DELIVERY_ACCURACY_M && (
                 <p className="mb-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-medium leading-relaxed text-amber-900" role="status">
                   Your device provided an approximate area. For an exact delivery point, zoom in,
