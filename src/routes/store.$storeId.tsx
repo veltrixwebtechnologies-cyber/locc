@@ -33,7 +33,8 @@ import { ProductThumb } from "@/components/product-thumb";
 import { recordProductEvent, recordRecentProductView } from "@/lib/merchandising";
 import { WishlistButton } from "@/components/wishlist-button";
 import { flyProductToCart } from "@/lib/fly-to-cart";
-import { getFallbackShopImage, resolveImageUrl } from "@/lib/image-utils";
+import { getFallbackProductImage, getFallbackShopImage, resolveImageUrl } from "@/lib/image-utils";
+import { getDemoNeighborhoodShop, type DemoNeighborhoodShop } from "@/lib/demo-neighborhood-shops";
 import { useDeliveryLocation } from "@/lib/location-store";
 import { isValidCoordinate, haversineDistanceKm } from "@/lib/geo";
 import { m } from "motion/react";
@@ -67,6 +68,25 @@ export const Route = createFileRoute("/store/$storeId")({
     category: (search.category as string) || undefined,
   }),
   loader: ({ params }): { store: Store; products: Product[] } => {
+    const demoShop = getDemoNeighborhoodShop(params.storeId);
+    if (demoShop) {
+      return {
+        store: {
+          id: demoShop.id,
+          name: demoShop.name,
+          category: demoShop.category,
+          tagline: "Shop preview",
+          rating: 0,
+          isOpen: false,
+          etaMin: 0,
+          address: `${demoShop.area}, ${demoShop.city} (approximate area)`,
+          lat: demoShop.lat,
+          lng: demoShop.lng,
+          imageUrl: getFallbackShopImage(demoShop.category, demoShop.name),
+        },
+        products: [],
+      };
+    }
     const store =
       params.storeId === APPROVED_STORE.id
         ? APPROVED_STORE
@@ -96,8 +116,102 @@ function getCategoryIcon(_catName: string) {
   return <Package className="h-4 w-4 text-slate-400" />;
 }
 
+function DemoShopPreview({ shop }: { shop: DemoNeighborhoodShop }) {
+  const [query, setQuery] = useState("");
+  const [basket, setBasket] = useState<Record<number, number>>({});
+  const visibleProducts = shop.sampleProducts
+    .map((name, index) => ({ name, index }))
+    .filter(({ name }) => name.toLowerCase().includes(query.trim().toLowerCase()));
+  const basketCount = Object.values(basket).reduce((total, qty) => total + qty, 0);
+  const basketTotal = Object.entries(basket).reduce(
+    (total, [index, qty]) => total + (shop.sampleProductPrices[Number(index)] ?? 0) * qty,
+    0,
+  );
+  const changeQty = (index: number, change: number) => {
+    setBasket((current) => {
+      const next = { ...current };
+      const qty = Math.max(0, (next[index] ?? 0) + change);
+      if (qty === 0) delete next[index];
+      else next[index] = qty;
+      return next;
+    });
+  };
+
+  return (
+    <main className="min-h-screen bg-[#F8F4FA] px-4 py-6 pb-32 sm:px-6">
+      <div className="mx-auto max-w-6xl">
+        <Link to="/" search={{ category: undefined, q: undefined }} className="mb-5 inline-flex items-center gap-2 text-sm font-semibold text-[#981495]">
+          <ArrowLeft className="h-4 w-4" /> Back to shops
+        </Link>
+        <section className="overflow-hidden rounded-3xl border border-[#EBD9F0] bg-white shadow-sm">
+          <div className="grid sm:grid-cols-[220px_1fr]">
+            <img src={getFallbackShopImage(shop.category, shop.name)} alt="" className="h-48 w-full object-cover sm:h-full" />
+            <div className="p-5 sm:p-7">
+              <span className="inline-flex rounded-full bg-[#F4E5F5] px-3 py-1 text-xs font-bold text-[#981495]">Local shop preview</span>
+              <h1 className="mt-3 font-display text-2xl font-black text-[#21162B] sm:text-3xl">{shop.name}</h1>
+              <p className="mt-2 text-sm text-slate-600">{shop.area}, {shop.city} · {shop.hub}</p>
+              <p className="mt-3 text-sm text-slate-600">Explore products commonly found at this type of shop. The map pin shows its approximate neighborhood; this shop has not published a LocalShore catalog yet.</p>
+            </div>
+          </div>
+        </section>
+        <label className="mt-5 flex items-center gap-3 rounded-2xl border border-[#EBD9F0] bg-white px-4 py-3 shadow-sm focus-within:ring-2 focus-within:ring-[#981495]/30">
+          <Search className="h-5 w-5 shrink-0 text-[#981495]" />
+          <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder={`Search sample products in ${shop.name}...`} className="w-full bg-transparent text-sm text-[#21162B] outline-none placeholder:text-slate-400" />
+        </label>
+        <section className="mt-6">
+          <div className="flex items-end justify-between gap-3">
+            <div>
+              <h2 className="font-display text-xl font-bold text-[#21162B]">All Products</h2>
+              <p className="mt-1 text-sm text-slate-600">Sample catalog · Prices are illustrative, not seller quotes.</p>
+            </div>
+            <span className="shrink-0 text-xs font-semibold text-slate-500">{visibleProducts.length} items</span>
+          </div>
+          <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4 xl:grid-cols-5">
+            {visibleProducts.map(({ name, index }) => (
+              <article key={index} className="min-w-0 overflow-hidden rounded-2xl border border-[#EBD9F0] bg-white p-2.5 shadow-sm sm:p-3">
+                <div className="relative aspect-square overflow-hidden rounded-xl bg-[#F8F4FA]">
+                  <img src={shop.sampleProductImages[index]} alt={name} onError={(event) => { event.currentTarget.onerror = null; event.currentTarget.src = getFallbackProductImage(name, shop.category); }} className="h-full w-full object-cover" />
+                  <div className="absolute bottom-2 right-2">
+                    {(basket[index] ?? 0) === 0 ? (
+                      <button type="button" onClick={() => changeQty(index, 1)} aria-label={`Add ${name} to sample basket`} className="rounded-lg border border-emerald-600 bg-white px-3 py-1 text-xs font-black text-emerald-700 shadow-sm transition hover:bg-emerald-600 hover:text-white">ADD</button>
+                    ) : (
+                      <div className="flex items-center rounded-lg border border-emerald-600 bg-white text-emerald-700 shadow-sm">
+                        <button type="button" onClick={() => changeQty(index, -1)} aria-label={`Remove one ${name}`} className="px-2 py-1 font-bold">−</button>
+                        <span className="min-w-5 text-center text-xs font-bold" aria-live="polite">{basket[index]}</span>
+                        <button type="button" onClick={() => changeQty(index, 1)} aria-label={`Add one ${name}`} className="px-2 py-1 font-bold">+</button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <div className="p-1 pt-3">
+                  <p className="font-black text-[#21162B]">₹{shop.sampleProductPrices[index].toLocaleString("en-IN")}</p>
+                  <p className="text-[11px] text-slate-500">Illustrative price</p>
+                  <h3 className="mt-2 line-clamp-2 text-sm font-semibold text-[#21162B]">{name}</h3>
+                  <p className="mt-1 text-xs text-slate-500">Sample product · Not available to order</p>
+                </div>
+              </article>
+            ))}
+          </div>
+          {visibleProducts.length === 0 && <p className="mt-4 rounded-2xl border border-[#EBD9F0] bg-white p-6 text-center text-sm text-slate-600">No sample products match your search.</p>}
+        </section>
+        {basketCount > 0 && (
+          <aside className="sticky bottom-4 z-20 mt-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-[#981495] p-4 text-white shadow-xl" aria-label="Sample basket">
+            <div>
+              <p className="flex items-center gap-2 font-bold"><ShoppingBag className="h-4 w-4" /> Sample basket · {basketCount} {basketCount === 1 ? "item" : "items"}</p>
+              <p className="max-w-2xl truncate text-xs text-white/90">{Object.entries(basket).map(([index, qty]) => `${shop.sampleProducts[Number(index)]} × ${qty}`).join(" · ")}</p>
+              <p className="text-xs text-white/85">Illustrative total ₹{basketTotal.toLocaleString("en-IN")} · Checkout unavailable for this preview shop</p>
+            </div>
+            <button type="button" onClick={() => setBasket({})} className="rounded-xl border border-white/50 px-3 py-2 text-xs font-semibold hover:bg-white/10">Clear basket</button>
+          </aside>
+        )}
+      </div>
+    </main>
+  );
+}
+
 function StorePage() {
   const loaded = Route.useLoaderData() as { store: Store; products: Product[] };
+  const demoShop = getDemoNeighborhoodShop(loaded.store.id);
   const searchParams = Route.useSearch();
   const requestedCategory = catalogCategoryKey(searchParams.category);
   const approved = useQuery({
@@ -402,6 +516,8 @@ function StorePage() {
       <Link to="/" search={{category:undefined,q:undefined}} className="block mt-3 underline">Back to shops</Link>
     </div></div>;
   }
+
+  if (demoShop) return <DemoShopPreview key={demoShop.id} shop={demoShop} />;
 
   const isDemoShop = /\(Demo\)|^LocalShore\s+(?:Demo\s+)?(?:CBE|BLR)-/i.test(store.name);
 

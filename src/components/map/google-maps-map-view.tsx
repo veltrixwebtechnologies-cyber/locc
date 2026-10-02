@@ -3,6 +3,7 @@ import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "re
 import { Locate, MapPin, RefreshCw } from "lucide-react";
 import type { MapLocation, MapMarkerItem } from "@/lib/map-service/types";
 import { loadGoogleMaps } from "@/lib/google-maps-loader";
+import { localShoreShopMarker } from "@/lib/localshore-shop-marker";
 import type { InteractiveMapViewRef } from "./interactive-map-view";
 
 interface Props {
@@ -25,6 +26,7 @@ export const GoogleMapsMapView = forwardRef<InteractiveMapViewRef, Props>(functi
   const mapRef = useRef<google.maps.Map | null>(null);
   const userMarkerRef = useRef<google.maps.Marker | null>(null);
   const shopMarkersRef = useRef<Record<string, google.maps.Marker>>({});
+  const markerDataRef = useRef<Record<string, MapMarkerItem>>({});
   const infoWindowRef = useRef<google.maps.InfoWindow | null>(null);
   const onBoundsChangeRef = useRef(onBoundsChange);
   const [error, setError] = useState<string | null>(null);
@@ -85,29 +87,36 @@ export const GoogleMapsMapView = forwardRef<InteractiveMapViewRef, Props>(functi
     const map = mapRef.current;
     const googleApi = window.google;
     if (!map || !googleApi?.maps) return;
+    markerDataRef.current = Object.fromEntries(markers.map((marker) => [marker.id, marker]));
     const currentIds = new Set(markers.map((marker) => marker.id));
     Object.keys(shopMarkersRef.current).forEach((id) => {
       if (!currentIds.has(id)) { shopMarkersRef.current[id].setMap(null); delete shopMarkersRef.current[id]; }
     });
     markers.forEach((marker) => {
       const position = { lat: marker.lat, lng: marker.lng };
+      const artwork = localShoreShopMarker(marker.shopName, marker.id === selectedMarkerId || marker.id === hoveredMarkerId, marker.isDemo);
+      const icon = { url: artwork.url, scaledSize: new googleApi.maps.Size(artwork.width, artwork.height), anchor: new googleApi.maps.Point(artwork.anchorX, artwork.anchorY) };
       let shopMarker = shopMarkersRef.current[marker.id];
       if (!shopMarker) {
-        shopMarker = new googleApi.maps.Marker({ map, position, title: marker.shopName, label: { text: "Shop", color: "#ffffff", fontWeight: "700" }, icon: { path: googleApi.maps.SymbolPath.CIRCLE, scale: 8, fillColor: "#f59e0b", fillOpacity: 1, strokeColor: "#ffffff", strokeWeight: 2 } });
+        shopMarker = new googleApi.maps.Marker({ map, position, title: `${marker.shopName}${marker.isDemo ? " (shop preview, approximate area)" : ""}`, icon });
         shopMarker.addListener("click", () => {
-          onSelectMarker?.(marker);
+          const selected = markerDataRef.current[marker.id];
+          if (!selected) return;
+          onSelectMarker?.(selected);
           const content = document.createElement("div");
           content.style.cssText = "min-width:220px;padding:4px 2px;font-family:Arial,sans-serif";
-          const title = document.createElement("strong"); title.textContent = marker.shopName; title.style.cssText = "display:block;font-size:15px;margin-bottom:6px;color:#1e1b4b";
-          const distance = document.createElement("div"); distance.textContent = `${marker.distanceKm.toFixed(1)} km away · ${marker.category}`; distance.style.cssText = "font-size:12px;color:#64748b;margin-bottom:4px";
-          const address = document.createElement("div"); address.textContent = marker.address || "Local Shore shop"; address.style.cssText = "font-size:12px;color:#64748b;margin-bottom:10px";
-          const button = document.createElement("button"); button.type = "button"; button.textContent = "View Shop"; button.style.cssText = "border:0;border-radius:8px;background:#981495;color:white;padding:7px 12px;font-weight:700;cursor:pointer"; button.onclick = () => onViewShop?.(marker.shopId);
-          content.append(title, distance, address, button);
+          const title = document.createElement("strong"); title.textContent = selected.shopName; title.style.cssText = "display:block;font-size:15px;margin-bottom:6px;color:#1e1b4b";
+          const distance = document.createElement("div"); distance.textContent = `${selected.isDemo ? "Shop preview · " : ""}${selected.distanceKm.toFixed(1)} km away · ${selected.category}`; distance.style.cssText = "font-size:12px;color:#64748b;margin-bottom:4px";
+          const address = document.createElement("div"); address.textContent = selected.address || "Local Shore shop"; address.style.cssText = "font-size:12px;color:#64748b;margin-bottom:10px";
+          const button = document.createElement("button"); button.type = "button"; button.textContent = selected.isDemo ? "Explore products" : "View Shop"; button.style.cssText = "border:0;border-radius:8px;background:#981495;color:white;padding:7px 12px;font-weight:700;cursor:pointer"; button.onclick = () => onViewShop?.(selected.shopId);
+          content.append(title, distance, address);
+          if (selected.isDemo) { const samples = document.createElement("div"); samples.textContent = `Sample products: ${selected.sampleProducts?.slice(0, 3).join(", ")}`; samples.style.cssText = "font-size:12px;color:#64748b;margin-bottom:10px"; content.append(samples); }
+          content.append(button);
           infoWindowRef.current?.setContent(content);
           infoWindowRef.current?.open({ map, anchor: shopMarker });
         });
         shopMarkersRef.current[marker.id] = shopMarker;
-      } else shopMarker.setPosition(position);
+      } else { shopMarker.setPosition(position); shopMarker.setIcon(icon); }
       shopMarker.setZIndex(marker.id === selectedMarkerId || marker.id === hoveredMarkerId ? 10 : 1);
     });
   }, [markers, selectedMarkerId, hoveredMarkerId, onSelectMarker, onViewShop]);
@@ -122,7 +131,7 @@ export const GoogleMapsMapView = forwardRef<InteractiveMapViewRef, Props>(functi
   };
 
   if (error) return <div className={`${className} grid place-items-center bg-slate-50 p-6 text-center`}><div><MapPin className="mx-auto h-8 w-8 text-[#981495]"/><p className="mt-3 font-semibold text-slate-900">Google Maps unavailable</p><p className="mt-1 max-w-sm text-xs text-slate-500">{error}</p><p className="mt-3 text-xs text-slate-500">Set <code>VITE_GOOGLE_MAPS_API_KEY</code> and use <code>VITE_MAP_PROVIDER=google</code>.</p></div></div>;
-  return <div className={`relative overflow-hidden ${className}`}><div ref={containerRef} className="h-full w-full" aria-label="Google map showing LocalShore shops" />{loading&&<div className="absolute inset-0 grid place-items-center bg-white/75 text-sm font-semibold text-slate-700"><RefreshCw className="mr-2 inline h-4 w-4 animate-spin"/>Loading Google Maps…</div>}<button type="button" onClick={useCurrentLocation} className="absolute left-3 top-3 z-10 inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-2 text-xs font-bold text-[#981495] shadow-md" aria-label="Use current location"><Locate className="h-4 w-4"/>You are here</button><div className="absolute bottom-2 left-2 rounded bg-white/90 px-2 py-1 text-[10px] text-slate-500 shadow">Google Maps · LocalShore sellers</div></div>;
+  return <div className={`relative overflow-hidden ${className}`}><div ref={containerRef} className="h-full w-full" aria-label="Google map showing LocalShore shops and shop previews" />{loading&&<div className="absolute inset-0 grid place-items-center bg-white/75 text-sm font-semibold text-slate-700"><RefreshCw className="mr-2 inline h-4 w-4 animate-spin"/>Loading Google Maps…</div>}<button type="button" onClick={useCurrentLocation} className="absolute left-3 top-3 z-10 inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-2 text-xs font-bold text-[#981495] shadow-md" aria-label="Use current location"><Locate className="h-4 w-4"/>You are here</button><div className="absolute bottom-2 left-2 rounded bg-white/90 px-2 py-1 text-[10px] text-slate-500 shadow">Google Maps · LocalShore shops</div></div>;
 });
 
 GoogleMapsMapView.displayName = "GoogleMapsMapView";

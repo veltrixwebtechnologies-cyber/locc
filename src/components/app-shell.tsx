@@ -696,8 +696,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                     className="inline-flex min-h-10 shrink-0 items-center gap-1 rounded-xl bg-white/15 px-2.5 py-2 text-[11px] font-bold text-white transition hover:bg-white/25 active:scale-95"
                   >
                     <MapPin className="h-3.5 w-3.5" />
-                    <span className="hidden sm:inline">Show map</span>
-                    <span className="sm:hidden">Map</span>
+                    <span>Show map</span>
                   </button>
                 )}
                 <Link

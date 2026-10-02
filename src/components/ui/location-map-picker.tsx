@@ -7,15 +7,18 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { MapPin, LocateFixed, Search, Loader2, Navigation, Check, ArrowLeft, Store } from "lucide-react";
 import { getMapTileConfig } from "@/lib/map-provider";
 import { detectCurrentGPSLocation, type DeliveryLocation } from "@/lib/location-store";
-import { isValidCoordinate } from "@/lib/geo";
+import { haversineDistanceKm, isValidCoordinate } from "@/lib/geo";
 import { MAX_CUSTOMER_DELIVERY_ACCURACY_M, parseCoordinates } from "@/lib/coordinates";
 import { resolveNominatimAddress } from "@/lib/location-address";
 import { geocodeSearch } from "@/lib/map-service/providers";
 import { toast } from "sonner";
 import { loadGoogleMaps } from "@/lib/google-maps-loader";
 import { supabase } from "@/integrations/supabase/client";
-import { haversineDistanceKm } from "@/lib/geo";
+import { isTestEntity } from "@/lib/map-service/store-engine";
+import { demoNeighborhoodShops, isGeneratedDemoShopName } from "@/lib/demo-neighborhood-shops";
+import { DEFAULT_SHOP_DISCOVERY_RADIUS_KM } from "@/lib/location-visibility";
 import { getFallbackShopImage } from "@/lib/image-utils";
+import { localShoreShopMarker } from "@/lib/localshore-shop-marker";
 
 const MAP_PROVIDER = import.meta.env.VITE_MAP_PROVIDER === "google" ? "google" : "osm";
 
@@ -48,17 +51,9 @@ type LocalShop = {
   lat: number;
   lng: number;
   distanceKm: number;
+  isDemo?: boolean;
+  sampleProducts?: string[];
 };
-
-function localShopPinSvg(selected = false) {
-  const size = selected ? 44 : 36;
-  const fill = selected ? "#7D1079" : "#981495";
-  const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='${size}' height='${size}' viewBox='0 0 44 44'>
-    <circle cx='22' cy='22' r='${selected ? 19 : 16}' fill='${fill}' stroke='#FFFFFF' stroke-width='3'/>
-    <path d='M13 19h18l-2 3v9H15v-9l-2-3Zm3-1 2-4h8l2 4M18 25h8v6h-8Z' fill='none' stroke='#FFFFFF' stroke-width='2' stroke-linejoin='round'/>
-  </svg>`;
-  return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
-}
 
 function deliveryPinSvg() {
   const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='48' height='58' viewBox='0 0 48 58'>
@@ -123,11 +118,29 @@ export function LocationMapPicker({
   const [showAllShops, setShowAllShops] = useState(false);
   const geocodeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // LocalShore remains the source of truth for shop markers. Google POIs are
-  // hidden in the map style and never used for discovery.
+  // Registered sellers come from Supabase. User-supplied business examples are
+  // separate, clearly labeled previews with approximate neighborhood pins.
   useEffect(() => {
     if (MAP_PROVIDER !== "google" || !coords) return;
     let cancelled = false;
+    const demoShops: LocalShop[] = demoNeighborhoodShops
+      .map((shop) => ({
+        id: shop.id,
+        shopName: shop.name,
+        category: shop.category.replaceAll("_", " "),
+        address: `Approximate area: ${shop.area}, ${shop.city}`,
+        imageUrl: getFallbackShopImage(shop.category, shop.name),
+        lat: shop.lat,
+        lng: shop.lng,
+        distanceKm: haversineDistanceKm(coords.lat, coords.lng, shop.lat, shop.lng),
+        isDemo: true,
+        sampleProducts: shop.sampleProducts,
+      }))
+      .filter((shop) => shop.distanceKm <= DEFAULT_SHOP_DISCOVERY_RADIUS_KM)
+      .sort((a, b) => a.distanceKm - b.distanceKm);
+    setLocalShops(demoShops);
+    setSelectedShop(null);
+    setShowAllShops(false);
     const timer = setTimeout(async () => {
       try {
         const { data, error } = await (supabase as any).rpc("get_customer_visible_shops", {
@@ -135,45 +148,40 @@ export function LocationMapPicker({
           p_lng: coords.lng,
           p_query: null,
           p_category_slug: null,
-          p_limit: 50,
+          p_limit: 100,
           p_offset: 0,
         });
         if (error) throw error;
         if (cancelled) return;
-        setLocalShops(
-          (data ?? [])
-            .filter((shop: any) => isValidCoordinate(shop.lat, shop.lng) && shop.shop_name)
-            .map((shop: any) => ({
-              id: String(shop.id),
-              shopName: String(shop.shop_name),
-              category: String(shop.category || shop.business_type || "Local shop"),
-              address: [shop.address_line1, shop.city, shop.state].filter(Boolean).join(", "),
-              // Reuse the same storefront-image/fallback logic as the rest of
-              // LocalShore so the picker never renders an empty shop card.
-              imageUrl:
-                shop.storefront_image_url ||
-                shop.shop_banner_url ||
-                shop.shop_logo_url ||
-                getFallbackShopImage(shop.category || shop.business_type, shop.shop_name),
-              lat: Number(shop.lat),
-              lng: Number(shop.lng),
-              distanceKm: Number.isFinite(Number(shop.distance_km))
-                ? Number(shop.distance_km)
-                : haversineDistanceKm(coords.lat, coords.lng, Number(shop.lat), Number(shop.lng)),
-            })),
-        );
-        setShowAllShops(false);
+        const registeredShops: LocalShop[] = (data ?? [])
+          .filter((shop: any) =>
+            isValidCoordinate(shop.lat, shop.lng) &&
+            shop.shop_name &&
+            !isTestEntity(String(shop.shop_name)) &&
+            !isGeneratedDemoShopName(String(shop.shop_name)),
+          )
+          .map((shop: any) => ({
+            id: String(shop.id),
+            shopName: String(shop.shop_name),
+            category: String(shop.category || shop.business_type || "Local shop"),
+            address: [shop.address_line1, shop.city, shop.state].filter(Boolean).join(", "),
+            imageUrl: shop.storefront_image_url || shop.shop_banner_url || shop.shop_logo_url ||
+              getFallbackShopImage(shop.category || shop.business_type, shop.shop_name),
+            lat: Number(shop.lat),
+            lng: Number(shop.lng),
+            distanceKm: haversineDistanceKm(coords.lat, coords.lng, Number(shop.lat), Number(shop.lng)),
+          }))
+          .filter((shop: LocalShop) => shop.distanceKm <= DEFAULT_SHOP_DISCOVERY_RADIUS_KM);
+        const distinctDemos = demoShops.filter((demo) => !registeredShops.some((shop) =>
+          shop.shopName.trim().toLowerCase() === demo.shopName.trim().toLowerCase() &&
+          haversineDistanceKm(shop.lat, shop.lng, demo.lat, demo.lng) < 2,
+        ));
+        setLocalShops([...registeredShops, ...distinctDemos].sort((a, b) => a.distanceKm - b.distanceKm));
       } catch (error) {
-        if (!cancelled) {
-          console.warn("LocalShore picker shop markers unavailable", error);
-          setLocalShops([]);
-        }
+        if (!cancelled) console.warn("Registered shop markers unavailable", error);
       }
     }, 250);
-    return () => {
-      cancelled = true;
-      clearTimeout(timer);
-    };
+    return () => { cancelled = true; clearTimeout(timer); };
   }, [coords?.lat, coords?.lng]);
 
   // Reverse geocode lat/lng to human address via Nominatim
@@ -479,14 +487,15 @@ export function LocationMapPicker({
 
     localShops.forEach((shop) => {
       const selected = selectedShop?.id === shop.id;
+      const artwork = localShoreShopMarker(shop.shopName, selected, shop.isDemo);
       const marker = new googleApi.maps.Marker({
         map,
         position: { lat: shop.lat, lng: shop.lng },
-        title: shop.shopName,
+        title: `${shop.shopName}${shop.isDemo ? " (shop preview; approximate area)" : ""}`,
         icon: {
-          url: localShopPinSvg(selected),
-          scaledSize: new googleApi.maps.Size(selected ? 44 : 36, selected ? 44 : 36),
-          anchor: new googleApi.maps.Point(selected ? 22 : 18, selected ? 22 : 18),
+          url: artwork.url,
+          scaledSize: new googleApi.maps.Size(artwork.width, artwork.height),
+          anchor: new googleApi.maps.Point(artwork.anchorX, artwork.anchorY),
         },
         zIndex: selected ? 20 : 5,
       });
@@ -667,7 +676,7 @@ export function LocationMapPicker({
             <div className="flex items-center justify-between border-b border-[#EEE7F3] px-3.5 py-3">
               <div>
                 <p className="text-sm font-black text-[#21162B]">Nearby shops</p>
-                <p className="text-[10px] font-semibold text-[#7D7485]">{localShops.length} LocalShore sellers</p>
+                <p className="text-[10px] font-semibold text-[#7D7485]">{localShops.filter((shop) => !shop.isDemo).length} registered · {localShops.filter((shop) => shop.isDemo).length} previews</p>
               </div>
               <Store className="h-4 w-4 text-[#981495]" />
             </div>
@@ -696,7 +705,7 @@ export function LocationMapPicker({
                   </div>
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-[11px] font-black text-[#21162B]">{shop.shopName}</span>
-                    <span className="block truncate text-[10px] font-semibold text-[#7D7485]">{shop.category}</span>
+                    <span className="block truncate text-[10px] font-semibold text-[#7D7485]">{shop.isDemo ? "Shop preview · " : ""}{shop.category}</span>
                     <span className="mt-0.5 block text-[10px] font-bold text-[#981495]">{shop.distanceKm.toFixed(1)} km away</span>
                   </span>
                   <span className="text-lg text-[#981495]">›</span>
@@ -738,7 +747,7 @@ export function LocationMapPicker({
 
         {MAP_PROVIDER === "google" && localShops.length > 0 && (
           <div className="absolute left-3 bottom-3 z-[1000] rounded-full bg-white/95 px-3 py-1.5 text-[10px] font-black text-[#981495] shadow-md ring-1 ring-[#EBD9F0]">
-            {localShops.length} LocalShore shop{localShops.length === 1 ? "" : "s"} nearby
+            {localShops.length} shop preview{localShops.length === 1 ? "" : "s"} nearby
           </div>
         )}
 
@@ -763,13 +772,15 @@ export function LocationMapPicker({
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-black text-[#21162B]">{selectedShop.shopName}</p>
                 <p className="truncate text-[11px] font-semibold text-[#7D7485]">
-                  {selectedShop.category} · {selectedShop.distanceKm.toFixed(1)} km away
+                  {selectedShop.isDemo ? "Shop preview · " : ""}{selectedShop.category} · {selectedShop.distanceKm.toFixed(1)} km away
                 </p>
                 <p className="truncate text-[10px] text-[#7D7485]">{selectedShop.address || "LocalShore shop"}</p>
+                {selectedShop.isDemo && <p className="mt-1 text-[10px] text-[#7D7485]">Sample products: {selectedShop.sampleProducts?.slice(0, 3).join(", ")}</p>}
               </div>
               <button type="button" onClick={() => setSelectedShop(null)} className="self-start text-lg leading-none text-slate-400" aria-label="Close shop card">×</button>
             </div>
             <div className="flex gap-2 px-3 pb-3">
+              {!selectedShop.isDemo && (
               <button
                 type="button"
                 onClick={() => toast.success(`${selectedShop.shopName} selected`)}
@@ -777,12 +788,13 @@ export function LocationMapPicker({
               >
                 Select this shop
               </button>
+              )}
               <button
                 type="button"
                 onClick={() => { window.location.href = `/store/${selectedShop.id}`; }}
                 className="flex-1 rounded-xl bg-[#F4EFF7] px-3 py-2 text-[11px] font-black text-[#981495]"
               >
-                View shop
+                {selectedShop.isDemo ? "Explore products" : "View shop"}
               </button>
             </div>
           </div>

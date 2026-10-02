@@ -46,6 +46,8 @@ export interface MapMarkerItem {
   totalVariants?: number;
   rawStore: Store;
   matchingProduct?: Product;
+  isDemo?: boolean;
+  sampleProducts?: string[];
 }
 
 export interface MapFilterOptions {
