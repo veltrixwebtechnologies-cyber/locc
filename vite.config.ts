@@ -14,6 +14,12 @@ export default defineConfig({
       include: ["lottie-web"],
     },
     server: {
+      // This workspace runs multiple Vite apps concurrently; use polling so
+      // ShorelineShopper still starts when the host inotify quota is exhausted.
+      watch: {
+        usePolling: true,
+        interval: 1000,
+      },
       headers: {
         "content-security-policy":
           "default-src 'self' http: https: data: blob: 'unsafe-inline' 'unsafe-eval'; img-src 'self' data: blob: https:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; style-src-elem 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https: http:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.razorpay.com https://*.razorpay.com https:; frame-src 'self' https://www.google.com https://maps.google.com https://api.razorpay.com https://checkout.razorpay.com https://*.razorpay.com;",

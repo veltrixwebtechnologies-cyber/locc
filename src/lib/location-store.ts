@@ -502,11 +502,9 @@ export async function detectCurrentGPSLocation(options?: {
     if (!hasFreshGPSFix(position) || (!allowApproximate && !hasFreshPreciseGPSFix(position)))
       throw new Error("Location is invalid or out of date. Refresh and try again.");
     const { latitude: lat, longitude: lng, accuracy } = position.coords;
-    if (allowApproximate && accuracy > MAX_APPROXIMATE_GPS_PREVIEW_ACCURACY_M) {
-      throw new Error(
-        `Your device reported an accuracy radius of ±${Math.round(accuracy)}m, which is too broad to locate your delivery area. Turn on device location and Wi-Fi, retry, or choose your entrance on the map.`,
-      );
-    }
+    // A coarse desktop/IP estimate is still useful as a map starting point.
+    // Keep it as an unconfirmed preview; the picker requires a manual pin
+    // confirmation before it can become the delivery location.
     let area = `Device location (${lat.toFixed(6)}, ${lng.toFixed(6)})`;
     let city = "";
     let label = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
@@ -645,10 +643,7 @@ export async function detectCurrentGPSLocation(options?: {
           // A precise fix is preferred, but map/manual-pin flows explicitly
           // allow an approximate first fix so the user can adjust the pin
           // instead of waiting forever on desktop Wi-Fi/IP geolocation.
-          if (
-            !hasFreshPreciseGPSFix(position) &&
-            (!allowApproximate || position.coords.accuracy > MAX_APPROXIMATE_GPS_PREVIEW_ACCURACY_M)
-          ) return;
+          if (!hasFreshPreciseGPSFix(position) && !allowApproximate) return;
           cleanup();
           processPosition(position).then(resolve, (error) => {
             if (requestRevision === locationRevision) {

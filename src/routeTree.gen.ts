@@ -36,6 +36,7 @@ import { Route as CollectionCollectionIdRouteImport } from './routes/collection.
 import { Route as OrderOrderIdRouteImport } from './routes/order.$orderId'
 import { Route as ProductProductIdRouteImport } from './routes/product.$productId'
 import { Route as StoreStoreIdRouteImport } from './routes/store.$storeId'
+import { Route as SupportTicketIdRouteImport } from './routes/support.$ticketId'
 import { Route as ApiWebhooksRazorpayRouteImport } from './routes/api/webhooks/razorpay'
 import { Route as LovableEmailAuthPreviewRouteImport } from './routes/lovable/email/auth/preview'
 import { Route as LovableEmailAuthWebhookRouteImport } from './routes/lovable/email/auth/webhook'
@@ -175,6 +176,11 @@ const StoreStoreIdRoute = StoreStoreIdRouteImport.update({
   path: '/store/$storeId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SupportTicketIdRoute = SupportTicketIdRouteImport.update({
+  id: '/$ticketId',
+  path: '/$ticketId',
+  getParentRoute: () => SupportRoute,
+} as any)
 const ApiWebhooksRazorpayRoute = ApiWebhooksRazorpayRouteImport.update({
   id: '/api/webhooks/razorpay',
   path: '/api/webhooks/razorpay',
@@ -211,7 +217,7 @@ export interface FileRoutesByFullPath {
   '/profile': typeof ProfileRoute
   '/rewards': typeof RewardsRoute
   '/search': typeof SearchRoute
-  '/support': typeof SupportRoute
+  '/support': typeof SupportRouteWithChildren
   '/wishlist': typeof WishlistRoute
   '/api/razorpay-webhook': typeof ApiRazorpayWebhookRoute
   '/brand/$brandId': typeof BrandBrandIdRoute
@@ -219,6 +225,7 @@ export interface FileRoutesByFullPath {
   '/order/$orderId': typeof OrderOrderIdRoute
   '/product/$productId': typeof ProductProductIdRoute
   '/store/$storeId': typeof StoreStoreIdRoute
+  '/support/$ticketId': typeof SupportTicketIdRoute
   '/api/webhooks/razorpay': typeof ApiWebhooksRazorpayRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
@@ -243,7 +250,7 @@ export interface FileRoutesByTo {
   '/profile': typeof ProfileRoute
   '/rewards': typeof RewardsRoute
   '/search': typeof SearchRoute
-  '/support': typeof SupportRoute
+  '/support': typeof SupportRouteWithChildren
   '/wishlist': typeof WishlistRoute
   '/api/razorpay-webhook': typeof ApiRazorpayWebhookRoute
   '/brand/$brandId': typeof BrandBrandIdRoute
@@ -251,6 +258,7 @@ export interface FileRoutesByTo {
   '/order/$orderId': typeof OrderOrderIdRoute
   '/product/$productId': typeof ProductProductIdRoute
   '/store/$storeId': typeof StoreStoreIdRoute
+  '/support/$ticketId': typeof SupportTicketIdRoute
   '/api/webhooks/razorpay': typeof ApiWebhooksRazorpayRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
@@ -276,7 +284,7 @@ export interface FileRoutesById {
   '/profile': typeof ProfileRoute
   '/rewards': typeof RewardsRoute
   '/search': typeof SearchRoute
-  '/support': typeof SupportRoute
+  '/support': typeof SupportRouteWithChildren
   '/wishlist': typeof WishlistRoute
   '/api/razorpay-webhook': typeof ApiRazorpayWebhookRoute
   '/brand/$brandId': typeof BrandBrandIdRoute
@@ -284,6 +292,7 @@ export interface FileRoutesById {
   '/order/$orderId': typeof OrderOrderIdRoute
   '/product/$productId': typeof ProductProductIdRoute
   '/store/$storeId': typeof StoreStoreIdRoute
+  '/support/$ticketId': typeof SupportTicketIdRoute
   '/api/webhooks/razorpay': typeof ApiWebhooksRazorpayRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
@@ -318,6 +327,7 @@ export interface FileRouteTypes {
     | '/order/$orderId'
     | '/product/$productId'
     | '/store/$storeId'
+    | '/support/$ticketId'
     | '/api/webhooks/razorpay'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
@@ -350,6 +360,7 @@ export interface FileRouteTypes {
     | '/order/$orderId'
     | '/product/$productId'
     | '/store/$storeId'
+    | '/support/$ticketId'
     | '/api/webhooks/razorpay'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
@@ -382,6 +393,7 @@ export interface FileRouteTypes {
     | '/order/$orderId'
     | '/product/$productId'
     | '/store/$storeId'
+    | '/support/$ticketId'
     | '/api/webhooks/razorpay'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
@@ -407,7 +419,7 @@ export interface RootRouteChildren {
   ProfileRoute: typeof ProfileRoute
   RewardsRoute: typeof RewardsRoute
   SearchRoute: typeof SearchRoute
-  SupportRoute: typeof SupportRoute
+  SupportRoute: typeof SupportRouteWithChildren
   WishlistRoute: typeof WishlistRoute
   ApiRazorpayWebhookRoute: typeof ApiRazorpayWebhookRoute
   BrandBrandIdRoute: typeof BrandBrandIdRoute
@@ -611,6 +623,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof StoreStoreIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/support/$ticketId': {
+      id: '/support/$ticketId'
+      path: '/$ticketId'
+      fullPath: '/support/$ticketId'
+      preLoaderRoute: typeof SupportTicketIdRouteImport
+      parentRoute: typeof SupportRoute
+    }
     '/api/webhooks/razorpay': {
       id: '/api/webhooks/razorpay'
       path: '/api/webhooks/razorpay'
@@ -635,6 +654,17 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface SupportRouteChildren {
+  SupportTicketIdRoute: typeof SupportTicketIdRoute
+}
+
+const SupportRouteChildren: SupportRouteChildren = {
+  SupportTicketIdRoute: SupportTicketIdRoute,
+}
+
+const SupportRouteWithChildren =
+  SupportRoute._addFileChildren(SupportRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AddressesRoute: AddressesRoute,
@@ -655,7 +685,7 @@ const rootRouteChildren: RootRouteChildren = {
   ProfileRoute: ProfileRoute,
   RewardsRoute: RewardsRoute,
   SearchRoute: SearchRoute,
-  SupportRoute: SupportRoute,
+  SupportRoute: SupportRouteWithChildren,
   WishlistRoute: WishlistRoute,
   ApiRazorpayWebhookRoute: ApiRazorpayWebhookRoute,
   BrandBrandIdRoute: BrandBrandIdRoute,

@@ -222,6 +222,7 @@ function fromRow(row: any): Order {
     storeCoordinates: sellerCoordinates ?? undefined,
     lines: (row.order_items ?? []).map((item: any) => ({
       productId: item.product_id,
+      orderItemId: item.id,
       storeId: row.seller_id,
       name: item.product_name,
       unit: item.sku ?? "",

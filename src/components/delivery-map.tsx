@@ -18,6 +18,9 @@ export interface LatLng {
 }
 
 import { getMapTileConfig } from "@/lib/map-provider";
+import { loadGoogleMaps } from "@/lib/google-maps-loader";
+
+const MAP_PROVIDER = import.meta.env.VITE_MAP_PROVIDER === "google" ? "google" : "osm";
 
 interface Props {
   orderId?: string;
@@ -72,6 +75,7 @@ export function DeliveryMap({
   const LRef = useRef<any>(null);
   const markersRef = useRef<Record<string, any>>({});
   const polylineRef = useRef<any>(null);
+  const googleModeRef = useRef(MAP_PROVIDER === "google");
   const mountedRef = useRef(true);
   const cameraTarget = useRef("");
 
@@ -199,7 +203,7 @@ export function DeliveryMap({
     return () => clearInterval(timer);
   }, [lastUpdated]);
 
-  // Initialize Leaflet when the first valid point becomes available. This is
+  // Initialize the selected map provider when the first valid point becomes available. This is
   // important for checkout, where the customer may choose a pin after mount.
   const hasMapPoint = Boolean(courier || destination || store);
   useEffect(() => {
@@ -207,16 +211,42 @@ export function DeliveryMap({
     let cancelled = false;
     (async () => {
       try {
-        const L = (await import("leaflet")).default;
-        await import("leaflet/dist/leaflet.css");
-        if (cancelled || !mapContainerRef.current) return;
-
-        LRef.current = L;
         const initialPoint = courier ?? destination ?? store;
         if (!initialPoint) {
           setLoading(false);
           return;
         }
+
+        if (MAP_PROVIDER === "google") {
+          const googleApi = await loadGoogleMaps();
+          if (cancelled || !mapContainerRef.current) return;
+          googleModeRef.current = true;
+          const map = new googleApi.maps.Map(mapContainerRef.current, {
+            center: { lat: initialPoint.lat, lng: initialPoint.lng },
+            zoom: 15,
+            mapTypeControl: false,
+            streetViewControl: false,
+            fullscreenControl: false,
+            clickableIcons: false,
+          });
+          mapRef.current = map;
+          setLoading(false);
+          if (interactive) {
+            map.addListener("click", (event: google.maps.MapMouseEvent) => {
+              if (event.latLng) {
+                destinationCallback.current?.({ lat: event.latLng.lat(), lng: event.latLng.lng() });
+              }
+            });
+          }
+          return;
+        }
+
+        const L = (await import("leaflet")).default;
+        await import("leaflet/dist/leaflet.css");
+        if (cancelled || !mapContainerRef.current) return;
+
+        LRef.current = L;
+        googleModeRef.current = false;
         const initialCenter: [number, number] = [initialPoint.lat, initialPoint.lng];
 
         const map = L.map(mapContainerRef.current, {
@@ -247,7 +277,7 @@ export function DeliveryMap({
           });
         }
       } catch (err) {
-        console.error("[DeliveryMap] Leaflet init error", err);
+        console.error("[DeliveryMap] map init error", err);
         setLoading(false);
       }
     })();
@@ -261,8 +291,14 @@ export function DeliveryMap({
     return () => {
       mountedRef.current = false;
       if (mapRef.current) {
-        mapRef.current.remove();
-        mapRef.current = null;
+        if (googleModeRef.current) {
+          Object.values(markersRef.current).forEach((marker: any) => marker.setMap?.(null));
+          polylineRef.current?.setMap?.(null);
+          mapRef.current = null;
+        } else {
+          mapRef.current.remove();
+          mapRef.current = null;
+        }
       }
     };
   }, []);
@@ -332,7 +368,60 @@ export function DeliveryMap({
   useEffect(() => {
     const map = mapRef.current;
     const L = LRef.current;
-    if (!map || !L) return;
+    if (!map) return;
+
+    if (MAP_PROVIDER === "google") {
+      const googleApi = window.google;
+      if (!googleApi?.maps) return;
+      googleModeRef.current = true;
+
+      const upsertGoogleMarker = (
+        id: string,
+        pos: LatLng | undefined,
+        iconUrl: string,
+        size: [number, number],
+      ) => {
+        if (!pos || !parseCoordinates(pos.lat, pos.lng)) {
+          markersRef.current[id]?.setMap?.(null);
+          delete markersRef.current[id];
+          return;
+        }
+        const marker = markersRef.current[id] ?? new googleApi.maps.Marker({ map });
+        marker.setPosition({ lat: pos.lat, lng: pos.lng });
+        marker.setIcon({ url: iconUrl, scaledSize: new googleApi.maps.Size(size[0], size[1]) });
+        marker.setMap(map);
+        markersRef.current[id] = marker;
+      };
+
+      upsertGoogleMarker("store", store, pinSvg("#2A6F77", "store"), [28, 38]);
+      upsertGoogleMarker("dest", destination ?? undefined, pinSvg("#E3A72E", "destination"), [28, 38]);
+      upsertGoogleMarker("courier", courier, courierScooterSvg("#D9584C", courier?.heading || 0), [36, 36]);
+
+      const dest = phase === "to_vendor" ? store : destination;
+      if (interactive && dest && parseCoordinates(dest.lat, dest.lng)) {
+        const key = dest.lat + ":" + dest.lng;
+        if (cameraTarget.current !== key) {
+          cameraTarget.current = key;
+          map.panTo({ lat: dest.lat, lng: dest.lng });
+          map.setZoom(17);
+        }
+      }
+
+      polylineRef.current?.setMap?.(null);
+      polylineRef.current = null;
+      if (routeInfo?.geometry?.length) {
+        polylineRef.current = new googleApi.maps.Polyline({
+          map,
+          path: routeInfo.geometry.map(([lng, lat]) => ({ lat, lng })),
+          strokeColor: phase === "to_vendor" ? "#2A6F77" : "#E3A72E",
+          strokeOpacity: 0.85,
+          strokeWeight: 4,
+        });
+      }
+      return;
+    }
+
+    if (!L) return;
 
     // Helper: update or animate marker
     const upsertMarker = (

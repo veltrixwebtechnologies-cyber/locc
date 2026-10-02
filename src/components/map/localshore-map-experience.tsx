@@ -11,10 +11,15 @@ import {
 } from "lucide-react";
 import { motion } from "framer-motion";
 import type { InteractiveMapViewRef } from "./interactive-map-view";
+import { GoogleMapsMapView } from "./google-maps-map-view";
 
 const InteractiveMapView = lazy(() =>
   import("./interactive-map-view").then((module) => ({ default: module.InteractiveMapView })),
 );
+
+// OSM/MapLibre remains the safe default. Enable Google Maps only in this
+// isolated GMap worktree with VITE_MAP_PROVIDER=google.
+const MAP_PROVIDER = import.meta.env.VITE_MAP_PROVIDER === "google" ? "google" : "osm";
 
 import type { MapFilterOptions, MapLocation, MapMarkerItem } from "@/lib/map-service/types";
 import { getMapMarkerItems, isTestEntity } from "@/lib/map-service/store-engine";
@@ -466,7 +471,18 @@ export function LocalShoreMapExperience({
                   <div className="h-[calc(100vh-210px)] min-h-[560px] max-h-[760px] animate-pulse bg-slate-100" />
                 }
               >
-                <InteractiveMapView
+                {MAP_PROVIDER === "google" ? <GoogleMapsMapView
+                  ref={mapRef}
+                  markers={markerItems}
+                  userLocation={userLocation}
+                  selectedMarkerId={selectedMarkerId}
+                  hoveredMarkerId={hoveredMarkerId}
+                  onSelectMarker={(m) => setSelectedMarkerId(m ? m.id : null)}
+                  onBoundsChange={(bounds) => setFilters((prev) => ({ ...prev, bounds }))}
+                  onUserLocationChange={setUserLocation}
+                  onViewShop={(shopId) => { window.location.href = `/store/${shopId}`; }}
+                  className="h-[calc(100vh-210px)] min-h-[560px] max-h-[760px] w-full"
+                /> : <InteractiveMapView
                   ref={mapRef}
                   markers={markerItems}
                   userLocation={userLocation}
@@ -476,7 +492,7 @@ export function LocalShoreMapExperience({
                   onBoundsChange={(bounds) => setFilters((prev) => ({ ...prev, bounds }))}
                   onUserLocationChange={setUserLocation}
                   className="h-[calc(100vh-210px)] min-h-[560px] max-h-[760px] w-full"
-                />
+                />}
               </Suspense>
             </div>
           </div>
@@ -517,7 +533,18 @@ export function LocalShoreMapExperience({
           {/* Map Container */}
           <div className="flex-1 relative">
             <Suspense fallback={<div className="h-full w-full animate-pulse bg-slate-100" />}>
-              <InteractiveMapView
+              {MAP_PROVIDER === "google" ? <GoogleMapsMapView
+                ref={mapRef}
+                markers={markerItems}
+                userLocation={userLocation}
+                selectedMarkerId={selectedMarkerId}
+                hoveredMarkerId={hoveredMarkerId}
+                onSelectMarker={(m) => setSelectedMarkerId(m ? m.id : null)}
+                onBoundsChange={(bounds) => setFilters((prev) => ({ ...prev, bounds }))}
+                onUserLocationChange={setUserLocation}
+                onViewShop={(shopId) => { window.location.href = `/store/${shopId}`; }}
+                className="h-full w-full rounded-none border-0"
+              /> : <InteractiveMapView
                 ref={mapRef}
                 markers={markerItems}
                 userLocation={userLocation}
@@ -527,7 +554,7 @@ export function LocalShoreMapExperience({
                 onBoundsChange={(bounds) => setFilters((prev) => ({ ...prev, bounds }))}
                 onUserLocationChange={setUserLocation}
                 className="h-full w-full rounded-none border-0"
-              />
+              />}
             </Suspense>
           </div>
         </div>
