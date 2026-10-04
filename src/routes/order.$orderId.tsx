@@ -17,6 +17,7 @@ import { m } from "motion/react";
 import { OrderSupport } from "@/components/order-support";
 import { DeliveryAnimation } from "@/components/delivery-animation";
 import { LottieLoading } from "@/components/ui/lottie-loading";
+import { OrderRefundPanel } from "@/components/order-refund-panel";
 
 export const Route = createFileRoute("/order/$orderId")({
   component: OrderPage,
@@ -322,7 +323,8 @@ function OrderPage() {
                 </p>
               )}
               <p className="mt-1 text-[11px] text-rose-600/80 dark:text-rose-400/80">
-                If any amount was deducted, a full refund will be credited back automatically.
+                If a payment was captured, check the refund status below or contact Customer Care.
+                Cancellation alone does not confirm a refund.
               </p>
             </div>
           </div>
@@ -474,11 +476,14 @@ function OrderPage() {
               <span>Cancel Order</span>
             </button>
             <p className="mt-1.5 text-[10px] text-center text-muted-foreground">
-              Free cancellation before order pickup. Instant refund for prepaid orders.
+              Cancellation availability depends on order progress. Any eligible refund is reviewed
+              and tracked separately.
             </p>
           </div>
         )}
       </section>
+
+      <OrderRefundPanel order={order} />
 
       {order.status === "delivered" && <OrderSupport order={order} />}
 
@@ -614,8 +619,8 @@ function CancelOrderModal({
           )}
 
           <div className="rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200/60 p-3 text-[11px] text-amber-800 dark:text-amber-300">
-            💡 <strong>Note:</strong> Prepaid orders will be automatically refunded to your original
-            payment method within 1–2 business days.
+            💡 <strong>Note:</strong> Cancellation does not itself process a payment refund. Any
+            refund request and its status are shown separately on the order page.
           </div>
         </div>
 

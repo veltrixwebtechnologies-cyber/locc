@@ -21,6 +21,7 @@ export function sourceLoader(root, mocks = {}) {
     code = code.replace(/from\s+(["'])([^"']+)\1/g, (_, quote, specifier) => {
       if (mocks[specifier])
         return `from ${JSON.stringify("data:text/javascript;base64," + Buffer.from(mocks[specifier]).toString("base64"))}`;
+      if (specifier.startsWith("node:")) return `from ${JSON.stringify(specifier)}`;
       if (!specifier.startsWith(".") && !specifier.startsWith("@/"))
         return `from ${JSON.stringify(pathToFileURL(require.resolve(specifier)).href)}`;
       let target = specifier.startsWith("@/")

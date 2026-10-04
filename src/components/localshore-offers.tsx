@@ -75,9 +75,17 @@ export function LocalShoreOffers() {
   const offersQuery = useQuery<typeof fallbackOffers>({
     queryKey: ["localshore-offer-cards", "shopper"],
     queryFn: async () => {
-      const { data, error } = await (supabase as any).from("localshore_offer_cards").select("*").order("sort_order").order("created_at");
+      const { data, error } = await (supabase as any)
+        .from("localshore_offer_cards")
+        .select("*")
+        .order("sort_order")
+        .order("created_at");
       if (error) return fallbackOffers;
-      return data.map((offer: any) => ({ ...offer, image: resolveImage(offer.image_url), icon: iconByCategory[offer.category as keyof typeof iconByCategory] || ShoppingBag }));
+      return data.map((offer: any) => ({
+        ...offer,
+        image: resolveImage(offer.image_url),
+        icon: iconByCategory[offer.category as keyof typeof iconByCategory] || ShoppingBag,
+      }));
     },
     staleTime: 1000 * 60 * 5,
   });
@@ -123,7 +131,9 @@ export function LocalShoreOffers() {
               role="link"
               tabIndex={0}
               aria-label={offer.action + ": " + offer.title.replace(/\n/g, " ")}
-              onClick={() => navigate({ to: "/search", search: { category: offer.category, q: undefined } })}
+              onClick={() =>
+                navigate({ to: "/search", search: { category: offer.category, q: undefined } })
+              }
               onKeyDown={(event) => {
                 if (event.key === "Enter" || event.key === " ") {
                   event.preventDefault();
@@ -171,7 +181,7 @@ export function LocalShoreOffers() {
                 src={offer.image}
                 alt=""
                 loading="lazy"
-                className="pointer-events-none absolute bottom-0 right-0 h-[78%] w-[42%] object-cover object-center transition duration-500 ease-out [mask-image:linear-gradient(to_right,transparent,black_45%)] group-hover:scale-105"
+                className="absolute bottom-0 right-0 h-[78%] w-[42%] object-cover object-center transition duration-500 ease-out [mask-image:linear-gradient(to_right,transparent,black_45%)] group-hover:scale-105"
               />
             </article>
           );

@@ -236,7 +236,7 @@ export function HeroSection() {
                         loading="eager"
                         decoding="async"
                         {...({ fetchPriority: "high" } as Record<string, string>)}
-                        className="absolute inset-0 h-full w-full object-cover pointer-events-none"
+                        className="absolute inset-0 h-full w-full object-cover"
                       />
                     </div>
                   </motion.div>
@@ -392,7 +392,10 @@ export function HeroSection() {
                                   <button
                                     key={item.id}
                                     type="button"
-                                    onMouseDown={(e) => e.preventDefault()}
+                                    onMouseDown={(e) => {
+                                      if (!(e.target as HTMLElement).closest("img"))
+                                        e.preventDefault();
+                                    }}
                                     onClick={() => {
                                       setIsFocused(false);
                                       navigate({ to: item.url as any });
@@ -439,7 +442,10 @@ export function HeroSection() {
                                   <button
                                     key={item.id}
                                     type="button"
-                                    onMouseDown={(e) => e.preventDefault()}
+                                    onMouseDown={(e) => {
+                                      if (!(e.target as HTMLElement).closest("img"))
+                                        e.preventDefault();
+                                    }}
                                     onClick={() => {
                                       setIsFocused(false);
                                       navigate({ to: item.url as any });

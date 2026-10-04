@@ -26,8 +26,7 @@ import { getMapMarkerItems, isTestEntity } from "@/lib/map-service/store-engine"
 import { geocodeSearch } from "@/lib/map-service/providers";
 import { Link } from "@tanstack/react-router";
 import { categoryColor, categoryLabel } from "@/lib/mock-data";
-import { getFallbackProductImage, getFallbackShopImage, isValidImageUrl } from "@/lib/image-utils";
-import { demoNeighborhoodShops, isGeneratedDemoShopName } from "@/lib/demo-neighborhood-shops";
+import { getFallbackProductImage, isValidImageUrl } from "@/lib/image-utils";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -37,9 +36,9 @@ import {
   setActiveDeliveryLocation,
 } from "@/lib/location-store";
 import { getCategoryByIdOrSlug } from "@/lib/shop-categories";
-import { haversineDistanceKm, isValidCoordinate } from "@/lib/geo";
+import { isValidCoordinate } from "@/lib/geo";
 import { CUSTOMER_VISIBILITY_RADIUS_KM, DEFAULT_SHOP_DISCOVERY_RADIUS_KM, hasConfirmedCoordinates } from "@/lib/location-visibility";
-import { isStoreInCategory } from "@/lib/shop-categories";
+import { discoverShops } from "@/lib/shop-discovery";
 
 // Quick category filter tabs matching the reference design
 const QUICK_FILTERS = [
@@ -144,15 +143,17 @@ export function LocalShoreMapExperience({
     queryFn: async () => {
       if (!hasConfirmedCoordinates(deliveryLoc)) return [];
       try {
-        const { data, error } = await (supabase as any).rpc("get_customer_visible_shops", {
-          p_lat: deliveryLoc.lat, p_lng: deliveryLoc.lng, p_query: query || null,
-          p_category_slug: initialCategory !== "all" ? initialCategory : null, p_limit: 100, p_offset: 0,
-        });
-        if (error) throw error;
-        return (data ?? []).filter((v: any) =>
-          !isTestEntity(v.shop_name) &&
-          (MAP_PROVIDER !== "google" || !isGeneratedDemoShopName(String(v.shop_name))),
+        const { shops } = await discoverShops(
+          (name, args) => (supabase as any).rpc(name, args),
+          {
+            lat: deliveryLoc.lat,
+            lng: deliveryLoc.lng,
+            query: query || null,
+            category: initialCategory !== "all" ? initialCategory : null,
+            radiusKm: DEFAULT_SHOP_DISCOVERY_RADIUS_KM,
+          },
         );
+        return shops.filter((shop) => !isTestEntity(shop.shop_name));
       } catch (err) {
         console.warn("Map vendors query fallback:", err);
         return [];
@@ -172,50 +173,15 @@ export function LocalShoreMapExperience({
 
     // Keep one marker per registered shop returned by the database.
     const seenShopIds = new Set<string>();
-    const registered = markers.filter((marker) => {
+    return markers.filter((marker) => {
       if (seenShopIds.has(marker.shopId)) return false;
       seenShopIds.add(marker.shopId);
       return true;
     });
-    if (MAP_PROVIDER !== "google") return registered;
-
-    const queryText = (filters.query ?? "").trim().toLowerCase();
-    const demos: MapMarkerItem[] = demoNeighborhoodShops.flatMap((shop) => {
-      const distanceKm = haversineDistanceKm(userLocation.lat, userLocation.lng, shop.lat, shop.lng);
-      if (distanceKm > DEFAULT_SHOP_DISCOVERY_RADIUS_KM) return [];
-      if (filters.category && !isStoreInCategory(shop.category, filters.category)) return [];
-      if (queryText && ![shop.name, shop.area, shop.city, ...shop.sampleProducts].some((value) => value.toLowerCase().includes(queryText))) return [];
-      if (filters.openNow || filters.inStockOnly || filters.minPrice != null || filters.maxPrice != null || filters.minRating != null) return [];
-      if (filters.bounds && (shop.lat < filters.bounds.swLat || shop.lat > filters.bounds.neLat || shop.lng < filters.bounds.swLng || shop.lng > filters.bounds.neLng)) return [];
-      if (registered.some((real) => real.shopName.trim().toLowerCase() === shop.name.trim().toLowerCase() && haversineDistanceKm(real.lat, real.lng, shop.lat, shop.lng) < 2)) return [];
-      const imageUrl = getFallbackShopImage(shop.category, shop.name);
-      return [{
-        id: `marker-${shop.id}`,
-        shopId: shop.id,
-        shopName: shop.name,
-        category: shop.category,
-        lat: shop.lat,
-        lng: shop.lng,
-        address: `Approximate area: ${shop.area}, ${shop.city}`,
-        rating: 0,
-        isOpen: false,
-        distanceKm: Math.round(distanceKm * 10) / 10,
-        productName: shop.sampleProducts[0],
-        productImage: imageUrl,
-        minPrice: 0,
-        priceDisplay: "Sample catalog",
-        updatedAt: "Demo preview",
-        inStock: false,
-        rawStore: { id: shop.id, name: shop.name, category: shop.category, tagline: "Shop preview", rating: 0, isOpen: false, etaMin: 0, address: `${shop.area}, ${shop.city}`, lat: shop.lat, lng: shop.lng, imageUrl },
-        isDemo: true,
-        sampleProducts: shop.sampleProducts,
-      }];
-    });
-    return [...registered, ...demos].sort((a, b) => a.distanceKm - b.distanceKm);
   }, [userLocation, filters, approvedProducts.data, approvedVendors.data]);
 
-  const registeredCount = markerItems.filter((marker) => !marker.isDemo).length;
-  const demoCount = markerItems.length - registeredCount;
+  const registeredCount = markerItems.filter((item) => !item.isDemo).length;
+  const demoCount = markerItems.filter((item) => item.isDemo).length;
 
   // Handle Geocoding Search for Map Locations
   const handleLocationSearch = async (val: string) => {
@@ -329,12 +295,12 @@ export function LocalShoreMapExperience({
             </h2>
             <span className="inline-flex items-center gap-1 rounded-full bg-[var(--sand)] border border-[#f0abfc] px-2.5 py-0.5 text-[11px] font-bold text-[#981495]">
               <span className="h-1.5 w-1.5 rounded-full bg-[#981495] animate-pulse" />
-              {MAP_PROVIDER === "google" ? `${registeredCount} registered · ${demoCount} previews` : "Verified Local Sellers"}
+            {MAP_PROVIDER === "google" ? `${registeredCount} shops · ${demoCount} demo catalogs` : "Verified Local Sellers"}
             </span>
           </div>
           <p className="mt-0.5 text-xs md:text-sm text-slate-500 font-medium">
             <strong className="text-slate-900 font-bold">{markerItems.length} local shop listings</strong>{" "}
-            {MAP_PROVIDER === "google" ? "in this area; shop previews have approximate pins and example products" : "verified in this area"}
+            {MAP_PROVIDER === "google" ? "registered shops and clearly labeled demo previews in this area" : "verified in this area"}
           </p>
         </div>
 
@@ -426,7 +392,7 @@ export function LocalShoreMapExperience({
 
                       {/* Top Pick Badge */}
                       <div className="absolute top-2.5 left-2.5 rounded-full bg-white/95 backdrop-blur-xs px-2.5 py-1 text-[10px] font-bold text-slate-900 shadow-sm border border-slate-200/40">
-                        {item.isDemo ? "Shop preview" : item.distanceKm <= 2 ? "Top Pick" : "Verified Store"}
+                        {item.isDemo ? "Demo shop · live catalog" : item.distanceKm <= 2 ? "Top Pick" : "Verified Store"}
                       </div>
 
                       {/* Wishlist Button */}
@@ -478,14 +444,14 @@ export function LocalShoreMapExperience({
 
                         <p className="text-[11px] font-semibold text-[#981495] flex items-center gap-1.5 mt-1">
                           <span className="h-1.5 w-1.5 rounded-full bg-[#981495] inline-block animate-pulse" />
-                          {item.isDemo ? "Sample products · Approximate area" : "Available for pickup & instant delivery"}
+                          {item.isDemo ? "Demo seller · listed products" : "Available for pickup & instant delivery"}
                         </p>
                       </div>
 
                       {/* Price & View Shop Footer */}
                       <div className="mt-2 flex items-center justify-between pt-2.5 border-t border-slate-100">
                         <div>
-                          {item.isDemo ? <span className="text-xs font-bold text-[#981495]">Sample catalog</span> : <>
+                          {<>
                           <span className="font-extrabold text-[14px] text-slate-900">
                             ₹{priceMin}–₹{priceMax}
                           </span>
@@ -493,7 +459,7 @@ export function LocalShoreMapExperience({
                           </>}
                         </div>
                         <span className="inline-flex items-center gap-1 rounded-full bg-[var(--sand)] px-3.5 py-1.5 text-[11px] font-bold text-[#981495] group-hover:bg-[#981495] group-hover:text-white transition-all shadow-2xs">
-                          {item.isDemo ? "Explore products" : "View Shop"}
+                          {item.isDemo ? "Browse demo shop" : "View Shop"}
                           <ArrowRight className="h-3.5 w-3.5" />
                         </span>
                       </div>
@@ -559,7 +525,7 @@ export function LocalShoreMapExperience({
             </button>
             <div className="text-center">
               <h3 className="font-bold text-sm text-slate-900">Shops near you</h3>
-              <p className="text-[10px] text-slate-500">{MAP_PROVIDER === "google" ? `${registeredCount} registered · ${demoCount} previews` : `${markerItems.length} verified stores`}</p>
+              <p className="text-[10px] text-slate-500">{MAP_PROVIDER === "google" ? `${registeredCount} shops · ${demoCount} demo catalogs` : `${markerItems.length} verified stores`}</p>
             </div>
             <button
               type="button"
@@ -684,7 +650,7 @@ function NeighborhoodMapPreviewCard({
     return (
       <div className="mb-8 rounded-3xl border border-[#EBD9F0] bg-white p-6 sm:p-8">
         <h3 className="font-display text-xl font-bold text-[#21162B]">Explore LocalShore nearby</h3>
-        <p className="mt-2 text-sm text-slate-600">No registered sellers or shop previews are within this location's discovery radius.</p>
+        <p className="mt-2 text-sm text-slate-600">No registered shops with published, in-stock products are available around this location yet.</p>
         <button type="button" onClick={onOpenMap} className="mt-4 rounded-full bg-[#981495] px-5 py-2.5 text-sm font-bold text-white">Open map</button>
       </div>
     );

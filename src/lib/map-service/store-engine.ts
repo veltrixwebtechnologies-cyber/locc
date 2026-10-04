@@ -11,6 +11,7 @@ import { isValidCoordinate } from "@/lib/geo";
 import type { MapMarkerItem, MapFilterOptions, MapLocation } from "./types";
 import { isStoreInCategory, toStoreCategory } from "@/lib/shop-categories";
 import { CUSTOMER_VISIBILITY_RADIUS_KM } from "@/lib/location-visibility";
+import { isGeneratedDemoShopName } from "@/lib/demo-neighborhood-shops";
 
 export { toStoreCategory };
 
@@ -162,7 +163,7 @@ export function getMapMarkerItems(
     );
 
     // Apply max distance filter (relative to active search location)
-    if (computedDistanceKm > CUSTOMER_VISIBILITY_RADIUS_KM) {
+    if (computedDistanceKm > (filters.maxDistanceKm ?? CUSTOMER_VISIBILITY_RADIUS_KM)) {
       return;
     }
 
@@ -275,8 +276,9 @@ export function getMapMarkerItems(
       matchingProducts.length,
     );
 
+    const isDemoCatalog = isGeneratedDemoShopName(store.name);
     const productNameDisplay =
-      query && topProduct
+      (query || isDemoCatalog) && topProduct
         ? topProduct.name
         : store.tagline || (topProduct ? topProduct.name : store.name);
 
@@ -302,6 +304,7 @@ export function getMapMarkerItems(
       totalVariants: matchingProducts.length,
       rawStore: { ...store, distanceKm: Number(computedDistanceKm.toFixed(1)) },
       matchingProduct: topProduct,
+      isDemo: isDemoCatalog,
     });
   });
 

@@ -118,24 +118,9 @@ function getCategoryIcon(_catName: string) {
 
 function DemoShopPreview({ shop }: { shop: DemoNeighborhoodShop }) {
   const [query, setQuery] = useState("");
-  const [basket, setBasket] = useState<Record<number, number>>({});
   const visibleProducts = shop.sampleProducts
     .map((name, index) => ({ name, index }))
     .filter(({ name }) => name.toLowerCase().includes(query.trim().toLowerCase()));
-  const basketCount = Object.values(basket).reduce((total, qty) => total + qty, 0);
-  const basketTotal = Object.entries(basket).reduce(
-    (total, [index, qty]) => total + (shop.sampleProductPrices[Number(index)] ?? 0) * qty,
-    0,
-  );
-  const changeQty = (index: number, change: number) => {
-    setBasket((current) => {
-      const next = { ...current };
-      const qty = Math.max(0, (next[index] ?? 0) + change);
-      if (qty === 0) delete next[index];
-      else next[index] = qty;
-      return next;
-    });
-  };
 
   return (
     <main className="min-h-screen bg-[#F8F4FA] px-4 py-6 pb-32 sm:px-6">
@@ -147,10 +132,10 @@ function DemoShopPreview({ shop }: { shop: DemoNeighborhoodShop }) {
           <div className="grid sm:grid-cols-[220px_1fr]">
             <img src={getFallbackShopImage(shop.category, shop.name)} alt="" className="h-48 w-full object-cover sm:h-full" />
             <div className="p-5 sm:p-7">
-              <span className="inline-flex rounded-full bg-[#F4E5F5] px-3 py-1 text-xs font-bold text-[#981495]">Local shop preview</span>
+              <span className="inline-flex rounded-full bg-[#F4E5F5] px-3 py-1 text-xs font-bold text-[#981495]">Example shop · Not onboarded</span>
               <h1 className="mt-3 font-display text-2xl font-black text-[#21162B] sm:text-3xl">{shop.name}</h1>
               <p className="mt-2 text-sm text-slate-600">{shop.area}, {shop.city} · {shop.hub}</p>
-              <p className="mt-3 text-sm text-slate-600">Explore products commonly found at this type of shop. The map pin shows its approximate neighborhood; this shop has not published a LocalShore catalog yet.</p>
+              <p className="mt-3 text-sm text-slate-600">This is an illustrative neighborhood example, not a registered LocalShore seller. Its map pin is approximate and the items below are examples only. Browse registered shops for real products and ordering.</p>
             </div>
           </div>
         </section>
@@ -162,7 +147,7 @@ function DemoShopPreview({ shop }: { shop: DemoNeighborhoodShop }) {
           <div className="flex items-end justify-between gap-3">
             <div>
               <h2 className="font-display text-xl font-bold text-[#21162B]">All Products</h2>
-              <p className="mt-1 text-sm text-slate-600">Sample catalog · Prices are illustrative, not seller quotes.</p>
+              <p className="mt-1 text-sm text-slate-600">Illustrative product types only · No live seller catalog or prices.</p>
             </div>
             <span className="shrink-0 text-xs font-semibold text-slate-500">{visibleProducts.length} items</span>
           </div>
@@ -171,39 +156,16 @@ function DemoShopPreview({ shop }: { shop: DemoNeighborhoodShop }) {
               <article key={index} className="min-w-0 overflow-hidden rounded-2xl border border-[#EBD9F0] bg-white p-2.5 shadow-sm sm:p-3">
                 <div className="relative aspect-square overflow-hidden rounded-xl bg-[#F8F4FA]">
                   <img src={shop.sampleProductImages[index]} alt={name} onError={(event) => { event.currentTarget.onerror = null; event.currentTarget.src = getFallbackProductImage(name, shop.category); }} className="h-full w-full object-cover" />
-                  <div className="absolute bottom-2 right-2">
-                    {(basket[index] ?? 0) === 0 ? (
-                      <button type="button" onClick={() => changeQty(index, 1)} aria-label={`Add ${name} to sample basket`} className="rounded-lg border border-emerald-600 bg-white px-3 py-1 text-xs font-black text-emerald-700 shadow-sm transition hover:bg-emerald-600 hover:text-white">ADD</button>
-                    ) : (
-                      <div className="flex items-center rounded-lg border border-emerald-600 bg-white text-emerald-700 shadow-sm">
-                        <button type="button" onClick={() => changeQty(index, -1)} aria-label={`Remove one ${name}`} className="px-2 py-1 font-bold">−</button>
-                        <span className="min-w-5 text-center text-xs font-bold" aria-live="polite">{basket[index]}</span>
-                        <button type="button" onClick={() => changeQty(index, 1)} aria-label={`Add one ${name}`} className="px-2 py-1 font-bold">+</button>
-                      </div>
-                    )}
-                  </div>
                 </div>
                 <div className="p-1 pt-3">
-                  <p className="font-black text-[#21162B]">₹{shop.sampleProductPrices[index].toLocaleString("en-IN")}</p>
-                  <p className="text-[11px] text-slate-500">Illustrative price</p>
                   <h3 className="mt-2 line-clamp-2 text-sm font-semibold text-[#21162B]">{name}</h3>
-                  <p className="mt-1 text-xs text-slate-500">Sample product · Not available to order</p>
+                  <p className="mt-1 text-xs text-slate-500">Example only · Not available to order</p>
                 </div>
               </article>
             ))}
           </div>
           {visibleProducts.length === 0 && <p className="mt-4 rounded-2xl border border-[#EBD9F0] bg-white p-6 text-center text-sm text-slate-600">No sample products match your search.</p>}
         </section>
-        {basketCount > 0 && (
-          <aside className="sticky bottom-4 z-20 mt-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-[#981495] p-4 text-white shadow-xl" aria-label="Sample basket">
-            <div>
-              <p className="flex items-center gap-2 font-bold"><ShoppingBag className="h-4 w-4" /> Sample basket · {basketCount} {basketCount === 1 ? "item" : "items"}</p>
-              <p className="max-w-2xl truncate text-xs text-white/90">{Object.entries(basket).map(([index, qty]) => `${shop.sampleProducts[Number(index)]} × ${qty}`).join(" · ")}</p>
-              <p className="text-xs text-white/85">Illustrative total ₹{basketTotal.toLocaleString("en-IN")} · Checkout unavailable for this preview shop</p>
-            </div>
-            <button type="button" onClick={() => setBasket({})} className="rounded-xl border border-white/50 px-3 py-2 text-xs font-semibold hover:bg-white/10">Clear basket</button>
-          </aside>
-        )}
       </div>
     </main>
   );
@@ -268,7 +230,7 @@ function StorePage() {
             price: Number(p.selling_price),
             imageUrl,
             category: p.category ?? "Other",
-            stock: Number(p.stock ?? 20),
+            stock: Number(p.stock ?? 0),
           };
         }),
       );
@@ -487,6 +449,15 @@ function StorePage() {
   const addProductToCart = (product: Product, event?: React.MouseEvent<HTMLButtonElement>) => {
     event?.preventDefault();
     event?.stopPropagation();
+
+    if (!Number.isSafeInteger(product.stock) || Number(product.stock) <= 0) {
+      toast.error("This product is out of stock.");
+      return;
+    }
+    if (qtyOf(product.id) >= Number(product.stock)) {
+      toast.error("You’ve reached the available quantity for this product.");
+      return;
+    }
 
     // Add to the cart before starting the optional animation. A browser that
     // does not support the animation must never prevent the cart mutation.
@@ -880,7 +851,9 @@ function StorePage() {
             >
               {filteredProducts.map((p) => {
                 const q = qtyOf(p.id);
-                const mrp = Math.round(p.price * 1.25);
+                // The public catalog does not supply MRP; never invent a discount
+                // for a registered seller's products.
+                const mrp = isLiveSellerStore ? p.price : Math.round(p.price * 1.25);
                 const discountPct = Math.round(((mrp - p.price) / mrp) * 100);
                 const unit = p.unit || "1 unit";
 
@@ -934,9 +907,10 @@ function StorePage() {
                             <button
                               type="button"
                               onClick={(event) => addProductToCart(p, event)}
+                              disabled={!Number.isSafeInteger(p.stock) || Number(p.stock) <= 0}
                               className="rounded-lg bg-[#fffafd] border border-emerald-600 text-emerald-700 hover:bg-emerald-600 hover:text-white px-3.5 py-1 text-xs font-black uppercase tracking-wider shadow-sm transition-all active:scale-95 cursor-pointer flex items-center gap-1"
                             >
-                              <span>ADD</span>
+                              <span>{Number.isSafeInteger(p.stock) && Number(p.stock) > 0 ? "ADD" : "Out of stock"}</span>
                             </button>
                           ) : (
                             <QtyStepper

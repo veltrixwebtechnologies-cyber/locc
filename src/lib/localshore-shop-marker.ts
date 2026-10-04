@@ -20,7 +20,7 @@ export function localShoreShopMarker(name: string, selected = false, demo = fals
     <circle cx="25" cy="24" r="14" fill="${accent}"/>
     <path d="M18 22h14l-1.8 2.5v7h-10.4v-7L18 22Zm2.2-1 1.5-3h6.6l1.5 3M23 27h4v4h-4Z" fill="none" stroke="#FFFFFF" stroke-width="1.6" stroke-linejoin="round"/>
     <text x="47" y="23" fill="${text}" font-family="Arial, sans-serif" font-size="11.5" font-weight="700">${safeLabel}</text>
-    <text x="47" y="37" fill="${demo ? "#9A5A9A" : "#981495"}" font-family="Arial, sans-serif" font-size="8.5" font-weight="700" letter-spacing=".5">${demo ? "PREVIEW · APPROX. AREA" : "LOCALSHORE SHOP"}</text>
+    <text x="47" y="37" fill="${demo ? "#9A5A9A" : "#981495"}" font-family="Arial, sans-serif" font-size="8.5" font-weight="700" letter-spacing=".5">${demo ? "DEMO CATALOG · APPROX AREA" : "LOCALSHORE SHOP"}</text>
   </svg>`;
   return {
     url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`,
