@@ -1,6 +1,7 @@
 import { catalogCategoryKey } from "./shop-categories";
 import { CUSTOMER_VISIBILITY_RADIUS_KM } from "./location-visibility";
 import { isValidCoordinate, isFiniteNumber } from "./geo";
+import { runCatalogRpcWithTimeout } from "./catalog-rpc";
 
 export interface DiscoveryShop {
   id: string;
@@ -42,13 +43,13 @@ export async function discoverShops(rpc: Rpc, input: {
     p_lat: input.lat, p_lng: input.lng, p_query: input.query,
     p_category_slug: input.category, p_limit: 100, p_offset: 0,
   };
-  let response = await rpc("discover_nearby_shops", {
+  let response = await runCatalogRpcWithTimeout(rpc("discover_nearby_shops", {
     ...args, p_radius_km: input.radiusKm, p_min_results: 3,
-  });
+  }));
   // An unapplied migration must not hide the existing catalog. Only fall back
   // for a missing RPC; connectivity/auth/database failures remain errors.
   const legacyMode = response.error?.code === "PGRST202";
-  if (legacyMode) response = await rpc("get_customer_visible_shops", args);
+  if (legacyMode) response = await runCatalogRpcWithTimeout(rpc("get_customer_visible_shops", args));
   if (response.error) throw new Error(response.error.message || "Unable to load nearby shops");
   if (!Array.isArray(response.data)) throw new Error("Invalid shop discovery response");
   const effectiveRadiusKm = legacyMode

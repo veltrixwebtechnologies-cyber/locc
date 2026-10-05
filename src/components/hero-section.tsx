@@ -398,7 +398,9 @@ export function HeroSection() {
                                     }}
                                     onClick={() => {
                                       setIsFocused(false);
-                                      navigate({ to: item.url as any });
+                                      if (item.metadata?.imported === true) {
+                                        if (item.url && item.url !== "#") window.open(item.url, "_blank", "noopener,noreferrer");
+                                      } else navigate({ to: item.url as any });
                                     }}
                                     className="w-full flex items-center gap-3 p-2 rounded-xl hover:bg-[var(--sand)]/80 transition-colors text-left group"
                                   >

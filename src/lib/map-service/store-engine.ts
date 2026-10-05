@@ -90,6 +90,7 @@ export function isTestEntity(name?: string | null): boolean {
   if (!name) return true;
   const lower = name.trim().toLowerCase();
   if (lower.length <= 2) return true;
+  if (isGeneratedDemoShopName(name)) return true;
   const testNames = [
     "sss",
     "ggg",
@@ -129,7 +130,9 @@ export function getMapMarkerItems(
       id: vendor.id,
       name: vendor.shop_name || APPROVED_STORE.name,
       tagline: vendor.business_type || "Approved local vendor",
-      category: toStoreCategory(vendor.category) as StoreCategory,
+      // Shop category is based on the seller's primary business type. Product
+      // categories can differ and must not leak other shops into a category map.
+      category: toStoreCategory(vendor.business_type || vendor.category) as StoreCategory,
       address:
         [vendor.address_line1, vendor.city, vendor.state].filter(Boolean).join(", ") ||
         APPROVED_STORE.address,
@@ -167,18 +170,10 @@ export function getMapMarkerItems(
       return;
     }
 
-    // Apply category filter (checking store category, tagline, and product categories)
+    // Category maps are scoped by the shop's primary business category, not
+    // incidental product categories.
     if (catFilter) {
-      const matchStoreCat =
-        isStoreInCategory(store.category, catFilter, store.rating) ||
-        isStoreInCategory(store.tagline, catFilter, store.rating);
-      const seedProds = productsByStore[store.id] || [];
-      const matchProdCat = seedProds.some((p) =>
-        isStoreInCategory(p.category, catFilter, store.rating),
-      );
-      if (!matchStoreCat && !matchProdCat) {
-        return;
-      }
+      if (!isStoreInCategory(store.category, catFilter, store.rating)) return;
     }
 
     // Apply open now filter

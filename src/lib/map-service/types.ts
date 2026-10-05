@@ -44,9 +44,15 @@ export interface MapMarkerItem {
   updatedAt: string; // e.g. "Price updated: Today" or "Price updated 2 hours ago"
   inStock: boolean;
   totalVariants?: number;
-  rawStore: Store;
+  rawStore?: Store;
   matchingProduct?: Product;
   isDemo?: boolean;
+  isImported?: boolean;
+  website?: string;
+  googleMapsUrl?: string;
+  reviewCount?: number;
+  imageType?: string;
+  claimStatus?: string;
   sampleProducts?: string[];
 }
 

@@ -9,6 +9,7 @@ import {
 } from "@/lib/location-visibility";
 import { catalogCategoryKey, isStoreInCategory } from "@/lib/shop-categories";
 import { discoverShops } from "@/lib/shop-discovery";
+import { fetchNearbyImportedShops, toImportedShopCard, type ImportedShopRow } from "@/lib/imported-shops";
 
 export function useShopDiscovery(filterState: ProductFilterState) {
   const [deliveryLoc] = useDeliveryLocation();
@@ -47,7 +48,7 @@ export function useShopDiscovery(filterState: ProductFilterState) {
       if (!deliveryLoc || !hasConfirmedCoordinates(deliveryLoc)) {
         return { shops: [], total: 0, expanded: false, fallbackZoneNames: [], primaryZoneName: null, effectiveRadiusKm: radiusKm, legacyMode: false };
       }
-      const [discovery, visibleProductsResult] = await Promise.all([
+      const [discovery, visibleProductsResult, importedResult] = await Promise.all([
         discoverShops((name, args) => (supabase as any).rpc(name, args), {
           lat: deliveryLoc.lat, lng: deliveryLoc.lng,
           query: filterState.query || null,
@@ -64,6 +65,12 @@ export function useShopDiscovery(filterState: ProductFilterState) {
           p_limit: 200,
           p_offset: 0,
         }),
+        fetchNearbyImportedShops((name, args) => (supabase as any).rpc(name, args), {
+          lat: deliveryLoc.lat, lng: deliveryLoc.lng, radiusKm,
+          category: catalogCategoryKey(filterState.category), query: filterState.query || null,
+        }).then((data) => ({ data, error: null })).catch((error: unknown) => ({
+          data: [], error: { code: "IMPORTED_DISCOVERY_FAILED", message: error instanceof Error ? error.message : String(error) },
+        })),
       ]);
       const data = discovery.shops;
       const productsBySeller = new Map<string, Array<{ name: string; price: number }>>();
@@ -110,6 +117,18 @@ export function useShopDiscovery(filterState: ProductFilterState) {
         fallbackZoneName: s.fallback_zone_name || s.zone_name || undefined,
       }));
 
+      if (importedResult.error) {
+        // Keep existing seller discovery available while a new schema migration
+        // is being applied; an absent imported-shops RPC is not a fatal catalog error.
+        if (importedResult.error.code !== "PGRST202") {
+          console.warn("Could not load imported public shop listings:", importedResult.error);
+        }
+      } else if (Array.isArray(importedResult.data)) {
+        list.push(...(importedResult.data as ImportedShopRow[])
+          .map(toImportedShopCard)
+          .filter((shop): shop is ShopCardData => shop !== null));
+      }
+
       // The server applies the selected radius and uses adjacent zones only
       // when fewer than three matching shops are inside it. Recheck the radius
       // for primary results, while preserving explicitly marked fallbacks.
@@ -127,7 +146,7 @@ export function useShopDiscovery(filterState: ProductFilterState) {
 
       // Filter: Verified
       if (filterState.verifiedShopOnly) {
-        list = list.filter((s) => s.isVerified);
+        list = list.filter((s) => s.isImported !== true && s.isVerified);
       }
 
       // Filter: Community Favorite
@@ -137,17 +156,17 @@ export function useShopDiscovery(filterState: ProductFilterState) {
 
       // Filter: Open Now
       if (filterState.openNowOnly) {
-        list = list.filter((s) => s.isOpen !== false);
+        list = list.filter((s) => s.isImported !== true && s.isOpen !== false);
       }
 
       // Filter: Delivery Available
       if (filterState.deliveryAvailableOnly) {
-        list = list.filter((s) => s.deliveryAvailable !== false);
+        list = list.filter((s) => s.isImported !== true && s.deliveryAvailable !== false);
       }
 
       // Filter: Pickup Available
       if (filterState.pickupAvailableOnly) {
-        list = list.filter((s) => s.pickupAvailable !== false);
+        list = list.filter((s) => s.isImported !== true && s.pickupAvailable !== false);
       }
 
       // Filter: Rating

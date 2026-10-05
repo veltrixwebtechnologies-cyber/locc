@@ -60,6 +60,16 @@ test("installed RPC preserves explicit zone fallback without calling the legacy 
   assert.equal(result.legacyMode, false);
 });
 
+test("selected shop category keeps only matching primary business categories", async () => {
+  const result = await discoverShops(async () => ({ data: [
+    { ...row("cafe-primary", 0.4, "grocery"), business_type: "Cafés & Tea Shops", category: "grocery" },
+    { ...row("grocery-primary", 0.5, "cafes"), business_type: "grocery", category: "cafes" },
+    { ...row("coffee-primary", 0.8, "restaurants"), business_type: "coffee shop", category: "restaurants" },
+  ], error: null }), { ...input, category: "cafes" });
+
+  assert.deepEqual(result.shops.map((shop) => shop.id), ["cafe-primary", "coffee-primary"]);
+});
+
 test("empty results do not trigger fallback; real errors remain errors", async () => {
   let calls = 0;
   const empty = await discoverShops(async () => { calls++; return { data: [], error: null }; }, input);

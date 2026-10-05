@@ -10,7 +10,8 @@
     "preview": "vite preview",
     "lint": "eslint .",
     "format": "prettier --write .",
-    "test:maps": "node --test tests/*.test.mjs"
+    "test:maps": "node --test tests/*.test.mjs",
+    "import:shops": "node --env-file=.env scripts/import-geojson-shops.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "5.5.7",

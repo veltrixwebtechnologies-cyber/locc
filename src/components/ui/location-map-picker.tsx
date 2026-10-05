@@ -20,6 +20,7 @@ import { discoverShops } from "@/lib/shop-discovery";
 import { DEFAULT_SHOP_DISCOVERY_RADIUS_KM } from "@/lib/location-visibility";
 import { getFallbackShopImage } from "@/lib/image-utils";
 import { localShoreShopMarker } from "@/lib/localshore-shop-marker";
+import { fetchNearbyImportedShops, getImportedShopHref } from "@/lib/imported-shops";
 
 const MAP_PROVIDER = import.meta.env.VITE_MAP_PROVIDER === "google" ? "google" : "osm";
 
@@ -54,6 +55,10 @@ type LocalShop = {
   distanceKm: number;
   isDemo?: boolean;
   isOpen?: boolean;
+  isImported?: boolean;
+  claimStatus?: string;
+  rating?: number;
+  reviewCount?: number;
 };
 
 function shopClusterIcon(count: number) {
@@ -71,8 +76,8 @@ function shopClusterIcon(count: number) {
   };
 }
 
-function compactShopIcon(isDemo = false, isSelected = false) {
-  const fill = isSelected ? "#6E0D70" : isDemo ? "#A437A0" : "#981495";
+function compactShopIcon(isDemo = false, isSelected = false, isImported = false) {
+  const fill = isSelected ? "#6E0D70" : isImported ? "#2878A5" : isDemo ? "#A437A0" : "#981495";
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="42" height="50" viewBox="0 0 42 50">
     <circle cx="21" cy="20" r="19" fill="${fill}" fill-opacity=".15"/>
     <path d="M21 46C18 39 7 30 7 19a14 14 0 1 1 28 0c0 11-11 20-14 27Z" fill="${fill}" stroke="#fff" stroke-width="3"/>
@@ -143,6 +148,7 @@ export function LocationMapPicker({
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [isGoogleMapReady, setIsGoogleMapReady] = useState(false);
+  const [isLeafletMapReady, setIsLeafletMapReady] = useState(false);
   const [mapZoom, setMapZoom] = useState(18);
   const [localShops, setLocalShops] = useState<LocalShop[]>([]);
   const [selectedShop, setSelectedShop] = useState<LocalShop | null>(null);
@@ -153,26 +159,32 @@ export function LocationMapPicker({
   const displayShops = localShops;
   const geocodeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Use the same registered-shop discovery as the marketplace. A neighborhood
-  // example has no seller/inventory relationship and cannot be a shopping destination.
+  // Show LocalShore sellers plus imported public directory listings around the
+  // selected delivery point. Imported records remain informational until claimed.
   useEffect(() => {
     setLocalShops([]);
     setSelectedShop(null);
     setShowAllShops(false);
     setShopsError(null);
     setShopsLoading(false);
-    if (MAP_PROVIDER !== "google" || !coords) return;
+    if (!coords) return;
     let cancelled = false;
     setShopsLoading(true);
     const timer = setTimeout(async () => {
       try {
-        const { shops } = await discoverShops((name, args) => (supabase as any).rpc(name, args), {
-          lat: coords.lat,
-          lng: coords.lng,
-          query: null,
-          category: null,
-          radiusKm: DEFAULT_SHOP_DISCOVERY_RADIUS_KM,
-        });
+        const rpc = (name: string, args: Record<string, unknown>) => (supabase as any).rpc(name, args);
+        const [sellerResult, importedResult] = await Promise.allSettled([
+          discoverShops(rpc, {
+            lat: coords.lat, lng: coords.lng, query: null, category: null,
+            radiusKm: DEFAULT_SHOP_DISCOVERY_RADIUS_KM,
+          }),
+          fetchNearbyImportedShops(rpc, {
+            lat: coords.lat, lng: coords.lng, radiusKm: DEFAULT_SHOP_DISCOVERY_RADIUS_KM,
+          }),
+        ]);
+        if (sellerResult.status === "rejected" && importedResult.status === "rejected") throw sellerResult.reason;
+        const shops = sellerResult.status === "fulfilled" ? sellerResult.value.shops : [];
+        const importedRows = importedResult.status === "fulfilled" ? importedResult.value : [];
         if (cancelled) return;
         const registeredShops = await Promise.all(shops
           .filter((shop) => !isTestEntity(shop.shop_name))
@@ -199,7 +211,21 @@ export function LocationMapPicker({
               isOpen: shop.is_open,
             };
           }));
-        if (!cancelled) setLocalShops(registeredShops);
+        const importedListings: LocalShop[] = importedRows.map((shop) => ({
+          id: `imported:${shop.id}`,
+          shopName: shop.business_name,
+          category: shop.category || "Local shop",
+          address: shop.formatted_address || [shop.city, shop.state].filter(Boolean).join(", "),
+          imageUrl: shop.cover_image_url || getFallbackShopImage(shop.category, shop.id),
+          lat: Number(shop.latitude),
+          lng: Number(shop.longitude),
+          distanceKm: Number(shop.distance_km),
+          isImported: true,
+          claimStatus: shop.claim_status,
+          rating: Number(shop.rating ?? 0),
+          reviewCount: shop.review_count ?? undefined,
+        }));
+        if (!cancelled) setLocalShops([...registeredShops, ...importedListings]);
       } catch {
         if (!cancelled) setShopsError("We couldn’t load nearby shops. Please try again.");
       } finally {
@@ -437,6 +463,7 @@ export function LocationMapPicker({
 
         markerRef.current = marker;
         mapRef.current = map;
+        setIsLeafletMapReady(true);
         const accuracy = initialAccuracyRef.current;
         if (typeof accuracy === "number" && Number.isFinite(accuracy) && accuracy > 10) {
           const circle = L.circle([mapStart.lat, mapStart.lng], {
@@ -496,6 +523,7 @@ export function LocationMapPicker({
           mapRef.current = null;
           markerRef.current = null;
         } else {
+          setIsLeafletMapReady(false);
           mapRef.current.remove();
           mapRef.current = null;
         }
@@ -503,79 +531,76 @@ export function LocationMapPicker({
     };
   }, [mapStart, handlePositionChange, performReverseGeocode]);
 
-  // Render only LocalShore sellers. Google’s own business/POI markers are
-  // disabled by GOOGLE_PICKER_STYLES above.
+  // Render registered stores and imported public listings on either map provider.
   useEffect(() => {
-    if (MAP_PROVIDER !== "google" || !isGoogleMapReady || !mapRef.current || !window.google?.maps) return;
-    const map = mapRef.current;
-    const googleApi = window.google;
-    Object.values(localShopMarkersRef.current).forEach((marker: any) => marker.setMap?.(null));
-    localShopMarkersRef.current = {};
-
-    const clusterPixels = mapZoom < 18 ? 64 : 0;
-    const projection = map.getProjection();
-    const worldScale = 2 ** mapZoom;
-    const fallbackCell = mapZoom < 12 ? 0.02 : mapZoom < 14 ? 0.01 : mapZoom < 16 ? 0.003 : 0.0008;
-    const groups = new Map<string, LocalShop[]>();
-    displayShops.forEach((shop) => {
-      const worldPoint = projection?.fromLatLngToPoint(new googleApi.maps.LatLng(shop.lat, shop.lng));
-      const key = clusterPixels && worldPoint
-        ? `${Math.floor((worldPoint.x * worldScale) / clusterPixels)}:${Math.floor((worldPoint.y * worldScale) / clusterPixels)}`
-        : clusterPixels
-          ? `${Math.floor(shop.lat / fallbackCell)}:${Math.floor(shop.lng / fallbackCell)}`
-          : shop.id;
-      groups.set(key, [...(groups.get(key) ?? []), shop]);
-    });
-
-    groups.forEach((shops, key) => {
-      if (shops.length > 1) {
-        const position = {
-          lat: shops.reduce((sum, shop) => sum + shop.lat, 0) / shops.length,
-          lng: shops.reduce((sum, shop) => sum + shop.lng, 0) / shops.length,
-        };
-        const marker = new googleApi.maps.Marker({
-          map,
-          position,
-          title: `${shops.length} nearby LocalShore shops · zoom in to explore`,
-          icon: shopClusterIcon(shops.length),
-          zIndex: 30,
-        });
-        marker.addListener("click", () => {
-          map.panTo(position);
-          map.setZoom(Math.min((map.getZoom() ?? 14) + 2, 21));
-        });
-        localShopMarkersRef.current[`cluster:${key}`] = marker;
-        return;
-      }
-      const shop = shops[0];
-      if (!shop) return;
-      const selected = selectedShop?.id === shop.id;
-      const icon = selected && mapZoom >= 17
-        ? (() => {
-            const artwork = localShoreShopMarker(shop.shopName, true, shop.isDemo);
-            return {
-              url: artwork.url,
-              scaledSize: new googleApi.maps.Size(artwork.width, artwork.height),
-              anchor: new googleApi.maps.Point(artwork.anchorX, artwork.anchorY),
-            };
-          })()
-        : compactShopIcon(Boolean(shop.isDemo), selected);
-      const marker = new googleApi.maps.Marker({
-        map,
-        position: { lat: shop.lat, lng: shop.lng },
-        title: shop.shopName,
-        icon,
-        zIndex: selected ? 20 : 5,
+    const removeShopMarkers = () => {
+      Object.values(localShopMarkersRef.current).forEach((marker: any) => {
+        marker.setMap?.(null);
+        marker.remove?.();
       });
-      marker.addListener("click", () => setSelectedShop(shop));
-      localShopMarkersRef.current[shop.id] = marker;
-    });
-
-    return () => {
-      Object.values(localShopMarkersRef.current).forEach((marker: any) => marker.setMap?.(null));
       localShopMarkersRef.current = {};
     };
-  }, [isGoogleMapReady, displayShops, mapStart, mapZoom, selectedShop?.id]);
+    if (MAP_PROVIDER === "google" && (!isGoogleMapReady || !mapRef.current || !window.google?.maps)) return;
+    if (MAP_PROVIDER === "osm" && (!isLeafletMapReady || !mapRef.current || !LRef.current)) return;
+    const map = mapRef.current;
+    removeShopMarkers();
+    if (MAP_PROVIDER === "google") {
+      const googleApi = window.google;
+      const clusterPixels = mapZoom < 18 ? 64 : 0;
+      const projection = map.getProjection();
+      const worldScale = 2 ** mapZoom;
+      const fallbackCell = mapZoom < 12 ? 0.02 : mapZoom < 14 ? 0.01 : mapZoom < 16 ? 0.003 : 0.0008;
+      const groups = new Map<string, LocalShop[]>();
+      displayShops.forEach((shop) => {
+        const worldPoint = projection?.fromLatLngToPoint(new googleApi.maps.LatLng(shop.lat, shop.lng));
+        const key = clusterPixels && worldPoint
+          ? `${Math.floor((worldPoint.x * worldScale) / clusterPixels)}:${Math.floor((worldPoint.y * worldScale) / clusterPixels)}`
+          : clusterPixels
+            ? `${Math.floor(shop.lat / fallbackCell)}:${Math.floor(shop.lng / fallbackCell)}`
+            : shop.id;
+        groups.set(key, [...(groups.get(key) ?? []), shop]);
+      });
+      groups.forEach((shops, key) => {
+        if (shops.length > 1) {
+          const position = {
+            lat: shops.reduce((sum, shop) => sum + shop.lat, 0) / shops.length,
+            lng: shops.reduce((sum, shop) => sum + shop.lng, 0) / shops.length,
+          };
+          const marker = new googleApi.maps.Marker({ map, position, title: `${shops.length} nearby shops · zoom in to explore`, icon: shopClusterIcon(shops.length), zIndex: 30 });
+          marker.addListener("click", () => { map.panTo(position); map.setZoom(Math.min((map.getZoom() ?? 14) + 2, 21)); });
+          localShopMarkersRef.current[`cluster:${key}`] = marker;
+          return;
+        }
+        const shop = shops[0];
+        if (!shop) return;
+        const selected = selectedShop?.id === shop.id;
+        const icon = selected && mapZoom >= 17
+          ? (() => {
+              const artwork = localShoreShopMarker(shop.shopName, true, shop.isDemo, shop.isImported);
+              return { url: artwork.url, scaledSize: new googleApi.maps.Size(artwork.width, artwork.height), anchor: new googleApi.maps.Point(artwork.anchorX, artwork.anchorY) };
+            })()
+          : compactShopIcon(Boolean(shop.isDemo), selected, shop.isImported);
+        const marker = new googleApi.maps.Marker({ map, position: { lat: shop.lat, lng: shop.lng }, title: `${shop.shopName}${shop.isImported ? " · public listing" : ""}`, icon, zIndex: selected ? 20 : 5 });
+        marker.addListener("click", () => setSelectedShop(shop));
+        localShopMarkersRef.current[shop.id] = marker;
+      });
+    } else {
+      const L = LRef.current;
+      displayShops.forEach((shop) => {
+        const color = shop.isImported ? "#2878A5" : shop.isDemo ? "#A437A0" : "#981495";
+        const icon = L.divIcon({
+          className: "location-picker-shop-marker",
+          html: `<span style="display:grid;place-items:center;width:30px;height:30px;border:2px solid white;border-radius:50%;background:${color};color:white;box-shadow:0 2px 8px #291b3466;font:700 14px Arial">⌂</span>`,
+          iconSize: [30, 30],
+          iconAnchor: [15, 15],
+        });
+        const marker = L.marker([shop.lat, shop.lng], { icon, title: `${shop.shopName}${shop.isImported ? " · public listing" : ""}` }).addTo(map);
+        marker.on("click", () => setSelectedShop(shop));
+        localShopMarkersRef.current[shop.id] = marker;
+      });
+    }
+    return removeShopMarkers;
+  }, [isGoogleMapReady, isLeafletMapReady, displayShops, mapStart, mapZoom, selectedShop?.id]);
 
   // Fit the map once to the actual delivery point and returned shop locations.
   // Keep this separate from marker redraws so selecting/zooming a shop never
@@ -748,7 +773,7 @@ export function LocationMapPicker({
             <div className="flex items-center justify-between border-b border-[#EEE7F3] px-3.5 py-3">
               <div>
                 <p className="text-sm font-black text-[#21162B]">Nearby shops</p>
-                <p className="text-[10px] font-semibold text-[#7D7485]">{shopsLoading ? "Finding nearby shops…" : `${localShops.length} shops · ${displayShops.filter((shop) => shop.isDemo).length} demo catalogs`}</p>
+                <p className="text-[10px] font-semibold text-[#7D7485]">{shopsLoading ? "Finding nearby shops…" : `${localShops.length} shops · ${displayShops.filter((shop) => shop.isImported).length} public listings · ${displayShops.filter((shop) => shop.isDemo).length} demo catalogs`}</p>
               </div>
               <Store className="h-4 w-4 text-[#981495]" />
             </div>
@@ -758,7 +783,7 @@ export function LocationMapPicker({
               ) : shopsError ? (
                 <div className="px-2 py-8 text-center text-[11px] text-[#7D7485]" role="alert">{shopsError}<button type="button" onClick={() => setShopsReload((value) => value + 1)} className="mt-2 block w-full font-bold text-[#981495]">Try again</button></div>
               ) : displayShops.length === 0 ? (
-                <div className="px-2 py-8 text-center text-[11px] font-semibold text-[#7D7485]">No nearby registered shops or demo previews in this area. Try another delivery area.</div>
+                <div className="px-2 py-8 text-center text-[11px] font-semibold text-[#7D7485]">No nearby LocalShore shops or public listings in this area. Try another delivery area.</div>
               ) : displayShops.slice(0, showAllShops ? displayShops.length : 8).map((shop) => (
                 <button
                   key={shop.id}
@@ -787,6 +812,7 @@ export function LocationMapPicker({
                     <span className="block truncate text-[11px] font-black text-[#21162B]">{shop.shopName}</span>
                     <span className="block truncate text-[10px] font-semibold text-[#7D7485]">{shop.category}</span>
                     {shop.isDemo && <span className="block text-[9px] font-bold text-amber-700">Demo catalog · approximate area</span>}
+                    {shop.isImported && <span className="block text-[9px] font-bold text-sky-700">Public shop · demo shopping available</span>}
                     <span className="mt-0.5 flex items-center gap-1.5 text-[10px] font-bold text-[#981495]">
                       {shop.isOpen !== undefined && <span className={shop.isOpen ? "text-emerald-700" : "text-slate-500"}>{shop.isOpen ? "Open now" : "Closed"} ·</span>}
                       {shop.distanceKm.toFixed(1)} km away
@@ -831,18 +857,18 @@ export function LocationMapPicker({
 
         {MAP_PROVIDER === "google" && displayShops.length > 0 && (
           <div className="absolute left-3 bottom-3 z-[1000] rounded-full bg-white/95 px-3 py-1.5 text-[10px] font-black text-[#981495] shadow-md ring-1 ring-[#EBD9F0]">
-            {localShops.length} shops nearby · demo catalogs use approximate area pins
+            {localShops.length} nearby shops · blue pins are public listings
           </div>
         )}
 
         {MAP_PROVIDER === "google" && coords && displayShops.length === 0 && !mapError && (
           <div className="absolute inset-x-3 bottom-3 z-[1000] rounded-xl bg-white/95 px-3 py-2 text-xs text-[#7D7485] shadow-md lg:hidden" role={shopsError ? "alert" : "status"}>
-            {shopsLoading ? "Finding nearby shops…" : shopsError || "No registered shops or demo previews nearby. Try another delivery area."}
+            {shopsLoading ? "Finding nearby shops…" : shopsError || "No nearby LocalShore shops or public listings. Try another delivery area."}
             {shopsError && <button type="button" onClick={() => setShopsReload((value) => value + 1)} className="ml-2 font-bold text-[#981495]">Try again</button>}
           </div>
         )}
 
-        {MAP_PROVIDER === "google" && selectedShop && (
+        {selectedShop && (
           <div className="absolute inset-x-3 bottom-3 z-[1100] overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-[#EBD9F0]">
             <div className="flex items-center gap-3 p-3">
               <div className="h-12 w-12 shrink-0 overflow-hidden rounded-xl bg-[#F4EFF7]">
@@ -863,19 +889,26 @@ export function LocationMapPicker({
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-black text-[#21162B]">{selectedShop.shopName}</p>
                 <p className="truncate text-[11px] font-semibold text-[#7D7485]">
-                {selectedShop.category} · {selectedShop.distanceKm.toFixed(1)} km away{selectedShop.isDemo ? " · demo" : ""}
+                {selectedShop.category} · {selectedShop.distanceKm.toFixed(1)} km away{selectedShop.isDemo ? " · demo catalog" : selectedShop.isImported ? " · public listing" : ""}
                 </p>
                 <p className="truncate text-[10px] text-[#7D7485]">{selectedShop.address || "LocalShore shop"}</p>
+                {selectedShop.isImported && <p className="truncate text-[10px] font-semibold text-sky-700">{selectedShop.rating ? `★ ${selectedShop.rating.toFixed(1)}${selectedShop.reviewCount ? ` (${selectedShop.reviewCount} reviews)` : ""} · ` : ""}Demo catalog · simulated checkout only</p>}
               </div>
               <button type="button" onClick={() => setSelectedShop(null)} className="self-start text-lg leading-none text-slate-400" aria-label="Close shop card">×</button>
             </div>
             <div className="flex gap-2 px-3 pb-3">
               <button
                 type="button"
-                onClick={() => { window.location.assign(`/store/${encodeURIComponent(selectedShop.id)}`); }}
+                onClick={() => {
+                  if (selectedShop.isImported) {
+                    window.location.assign(getImportedShopHref(selectedShop.id, selectedShop.lat, selectedShop.lng));
+                  } else {
+                    window.location.assign(`/store/${encodeURIComponent(selectedShop.id)}`);
+                  }
+                }}
                 className="flex-1 rounded-xl bg-[#981495] px-3 py-2 text-[11px] font-black text-white"
               >
-                Browse & buy from this shop
+                View Local Shop
               </button>
             </div>
           </div>

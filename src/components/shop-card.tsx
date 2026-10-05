@@ -11,7 +11,7 @@ import {
   ChevronRight,
   Award,
 } from "lucide-react";
-import { resolveImageUrl, getFallbackShopImage } from "@/lib/image-utils";
+import { resolveImageUrl, getFallbackShopImage, getRepresentativeItemImages } from "@/lib/image-utils";
 import { WishlistButton } from "@/components/wishlist-button";
 import { Badge } from "@/components/ui/badge";
 
@@ -39,6 +39,13 @@ export interface ShopCardData {
   description?: string;
   isFallback?: boolean;
   fallbackZoneName?: string;
+  isImported?: boolean;
+  claimStatus?: string;
+  imageType?: string;
+  website?: string;
+  googleMapsUrl?: string;
+  latitude?: number;
+  longitude?: number;
 }
 
 interface ShopCardProps {
@@ -74,7 +81,9 @@ export function ShopCard({
   const [imgError, setImgError] = useState(false);
 
   const isClosed = shop.isOpen === false;
-  const statusText = isClosed
+  const statusText = shop.isImported
+    ? "Public listing"
+    : isClosed
     ? shop.openingTime
       ? `Opens ${shop.openingTime}`
       : "Closed"
@@ -101,7 +110,7 @@ export function ShopCard({
       <div className="relative aspect-[16/10] max-[639px]:aspect-[16/7] w-full overflow-hidden bg-muted">
         <img
           src={resolvedImg}
-          alt={shop.name}
+          alt={shop.isImported && shop.imageType !== "seller" ? `${shop.name} representative category image` : shop.name}
           loading={priority ? "eager" : "lazy"}
           fetchPriority={priority ? "high" : "auto"}
           decoding="async"
@@ -113,7 +122,7 @@ export function ShopCard({
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
 
         {/* Wishlist Button */}
-        <div className="absolute top-2.5 right-2.5 z-10">
+        {!shop.isImported && <div className="absolute top-2.5 right-2.5 z-10">
           <WishlistButton
             productId={`shop-${shop.id}`}
             productName={shop.name}
@@ -127,10 +136,12 @@ export function ShopCard({
               sellerId: shop.id,
             }}
           />
-        </div>
+        </div>}
 
         {/* Top-Left Rating Badge */}
-        <div className="absolute top-2.5 left-2.5 z-10 flex items-center gap-1 rounded-full bg-background/95 backdrop-blur-md px-2.5 py-1 text-xs font-black text-foreground border border-border/60 shadow-xs">
+        {shop.isImported ? (
+          <div className="absolute top-2.5 left-2.5 z-10 rounded-full bg-sky-950/85 px-2.5 py-1 text-[10px] font-bold text-white shadow-xs">{shop.imageType === "seller" && !imgError ? "Seller photo" : "Representative image"}</div>
+        ) : <div className="absolute top-2.5 left-2.5 z-10 flex items-center gap-1 rounded-full bg-background/95 backdrop-blur-md px-2.5 py-1 text-xs font-black text-foreground border border-border/60 shadow-xs">
           <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
           <span>{Number(shop.rating || 4.5).toFixed(1)}</span>
           {shop.reviewCount !== undefined && shop.reviewCount > 0 && (
@@ -138,7 +149,7 @@ export function ShopCard({
               ({shop.reviewCount})
             </span>
           )}
-        </div>
+        </div>}
 
         {/* Bottom Banner Info: Distance & Status */}
         <div className="absolute bottom-2.5 left-3 right-3 z-10 flex items-center justify-between text-white text-xs font-bold">
@@ -155,14 +166,16 @@ export function ShopCard({
 
           <div
             className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-black border backdrop-blur-md ${
-              isClosed
+              shop.isImported
+                ? "bg-slate-950/80 text-slate-200 border-slate-500/40"
+                : isClosed
                 ? "bg-rose-950/80 text-rose-200 border-rose-500/40"
                 : "bg-emerald-950/80 text-emerald-300 border-emerald-500/40"
             }`}
           >
             <span
               className={`h-2 w-2 rounded-full ${
-                isClosed ? "bg-rose-400 animate-pulse" : "bg-emerald-400 animate-pulse"
+              shop.isImported ? "bg-slate-300" : isClosed ? "bg-rose-400 animate-pulse" : "bg-emerald-400 animate-pulse"
               }`}
             />
             <span>{statusText}</span>
@@ -180,7 +193,11 @@ export function ShopCard({
                 Nearby zone{shop.fallbackZoneName ? ` · ${shop.fallbackZoneName}` : ""}
               </Badge>
             )}
-            {shop.isVerified && (
+            {shop.isImported ? (
+              <Badge className="border-sky-500/30 bg-sky-500/10 px-2 py-0.5 text-[10px] font-extrabold text-sky-800">
+                Public listing · {shop.claimStatus === "unclaimed" ? "Unclaimed" : shop.claimStatus}
+              </Badge>
+            ) : shop.isVerified && (
               <Badge className="bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/30 text-[10px] font-extrabold px-2 py-0.5 rounded-md flex items-center gap-1">
                 <ShieldCheck className="h-3 w-3 text-emerald-600" />
                 <span>Verified Store</span>
@@ -198,22 +215,23 @@ export function ShopCard({
           </div>
 
           {/* Shop Title */}
-          <Link
-            to="/store/$storeId"
-            params={{ storeId: shop.id }}
-            search={{ sq: undefined, category: shop.category || undefined }}
-            className="group/title block"
-          >
-            <h3 className="text-lg max-[639px]:text-base font-extrabold text-foreground group-hover/title:text-primary transition-colors line-clamp-1 leading-snug">
-              🏪 {shop.name}
-            </h3>
-          </Link>
+          {shop.isImported ? (
+            <Link to="/store/$storeId" params={{ storeId: shop.id }} search={{ shopLat: shop.latitude, shopLng: shop.longitude }} className="group/title block">
+              <h3 className="text-lg max-[639px]:text-base font-extrabold text-foreground line-clamp-1 leading-snug group-hover/title:text-primary">🏪 {shop.name}</h3>
+            </Link>
+          ) : (
+            <Link to="/store/$storeId" params={{ storeId: shop.id }} search={{ sq: undefined, category: shop.category || undefined }} className="group/title block">
+              <h3 className="text-lg max-[639px]:text-base font-extrabold text-foreground group-hover/title:text-primary transition-colors line-clamp-1 leading-snug">🏪 {shop.name}</h3>
+            </Link>
+          )}
 
           {shop.address && (
             <p className="mt-1 line-clamp-2 break-words text-xs font-medium leading-relaxed text-muted-foreground">
               {shop.address}
             </p>
           )}
+          {shop.isImported && shop.rating > 0 && <p className="mt-2 flex items-center gap-1 text-xs font-bold"><Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />{shop.rating.toFixed(1)} {shop.reviewCount != null && <span className="font-normal text-muted-foreground">({shop.reviewCount} reviews)</span>}</p>}
+          {shop.isImported && shop.website && <a href={shop.website} target="_blank" rel="noreferrer" className="mt-2 inline-block text-xs font-semibold text-primary underline">Visit website</a>}
         </div>
 
         {/* Search Match Context (Relevant products & starting price) */}
@@ -239,7 +257,7 @@ export function ShopCard({
           ) : (
             <div className="flex items-center justify-between text-muted-foreground font-medium">
               <span className="truncate" title={shop.featuredProductName || "Browse shop catalog"}>
-                {shop.featuredProductName ? `Available: ${shop.featuredProductName}` : "Browse shop catalog"}
+                {shop.isImported ? "Imported directory listing · no seller catalog" : shop.featuredProductName ? `Available: ${shop.featuredProductName}` : "Browse shop catalog"}
               </span>
               {shop.startingPrice !== undefined && shop.startingPrice > 0 && (
                 <span className="text-foreground font-bold">
@@ -250,7 +268,17 @@ export function ShopCard({
           )}
 
           {/* Delivery & Self-Pickup Badges */}
-          <div className="flex items-center gap-3 pt-1 border-t border-border/40 text-[11px] font-extrabold text-muted-foreground">
+          {shop.isImported ? <div className="space-y-2 text-[11px] text-muted-foreground">
+            <p>{shop.imageType === "seller" && !imgError ? "Seller supplied cover image" : "Unsplash representative cover · not a photo of this business"}</p>
+            <div>
+              <p className="mb-1.5 font-semibold">Example product imagery · representative only, not shop stock</p>
+              <div className="grid grid-cols-3 gap-1.5" aria-label="Representative category product imagery">
+                {getRepresentativeItemImages(shop.category, shop.id).map((imageUrl, index) => (
+                  <img key={`${shop.id}-example-${index}`} src={imageUrl} alt={`${shop.category} representative product example ${index + 1}`} loading="lazy" decoding="async" className="h-16 w-full rounded-lg border border-border/60 bg-muted object-cover" />
+                ))}
+              </div>
+            </div>
+          </div> : <div className="flex items-center gap-3 pt-1 border-t border-border/40 text-[11px] font-extrabold text-muted-foreground">
             <span
               className={`flex items-center gap-1 ${
                 shop.deliveryAvailable === true
@@ -270,20 +298,19 @@ export function ShopCard({
               <ShoppingBag className="h-3.5 w-3.5" />
               <span>Self Pickup</span>
             </span>
-          </div>
+          </div>}
         </div>
 
         {/* View Shop CTA */}
-        <Link
-          to="/store/$storeId"
-          params={{ storeId: shop.id }}
-          search={{ sq: undefined, category: shop.category || undefined }}
-          className="w-full rounded-2xl bg-primary hover:bg-primary/90 text-primary-foreground py-2.5 max-[639px]:py-2 px-4 text-xs font-extrabold flex items-center justify-center gap-2 shadow-md hover:shadow-lg active:scale-[0.98] transition-all duration-200"
-        >
-          <StoreIcon className="h-3.5 w-3.5" />
-          <span>View Local Shop</span>
-          <ChevronRight className="h-3.5 w-3.5" />
-        </Link>
+        {shop.isImported ? (
+          <Link to="/store/$storeId" params={{ storeId: shop.id }} search={{ shopLat: shop.latitude, shopLng: shop.longitude }} className="w-full rounded-2xl bg-primary hover:bg-primary/90 text-primary-foreground py-2.5 max-[639px]:py-2 px-4 text-xs font-extrabold flex items-center justify-center gap-2 shadow-md hover:shadow-lg transition-all duration-200">
+            <StoreIcon className="h-3.5 w-3.5" /><span>View Local Shop</span><ChevronRight className="h-3.5 w-3.5" />
+          </Link>
+        ) : (
+          <Link to="/store/$storeId" params={{ storeId: shop.id }} search={{ sq: undefined, category: shop.category || undefined }} className="w-full rounded-2xl bg-primary hover:bg-primary/90 text-primary-foreground py-2.5 max-[639px]:py-2 px-4 text-xs font-extrabold flex items-center justify-center gap-2 shadow-md hover:shadow-lg active:scale-[0.98] transition-all duration-200">
+            <StoreIcon className="h-3.5 w-3.5" /><span>View Local Shop</span><ChevronRight className="h-3.5 w-3.5" />
+          </Link>
+        )}
       </div>
     </div>
   );

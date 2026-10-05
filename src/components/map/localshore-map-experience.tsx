@@ -35,21 +35,12 @@ import {
   detectCurrentGPSLocation,
   setActiveDeliveryLocation,
 } from "@/lib/location-store";
-import { getCategoryByIdOrSlug } from "@/lib/shop-categories";
+import { catalogCategoryKey, getCategoryByIdOrSlug } from "@/lib/shop-categories";
 import { isValidCoordinate } from "@/lib/geo";
 import { CUSTOMER_VISIBILITY_RADIUS_KM, DEFAULT_SHOP_DISCOVERY_RADIUS_KM, hasConfirmedCoordinates } from "@/lib/location-visibility";
 import { discoverShops } from "@/lib/shop-discovery";
-
-// Quick category filter tabs matching the reference design
-const QUICK_FILTERS = [
-  { id: "all", label: "All Shops" },
-  { id: "grocery", label: "Kirana & Grocery" },
-  { id: "bakery", label: "Bakeries" },
-  { id: "pharmacy", label: "Pharmacies" },
-  { id: "restaurants", label: "Restaurants" },
-  { id: "fashion", label: "Fashion" },
-  { id: "electronics", label: "Electronics" },
-] as const;
+import { fetchNearbyImportedShops, toImportedMapMarker } from "@/lib/imported-shops";
+import { ShopCard } from "@/components/shop-card";
 
 interface Props {
   initialQuery?: string;
@@ -69,6 +60,8 @@ export function LocalShoreMapExperience({
   onCategoryChange,
 }: Props) {
   const mapRef = useRef<InteractiveMapViewRef>(null);
+  const mapCategory = catalogCategoryKey(initialCategory) as MapFilterOptions["category"] | null;
+  const selectedCategoryLabel = mapCategory ? getCategoryByIdOrSlug(mapCategory).name : null;
   const [deliveryLoc] = useDeliveryLocation();
   const [view, setView] = useState<"map" | "list">("map");
   const [userLocation, setUserLocation] = useState<MapLocation | null>(() =>
@@ -95,7 +88,7 @@ export function LocalShoreMapExperience({
   const [query, setQuery] = useState(initialQuery);
   const [filters, setFilters] = useState<MapFilterOptions>({
     query: initialQuery,
-    category: initialCategory !== "all" ? (initialCategory as any) : undefined,
+    category: mapCategory ?? undefined,
     maxDistanceKm: CUSTOMER_VISIBILITY_RADIUS_KM,
   });
   const [selectedMarkerId, setSelectedMarkerId] = useState<string | null>(null);
@@ -107,13 +100,13 @@ export function LocalShoreMapExperience({
     setFilters((prev) => ({
       ...prev,
       query: initialQuery,
-      category: initialCategory !== "all" ? (initialCategory as any) : undefined,
+      category: mapCategory ?? undefined,
     }));
-  }, [initialQuery, initialCategory]);
+  }, [initialQuery, mapCategory]);
 
   // Query live Supabase approved vendor catalog & product catalog (cached across app)
   const approvedProducts = useQuery({
-    queryKey: ["customer-visible-products", deliveryLoc?.lat, deliveryLoc?.lng, query, initialCategory],
+    queryKey: ["customer-visible-products", deliveryLoc?.lat, deliveryLoc?.lng, query, mapCategory],
     staleTime: 1000 * 60 * 5,
     gcTime: 1000 * 60 * 10,
     retry: 1,
@@ -123,7 +116,7 @@ export function LocalShoreMapExperience({
       try {
         const { data, error } = await (supabase as any).rpc("get_customer_visible_products", {
           p_lat: deliveryLoc.lat, p_lng: deliveryLoc.lng, p_query: query || null,
-          p_category_slug: initialCategory !== "all" ? initialCategory : null, p_limit: 100, p_offset: 0,
+          p_category_slug: mapCategory, p_limit: 100, p_offset: 0,
         });
         if (error) throw error;
         return (data ?? []).filter((p: any) => !isTestEntity(p.name));
@@ -135,7 +128,7 @@ export function LocalShoreMapExperience({
   });
 
   const approvedVendors = useQuery({
-    queryKey: ["customer-visible-shops", deliveryLoc?.lat, deliveryLoc?.lng, query, initialCategory],
+    queryKey: ["customer-visible-shops", deliveryLoc?.lat, deliveryLoc?.lng, query, mapCategory],
     staleTime: 1000 * 60 * 5,
     gcTime: 1000 * 60 * 10,
     retry: 1,
@@ -149,7 +142,7 @@ export function LocalShoreMapExperience({
             lat: deliveryLoc.lat,
             lng: deliveryLoc.lng,
             query: query || null,
-            category: initialCategory !== "all" ? initialCategory : null,
+            category: mapCategory ?? null,
             radiusKm: DEFAULT_SHOP_DISCOVERY_RADIUS_KM,
           },
         );
@@ -161,27 +154,47 @@ export function LocalShoreMapExperience({
     },
   });
 
+  const importedShops = useQuery({
+    queryKey: ["nearby-imported-shops", deliveryLoc?.lat, deliveryLoc?.lng, query, mapCategory, filters.maxDistanceKm],
+    staleTime: 1000 * 60 * 5,
+    gcTime: 1000 * 60 * 10,
+    retry: false,
+    enabled: hasConfirmedCoordinates(deliveryLoc),
+    queryFn: async () => {
+      return fetchNearbyImportedShops((name, args) => (supabase as any).rpc(name, args), {
+        lat: deliveryLoc!.lat, lng: deliveryLoc!.lng,
+        radiusKm: filters.maxDistanceKm ?? DEFAULT_SHOP_DISCOVERY_RADIUS_KM,
+        category: mapCategory ?? null, query: query || null,
+      });
+    },
+  });
+
   // Calculate Product-Aware Map Markers
   const markerItems: MapMarkerItem[] = useMemo(() => {
     if (!userLocation) return [];
-    const markers = getMapMarkerItems(
+    const sellerMarkers = getMapMarkerItems(
       userLocation,
       filters,
       approvedProducts.data ?? [],
       approvedVendors.data ?? [],
     );
 
-    // Keep one marker per registered shop returned by the database.
+    const importedMarkers = (importedShops.data ?? [])
+      .map(toImportedMapMarker)
+      .filter((marker): marker is MapMarkerItem => marker !== null);
+    const markers = [...sellerMarkers, ...importedMarkers];
+
+    // Keep one marker per shop. Imported IDs have a distinct namespace and
+    // cannot collide with seller account IDs.
     const seenShopIds = new Set<string>();
     return markers.filter((marker) => {
       if (seenShopIds.has(marker.shopId)) return false;
       seenShopIds.add(marker.shopId);
       return true;
     });
-  }, [userLocation, filters, approvedProducts.data, approvedVendors.data]);
+  }, [userLocation, filters, approvedProducts.data, approvedVendors.data, importedShops.data]);
 
-  const registeredCount = markerItems.filter((item) => !item.isDemo).length;
-  const demoCount = markerItems.filter((item) => item.isDemo).length;
+  const registeredCount = markerItems.length;
 
   // Handle Geocoding Search for Map Locations
   const handleLocationSearch = async (val: string) => {
@@ -237,7 +250,6 @@ export function LocalShoreMapExperience({
     onQueryChange?.(query);
   };
 
-  const activeQuickFilter = filters.category ? getCategoryByIdOrSlug(filters.category).id : "all";
   const [showDesktopMap, setShowDesktopMap] = useState(initialMapOpen);
   const [isMobileMapOpen, setIsMobileMapOpen] = useState(initialMapOpen);
 
@@ -291,16 +303,16 @@ export function LocalShoreMapExperience({
         <div>
           <div className="flex items-center gap-2.5">
             <h2 className="font-display text-xl md:text-2xl font-extrabold text-slate-900 tracking-tight">
-              Shops near you
+              {selectedCategoryLabel ? `${selectedCategoryLabel} shops near you` : "Shops near you"}
             </h2>
             <span className="inline-flex items-center gap-1 rounded-full bg-[var(--sand)] border border-[#f0abfc] px-2.5 py-0.5 text-[11px] font-bold text-[#981495]">
               <span className="h-1.5 w-1.5 rounded-full bg-[#981495] animate-pulse" />
-            {MAP_PROVIDER === "google" ? `${registeredCount} shops · ${demoCount} demo catalogs` : "Verified Local Sellers"}
+            {registeredCount} matching shops
             </span>
           </div>
           <p className="mt-0.5 text-xs md:text-sm text-slate-500 font-medium">
-            <strong className="text-slate-900 font-bold">{markerItems.length} local shop listings</strong>{" "}
-            {MAP_PROVIDER === "google" ? "registered shops and clearly labeled demo previews in this area" : "verified in this area"}
+            <strong className="text-slate-900 font-bold">{markerItems.length} shop listings</strong>{" "}
+            {selectedCategoryLabel ? `in ${selectedCategoryLabel}` : "near your selected location"}
           </p>
         </div>
 
@@ -356,6 +368,16 @@ export function LocalShoreMapExperience({
               }`}
             >
               {markerItems.map((item) => {
+                if (item.isImported) return (
+                  <ShopCard key={item.id} variant="wide" className="h-full max-w-none" shop={{
+                    id: item.shopId, name: item.shopName, category: categoryLabel[item.category] || item.category,
+                    imageUrl: item.productImage, imageType: item.imageType, rating: item.rating,
+                    reviewCount: item.reviewCount, distanceKm: item.distanceKm, address: item.address,
+                    isImported: true, claimStatus: item.claimStatus, googleMapsUrl: item.googleMapsUrl,
+                    website: item.website,
+                    latitude: item.lat, longitude: item.lng,
+                  }} />
+                );
                 const isSelected = selectedMarkerId === item.id;
                 const imgUrl = isValidImageUrl(item.productImage)
                   ? item.productImage
@@ -372,7 +394,8 @@ export function LocalShoreMapExperience({
                     params={{ storeId: item.shopId }}
                     onMouseEnter={() => setHoveredMarkerId(item.id)}
                     onMouseLeave={() => setHoveredMarkerId(null)}
-                    onClick={() => {
+                    onClick={(event) => {
+                      if (item.isImported) event.preventDefault();
                       setSelectedMarkerId(item.id);
                       mapRef.current?.flyToLocation(item.lat, item.lng, 14.5);
                     }}
@@ -386,17 +409,19 @@ export function LocalShoreMapExperience({
                     <div className="relative aspect-[16/10] w-full overflow-hidden bg-slate-100">
                       <img
                         src={imgUrl}
-                        alt={item.productName}
+                        alt={item.isImported ? `${item.shopName} representative category image` : item.productName}
+                        loading="lazy"
                         className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
                       />
 
                       {/* Top Pick Badge */}
                       <div className="absolute top-2.5 left-2.5 rounded-full bg-white/95 backdrop-blur-xs px-2.5 py-1 text-[10px] font-bold text-slate-900 shadow-sm border border-slate-200/40">
-                        {item.isDemo ? "Demo shop · live catalog" : item.distanceKm <= 2 ? "Top Pick" : "Verified Store"}
+                        {item.isImported ? "Public listing · unclaimed" : item.isDemo ? "Demo shop · live catalog" : item.distanceKm <= 2 ? "Top Pick" : "Verified Store"}
                       </div>
 
                       {/* Wishlist Button */}
-                      {!item.isDemo && <button
+                      {item.isImported && <span className="absolute top-2.5 right-2.5 rounded-full bg-sky-950/85 px-2.5 py-1 text-[10px] font-bold text-white">{item.imageType === "seller" ? "Seller photo" : "Representative image"}</span>}
+                      {!item.isDemo && !item.isImported && <button
                         type="button"
                         onClick={(e) => {
                           e.preventDefault();
@@ -429,7 +454,7 @@ export function LocalShoreMapExperience({
                           <h3 className="font-bold text-[14px] text-slate-900 line-clamp-1 group-hover:text-[#981495] transition-colors">
                             {item.shopName}
                           </h3>
-                          {!item.isDemo && <div className="flex items-center gap-0.5 shrink-0 text-[12px] font-bold text-slate-700">
+                          {!item.isDemo && item.rating > 0 && <div className="flex items-center gap-0.5 shrink-0 text-[12px] font-bold text-slate-700">
                             <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
                             <span>{item.rating.toFixed(1)}</span>
                             <span className="font-normal text-slate-400 ml-0.5">
@@ -439,12 +464,12 @@ export function LocalShoreMapExperience({
                         </div>
 
                         <p className="text-xs text-slate-500 line-clamp-1 mt-0.5">
-                          {item.productName}
+                          {item.isImported ? item.address : item.productName}
                         </p>
 
                         <p className="text-[11px] font-semibold text-[#981495] flex items-center gap-1.5 mt-1">
                           <span className="h-1.5 w-1.5 rounded-full bg-[#981495] inline-block animate-pulse" />
-                          {item.isDemo ? "Demo seller · listed products" : "Available for pickup & instant delivery"}
+                          {item.isImported ? "Directory information · no LocalShore seller account" : item.isDemo ? "Demo seller · listed products" : "Available for pickup & instant delivery"}
                         </p>
                       </div>
 
@@ -452,14 +477,16 @@ export function LocalShoreMapExperience({
                       <div className="mt-2 flex items-center justify-between pt-2.5 border-t border-slate-100">
                         <div>
                           {<>
-                          <span className="font-extrabold text-[14px] text-slate-900">
-                            ₹{priceMin}–₹{priceMax}
-                          </span>
-                          <span className="text-[10px] text-slate-400 ml-1">total</span>
+                          {item.isImported ? (
+                            <span className="text-xs font-semibold text-slate-500">Rating {item.rating > 0 ? `${item.rating.toFixed(1)} (${item.reviewCount ?? 0})` : "not available"}</span>
+                          ) : <>
+                            <span className="font-extrabold text-[14px] text-slate-900">₹{priceMin}–₹{priceMax}</span>
+                            <span className="text-[10px] text-slate-400 ml-1">total</span>
+                          </>}
                           </>}
                         </div>
                         <span className="inline-flex items-center gap-1 rounded-full bg-[var(--sand)] px-3.5 py-1.5 text-[11px] font-bold text-[#981495] group-hover:bg-[#981495] group-hover:text-white transition-all shadow-2xs">
-                          {item.isDemo ? "Browse demo shop" : "View Shop"}
+                          {item.isImported ? "View public listing" : item.isDemo ? "Browse demo shop" : "View Shop"}
                           <ArrowRight className="h-3.5 w-3.5" />
                         </span>
                       </div>
@@ -524,8 +551,8 @@ export function LocalShoreMapExperience({
               ✕
             </button>
             <div className="text-center">
-              <h3 className="font-bold text-sm text-slate-900">Shops near you</h3>
-              <p className="text-[10px] text-slate-500">{MAP_PROVIDER === "google" ? `${registeredCount} shops · ${demoCount} demo catalogs` : `${markerItems.length} verified stores`}</p>
+              <h3 className="font-bold text-sm text-slate-900">{selectedCategoryLabel ? `${selectedCategoryLabel} shops` : "Shops near you"}</h3>
+              <p className="text-[10px] text-slate-500">{registeredCount} matching shops</p>
             </div>
             <button
               type="button"
@@ -601,56 +628,18 @@ function NeighborhoodMapPreviewCard({
   markers?: MapMarkerItem[];
   onOpenMap: () => void;
 }) {
-  const hasDemos = markers.some((marker) => marker.isDemo);
   const topNearest = useMemo(() => {
     return [...markers].sort((a, b) => a.distanceKm - b.distanceKm).slice(0, 4);
   }, [markers]);
 
-  const p0 = topNearest[0] || {
-    shopName: "FreshMart",
-    category: "Groceries & Essentials",
-    distanceKm: 0.9,
-    etaMin: 15,
-    imageUrl: "/assets/grocery-basket.png",
-    isDemo: false,
-  };
-  const p1 = topNearest[1] || {
-    shopName: "StyleHaven",
-    category: "Fashion & Lifestyle",
-    distanceKm: 1.2,
-    etaMin: 18,
-    imageUrl: "/assets/clothing.png",
-    isDemo: false,
-  };
-  const p2 = topNearest[2] || {
-    shopName: "SweetBites",
-    category: "Bakery & Cakes",
-    distanceKm: 0.7,
-    etaMin: 12,
-    imageUrl: "/assets/chocolate-cake.png",
-    isDemo: false,
-  };
-  const p3 = topNearest[3] || {
-    shopName: "HealthPlus",
-    category: "Pharmacy & Wellness",
-    distanceKm: 1.4,
-    etaMin: 20,
-    imageUrl: "/assets/pharmacy-medicines.png",
-    isDemo: false,
-  };
+  const [p0, p1, p2, p3] = topNearest;
+  const getDistanceLabel = (item: MapMarkerItem) => `${item.distanceKm.toFixed(1)} km away`;
 
-  const getEtaString = (item: any) => {
-    if (item.isDemo) return `Preview · approx. ${item.distanceKm.toFixed(1)} km`;
-    const min = item.etaMin ?? Math.max(10, Math.round((item.distanceKm || 1) * 5 + 10));
-    const dist = item.distanceKm ? ` (${item.distanceKm.toFixed(1)} km)` : "";
-    return `${min} min${dist}`;
-  };
-
-  if (MAP_PROVIDER === "google" && markers.length === 0) {
+  if (markers.length === 0) {
     return (
       <div className="mb-8 rounded-3xl border border-[#EBD9F0] bg-white p-6 sm:p-8">
         <h3 className="font-display text-xl font-bold text-[#21162B]">Explore LocalShore nearby</h3>
-        <p className="mt-2 text-sm text-slate-600">No registered shops with published, in-stock products are available around this location yet.</p>
+        <p className="mt-2 text-sm text-slate-600">No shops match this category near your selected location yet.</p>
         <button type="button" onClick={onOpenMap} className="mt-4 rounded-full bg-[#981495] px-5 py-2.5 text-sm font-bold text-white">Open map</button>
       </div>
     );
@@ -699,7 +688,7 @@ function NeighborhoodMapPreviewCard({
             </span>
           </h3>
           <p className="text-sm sm:text-base font-bold text-slate-500 mt-2.5">
-            {hasDemos ? "Explore registered shops and shop previews nearby" : "Discover nearest verified shops around you"}
+            Discover nearest verified shops around you
           </p>
         </div>
 
@@ -711,7 +700,7 @@ function NeighborhoodMapPreviewCard({
               <MapPin className="h-3.5 w-3.5 fill-emerald-600 text-emerald-600" />
             </div>
             <span className="text-xs font-bold text-slate-700">
-              {hasDemos ? "Preview pins show approximate areas" : "Real local shops near your address"}
+              Real local shops near your address
             </span>
           </div>
 
@@ -721,7 +710,7 @@ function NeighborhoodMapPreviewCard({
               <StoreIcon className="h-3.5 w-3.5 text-pink-600" />
             </div>
             <span className="text-xs font-bold text-slate-700">
-              {hasDemos ? "Browse sample shop catalogs" : "Support your neighborhood vendors"}
+              Support your neighborhood vendors
             </span>
           </div>
 
@@ -730,7 +719,7 @@ function NeighborhoodMapPreviewCard({
             <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--sand)] text-[#981495]">
               <span className="text-xs font-black">∅</span>
             </div>
-            <span className="text-xs font-bold text-slate-700">{hasDemos ? "Shop previews are labeled" : "No dark stores"}</span>
+            <span className="text-xs font-bold text-slate-700">No dark stores</span>
           </div>
 
           {/* Pill 4 */}
@@ -738,7 +727,7 @@ function NeighborhoodMapPreviewCard({
             <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-amber-100 text-amber-600">
               <Zap className="h-3.5 w-3.5 fill-amber-500 text-amber-500" />
             </div>
-            <span className="text-xs font-bold text-slate-700">{hasDemos ? "Sample products for browsing" : "Faster, fresher delivery"}</span>
+            <span className="text-xs font-bold text-slate-700">Faster, fresher delivery</span>
           </div>
         </div>
 
@@ -849,7 +838,8 @@ function NeighborhoodMapPreviewCard({
 
         {/* 4 Floating Shop Cards connected to map pins */}
 
-        {/* Card 1: Top Left - FreshMart */}
+        {/* Only show real shops returned for the selected category. */}
+        {p0 && (
         <div className="absolute top-4 left-4 flex items-center gap-2.5 rounded-2xl bg-white/95 backdrop-blur-xs p-2 pr-3 shadow-lg border border-emerald-100 z-10 transition-transform group-hover:scale-105 max-w-[180px] sm:max-w-[210px] min-w-0">
           <img
             src={p0.productImage || (p0 as any).imageUrl || "/assets/grocery-basket.png"}
@@ -866,16 +856,17 @@ function NeighborhoodMapPreviewCard({
               </span>}
             </div>
             <p className="text-[9px] font-semibold text-slate-400 truncate">
-              {p0.category || "Groceries & Essentials"}
+              {p0.category || "Local shop"}
             </p>
             <div className="flex items-center gap-1 text-[10px] font-bold text-emerald-600 mt-0.5 whitespace-nowrap">
               <MapPin className="h-3 w-3 fill-emerald-600 shrink-0" />
-              <span>{getEtaString(p0)}</span>
+              <span>{getDistanceLabel(p0)}</span>
             </div>
           </div>
         </div>
+        )}
 
-        {/* Card 2: Top Right - StyleHaven */}
+        {p1 && (
         <div className="absolute top-4 right-4 flex items-center gap-2.5 rounded-2xl bg-white/95 backdrop-blur-xs p-2 pr-3 shadow-lg border border-[var(--sand)] z-10 transition-transform group-hover:scale-105 max-w-[180px] sm:max-w-[210px] min-w-0">
           <img
             src={p1.productImage || (p1 as any).imageUrl || "/assets/clothing.png"}
@@ -892,16 +883,17 @@ function NeighborhoodMapPreviewCard({
               </span>}
             </div>
             <p className="text-[9px] font-semibold text-slate-400 truncate">
-              {p1.category || "Fashion & Lifestyle"}
+              {p1.category || "Local shop"}
             </p>
             <div className="flex items-center gap-1 text-[10px] font-bold text-[#c026d3] mt-0.5 whitespace-nowrap">
               <MapPin className="h-3 w-3 fill-[#c026d3] shrink-0" />
-              <span>{getEtaString(p1)}</span>
+              <span>{getDistanceLabel(p1)}</span>
             </div>
           </div>
         </div>
+        )}
 
-        {/* Card 3: Bottom Left - SweetBites */}
+        {p2 && (
         <div className="absolute bottom-12 left-4 flex items-center gap-2.5 rounded-2xl bg-white/95 backdrop-blur-xs p-2 pr-3 shadow-lg border border-amber-100 z-10 transition-transform group-hover:scale-105 max-w-[180px] sm:max-w-[210px] min-w-0">
           <img
             src={p2.productImage || (p2 as any).imageUrl || "/assets/chocolate-cake.png"}
@@ -918,16 +910,17 @@ function NeighborhoodMapPreviewCard({
               </span>}
             </div>
             <p className="text-[9px] font-semibold text-slate-400 truncate">
-              {p2.category || "Bakery & Cakes"}
+              {p2.category || "Local shop"}
             </p>
             <div className="flex items-center gap-1 text-[10px] font-bold text-amber-600 mt-0.5 whitespace-nowrap">
               <MapPin className="h-3 w-3 fill-amber-500 shrink-0" />
-              <span>{getEtaString(p2)}</span>
+              <span>{getDistanceLabel(p2)}</span>
             </div>
           </div>
         </div>
+        )}
 
-        {/* Card 4: Bottom Right - HealthPlus / Roja Bakes */}
+        {p3 && (
         <div className="absolute bottom-16 right-4 flex items-center gap-2.5 rounded-2xl bg-white/95 backdrop-blur-xs p-2 pr-3 shadow-lg border border-rose-100 z-10 transition-transform group-hover:scale-105 max-w-[180px] sm:max-w-[210px] min-w-0">
           <img
             src={p3.productImage || (p3 as any).imageUrl || "/assets/pharmacy-medicines.png"}
@@ -944,14 +937,15 @@ function NeighborhoodMapPreviewCard({
               </span>}
             </div>
             <p className="text-[9px] font-semibold text-slate-400 truncate">
-              {p3.category || "Pharmacy & Wellness"}
+              {p3.category || "Local shop"}
             </p>
             <div className="flex items-center gap-1 text-[10px] font-bold text-rose-600 mt-0.5 whitespace-nowrap">
               <MapPin className="h-3 w-3 fill-rose-500 shrink-0" />
-              <span>{getEtaString(p3)}</span>
+              <span>{getDistanceLabel(p3)}</span>
             </div>
           </div>
         </div>
+        )}
 
         {/* Map Bottom Left CTA Pill */}
         <div className="absolute bottom-3 left-4 bg-white/90 backdrop-blur-xs px-3.5 py-1.5 rounded-full text-xs font-bold text-[#7e22ce] shadow-md border border-[var(--sand)] flex items-center gap-1.5 opacity-95 group-hover:opacity-100 transition-opacity z-20">

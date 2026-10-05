@@ -61,13 +61,20 @@ import { isTestEntity } from "@/lib/map-service/store-engine";
 import { LottieLoading } from "@/components/ui/lottie-loading";
 import { RelatedProductsSection } from "@/components/related-products-section";
 import { adaptMockProduct } from "@/lib/recommendations/recommendation-engine";
+import { ImportedShopPage } from "@/components/imported-shop-page";
 
 export const Route = createFileRoute("/store/$storeId")({
-  validateSearch: (search: Record<string, unknown>): { sq?: string; category?: string } => ({
+  validateSearch: (search: Record<string, unknown>): { sq?: string; category?: string; shopLat?: number; shopLng?: number } => ({
     sq: (search.sq as string) || (search.q as string) || undefined,
     category: (search.category as string) || undefined,
+    shopLat: search.shopLat != null && search.shopLat !== "" && Number.isFinite(Number(search.shopLat)) ? Number(search.shopLat) : undefined,
+    shopLng: search.shopLng != null && search.shopLng !== "" && Number.isFinite(Number(search.shopLng)) ? Number(search.shopLng) : undefined,
   }),
-  loader: ({ params }): { store: Store; products: Product[] } => {
+  loader: ({ params }): { store: Store; products: Product[] } | { importedShopId: string } => {
+    if (params.storeId.startsWith("imported:")) {
+      if (!isUuid(params.storeId.slice("imported:".length))) throw notFound();
+      return { importedShopId: params.storeId };
+    }
     const demoShop = getDemoNeighborhoodShop(params.storeId);
     if (demoShop) {
       return {
@@ -95,7 +102,7 @@ export const Route = createFileRoute("/store/$storeId")({
     if (!store) throw notFound();
     return { store, products: productsByStore[store.id] ?? [] };
   },
-  component: StorePage,
+  component: StoreRoutePage,
   notFoundComponent: () => (
     <div className="grid min-h-screen place-items-center p-6 text-center">
       <div>
@@ -111,6 +118,14 @@ export const Route = createFileRoute("/store/$storeId")({
     </div>
   ),
 });
+
+function StoreRoutePage() {
+  const loaded = Route.useLoaderData();
+  const search = Route.useSearch();
+  return "importedShopId" in loaded
+    ? <ImportedShopPage shopId={loaded.importedShopId} lat={search.shopLat} lng={search.shopLng} />
+    : <StorePage />;
+}
 
 function getCategoryIcon(_catName: string) {
   return <Package className="h-4 w-4 text-slate-400" />;

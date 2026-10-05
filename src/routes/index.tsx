@@ -41,6 +41,8 @@ import { isTestEntity } from "@/lib/map-service/store-engine";
 import { useDeliveryLocation } from "@/lib/location-store";
 import { getCategoryByIdOrSlug, toStoreCategory, isStoreInCategory, catalogCategoryKey } from "@/lib/shop-categories";
 import { discoverShops } from "@/lib/shop-discovery";
+import { runCatalogRpcWithTimeout } from "@/lib/catalog-rpc";
+import { fetchNearbyImportedShops, toImportedShopCard } from "@/lib/imported-shops";
 import {
   CUSTOMER_VISIBILITY_RADIUS_KM,
   DEFAULT_SHOP_DISCOVERY_RADIUS_KM,
@@ -125,21 +127,16 @@ function Home() {
     queryKey: ["homepage-visible-products", locLat, locLng],
     staleTime: 1000 * 60 * 5,
     gcTime: 1000 * 60 * 10,
-    retry: 1,
+    retry: false,
     refetchOnWindowFocus: false,
     queryFn: async () => {
       if (!hasConfirmedCoordinates(deliveryLoc)) return [];
-      try {
-        const { data, error } = await (supabase as any).rpc("get_customer_visible_products", {
+      const { data, error } = await runCatalogRpcWithTimeout((supabase as any).rpc("get_customer_visible_products", {
           p_lat: deliveryLoc.lat, p_lng: deliveryLoc.lng, p_query: null,
           p_category_slug: null, p_limit: 100, p_offset: 0,
-        });
-        if (error) throw error;
-        return (data ?? []).filter((p: any) => !isTestEntity(p.name));
-      } catch (err) {
-        console.warn("Products query fallback:", err);
-        return [];
-      }
+        }));
+      if (error) throw new Error(error.message || "Unable to load nearby products");
+      return ((data ?? []) as any[]).filter((p: any) => !isTestEntity(p.name));
     },
   });
 
@@ -147,7 +144,7 @@ function Home() {
     queryKey: ["homepage-visible-shops-v4", locLat, locLng, search.category, query],
     staleTime: 1000 * 60 * 5,
     gcTime: 1000 * 60 * 10,
-    retry: 1,
+    retry: false,
     refetchOnWindowFocus: false,
     queryFn: async () => {
       if (!deliveryLoc || !hasConfirmedCoordinates(deliveryLoc)) return {
@@ -189,6 +186,17 @@ function Home() {
   });
 
   const [visibleProductLimit, setVisibleProductLimit] = useState(15);
+
+  const publicShops = useQuery({
+    queryKey: ["homepage-public-shops", locLat, locLng, search.category, query],
+    staleTime: 1000 * 60 * 5,
+    retry: false,
+    enabled: hasConfirmedCoordinates(deliveryLoc),
+    queryFn: () => fetchNearbyImportedShops((name, args) => (supabase as any).rpc(name, args), {
+      lat: deliveryLoc!.lat, lng: deliveryLoc!.lng, radiusKm: DEFAULT_SHOP_DISCOVERY_RADIUS_KM,
+      category: catalogCategoryKey(search.category), query: query.trim() || null,
+    }),
+  });
 
   useEffect(() => {
     setQuery(search.q ?? "");
@@ -362,6 +370,7 @@ function Home() {
   const displayCategoryName = useMemo(() => getCategoryDisplayName(cat), [cat]);
   const nearbyLoading =
     hasConfirmedLocation && (approvedVendors.isLoading || approvedProducts.isLoading);
+  const nearbyLoadError = approvedVendors.isError || approvedProducts.isError;
   const homeFallbackZoneNames = Array.from(
     new Set(
       (approvedVendors.data?.shops ?? [])
@@ -437,13 +446,20 @@ function Home() {
               className="h-full max-w-none"
             />
           ))}
-          {approvedVendors.isError && (
+          {(publicShops.data ?? []).map((row) => {
+            const shop = toImportedShopCard(row);
+            return shop ? <ShopCard key={shop.id} shop={shop} variant="wide" className="h-full max-w-none" /> : null;
+          })}
+          {nearbyLoadError && (
             <div className="col-span-full rounded-xl border border-amber-300 bg-amber-50 p-4 text-amber-950" role="alert">
-              <p>We couldn’t load nearby shops. Please try again.</p>
-              <button className="mt-2 rounded-lg px-3 py-2 font-semibold underline focus-visible:outline focus-visible:outline-2" onClick={() => void approvedVendors.refetch()}>Retry shops</button>
+              <p>We couldn’t load nearby shops and products. Please check your connection and retry.</p>
+              <button className="mt-2 rounded-lg px-3 py-2 font-semibold underline focus-visible:outline focus-visible:outline-2" onClick={() => {
+                if (approvedVendors.isError) void approvedVendors.refetch();
+                if (approvedProducts.isError) void approvedProducts.refetch();
+              }}>Retry nearby catalog</button>
             </div>
           )}
-          {!nearbyLoading && !approvedVendors.isError && filtered.length === 0 && (
+          {!nearbyLoading && !publicShops.isLoading && !nearbyLoadError && filtered.length === 0 && (publicShops.data?.length ?? 0) === 0 && (
             <div className="col-span-full">
               <EmptyState />
             </div>
@@ -531,6 +547,8 @@ function Home() {
           >
             <LocalShoreMapExperience
               initialMapOpen
+              initialQuery={query}
+              initialCategory={activeFilter ?? "all"}
               onCloseMap={() => setIsNearbyMapOpen(false)}
             />
           </Suspense>

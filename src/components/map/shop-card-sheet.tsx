@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import type { MapMarkerItem } from "@/lib/map-service/types";
 import { categoryColor, categoryLabel } from "@/lib/mock-data";
-import { getFallbackProductImage, isValidImageUrl } from "@/lib/image-utils";
+import { getFallbackProductImage, getRepresentativeItemImages, isValidImageUrl } from "@/lib/image-utils";
 import { fetchMapRoute } from "@/lib/map-service/providers";
 import { toast } from "sonner";
 
@@ -59,6 +59,38 @@ export function ShopCardSheet({ marker, userLocation, onClose, onDirectionsCalcu
 
   // Strikethrough estimate price for showcase
   const originalPrice = Math.round(marker.minPrice * 1.15);
+
+  if (marker.isImported) {
+    return (
+      <div className="animate-in slide-in-from-bottom-6 fade-in-20 duration-300 pointer-events-auto relative w-full max-w-lg overflow-hidden rounded-[28px] border border-border bg-card p-4 shadow-2xl backdrop-blur-xl">
+        <div className="mb-3 flex items-center justify-between gap-2">
+          <span className="rounded-full bg-sky-100 px-3 py-1 text-xs font-bold text-sky-900">Public listing · {marker.claimStatus === "unclaimed" ? "Unclaimed" : marker.claimStatus}</span>
+          <button onClick={onClose} className="grid h-7 w-7 place-items-center rounded-full bg-muted text-muted-foreground hover:bg-muted/80" aria-label="Close card"><X className="h-4 w-4" /></button>
+        </div>
+        <img src={imageSrc} alt={`${marker.shopName} ${marker.imageType === "seller" ? "seller" : "representative"} ${marker.category} image`} loading="lazy" className="aspect-[16/8] w-full rounded-2xl border border-border/50 bg-muted object-cover" onError={(event) => { event.currentTarget.src = getFallbackProductImage(marker.shopName, marker.category); }} />
+        <div className="mt-3 space-y-2 px-1">
+          <div className="flex items-start justify-between gap-3">
+            <div><h3 className="font-display text-base font-extrabold text-foreground">{marker.shopName}</h3><p className="mt-1 text-xs text-muted-foreground">{marker.category} · {marker.distanceKm.toFixed(1)} km away</p></div>
+            {marker.rating > 0 && <div className="flex shrink-0 items-center gap-1 rounded-lg bg-amber-500/10 px-2 py-1 text-xs font-bold"><Star className="h-3.5 w-3.5 fill-amber-500 text-amber-500" />{marker.rating.toFixed(1)}{marker.reviewCount != null && <span className="text-muted-foreground">({marker.reviewCount})</span>}</div>}
+          </div>
+          {marker.address && <p className="text-xs leading-relaxed text-muted-foreground">{marker.address}</p>}
+          <p className="text-[11px] text-muted-foreground">{marker.imageType === "seller" ? "Image supplied by the claimed seller." : "Representative category image; not a photo of this business."} {marker.claimStatus === "unclaimed" && "This public listing has no LocalShore seller catalog and cannot accept orders."}</p>
+          <div>
+            <p className="mb-1.5 text-[11px] font-semibold text-muted-foreground">Example product imagery · representative only, not shop stock</p>
+            <div className="grid grid-cols-3 gap-2" aria-label="Representative category product imagery">
+              {getRepresentativeItemImages(marker.category, marker.shopId).map((imageUrl, index) => (
+                <img key={`${marker.id}-example-${index}`} src={imageUrl} alt={`${marker.category} representative product example ${index + 1}`} loading="lazy" decoding="async" className="h-16 w-full rounded-lg border border-border/60 bg-muted object-cover" />
+              ))}
+            </div>
+          </div>
+        </div>
+        <div className="mt-4 grid grid-cols-2 gap-2.5">
+          <Link to="/store/$storeId" params={{ storeId: marker.shopId }} search={{ shopLat: marker.lat, shopLng: marker.lng }} className="flex items-center justify-center gap-1.5 rounded-2xl bg-foreground px-3 py-2.5 text-xs font-bold text-background">View Local Shop <ArrowRight className="h-4 w-4" /></Link>
+          <button onClick={handleDirections} disabled={loadingRoute} className="flex items-center justify-center gap-1.5 rounded-2xl border border-border bg-muted/60 px-3 py-2.5 text-xs font-bold text-foreground hover:bg-muted disabled:opacity-50"><Navigation className={`h-4 w-4 text-primary ${loadingRoute ? "animate-spin" : ""}`} />{loadingRoute ? "Routing…" : "Directions"}</button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="animate-in slide-in-from-bottom-6 fade-in-20 duration-300 pointer-events-auto relative w-full max-w-lg overflow-hidden rounded-[28px] border border-border bg-card p-4 shadow-2xl backdrop-blur-xl">

@@ -1,4 +1,5 @@
 import { parseCoordinates } from "./coordinates";
+import { buildDemoReceipt, type DemoOrderInput } from "./demo-payment";
 import { useEffect, useState } from "react";
 import type { CartLine } from "./cart-store";
 import { supabase } from "@/integrations/supabase/client";
@@ -112,6 +113,7 @@ export const orderStatusLabel: Record<OrderStatus, string> = {
 };
 
 export interface Order {
+  isDemoPayment?: boolean;
   id: string;
   code: string;
   storeId: string;
@@ -346,6 +348,22 @@ const orderErrorMessage = (error: any) => {
 };
 
 export const ordersStore = {
+  async placeDemo(order: DemoOrderInput) {
+    const { data, error: sessionError } = await supabase.auth.getSession();
+    const user = data.session?.user;
+    if (sessionError || !user) throw new Error("Sign in before demo checkout.");
+    if (!parseCoordinates(order.destination?.lat, order.destination?.lng) || !order.address.trim())
+      throw new Error("Confirm your delivery address before continuing.");
+    // Generated Supabase types do not yet include the existing catalog view.
+    const { data: products, error } = await (supabase as any).from("approved_product_catalog")
+      .select("id,seller_id,name,selling_price,stock")
+      .eq("seller_id", order.storeId).in("id", order.lines.map(line => line.productId));
+    if (error) throw new Error("Could not verify real shop inventory. Please try again.");
+    const receipt = buildDemoReceipt(order, products ?? [], crypto.randomUUID());
+    // Separate, per-user browser storage; never send this receipt to the live order RPC.
+    localStorage.setItem(demoOrdersKey(user.id), JSON.stringify([receipt, ...loadDemoOrders(user.id)].slice(0, 50)));
+    return receipt;
+  },
   async place(order: Omit<Order, "id" | "code" | "createdAt" | "status">) {
     const { data: session } = await supabase.auth.getSession();
     const user = session.session?.user;
@@ -421,9 +439,18 @@ function loadDemoOrders(userId: string): Order[] {
   if (typeof window === "undefined") return [];
   try {
     const raw = localStorage.getItem(demoOrdersKey(userId));
-    if (raw) return JSON.parse(raw);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? parsed : [];
+    }
   } catch {}
   return [];
+}
+
+export async function getDemoReceipt(orderId: string): Promise<Order | null> {
+  const { data } = await supabase.auth.getSession();
+  if (!data.session?.user) return null;
+  return loadDemoOrders(data.session.user.id).find(order => order?.id === orderId && order.isDemoPayment === true) ?? null;
 }
 
 export async function cancelOrder(orderId: string, reason: string): Promise<boolean> {
@@ -441,8 +468,8 @@ export async function cancelOrder(orderId: string, reason: string): Promise<bool
   ];
   let cancelled = false;
 
-  // 1. Update local storage demo order if present
-  if (userId) {
+  // Demo orders are local-only and use non-UUID identifiers.
+  if (!isUuid(orderId)) {
     const demoOrders = loadDemoOrders(userId);
     const demoIndex = demoOrders.findIndex(
       (o: Order) =>
@@ -459,39 +486,23 @@ export async function cancelOrder(orderId: string, reason: string): Promise<bool
       }
       cancelled = true;
     }
+    if (!cancelled) return false;
   }
 
-  // 2. Update real Supabase order if UUID
+  // Real order workflow changes must go through the ownership/status-checked
+  // RPC. Direct PostgREST updates are blocked by workflow RLS and can also
+  // partially cancel an order without releasing its delivery assignment.
   if (isUuid(orderId)) {
-    try {
-      const { data: cancelledOrder, error } = await (supabase as any)
-        .from("orders")
-        .update({
-          status: "cancelled",
-          cancellation_reason: reason,
-          cancelled_at: new Date().toISOString(),
-        })
-        .eq("id", orderId)
-        .eq("user_id", userId)
-        .in("status", cancellableStatuses)
-        .select("id")
-        .maybeSingle();
-
-      if (error) {
-        throw error;
-      }
-      if (!cancelledOrder) return false;
-      cancelled = true;
-
-      // Also cancel active delivery assignment if any
-      await (supabase as any)
-        .from("delivery_assignments")
-        .update({ status: "cancelled" })
-        .eq("order_id", orderId);
-    } catch (err) {
-      console.warn("Cancel order database update error:", err);
-      return false;
+    const { data: cancelledOrder, error } = await (supabase as any).rpc("customer_cancel_order", {
+      _order_id: orderId,
+      _reason: reason,
+    });
+    if (error) {
+      console.warn("Cancel order RPC failed:", error);
+      throw new Error(error.message || "The order could not be cancelled.");
     }
+    if (!cancelledOrder?.id || cancelledOrder.status !== "cancelled") return false;
+    cancelled = true;
   }
 
   // Also update cached order if present
@@ -503,7 +514,7 @@ export async function cancelOrder(orderId: string, reason: string): Promise<bool
     updateOrdersCache([...currentCached]);
   }
 
-  return cancelled || currentCached.some((o) => o.id === orderId || o.code === orderId);
+  return cancelled;
 }
 
 export function useOrders() {

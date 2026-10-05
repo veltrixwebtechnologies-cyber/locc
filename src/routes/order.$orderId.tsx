@@ -18,10 +18,17 @@ import { OrderSupport } from "@/components/order-support";
 import { DeliveryAnimation } from "@/components/delivery-animation";
 import { LottieLoading } from "@/components/ui/lottie-loading";
 import { OrderRefundPanel } from "@/components/order-refund-panel";
+import { getOrderProgressIndex } from "@/lib/order-progress";
+import { DemoOrderReceipt } from "@/components/demo-order-receipt";
 
 export const Route = createFileRoute("/order/$orderId")({
-  component: OrderPage,
+  component: OrderRoutePage,
 });
+
+function OrderRoutePage() {
+  const { orderId } = Route.useParams();
+  return orderId.startsWith("demo-") ? <DemoOrderReceipt orderId={orderId} /> : <OrderPage />;
+}
 
 function DeliveryTimingHero({ order }: { order: Order }) {
   const isDelivered = order.status === "delivered";
@@ -231,13 +238,13 @@ function OrderPage() {
   );
 
   const store = order ? getStore(order.storeId) : undefined;
-  const currentIndex = order ? orderStatusFlow.indexOf(order.status) : 0;
+  const currentIndex = order ? getOrderProgressIndex(order.status) : 0;
   const status = order?.status;
   const canCancel =
     order &&
-    order.status !== "delivered" &&
-    order.status !== "cancelled" &&
-    order.status !== "returned";
+    ["new", "accepted", "vendor_accepted", "preparing", "packed", "ready_for_pickup"].includes(
+      order.status,
+    );
 
   const destination = useMemo(() => {
     return order?.destination ?? null;
@@ -282,7 +289,7 @@ function OrderPage() {
     );
   }
 
-  const progress = ((currentIndex + 1) / orderStatusFlow.length) * 100;
+  const progress = currentIndex < 0 ? 0 : ((currentIndex + 1) / orderStatusFlow.length) * 100;
 
   return (
     <AppShell>
@@ -376,7 +383,7 @@ function OrderPage() {
         </div>
         <ol className="mt-4 space-y-3">
           {orderStatusFlow.map((s, i) => {
-            const done = i <= currentIndex;
+            const done = currentIndex >= 0 && i <= currentIndex;
             const active = i === currentIndex && s !== "delivered";
             return (
               <m.li

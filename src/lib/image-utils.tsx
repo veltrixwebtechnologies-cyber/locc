@@ -386,6 +386,31 @@ const SHOP_IMAGE_VARIANTS: Record<string, string[]> = {
   ],
 };
 
+const REPRESENTATIVE_ITEM_IMAGES: Record<string, string[]> = {
+  fashion: [
+    "https://images.unsplash.com/photo-1489987707025-afc232f7ea0f?auto=format&fit=crop&w=320&q=75",
+    "https://images.unsplash.com/photo-1551488831-00ddcb6c6bd3?auto=format&fit=crop&w=320&q=75",
+    "https://images.unsplash.com/photo-1541099649105-f69ad21f3246?auto=format&fit=crop&w=320&q=75",
+    "https://images.unsplash.com/photo-1558769132-cb1aea458c5e?auto=format&fit=crop&w=320&q=75",
+  ],
+  furniture: [
+    "https://images.unsplash.com/photo-1555041469-a586c61ea9bc?auto=format&fit=crop&w=320&q=75",
+    "https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=320&q=75",
+    "https://images.unsplash.com/photo-1513519245088-0e12902e5a38?auto=format&fit=crop&w=320&q=75",
+    "https://images.unsplash.com/photo-1493663284031-b7e3aefcae8e?auto=format&fit=crop&w=320&q=75",
+  ],
+};
+
+/** Generic category examples for directory-only shops; never seller stock photos. */
+export function getRepresentativeItemImages(category?: string | null, seed?: string | null): string[] {
+  const normalized = String(category ?? "").toLowerCase();
+  const key = normalized.includes("furniture") ? "furniture" : "fashion";
+  const images = REPRESENTATIVE_ITEM_IMAGES[key];
+  const seedText = String(seed ?? "localshore-shop");
+  const offset = [...seedText].reduce((total, char) => total + char.charCodeAt(0), 0) % images.length;
+  return Array.from({ length: 3 }, (_, index) => images[(offset + index) % images.length]);
+}
+
 /** Deterministic, category-appropriate storefront fallback for shop cards. */
 export function getFallbackShopImage(category?: string | null, seed?: string | null): string {
   const normalized = String(category ?? "").toLowerCase().replace(/[^a-z0-9]+/g, "_");

@@ -48,6 +48,10 @@ export function SwiggyInstantSearchDropdown({
 
   const handleResultClick = (item: SearchResultItem) => {
     if (onSelectResult) onSelectResult();
+    if (item.metadata?.imported === true) {
+      if (item.url && item.url !== "#") window.open(item.url, "_blank", "noopener,noreferrer");
+      return;
+    }
     const targetUrl = item.url || "";
     if (targetUrl.startsWith("/store/")) {
       const storeId = item.storeId || targetUrl.replace("/store/", "");
