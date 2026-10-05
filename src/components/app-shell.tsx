@@ -104,14 +104,19 @@ export function AppShell({ children }: { children: ReactNode }) {
   // /auth. Catch the recovery event at the app shell so the token session is
   // established before navigating to the password form.
   useEffect(() => {
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((event) => {
-      if (event === "PASSWORD_RECOVERY" && pathname !== "/auth") {
-        void navigate({ to: "/auth", search: { flow: "password-recovery" } });
-      }
-    });
-    return () => subscription.unsubscribe();
+    let subscription: { unsubscribe: () => void } | null = null;
+    try {
+      const result = supabase.auth.onAuthStateChange((event) => {
+        if (event === "PASSWORD_RECOVERY" && pathname !== "/auth") {
+          void navigate({ to: "/auth", search: { flow: "password-recovery" } });
+        }
+      });
+      subscription = result.data.subscription;
+    } catch (error) {
+      // Keep public browsing available when a preview has no Supabase config.
+      console.warn("[LocalShore auth] Password recovery listener unavailable", error);
+    }
+    return () => subscription?.unsubscribe();
   }, [navigate, pathname]);
 
   useEffect(() => {

@@ -73,8 +73,11 @@ function createSupabaseClient() {
   ]);
   const SUPABASE_PUBLISHABLE_KEY =
     metaEnv?.["VITE_SUPABASE_PUBLISHABLE_KEY"] ||
+    metaEnv?.["VITE_SUPABASE_ANON_KEY"] ||
     runtimeEnv?.["SUPABASE_PUBLISHABLE_KEY"] ||
-    runtimeEnv?.["VITE_SUPABASE_PUBLISHABLE_KEY"];
+    runtimeEnv?.["SUPABASE_ANON_KEY"] ||
+    runtimeEnv?.["VITE_SUPABASE_PUBLISHABLE_KEY"] ||
+    runtimeEnv?.["VITE_SUPABASE_ANON_KEY"];
 
   if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {
     const missing = [
