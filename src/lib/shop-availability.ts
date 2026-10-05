@@ -110,6 +110,37 @@ export function useShopStatus(sellerId: string | null | undefined) {
   return query;
 }
 
+/** Store-aware public storefront status, available after the Phase B runtime migration. */
+export function useStorefrontStatus(sellerId: string | null | undefined) {
+  return useQuery({
+    queryKey: ["storefront-status", sellerId],
+    enabled: Boolean(sellerId),
+    staleTime: 60_000,
+    retry: false,
+    queryFn: async () => {
+      if (!sellerId) return null;
+      const { data, error } = await (supabase as any).rpc("get_customer_storefront", {
+        p_seller_id: sellerId,
+      });
+      // The local app may be paired with a DB where this prepared migration is
+      // not installed yet. Leave legacy pages usable without pretending the
+      // new Store availability contract has been verified.
+      if (error?.code === "PGRST202" || error?.code === "42883") return null;
+      if (error) throw error;
+      return data as null | {
+        id: string;
+        name: string;
+        address_line1: string | null;
+        city: string | null;
+        status: string;
+        can_browse: boolean;
+        can_order: boolean;
+        availability: ShopStatus;
+      };
+    },
+  });
+}
+
 /** Batch statuses for a list of seller IDs (used on home/listing pages) */
 export function useShopsStatus(sellerIds: string[]) {
   const key = sellerIds.slice().sort().join(",");

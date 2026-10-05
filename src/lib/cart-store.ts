@@ -2,7 +2,11 @@ import { useSyncExternalStore } from "react";
 
 export interface CartLine {
   productId: string;
+  /** Database order_items.id; present only for persisted order lines. */
+  orderItemId?: string;
   storeId: string;
+  /** Physical fulfillment Store; absent on legacy cached/catalog rows until resolved server-side. */
+  fulfillmentStoreId?: string;
   name: string;
   unit: string;
   price: number;
@@ -88,14 +92,18 @@ export const cartStore = {
   add(
     storeId: string,
     storeName: string,
-    product: { id: string; name: string; unit: string; price: number; stock?: number },
+    product: { id: string; name: string; unit: string; price: number; stock?: number; fulfillmentStoreId?: string | null },
   ) {
     ensureHydrated();
     if (!storeId || !product.id || !Number.isFinite(product.price) || product.price < 0) return;
     if (product.stock !== undefined && (!Number.isSafeInteger(product.stock) || product.stock <= 0)) {
       return;
     }
-    const sameStore = state.storeId === storeId;
+    const sameSeller = state.storeId === storeId;
+    const samePhysicalStore = !product.fulfillmentStoreId || state.lines.every(
+      (line) => !line.fulfillmentStoreId || line.fulfillmentStoreId === product.fulfillmentStoreId,
+    );
+    const sameStore = sameSeller && samePhysicalStore;
     const previousStoreName = !sameStore && state.lines.length > 0 ? state.storeName : null;
     const baseLines = sameStore ? state.lines : [];
     const existing = baseLines.find((l) => l.productId === product.id);
@@ -114,6 +122,7 @@ export const cartStore = {
           {
             productId: product.id,
             storeId,
+            fulfillmentStoreId: product.fulfillmentStoreId ?? undefined,
             name: product.name,
             unit: product.unit,
             price: product.price,

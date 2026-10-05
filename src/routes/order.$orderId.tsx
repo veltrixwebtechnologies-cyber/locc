@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AppShell } from "@/components/app-shell";
 import {
   useOrdersState,
@@ -17,10 +18,231 @@ import { m } from "motion/react";
 import { OrderSupport } from "@/components/order-support";
 import { DeliveryAnimation } from "@/components/delivery-animation";
 import { LottieLoading } from "@/components/ui/lottie-loading";
+import { Button } from "@/components/ui/button";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/lib/auth-store";
 
 export const Route = createFileRoute("/order/$orderId")({
   component: OrderPage,
 });
+
+const isUuid = (value: string) =>
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+const refundStatusLabel = (status: string) =>
+  status.replaceAll("_", " ").replace(/^./, (s) => s.toUpperCase());
+
+function RefundRequestPanel({ order }: { order: Order }) {
+  const enabled = import.meta.env.VITE_ENABLE_REFUNDS === "true";
+  const auth = useAuth();
+  const queryClient = useQueryClient();
+  const idempotencyKey = useRef("");
+  const [amount, setAmount] = useState(String(order.total));
+  const [reasonCode, setReasonCode] = useState("CUSTOMER_CANCELLATION");
+  const [reason, setReason] = useState("");
+  const isCod = ["cod", "cash on delivery"].includes(order.paymentMethod.toLowerCase());
+  const canRequest = isCod
+    ? order.status === "delivered"
+    : ["cancelled", "delivered", "returned"].includes(order.status);
+
+  const refunds = useQuery({
+    queryKey: ["order-refunds", auth.id, order.id],
+    enabled: enabled && Boolean(auth.id) && isUuid(order.id),
+    queryFn: async () => {
+      const { data, error } = await (supabase as any)
+        .from("refunds")
+        .select(
+          "id,amount,reason_code,status,payment_method,requested_at,approved_at,processed_at,failed_at,failure_reason",
+        )
+        .eq("order_id", order.id)
+        .order("requested_at", { ascending: false });
+      if (error) throw error;
+      return (data ?? []) as Array<{
+        id: string;
+        amount: number;
+        reason_code: string;
+        status: string;
+        payment_method: string;
+        requested_at: string;
+        approved_at: string | null;
+        processed_at: string | null;
+        failed_at: string | null;
+        failure_reason: string | null;
+      }>;
+    },
+    refetchInterval: 20_000,
+  });
+
+  const request = useMutation({
+    mutationFn: async () => {
+      if (!auth.id) throw new Error("Sign in to request a refund.");
+      const numericAmount = Number(amount);
+      if (!Number.isFinite(numericAmount) || numericAmount <= 0)
+        throw new Error("Enter a valid refund amount.");
+      if (!idempotencyKey.current) idempotencyKey.current = crypto.randomUUID();
+      const { data, error } = await (supabase as any).rpc("request_order_refund", {
+        p_order_id: order.id,
+        p_amount: numericAmount,
+        p_reason_code: reasonCode,
+        p_reason: reason.trim() || null,
+        p_idempotency_key: idempotencyKey.current,
+      });
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: async () => {
+      idempotencyKey.current = "";
+      toast.success("Refund request submitted for review.");
+      await queryClient.invalidateQueries({ queryKey: ["order-refunds", auth.id, order.id] });
+      await refunds.refetch();
+    },
+    onError: (error: any) => {
+      const message = String(error?.message ?? "");
+      if (/permission denied|authentication required|order not found/i.test(message)) {
+        toast.error("Sign in with the account that placed this order, then try again.");
+      } else if (/refundable balance|captured payment|COD reimbursement|delivered/i.test(message)) {
+        toast.error(message);
+      } else {
+        toast.error(
+          "Refund request could not be submitted. The refund service may not be enabled in this environment yet.",
+        );
+      }
+    },
+  });
+
+  if (!enabled) return null;
+  return (
+    <section
+      className="mx-5 mt-4 space-y-3 rounded-2xl border border-border bg-card p-4"
+      aria-label="Refund status and request"
+    >
+      <div>
+        <h2 className="font-display text-base font-semibold">Refunds</h2>
+        <p className="mt-1 text-xs text-muted-foreground">
+          Requests are reviewed separately. Amount eligibility is checked against the recorded
+          payment on the server. Approval does not mean the payment provider has returned the funds.
+        </p>
+      </div>
+      {!auth.id ? (
+        <p className="text-sm text-muted-foreground">
+          Sign in to view or request refunds for this order.
+        </p>
+      ) : refunds.isError ? (
+        <p className="text-sm text-muted-foreground">
+          Refund status is unavailable in this environment. Contact LocalShore Customer Care for
+          help.
+        </p>
+      ) : refunds.isLoading ? (
+        <p className="text-sm text-muted-foreground">Loading refund status…</p>
+      ) : refunds.data?.length ? (
+        <div className="space-y-2">
+          {refunds.data.map((item) => (
+            <article key={item.id} className="rounded-xl border p-3">
+              <div className="flex flex-wrap items-center gap-2">
+                <strong className="mr-auto text-sm">
+                  ₹{Number(item.amount).toLocaleString("en-IN", { maximumFractionDigits: 2 })}
+                </strong>
+                <span className="rounded-full border px-2 py-1 text-xs capitalize">
+                  {refundStatusLabel(item.status)}
+                </span>
+              </div>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {refundStatusLabel(item.reason_code)} · Requested{" "}
+                {new Date(item.requested_at).toLocaleString("en-IN")}
+              </p>
+              {item.status === "approved" && item.payment_method !== "cod" && (
+                <p className="mt-1 text-xs text-amber-700">
+                  Approved; payment-provider processing is still pending.
+                </p>
+              )}
+              {item.status === "refunded" && (
+                <p className="mt-1 text-xs text-emerald-700">Refund recorded as completed.</p>
+              )}
+              {item.failure_reason && (
+                <p className="mt-1 text-xs text-destructive">{item.failure_reason}</p>
+              )}
+            </article>
+          ))}
+        </div>
+      ) : (
+        <p className="text-sm text-muted-foreground">
+          No refund request has been recorded for this order.
+        </p>
+      )}
+      {canRequest && auth.id && (
+        <form
+          className="space-y-2 border-t pt-3"
+          onSubmit={(event) => {
+            event.preventDefault();
+            if (
+              window.confirm(
+                "Submit this refund request for review? This does not process a payment refund.",
+              )
+            )
+              request.mutate();
+          }}
+        >
+          <label className="block text-xs font-medium" htmlFor={`refund-amount-${order.id}`}>
+            Requested amount (INR)
+          </label>
+          <input
+            id={`refund-amount-${order.id}`}
+            type="number"
+            min="0.01"
+            step="0.01"
+            inputMode="decimal"
+            value={amount}
+            onChange={(event) => setAmount(event.target.value)}
+            className="h-10 w-full rounded-lg border border-input bg-background px-3 text-sm"
+            required
+          />
+          <label className="block text-xs font-medium" htmlFor={`refund-reason-${order.id}`}>
+            Reason
+          </label>
+          <select
+            id={`refund-reason-${order.id}`}
+            value={reasonCode}
+            onChange={(event) => setReasonCode(event.target.value)}
+            className="h-10 w-full rounded-lg border border-input bg-background px-3 text-sm"
+          >
+            <option value="CUSTOMER_CANCELLATION">Customer cancellation</option>
+            <option value="SELLER_CANCELLATION">Shop cancellation</option>
+            <option value="OUT_OF_STOCK">Out of stock</option>
+            <option value="DAMAGED_ITEM">Damaged item</option>
+            <option value="WRONG_ITEM">Wrong item</option>
+            <option value="MISSING_ITEM">Missing item</option>
+            <option value="DELIVERY_FAILURE">Delivery failure</option>
+            <option value="DUPLICATE_PAYMENT">Duplicate payment</option>
+            <option value="OTHER">Other</option>
+          </select>
+          <label className="block text-xs font-medium" htmlFor={`refund-note-${order.id}`}>
+            Note (optional)
+          </label>
+          <textarea
+            id={`refund-note-${order.id}`}
+            value={reason}
+            onChange={(event) => setReason(event.target.value)}
+            maxLength={1000}
+            rows={2}
+            className="w-full rounded-lg border border-input bg-background p-3 text-sm"
+            placeholder="Add context for the review team"
+          />
+          <Button
+            type="submit"
+            disabled={request.isPending || refunds.isLoading}
+            className="w-full"
+          >
+            {request.isPending ? "Submitting…" : "Request refund review"}
+          </Button>
+          {request.isError && (
+            <p role="alert" className="text-xs text-destructive">
+              Request failed. Check the amount/reason or contact Customer Care.
+            </p>
+          )}
+        </form>
+      )}
+    </section>
+  );
+}
 
 function DeliveryTimingHero({ order }: { order: Order }) {
   const isDelivered = order.status === "delivered";
@@ -322,12 +544,16 @@ function OrderPage() {
                 </p>
               )}
               <p className="mt-1 text-[11px] text-rose-600/80 dark:text-rose-400/80">
-                If any amount was deducted, a full refund will be credited back automatically.
+                Cancellation does not confirm a refund. Refund requests are reviewed separately; any
+                approved prepaid refund must be processed by the payment provider. COD reimbursement
+                is handled manually.
               </p>
             </div>
           </div>
         </div>
       )}
+
+      <RefundRequestPanel order={order} />
 
       {/* Prominent High-Visibility Delivery Timing Hero */}
       <DeliveryTimingHero order={order} />
@@ -474,7 +700,8 @@ function OrderPage() {
               <span>Cancel Order</span>
             </button>
             <p className="mt-1.5 text-[10px] text-center text-muted-foreground">
-              Free cancellation before order pickup. Instant refund for prepaid orders.
+              Cancellation eligibility is checked before pickup. Any refund is reviewed and
+              processed separately; provider settlement timing may vary.
             </p>
           </div>
         )}
@@ -614,8 +841,9 @@ function CancelOrderModal({
           )}
 
           <div className="rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200/60 p-3 text-[11px] text-amber-800 dark:text-amber-300">
-            💡 <strong>Note:</strong> Prepaid orders will be automatically refunded to your original
-            payment method within 1–2 business days.
+            💡 <strong>Note:</strong> Cancelling an order does not mean a refund has been processed.
+            Prepaid refunds require review and payment-provider processing; COD reimbursements are
+            handled manually. We do not promise a settlement date here.
           </div>
         </div>
 

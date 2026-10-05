@@ -115,6 +115,9 @@ export interface Order {
   id: string;
   code: string;
   storeId: string;
+  /** Physical Store ID; storeId remains the legacy seller route key. */
+  fulfillmentStoreId?: string;
+  pickupAddress?: string;
   storeName: string;
   storeCoordinates?: { lat: number; lng: number };
   lines: CartLine[];
@@ -161,6 +164,7 @@ function fromRow(row: any): Order {
     : undefined;
 
   const sellerCoordinates =
+    normalizeCoordinate({ lat: row.fulfillment_store?.latitude, lng: row.fulfillment_store?.longitude }) ??
     normalizeCoordinate({ lat: row.seller?.lat, lng: row.seller?.lng }) ??
     normalizeCoordinate(row.seller?.wizard_data?.pickupCoordinates) ??
     normalizeCoordinate(row.seller?.wizard_data?.shopCoordinates) ??
@@ -218,11 +222,15 @@ function fromRow(row: any): Order {
     id: row.id,
     code: row.order_number,
     storeId: row.seller_id,
-    storeName: row.seller?.business_name ?? "Local Shore shop",
+    storeName: row.fulfillment_store?.name ?? row.seller?.business_name ?? "Local Shore shop",
+    fulfillmentStoreId: row.fulfillment_store?.store_id ?? row.store_id ?? undefined,
+    pickupAddress: [row.fulfillment_store?.address_line1, row.fulfillment_store?.city].filter(Boolean).join(", ") || undefined,
     storeCoordinates: sellerCoordinates ?? undefined,
     lines: (row.order_items ?? []).map((item: any) => ({
       productId: item.product_id,
+      orderItemId: item.id,
       storeId: row.seller_id,
+      fulfillmentStoreId: row.fulfillment_store?.store_id ?? row.store_id ?? undefined,
       name: item.product_name,
       unit: item.sku ?? "",
       price: Number(item.unit_price),
@@ -297,9 +305,20 @@ async function loadOrders(): Promise<Order[]> {
       // Ignore assignment lookup errors
     }
 
+    let fulfillmentStores: any[] = [];
+    try {
+      const { data: storesData } = await (supabase as any).rpc("get_customer_order_storefronts", {
+        p_order_ids: orderIds,
+      });
+      if (Array.isArray(storesData)) fulfillmentStores = storesData;
+    } catch {
+      // Older databases keep displaying the legacy seller storefront label.
+    }
+    const storeByOrder = new Map(fulfillmentStores.map((store) => [store.order_id, store]));
     const processedOrders = ordersData.map((row: any) => {
       const rowWithAssignment = {
         ...row,
+        fulfillment_store: storeByOrder.get(row.id),
         delivery_assignments: assignmentsMap[row.id] ? [assignmentsMap[row.id]] : [],
       };
       return fromRow(rowWithAssignment);
@@ -399,6 +418,8 @@ export const ordersStore = {
       createdAt: new Date(created.placed_at).getTime(),
       status: "new" as OrderStatus,
       storeId: created.seller_id,
+      fulfillmentStoreId: created.store_id ?? undefined,
+      lines: order.lines.map((line) => ({ ...line, fulfillmentStoreId: created.store_id ?? undefined })),
       subtotal: Number(created.subtotal),
       deliveryFee: Number(created.shipping_fee),
       total: Number(created.total),

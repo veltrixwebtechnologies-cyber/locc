@@ -10,11 +10,26 @@ export function useShopCoordinates(id: string | null) {
     staleTime: 60_000,
     retry: 1,
     queryFn: async () => {
-      const {data, error} = await (supabase as any).from("approved_vendor_catalog")
-        .select("lat,lng").eq("id", id).maybeSingle();
+      const storefront = await (supabase as any).rpc("get_customer_storefront", {
+        p_seller_id: id,
+      });
+      if (!storefront.error && storefront.data) {
+        const { latitude, longitude } = storefront.data;
+        if (isValidCoordinate(latitude, longitude)) {
+          return { lat: Number(latitude), lng: Number(longitude), source: "store" as const };
+        }
+      } else if (storefront.error && !["PGRST202", "42883"].includes(storefront.error.code)) {
+        throw storefront.error;
+      }
+      const { data, error } = await (supabase as any)
+        .from("approved_vendor_catalog")
+        .select("lat,lng")
+        .eq("id", id)
+        .maybeSingle();
       if (error) throw error;
       return data && isValidCoordinate(data.lat, data.lng)
-        ? {lat: Number(data.lat), lng: Number(data.lng)} : null;
+        ? { lat: Number(data.lat), lng: Number(data.lng), source: "seller-legacy" as const }
+        : null;
     },
   });
 }

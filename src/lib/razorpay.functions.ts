@@ -46,6 +46,7 @@ export interface VerifyRazorpayPaymentResult {
     payment_status: string;
     payment_reference: string;
     seller_id: string;
+    store_id?: string | null;
   };
 }
 
@@ -101,6 +102,31 @@ export const createRazorpayOrderFn = createServerFn({ method: "POST" })
     if (prodErr || !dbProducts || dbProducts.length !== requestedProductIds.length) {
       console.error("[razorpay] Error fetching product prices:", prodErr);
       throw new Error("Unable to retrieve authoritative prices for cart items.");
+    }
+
+    // Store/zone policy runs before creating a gateway order so known-ineligible
+    // deliveries are never charged. The final order-item trigger remains the
+    // race-safe database guard when the prepared migration is installed.
+    const { data: commerceCheck, error: commerceError } = await (context.supabase as any).rpc(
+      "resolve_customer_checkout",
+      {
+        p_product_ids: requestedProductIds,
+        p_customer_latitude: data.customer_latitude,
+        p_customer_longitude: data.customer_longitude,
+      },
+    );
+    if (commerceError && !["PGRST202", "42883"].includes(commerceError.code)) {
+      throw new Error("Store delivery availability could not be verified. Please try again.");
+    }
+    if (!commerceError && commerceCheck && commerceCheck.eligible === false) {
+      const messages: Record<string, string> = {
+        STORE_CLOSED: "This store is closed right now. Please try again during opening hours.",
+        STORE_UNAVAILABLE: "This store is currently unavailable for new orders.",
+        OUTSIDE_SERVICE_ZONE: "This address is outside the store’s delivery zone.",
+        OUTSIDE_DELIVERY_RADIUS: "This address is outside the store’s delivery area.",
+        MULTIPLE_FULFILLMENT_STORES: "Your cart contains items from different store locations. Please order from one store at a time.",
+      };
+      throw new Error(messages[commerceCheck.reason] || "This store cannot deliver to the selected address.");
     }
 
     const priceMap = new Map<string, number>();
@@ -341,6 +367,7 @@ export const verifyRazorpayPaymentFn = createServerFn({ method: "POST" })
         payment_status: "paid",
         payment_reference: data.razorpay_payment_id,
         seller_id: rpcCreated.seller_id,
+        store_id: rpcCreated.store_id ?? null,
       },
     };
   });

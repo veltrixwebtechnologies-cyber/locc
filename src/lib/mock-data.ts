@@ -180,7 +180,10 @@ export const deliveryCategories: DeliveryCategory[] = [
 
 export interface Product {
   id: string;
+  /** Legacy route/cart key (seller ID); seller_id remains the business owner. */
   storeId: string;
+  /** Physical Store ID when returned by the Store-aware catalog. */
+  fulfillmentStoreId?: string;
   /** Seller name for products returned from the cross-seller approved catalog. */
   shopName?: string;
   name: string;

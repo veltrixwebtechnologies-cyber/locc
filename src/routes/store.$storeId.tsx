@@ -44,6 +44,7 @@ import { useMLTracker } from "@/hooks/use-ml-tracker";
 import { ComplementaryShopsWidget } from "@/components/complementary-shops-widget";
 import { NearbySimilarShopsWidget } from "@/components/nearby-similar-shops-widget";
 import { scrollToShops } from "@/lib/scroll-utils";
+import { useStorefrontStatus } from "@/lib/shop-availability";
 
 const isUuid = (value: string) =>
   // Demo seller IDs are UUID-shaped MD5 values and don't necessarily carry
@@ -106,6 +107,17 @@ function StorePage() {
     queryKey: ["approved-store-v5", loaded.store.id, requestedCategory],
     enabled: loaded.store.id === APPROVED_STORE.id || isUuid(loaded.store.id),
     queryFn: async () => {
+      let defaultStoreId: string | null = null;
+      if (loaded.store.id !== APPROVED_STORE.id) {
+        const { data: storefront, error: storefrontError } = await (supabase as any).rpc(
+          "get_customer_storefront",
+          { p_seller_id: loaded.store.id },
+        );
+        if (storefrontError && !["PGRST202", "42883"].includes(storefrontError.code)) {
+          throw storefrontError;
+        }
+        defaultStoreId = storefront?.id ?? null;
+      }
       let productQuery = (supabase as any)
         .from("approved_product_catalog")
         .select("id,seller_id,shop_name,name,category,selling_price,image_url,stock")
@@ -134,7 +146,17 @@ function StorePage() {
       const sellerRows = loaded.store.id === APPROVED_STORE.id
         ? (data ?? [])
         : (data ?? []).filter((p: any) => p.seller_id === loaded.store.id);
-      const validRows = sellerRows.filter((p: any) => !isTestEntity(p.name));
+      let storeIdByProduct = new Map<string, string>();
+      if (defaultStoreId && sellerRows.length) {
+        const { data: storeLinks } = await (supabase as any)
+          .from("products")
+          .select("id,store_id")
+          .in("id", sellerRows.map((p: any) => p.id));
+        storeIdByProduct = new Map((storeLinks ?? []).map((p: any) => [p.id, p.store_id]));
+      }
+      const validRows = sellerRows
+        .filter((p: any) => !isTestEntity(p.name))
+        .filter((p: any) => !defaultStoreId || !storeIdByProduct.get(p.id) || storeIdByProduct.get(p.id) === defaultStoreId);
       const products = await Promise.all(
         validRows.map(async (p: any) => {
           const rawImage = p.image_url ?? "";
@@ -148,6 +170,7 @@ function StorePage() {
           return {
             id: p.id,
             storeId: p.seller_id ?? APPROVED_STORE.id,
+            fulfillmentStoreId: storeIdByProduct.get(p.id) ?? undefined,
             shopName: p.shop_name ?? undefined,
             name: p.name,
             unit: p.unit || p.category || "1 unit",
@@ -248,9 +271,19 @@ function StorePage() {
     },
   });
 
-  const store = approved.data?.store ?? loaded.store;
+  const baseStore = approved.data?.store ?? loaded.store;
   const liveProds = approved.data?.products ?? [];
   const isLiveSellerStore = isUuid(loaded.store.id) && loaded.store.id !== APPROVED_STORE.id;
+  const storefrontStatus = useStorefrontStatus(isLiveSellerStore ? loaded.store.id : null);
+  const store = storefrontStatus.data?.can_browse
+    ? {
+        ...baseStore,
+        name: storefrontStatus.data.name || baseStore.name,
+        address: [storefrontStatus.data.address_line1, storefrontStatus.data.city]
+          .filter(Boolean)
+          .join(", ") || baseStore.address,
+      }
+    : baseStore;
   const products = (
     isLiveSellerStore
       ? liveProds
@@ -376,6 +409,10 @@ function StorePage() {
 
     // Add to the cart before starting the optional animation. A browser that
     // does not support the animation must never prevent the cart mutation.
+    if (storefrontStatus.data?.can_browse === false) {
+      toast.error("This shop is not currently available.");
+      return;
+    }
     cartStore.add(product.storeId || store.id, product.shopName || store.name, product);
     void recordProductEvent(product.id, "add_to_cart");
     try {
@@ -401,6 +438,17 @@ function StorePage() {
       {approved.isError && <button className="m-3 rounded-lg bg-primary px-4 py-2 text-primary-foreground" onClick={() => void approved.refetch()}>Try again</button>}
       <Link to="/" search={{category:undefined,q:undefined}} className="block mt-3 underline">Back to shops</Link>
     </div></div>;
+  }
+  if (isLiveSellerStore && storefrontStatus.data?.can_browse === false) {
+    return (
+      <div className="grid min-h-screen place-items-center p-6 text-center">
+        <div role="status">
+          <h1 className="text-xl font-bold">This store is currently unavailable</h1>
+          <p className="mt-2 text-sm text-muted-foreground">Please check back later or browse other local shops.</p>
+          <Link to="/" search={{ category: "all-shops", q: undefined }} className="mt-4 inline-block underline">Back to shops</Link>
+        </div>
+      </div>
+    );
   }
 
   const isDemoShop = /\(Demo\)|^LocalShore\s+(?:Demo\s+)?(?:CBE|BLR)-/i.test(store.name);
@@ -508,7 +556,9 @@ function StorePage() {
 
                 <div className="flex items-center gap-1 rounded-full bg-emerald-50/90 px-2.5 py-1 text-emerald-800 border border-emerald-200/70 shadow-2xs">
                   <Clock className="h-3.5 w-3.5 text-emerald-600" />
-                  <span>{isLiveSellerStore ? "Check opening hours with shop" : store.isOpen ? "Open now" : "Closed"}</span>
+                  <span>{storefrontStatus.data
+                    ? storefrontStatus.data.can_order ? storefrontStatus.data.availability.label : "Currently not accepting orders"
+                    : isLiveSellerStore ? "Availability shown at checkout" : store.isOpen ? "Open now" : "Closed"}</span>
                 </div>
 
                 {!isLiveSellerStore && <div className="flex items-center gap-1 rounded-full bg-[var(--sand)]/90 px-2.5 py-1 text-[#700b6e] border border-[#f0abfc]/70 shadow-2xs">
@@ -527,6 +577,11 @@ function StorePage() {
                   </div>
                 )}
               </div>
+              {storefrontStatus.data?.can_browse && !storefrontStatus.data.can_order && (
+                <p className="mt-2 inline-flex rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-900" role="status">
+                  This store is visible, but is not accepting new orders right now.
+                </p>
+              )}
             </div>
           </div>
         </div>

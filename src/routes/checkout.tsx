@@ -624,6 +624,43 @@ function CheckoutPage() {
   );
   const canPlace = pinConfirmed && Number.isFinite(computedDistanceKm);
 
+  const validateStoreCheckout = async (coords: { lat: number; lng: number }) => {
+    let data: any;
+    let error: any;
+    try {
+      ({ data, error } = await (supabase as any).rpc("resolve_customer_checkout", {
+        p_product_ids: cart.lines.map((line) => line.productId),
+        p_customer_latitude: coords.lat,
+        p_customer_longitude: coords.lng,
+      }));
+    } catch {
+      toast.error("We couldn’t verify this store’s delivery availability. Please try again.");
+      return false;
+    }
+    // Until the prepared runtime migration is installed, the existing order RPC
+    // remains authoritative for its legacy seller/open-hours checks.
+    if (error?.code === "PGRST202" || error?.code === "42883") return true;
+    if (error) {
+      toast.error("We couldn’t verify this store’s delivery availability. Please try again.");
+      return false;
+    }
+    if (!data?.eligible) {
+      const message: Record<string, string> = {
+        STORE_UNAVAILABLE: "This store is currently unavailable for new orders.",
+        STORE_CLOSED: "This store is closed right now. Please try again during opening hours.",
+        STORE_LOCATION_UNAVAILABLE: "This store’s delivery location is not available yet.",
+        CUSTOMER_LOCATION_INVALID: "Confirm a valid delivery location before continuing.",
+        OUTSIDE_SERVICE_ZONE: "This address is outside the store’s delivery zone.",
+        OUTSIDE_DELIVERY_RADIUS: "This address is outside the store’s delivery area.",
+        MULTIPLE_FULFILLMENT_STORES: "Your cart contains items from different store locations. Please order from one store at a time.",
+        EMPTY_CART: "Your cart is empty.",
+      };
+      toast.error(message[data?.reason] ?? "This store cannot deliver to the selected address.");
+      return false;
+    }
+    return true;
+  };
+
   const applyCoupon = async (codeToApply?: string) => {
     const code = (codeToApply || couponCode).trim().toUpperCase();
     if (!code) {
@@ -674,6 +711,8 @@ function CheckoutPage() {
       toast.error("Confirm the delivery location before continuing.");
       return;
     }
+    const destinationCoords = parseCoordinates(pinCoords?.lat, pinCoords?.lng);
+    if (!destinationCoords || !(await validateStoreCheckout(destinationCoords))) return;
     if (pay === "cod") {
       void placeOrder();
       return;
@@ -759,8 +798,12 @@ function CheckoutPage() {
                   id: verifyRes.order.id,
                   code: verifyRes.order.code,
                   storeId: verifyRes.order.seller_id,
+                  fulfillmentStoreId: verifyRes.order.store_id ?? undefined,
                   storeName: store.name,
-                  lines: cart.lines,
+                  lines: cart.lines.map((line) => ({
+                    ...line,
+                    fulfillmentStoreId: verifyRes.order.store_id ?? line.fulfillmentStoreId,
+                  })),
                   subtotal: totals.subtotal,
                   deliveryFee: displayDeliveryFee,
                   total: verifyRes.order.total,
@@ -839,6 +882,7 @@ function CheckoutPage() {
       toast.error("Confirm the delivery location before placing the order.");
       return;
     }
+    if (!(await validateStoreCheckout(destinationCoords))) return;
     setIsPlacing(true);
     setPaymentStep("authorizing");
 
