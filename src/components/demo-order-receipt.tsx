@@ -17,16 +17,16 @@ export function DemoOrderReceipt({ orderId }: { orderId: string }) {
   return (
     <AppShell>
       <section className="mx-auto my-8 max-w-2xl rounded-2xl border bg-card p-6">
-        <h1 className="font-display text-2xl font-bold">Demo payment receipt</h1>
+        <h1 className="font-display text-2xl font-bold">Test payment receipt</h1>
         <p className="my-3 rounded-xl bg-amber-50 p-4 text-sm text-amber-950">
-          Simulation only — no money charged, no stock reserved, and no seller or delivery partner
+          Test mode only — no real money charged, no stock reserved, and no seller or delivery partner
           notified. This is not a live order.
         </p>
         {isPending ? (
           <p>Loading test receipt…</p>
         ) : isError || !receipt ? (
           <p>
-            Receipt unavailable. Sign in with the same account and browser used for demo checkout.
+            Receipt unavailable. Sign in with the same account and browser used for test checkout.
           </p>
         ) : (
           <>
@@ -34,6 +34,8 @@ export function DemoOrderReceipt({ orderId }: { orderId: string }) {
               {receipt.code} · {new Date(receipt.createdAt).toLocaleString()}
             </p>
             <h2 className="my-4 text-lg font-semibold">{receipt.storeName}</h2>
+            <p className="text-sm text-muted-foreground">{receipt.paymentMethod}</p>
+            {receipt.paymentReference && <p className="mt-1 break-all font-mono text-xs">Razorpay reference: {receipt.paymentReference}</p>}
             <ul className="divide-y">
               {receipt.lines.map((line) => (
                 <li key={line.productId} className="flex justify-between gap-4 py-3">

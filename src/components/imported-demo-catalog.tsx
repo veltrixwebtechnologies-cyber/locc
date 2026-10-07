@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { ProductThumb } from "@/components/product-thumb";
+import { QtyStepper } from "@/components/qty-stepper";
 import {
   getImportedDemoTotal,
   type ImportedDemoItem,
@@ -11,11 +13,13 @@ export function ImportedDemoCatalog({
   shopName,
   items,
   search,
+  category,
 }: {
   shopId: string;
   shopName: string;
   items: ImportedDemoItem[];
   search: string;
+  category: string;
 }) {
   const [quantities, setQuantities] = useState<ImportedDemoQuantities>({});
   const [checkout, setCheckout] = useState(false);
@@ -34,62 +38,52 @@ export function ImportedDemoCatalog({
   );
   return (
     <>
-      <div className="mt-4 grid grid-cols-2 gap-4 md:grid-cols-3">
+      <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5">
         {visible.map((item) => (
-          <article key={item.id} className="overflow-hidden rounded-2xl border bg-card shadow-sm">
-            <img
-              src={item.imageUrl.replace("w=320", "w=640")}
-              alt={`${item.name} representative demo image`}
-              loading="lazy"
-              className="aspect-square w-full bg-muted object-cover"
-              onError={(event) => {
-                event.currentTarget.onerror = null;
-                event.currentTarget.src = "/placeholder.svg";
-              }}
-            />
-            <div className="space-y-2 p-4">
-              <h3 className="font-semibold">{item.name}</h3>
-              <p className="text-xs text-muted-foreground">
-                Demo product · sample price · not shop stock
+          <article
+            key={item.id}
+            className="group overflow-hidden rounded-2xl border border-slate-200/90 bg-[#fffafd] p-3 shadow-sm transition-colors hover:border-[#f0abfc]"
+          >
+            <div className="relative flex aspect-square items-center justify-center overflow-hidden rounded-xl border border-slate-100 bg-slate-50/90 p-2">
+              <ProductThumb
+                src={item.imageUrl.replace("w=320", "w=640")}
+                alt={`${item.name} representative image`}
+                category={/bakery|baker/i.test(category) ? "bakery" : /furniture/i.test(category) ? "home_decor" : "individual_fashion"}
+                size="lg"
+              />
+              <span className="absolute bottom-2 left-2 rounded-md bg-slate-900/80 px-2 py-0.5 text-[10px] font-bold text-white">
+                1 unit
+              </span>
+              <div
+                className="absolute bottom-2 right-2 z-20"
+                aria-label={`Quantity for ${item.name}`}
+              >
+                <QtyStepper
+                  qty={quantities[item.id] ?? 0}
+                  max={99}
+                  onAdd={() => change(item.id, 1)}
+                  onChange={(qty) => change(item.id, qty - (quantities[item.id] ?? 0))}
+                  addClassName="rounded-lg border border-emerald-600 bg-[#fffafd] px-3.5 py-1 text-xs font-black uppercase text-emerald-700 shadow-sm hover:bg-emerald-600 hover:text-white"
+                />
+              </div>
+            </div>
+            <div className="mt-2.5 space-y-1">
+              <p className="text-base font-black text-slate-900">
+                ₹{item.price.toLocaleString("en-IN")}
               </p>
-              <p className="font-bold">₹{item.price.toLocaleString("en-IN")}</p>
-              {quantities[item.id] ? (
-                <div className="flex items-center justify-between rounded-xl border">
-                  <button
-                    type="button"
-                    aria-label={`Remove one ${item.name}`}
-                    onClick={() => change(item.id, -1)}
-                    className="px-4 py-2"
-                  >
-                    −
-                  </button>
-                  <span>{quantities[item.id]}</span>
-                  <button
-                    type="button"
-                    aria-label={`Add one ${item.name}`}
-                    onClick={() => change(item.id, 1)}
-                    disabled={quantities[item.id] >= 99}
-                    className="px-4 py-2"
-                  >
-                    +
-                  </button>
-                </div>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => change(item.id, 1)}
-                  className="w-full rounded-xl bg-primary px-4 py-2 text-primary-foreground"
-                >
-                  Add to demo cart
-                </button>
-              )}
+              <h3 className="line-clamp-2 text-sm font-bold text-slate-800">{item.name}</h3>
+              <p className="truncate text-[11px] text-slate-500">Catalog for {shopName}</p>
+              <p className="text-[10px] text-muted-foreground">Prototype item · sample price</p>
+              <span className="inline-flex rounded-md bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-600">
+                {category}
+              </span>
             </div>
           </article>
         ))}
       </div>
       {!visible.length && <p className="mt-4">No demo products match your search.</p>}
       {count > 0 && (
-        <section className="mt-6 rounded-2xl border bg-card p-5" aria-label="Demo cart">
+        <section id="imported-shop-cart" className="mt-6 scroll-mt-24 rounded-2xl border bg-card p-5" aria-label="Demo cart">
           <h3 className="font-bold">Demo cart · {shopName}</h3>
           <p className="my-2">
             {count} items · sample total ₹{total.toLocaleString("en-IN")}
@@ -106,6 +100,10 @@ export function ImportedDemoCatalog({
           </button>
         </section>
       )}
+      {count > 0 && <div className="fixed bottom-20 right-4 z-40 flex max-w-[calc(100vw-2rem)] items-center gap-4 rounded-2xl bg-primary px-4 py-3 text-primary-foreground shadow-xl sm:bottom-5" role="status">
+        <div className="min-w-0"><p className="truncate text-xs font-semibold">{count} items · {shopName}</p><p className="font-bold">₹{total.toLocaleString("en-IN")}</p><p className="text-[10px]">Prototype cart · test checkout</p></div>
+        <button type="button" onClick={() => document.getElementById("imported-shop-cart")?.scrollIntoView({ behavior: "smooth", block: "start" })} className="shrink-0 rounded-xl bg-yellow-300 px-4 py-2 text-xs font-bold text-slate-900">View Cart</button>
+      </div>}
       {checkout && count > 0 && (
         <section
           className="mt-5 rounded-2xl border border-amber-300 bg-card p-5"

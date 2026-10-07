@@ -17,6 +17,12 @@ const CATEGORY_IMAGES = {
     "photo-1513519245088-0e12902e5a38",
     "photo-1584100936595-c0654b55a2e2",
   ],
+  Bakery: [
+    "photo-1509440159596-0249088772ff",
+    "photo-1578985545062-69928b1d9587",
+    "photo-1608198093002-ad4e005484df",
+    "photo-1555507036-ab1f4038808a",
+  ],
 };
 
 export function cleanText(value) {
@@ -135,9 +141,15 @@ export function normalizeFeature(feature, fileName) {
     return { invalidCoordinates: true };
   }
   const properties = feature.properties && typeof feature.properties === "object" ? feature.properties : {};
-  const isFurniture = /furniture/iu.test(path.basename(fileName));
-  if (!isFurniture && !/Dress_Shops_and_Apparels/iu.test(fileName)) return { error: "Unknown dataset category; add an explicit filename mapping before importing" };
-  const category = isFurniture ? "Furniture" : "Fashion & Apparel";
+  const dataset = path.basename(fileName);
+  const category = /furniture/iu.test(dataset)
+    ? "Furniture"
+    : /Dress_Shops_and_Apparels/iu.test(dataset)
+      ? "Fashion & Apparel"
+      : /Bakeries/iu.test(dataset)
+        ? "Bakery"
+        : null;
+  if (!category) return { error: "Unknown dataset category; add an explicit filename mapping before importing" };
   const businessName = cleanText(properties.business_name);
   if (!businessName) return { error: "business_name is missing" };
 
@@ -164,7 +176,7 @@ export function normalizeFeature(feature, fileName) {
     latitude,
     longitude,
     phone,
-    website: normalizeUrl(properties.website),
+    website: category === "Bakery" ? null : normalizeUrl(properties.website),
     google_maps_url: normalizeUrl(properties.google_maps_url),
     rating: parseRating(rawRating),
     review_count: parseCount(properties.review_count),

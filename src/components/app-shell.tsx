@@ -57,7 +57,7 @@ export function requestLocationModal() {
   }
 }
 
-export function AppShell({ children }: { children: ReactNode }) {
+export function AppShell({ children, hideFloatingCart = false }: { children: ReactNode; hideFloatingCart?: boolean }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const urlQuery = useRouterState({ select: (s) => (s.location.search as { q?: string }).q });
   const navigate = useNavigate();
@@ -83,7 +83,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const hasLocation = mounted && deliveryLocation !== null;
 
   const showFloatingCart =
-    itemCount > 0 && !pathname.startsWith("/cart") && !pathname.startsWith("/checkout");
+    !hideFloatingCart && itemCount > 0 && !pathname.startsWith("/cart") && !pathname.startsWith("/checkout");
 
   useEffect(() => {
     setMounted(true);

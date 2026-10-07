@@ -10,6 +10,8 @@ export interface CartLine {
   price: number;
   qty: number;
   availableStock?: number;
+  imageUrl?: string;
+  category?: string;
 }
 
 interface CartState {
@@ -90,7 +92,7 @@ export const cartStore = {
   add(
     storeId: string,
     storeName: string,
-    product: { id: string; name: string; unit: string; price: number; stock?: number },
+    product: { id: string; name: string; unit: string; price: number; stock?: number; imageUrl?: string; category?: string },
   ) {
     ensureHydrated();
     if (!storeId || !product.id || !Number.isFinite(product.price) || product.price < 0) return;
@@ -121,6 +123,8 @@ export const cartStore = {
             price: product.price,
             qty: 1,
             availableStock: product.stock,
+            imageUrl: product.imageUrl,
+            category: product.category,
           },
         ];
     state = { storeId, storeName, lines };

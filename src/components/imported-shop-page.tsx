@@ -5,20 +5,9 @@ import { ArrowLeft, Loader2, MapPin, Search, Star } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchImportedShopById } from "@/lib/imported-shops";
-import { getFallbackShopImage, getRepresentativeItemImages } from "@/lib/image-utils";
+import { getFallbackShopImage, getFallbackProductImage } from "@/lib/image-utils";
 import { ImportedDemoCatalog } from "@/components/imported-demo-catalog";
-import { getDemoPrice } from "@/lib/imported-demo-cart";
-
-const PREVIEW_LABELS: Record<string, string> = {
-  "photo-1489987707025-afc232f7ea0f": "Clothing",
-  "photo-1551488831-00ddcb6c6bd3": "Shirts",
-  "photo-1541099649105-f69ad21f3246": "Jeans",
-  "photo-1558769132-cb1aea458c5e": "Boutique clothing",
-  "photo-1555041469-a586c61ea9bc": "Sofas",
-  "photo-1505693416388-ac5ce068fe85": "Bedroom furniture",
-  "photo-1513519245088-0e12902e5a38": "Home decor",
-  "photo-1493663284031-b7e3aefcae8e": "Living room furniture",
-};
+import { getImportedCatalogItems } from "@/lib/imported-demo-cart";
 
 export function ImportedShopPage({ shopId, lat, lng }: { shopId: string; lat?: number; lng?: number }) {
   const [search, setSearch] = useState("");
@@ -29,12 +18,13 @@ export function ImportedShopPage({ shopId, lat, lng }: { shopId: string; lat?: n
     retry: false,
   });
   const shop = shopQuery.data;
-  const previews = shop ? getRepresentativeItemImages(shop.category, shopId).map((imageUrl) => ({
-    imageUrl,
-    name: PREVIEW_LABELS[imageUrl.split("/").pop()?.split("?")[0] ?? ""] ?? `${shop.category} preview`,
-  })).map((item, index) => ({ ...item, id: `demo:${shopId}:${index}`, price: getDemoPrice(item.name, shop.category) })) : [];
+  const previews = shop ? getImportedCatalogItems(shop.category).map(item => ({
+    ...item,
+    id: `demo:${shopId}:${item.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`,
+    imageUrl: getFallbackProductImage(item.name, /bakery|baker/i.test(shop.category) ? "bakery" : /furniture/i.test(shop.category) ? "home_decor" : "individual_fashion"),
+  })) : [];
   return (
-    <AppShell>
+    <AppShell hideFloatingCart>
       <main className="mx-auto max-w-6xl px-4 py-6 pb-28 sm:px-6">
         <Link to="/" search={{ category: undefined, q: undefined }} className="mb-5 inline-flex items-center gap-2 text-sm font-semibold text-primary">
           <ArrowLeft className="h-4 w-4" /> Back to shops
@@ -68,7 +58,7 @@ export function ImportedShopPage({ shopId, lat, lng }: { shopId: string; lat?: n
               <h2 className="font-display text-xl font-bold">Demo product catalog</h2>
               <p className="mt-1 text-sm text-muted-foreground">Try shopping with representative {shop.category.toLowerCase()} images from Unsplash and sample prices. Not this business’s confirmed inventory. Demo checkout only — no real payment or delivery.</p>
               <label className="mt-4 flex items-center gap-3 rounded-2xl border bg-card px-4 py-3"><Search className="h-4 w-4 text-primary" /><input aria-label="Search product previews" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search product previews…" className="w-full bg-transparent text-sm outline-none" /></label>
-              <ImportedDemoCatalog key={shopId} shopId={shopId} shopName={shop.business_name} items={previews} search={search} />
+              <ImportedDemoCatalog key={shopId} shopId={shopId} shopName={shop.business_name} category={shop.category} items={previews} search={search} />
             </section>
           </>
         ) : null}

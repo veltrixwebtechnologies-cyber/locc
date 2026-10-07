@@ -22,7 +22,7 @@ export function buildDemoReceipt(
       (product) => product.id === line.productId && product.seller_id === input.storeId,
     );
     if (!product || line.storeId !== input.storeId || seen.has(line.productId))
-      throw new Error("Only this shop's real approved products can be used in demo checkout.");
+      throw new Error("Only this shop's verified catalog items can be used in test checkout.");
     seen.add(line.productId);
     const price = Number(product.selling_price);
     const stock = Number(product.stock);

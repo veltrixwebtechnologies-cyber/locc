@@ -1,4 +1,5 @@
 import { parseCoordinates } from "./coordinates";
+import { importedCatalogProducts } from "./imported-storefront";
 import { buildDemoReceipt, type DemoOrderInput } from "./demo-payment";
 import { useEffect, useState } from "react";
 import type { CartLine } from "./cart-store";
@@ -114,6 +115,7 @@ export const orderStatusLabel: Record<OrderStatus, string> = {
 
 export interface Order {
   isDemoPayment?: boolean;
+  paymentReference?: string;
   id: string;
   code: string;
   storeId: string;
@@ -348,23 +350,45 @@ const orderErrorMessage = (error: any) => {
 };
 
 export const ordersStore = {
+  async saveTestReceipt(receipt: Order) {
+    const { data, error } = await supabase.auth.getSession();
+    if (error || !data.session?.user || !receipt.isDemoPayment || !receipt.id.startsWith("demo-"))
+      throw new Error("Sign in to save your verified test receipt.");
+    const userId = data.session.user.id;
+    const existing = loadDemoOrders(userId).filter(order => order.id !== receipt.id);
+    localStorage.setItem(demoOrdersKey(userId), JSON.stringify([receipt, ...existing].slice(0, 50)));
+    return receipt;
+  },
   async placeDemo(order: DemoOrderInput) {
     const { data, error: sessionError } = await supabase.auth.getSession();
     const user = data.session?.user;
     if (sessionError || !user) throw new Error("Sign in before demo checkout.");
     if (!parseCoordinates(order.destination?.lat, order.destination?.lng) || !order.address.trim())
       throw new Error("Confirm your delivery address before continuing.");
+    let products;
+    if (order.storeId.startsWith("imported:")) {
+      const { data: shop, error } = await (supabase as any).from("imported_shops")
+        .select("id,business_name,category").eq("id", order.storeId.slice(9)).maybeSingle();
+      if (error || !shop) throw new Error("This shop listing could not be verified. Please try again.");
+      order = { ...order, storeName: shop.business_name };
+      products = importedCatalogProducts(order.storeId, shop.business_name, shop.category).map(product => ({
+        id: product.id, seller_id: order.storeId, name: product.name, selling_price: product.price, stock: product.stock,
+      }));
+    } else {
     // Generated Supabase types do not yet include the existing catalog view.
-    const { data: products, error } = await (supabase as any).from("approved_product_catalog")
+    const { data: catalog, error } = await (supabase as any).from("approved_product_catalog")
       .select("id,seller_id,name,selling_price,stock")
       .eq("seller_id", order.storeId).in("id", order.lines.map(line => line.productId));
     if (error) throw new Error("Could not verify real shop inventory. Please try again.");
+    products = catalog;
+    }
     const receipt = buildDemoReceipt(order, products ?? [], crypto.randomUUID());
     // Separate, per-user browser storage; never send this receipt to the live order RPC.
     localStorage.setItem(demoOrdersKey(user.id), JSON.stringify([receipt, ...loadDemoOrders(user.id)].slice(0, 50)));
     return receipt;
   },
   async place(order: Omit<Order, "id" | "code" | "createdAt" | "status">) {
+    if (order.storeId.startsWith("imported:")) throw new Error("Sample catalogs support test checkout only.");
     const { data: session } = await supabase.auth.getSession();
     const user = session.session?.user;
     if (!user) throw new Error("Sign in before placing an order");

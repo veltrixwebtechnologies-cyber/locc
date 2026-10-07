@@ -61,7 +61,9 @@ import { isTestEntity } from "@/lib/map-service/store-engine";
 import { LottieLoading } from "@/components/ui/lottie-loading";
 import { RelatedProductsSection } from "@/components/related-products-section";
 import { adaptMockProduct } from "@/lib/recommendations/recommendation-engine";
-import { ImportedShopPage } from "@/components/imported-shop-page";
+import { AppShell } from "@/components/app-shell";
+import { fetchImportedShopById } from "@/lib/imported-shops";
+import { importedStorefront } from "@/lib/imported-storefront";
 
 export const Route = createFileRoute("/store/$storeId")({
   validateSearch: (search: Record<string, unknown>): { sq?: string; category?: string; shopLat?: number; shopLng?: number } => ({
@@ -123,8 +125,17 @@ function StoreRoutePage() {
   const loaded = Route.useLoaderData();
   const search = Route.useSearch();
   return "importedShopId" in loaded
-    ? <ImportedShopPage shopId={loaded.importedShopId} lat={search.shopLat} lng={search.shopLng} />
+    ? <ImportedStorePage key={loaded.importedShopId} shopId={loaded.importedShopId} lat={search.shopLat} lng={search.shopLng} />
     : <StorePage />;
+}
+
+function ImportedStorePage({ shopId, lat, lng }: { shopId: string; lat?: number; lng?: number }) {
+  const shop = useQuery({
+    queryKey: ["imported-shop-detail", shopId, lat, lng],
+    queryFn: () => fetchImportedShopById((name, args) => (supabase as any).rpc(name, args), shopId, lat, lng),
+    staleTime: 300_000, retry: false,
+  });
+  return <AppShell hideFloatingCart>{shop.isPending ? <div className="grid min-h-64 place-items-center" role="status">Loading shop…</div> : shop.isError ? <div className="p-8 text-center" role="alert"><p>{shop.error.message}</p><button onClick={() => void shop.refetch()} className="mt-4 rounded-xl bg-primary px-5 py-3 text-primary-foreground">Try again</button></div> : <StorePage catalog={importedStorefront(shop.data)} />}</AppShell>;
 }
 
 function getCategoryIcon(_catName: string) {
@@ -186,8 +197,10 @@ function DemoShopPreview({ shop }: { shop: DemoNeighborhoodShop }) {
   );
 }
 
-function StorePage() {
-  const loaded = Route.useLoaderData() as { store: Store; products: Product[] };
+function StorePage({ catalog }: { catalog?: ReturnType<typeof importedStorefront> } = {}) {
+  const routeData = Route.useLoaderData();
+  const loaded = catalog ?? routeData as { store: Store; products: Product[] };
+  const isImported = Boolean(catalog?.imported);
   const demoShop = getDemoNeighborhoodShop(loaded.store.id);
   const searchParams = Route.useSearch();
   const requestedCategory = catalogCategoryKey(searchParams.category);
@@ -343,7 +356,7 @@ function StorePage() {
   const liveProds = approved.data?.products ?? [];
   const isLiveSellerStore = isUuid(loaded.store.id) && loaded.store.id !== APPROVED_STORE.id;
   const products = (
-    isLiveSellerStore
+    isImported ? loaded.products : isLiveSellerStore
       ? liveProds
       : loaded.products && loaded.products.length > 0
         ? loaded.products
@@ -392,7 +405,7 @@ function StorePage() {
 
   useEffect(() => {
     if (store?.id) {
-      trackShopView(store.id, store.category, deliveryLoc?.lat, deliveryLoc?.lng);
+      if (!isImported) trackShopView(store.id, store.category, deliveryLoc?.lat, deliveryLoc?.lng);
     }
   }, [store?.id]);
 
@@ -477,7 +490,7 @@ function StorePage() {
     // Add to the cart before starting the optional animation. A browser that
     // does not support the animation must never prevent the cart mutation.
     cartStore.add(product.storeId || store.id, product.shopName || store.name, product);
-    void recordProductEvent(product.id, "add_to_cart");
+    if (!isImported) void recordProductEvent(product.id, "add_to_cart");
     try {
       flyProductToCart(product.id);
     } catch {
@@ -547,7 +560,7 @@ function StorePage() {
           <div className="absolute top-4 right-4 z-20">
             <div className="inline-flex items-center gap-1.5 rounded-full bg-[#fffafd]/95 backdrop-blur-md px-3.5 py-1.5 text-xs font-black text-slate-900 shadow-xl border border-[#f0abfc]/80">
               <ShieldCheck className="h-4 w-4 text-[#981495] fill-[#981495]/20" />
-              <span>{isDemoShop ? "Demo shop" : "Local shop"}</span>
+              <span>{isImported ? "Public shop" : isDemoShop ? "Demo shop" : "Local shop"}</span>
             </div>
           </div>
 
@@ -588,7 +601,7 @@ function StorePage() {
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2 mb-1">
                 <span className="inline-flex items-center gap-1 rounded-full bg-[var(--sand)]/90 px-2.5 py-0.5 text-[10px] font-bold text-[#981495] border border-[#f0abfc]">
-                  {isDemoShop ? "Demo catalog — sample products" : "LocalShore Merchant"}
+                  {isImported ? "Prototype catalog" : isDemoShop ? "Demo catalog — sample products" : "LocalShore Merchant"}
                 </span>
               </div>
 
@@ -610,14 +623,14 @@ function StorePage() {
 
                 <div className="flex items-center gap-1 rounded-full bg-emerald-50/90 px-2.5 py-1 text-emerald-800 border border-emerald-200/70 shadow-2xs">
                   <Clock className="h-3.5 w-3.5 text-emerald-600" />
-                  <span>{isLiveSellerStore ? "Check opening hours with shop" : store.isOpen ? "Open now" : "Closed"}</span>
+                  <span>{isImported || isLiveSellerStore ? "Check opening hours with shop" : store.isOpen ? "Open now" : "Closed"}</span>
                 </div>
 
                 {!isLiveSellerStore && <div className="flex items-center gap-1 rounded-full bg-[var(--sand)]/90 px-2.5 py-1 text-[#700b6e] border border-[#f0abfc]/70 shadow-2xs">
                   <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
                   <span>{store.rating.toFixed(1)}</span>
                   <span className="text-[#981495]/80 font-normal">
-                    ({Math.floor(store.rating * 240)} reviews)
+                    ({isImported ? catalog?.reviewCount : Math.floor(store.rating * 240)} reviews)
                   </span>
                 </div>}
 
@@ -868,7 +881,7 @@ function StorePage() {
                 const q = qtyOf(p.id);
                 // The public catalog does not supply MRP; never invent a discount
                 // for a registered seller's products.
-                const mrp = isLiveSellerStore ? p.price : Math.round(p.price * 1.25);
+                const mrp = isImported || isLiveSellerStore ? p.price : Math.round(p.price * 1.25);
                 const discountPct = Math.round(((mrp - p.price) / mrp) * 100);
                 const unit = p.unit || "1 unit";
 
@@ -941,11 +954,14 @@ function StorePage() {
 
                       {/* Product details section */}
                       <Link
-                        to="/product/$productId"
-                        params={{ productId: p.id }}
+                        to={isImported ? "/store/$storeId" : "/product/$productId"}
+                        params={isImported ? { storeId: store.id } : { productId: p.id }}
+                        search={isImported ? { sq: p.name, shopLat: store.lat, shopLng: store.lng } : {}}
                         onClick={() => {
-                          void recordProductEvent(p.id, "view");
-                          void recordRecentProductView(p.id);
+                          if (!isImported) {
+                            void recordProductEvent(p.id, "view");
+                            void recordRecentProductView(p.id);
+                          }
                         }}
                         className="mt-2.5 block space-y-1"
                       >
@@ -974,11 +990,12 @@ function StorePage() {
 
                         {p.shopName && (
                           <p className="truncate pt-0.5 text-[11px] font-medium text-slate-500">
-                            Sold by {p.shopName}
+                            {isImported ? "Catalog for" : "Sold by"} {p.shopName}
                           </p>
                         )}
 
                         {/* Rating & ETA */}
+                        {isImported ? <p className="text-[11px] text-muted-foreground">Representative item · sample price</p> : (
                         <div className="flex items-center gap-2 pt-0.5 text-[11px] font-bold text-slate-600">
                           <span className="flex items-center gap-0.5 text-amber-600">
                             <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
@@ -989,6 +1006,7 @@ function StorePage() {
                             <span className="text-slate-500">⏱ {computedEtaMin} mins</span>
                           )}
                         </div>
+                        )}
 
                         {/* Category pill with arrow */}
                         <div className="pt-1">
@@ -1006,7 +1024,7 @@ function StorePage() {
           )}
         </div>
 
-        {recommendationSource && recommendationCandidates.length > 1 && (
+        {!isImported && recommendationSource && recommendationCandidates.length > 1 && (
           <section className="mt-8" aria-label="Complete your purchase">
             <RelatedProductsSection
               sourceProduct={recommendationSource}
@@ -1019,7 +1037,7 @@ function StorePage() {
         )}
 
         {/* ── STORE TRUST & ASSURANCE BANNER ── */}
-        <div className="mt-12 rounded-3xl bg-gradient-to-r from-[#981495] via-[#700b6e] to-[#310938] text-white p-6 sm:p-8 shadow-xl border-2 border-[#f0abfc]/80">
+        {!isImported && <div className="mt-12 rounded-3xl bg-gradient-to-r from-[#981495] via-[#700b6e] to-[#310938] text-white p-6 sm:p-8 shadow-xl border-2 border-[#f0abfc]/80">
           <div className="flex flex-col md:flex-row items-center justify-between gap-6">
             <div className="space-y-1 text-center md:text-left">
               <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-400/20 px-3 py-1 text-xs font-black text-amber-300 border border-[#f0abfc]/40">
@@ -1052,15 +1070,16 @@ function StorePage() {
           </div>
         </div>
 
+        }
         {/* ── SEARCH-BASED RECOMMENDED SHOPS ("Other Shops Selling What You Searched For") ── */}
-        <SearchShopRecommendations
+        {!isImported && <SearchShopRecommendations
           searchQuery={query || sq || ""}
           currentShopId={store.id}
           currentShopName={store.name}
-        />
+        />}
 
         {/* ── NEARBY RECOMMENDED SHOPS ── */}
-        {deliveryLoc && !(query || sq).trim() && (
+        {!isImported && deliveryLoc && !(query || sq).trim() && (
           <div className="mt-12 mb-6">
             <div className="flex items-center justify-between mb-4">
               <div>
@@ -1124,7 +1143,7 @@ function StorePage() {
           </div>
         )}
 
-        {deliveryLoc && (
+        {!isImported && deliveryLoc && (
           <NearbySimilarShopsWidget
             currentCategory={store.category}
             currentStoreId={store.id}
@@ -1134,7 +1153,7 @@ function StorePage() {
           />
         )}
 
-        <ComplementaryShopsWidget
+        {!isImported && <ComplementaryShopsWidget
           currentCategory={store.category}
           userLat={deliveryLoc?.lat}
           userLng={deliveryLoc?.lng}
@@ -1158,7 +1177,7 @@ function StorePage() {
               matching_reason: "High customer satisfaction for accessories",
             },
           ]}
-        />
+        />}
       </div>
 
       {/* Sticky Cart Footer Bar when items are present */}

@@ -10,6 +10,7 @@ import {
 import { catalogCategoryKey, isStoreInCategory } from "@/lib/shop-categories";
 import { discoverShops } from "@/lib/shop-discovery";
 import { fetchNearbyImportedShops, toImportedShopCard, type ImportedShopRow } from "@/lib/imported-shops";
+import { shouldRetryCatalogQuery } from "@/lib/catalog-rpc";
 
 export function useShopDiscovery(filterState: ProductFilterState) {
   const [deliveryLoc] = useDeliveryLocation();
@@ -43,7 +44,8 @@ export function useShopDiscovery(filterState: ProductFilterState) {
     queryKey,
     staleTime: 1000 * 60 * 5,
     gcTime: 1000 * 60 * 15,
-    retry: false,
+    retry: shouldRetryCatalogQuery,
+    retryDelay: (attempt) => Math.min(750 * 2 ** attempt, 3_000),
     queryFn: async () => {
       if (!deliveryLoc || !hasConfirmedCoordinates(deliveryLoc)) {
         return { shops: [], total: 0, expanded: false, fallbackZoneNames: [], primaryZoneName: null, effectiveRadiusKm: radiusKm, legacyMode: false };

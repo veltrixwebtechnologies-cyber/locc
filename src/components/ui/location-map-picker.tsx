@@ -709,9 +709,9 @@ export function LocationMapPicker({
   };
 
   return (
-    <div className="flex flex-col w-full relative shrink-0 rounded-2xl">
+    <div className="flex flex-col w-full relative shrink-0 rounded-[28px] bg-white p-3 sm:p-4">
       {/* Map Search Bar & Back Button */}
-      <div className="relative z-[1000] flex shrink-0 flex-col gap-2 bg-white pb-3">
+      <div className="relative z-[1000] flex shrink-0 flex-col gap-3 bg-white pb-3 sm:gap-4 sm:pb-4">
         <div className="flex items-center gap-2">
           {onBack && (
             <button
@@ -728,8 +728,8 @@ export function LocationMapPicker({
               type="text"
               value={searchQuery}
               onChange={(e) => void handleMapSearch(e.target.value)}
-              placeholder="Search area or landmark on map..."
-              className="w-full bg-transparent text-xs sm:text-sm font-semibold text-slate-900 outline-none placeholder:text-slate-400"
+              placeholder="Search area, street or landmark"
+              className="w-full bg-transparent text-sm sm:text-base font-semibold text-slate-900 outline-none placeholder:text-slate-400"
               autoComplete="off"
             />
             {isSearching && <Loader2 className="h-4 w-4 text-[#981495] animate-spin shrink-0" />}
@@ -767,7 +767,7 @@ export function LocationMapPicker({
 
       {/* LocalShore map canvas. Google mode uses a quiet branded style and
           LocalShore seller markers; OSM mode keeps the existing Leaflet map. */}
-      <div className={`relative isolate w-full shrink-0 overflow-hidden rounded-2xl border border-[#E9DDF0] bg-[#FAF7FC] shadow-sm ${MAP_PROVIDER === "google" ? "h-[380px] sm:h-[460px] lg:flex lg:h-[560px]" : "h-[280px] sm:h-[340px]"}`}>
+      <div className={`relative isolate w-full shrink-0 overflow-hidden rounded-[24px] border border-[#E9DDF0] bg-[#FAF7FC] shadow-sm ${MAP_PROVIDER === "google" ? "h-[min(62vh,680px)] min-h-[360px] sm:min-h-[460px] lg:flex" : "h-[min(52vh,560px)] min-h-[300px] sm:min-h-[380px]"}`}>
         {MAP_PROVIDER === "google" && (
           <aside className="hidden min-w-0 overflow-hidden border-r border-[#EEE7F3] bg-white lg:flex lg:w-[230px] lg:shrink-0 lg:flex-col">
             <div className="flex items-center justify-between border-b border-[#EEE7F3] px-3.5 py-3">
@@ -812,7 +812,7 @@ export function LocationMapPicker({
                     <span className="block truncate text-[11px] font-black text-[#21162B]">{shop.shopName}</span>
                     <span className="block truncate text-[10px] font-semibold text-[#7D7485]">{shop.category}</span>
                     {shop.isDemo && <span className="block text-[9px] font-bold text-amber-700">Demo catalog · approximate area</span>}
-                    {shop.isImported && <span className="block text-[9px] font-bold text-sky-700">Public shop · demo shopping available</span>}
+                    {shop.isImported && <span className="block text-[9px] font-bold text-sky-700">Public shop · prototype catalog</span>}
                     <span className="mt-0.5 flex items-center gap-1.5 text-[10px] font-bold text-[#981495]">
                       {shop.isOpen !== undefined && <span className={shop.isOpen ? "text-emerald-700" : "text-slate-500"}>{shop.isOpen ? "Open now" : "Closed"} ·</span>}
                       {shop.distanceKm.toFixed(1)} km away
@@ -892,7 +892,7 @@ export function LocationMapPicker({
                 {selectedShop.category} · {selectedShop.distanceKm.toFixed(1)} km away{selectedShop.isDemo ? " · demo catalog" : selectedShop.isImported ? " · public listing" : ""}
                 </p>
                 <p className="truncate text-[10px] text-[#7D7485]">{selectedShop.address || "LocalShore shop"}</p>
-                {selectedShop.isImported && <p className="truncate text-[10px] font-semibold text-sky-700">{selectedShop.rating ? `★ ${selectedShop.rating.toFixed(1)}${selectedShop.reviewCount ? ` (${selectedShop.reviewCount} reviews)` : ""} · ` : ""}Demo catalog · simulated checkout only</p>}
+                {selectedShop.isImported && <p className="truncate text-[10px] font-semibold text-sky-700">{selectedShop.rating ? `★ ${selectedShop.rating.toFixed(1)}${selectedShop.reviewCount ? ` (${selectedShop.reviewCount} reviews)` : ""} · ` : ""}Prototype catalog · test checkout only</p>}
               </div>
               <button type="button" onClick={() => setSelectedShop(null)} className="self-start text-lg leading-none text-slate-400" aria-label="Close shop card">×</button>
             </div>
@@ -938,14 +938,14 @@ export function LocationMapPicker({
       </div>
 
       {/* Selected Address Preview & Confirmation Card */}
-      <div className={`bg-white p-4 border-t border-slate-100 space-y-3.5 ${MAP_PROVIDER === "google" ? "md:flex md:items-center md:gap-3 md:space-y-0" : ""}`}>
+      <div className="mt-3 grid gap-3 rounded-[22px] border border-slate-200 bg-white p-3 shadow-sm sm:grid-cols-[1fr_auto] sm:items-center sm:p-4">
         {MAP_PROVIDER === "google" && !hasPositionedPin && (
           <div className="flex flex-1 items-start gap-2 rounded-xl bg-[#FFF8ED] px-3 py-2.5 text-[11px] font-semibold text-amber-800 ring-1 ring-amber-200">
             <Navigation className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
             Your device provided an approximate area. Move the pin to your exact entrance and confirm it.
           </div>
         )}
-        <div className="flex items-start gap-3">
+        <div className="flex min-w-0 items-center gap-3">
           <div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-[var(--sand)] text-[#981495] mt-0.5">
             {isGeocoding ? (
               <Loader2 className="h-4 w-4 animate-spin" />
@@ -954,19 +954,14 @@ export function LocationMapPicker({
             )}
           </div>
           <div className="flex-1 min-w-0">
-            <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider block">
-              {hasPositionedPin ? "Selected delivery point" : "Unconfirmed device estimate"}
+            <span className="block text-[10px] font-black uppercase tracking-wider text-slate-400">
+              {hasPositionedPin ? "Selected location" : "Unconfirmed device estimate"}
             </span>
-            <h4 className="text-sm font-black text-slate-900 truncate leading-snug">
+            <h4 className="truncate text-base font-black leading-snug text-slate-900 sm:text-lg">
               {addressDetails.area}
             </h4>
-            <p className="text-xs text-slate-500 font-medium truncate">{addressDetails.label}</p>
-            {coords && (
-              <p className="mt-1 text-[11px] font-medium tabular-nums text-slate-500" aria-live="polite">
-                Pin: {coords.lat.toFixed(6)}, {coords.lng.toFixed(6)}
-                {isGeocoding ? " · Updating address…" : ""}
-              </p>
-            )}
+            <p className="truncate text-xs font-medium text-slate-500">{addressDetails.label}</p>
+            <p className="mt-1 text-xs font-semibold text-[#981495]">{shopsLoading ? "Finding nearby shops…" : `${displayShops.length} shops nearby`}{coords && isGeocoding ? " · Updating address…" : ""}</p>
           </div>
         </div>
 
@@ -974,10 +969,10 @@ export function LocationMapPicker({
           type="button"
           onClick={handleConfirm}
           disabled={isGeocoding || !coords || !hasPositionedPin}
-          className={`w-full flex items-center justify-center gap-2 rounded-2xl bg-[#981495] hover:bg-[#7b1078] active:scale-[0.99] text-white py-3.5 px-4 font-black text-sm shadow-lg shadow-[#981495]/20 transition-all cursor-pointer disabled:opacity-60 ${MAP_PROVIDER === "google" ? "md:w-[230px] md:shrink-0" : ""}`}
+          className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[#981495] px-7 py-4 text-sm font-black text-white shadow-lg shadow-[#981495]/20 transition-all hover:bg-[#7b1078] active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto sm:min-w-[250px]"
         >
           <Check className="h-4 w-4 stroke-[3]" />
-          {hasPositionedPin ? "Confirm Selected Location" : "Move pin to confirm exact location"}
+          {hasPositionedPin ? "Confirm location" : "Move pin to confirm exact location"}
         </button>
       </div>
     </div>

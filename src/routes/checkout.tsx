@@ -14,7 +14,7 @@ import { DeliveryAnimation } from "@/components/delivery-animation";
 import { reverseGeocode } from "@/lib/geocoding.functions";
 import { useDeliveryLocation } from "@/lib/location-store";
 import { isValidCoordinate, haversineDistanceKm } from "@/lib/geo";
-import { AVAILABLE_COUPONS, calculateBillBreakdown, evaluateCoupon } from "@/lib/coupons";
+import { AVAILABLE_COUPONS, calculateBillBreakdown, evaluateCoupon, evaluateSampleCoupon } from "@/lib/coupons";
 import { SmartLottieLoader } from "@/components/ui/smart-lottie-loader";
 import {
   Crosshair,
@@ -44,6 +44,8 @@ import {
   type VerifyRazorpayPaymentInput,
 } from "@/lib/razorpay.functions";
 import { useShopCoordinates } from "@/hooks/use-shop-coordinates";
+import { createImportedTestOrderFn, verifyImportedTestPaymentFn } from "@/lib/imported-razorpay.functions";
+type CheckoutVerification = VerifyRazorpayPaymentInput & { test_checkout_token?: string };
 
 function loadRazorpaySDK(): Promise<boolean> {
   return new Promise((resolve) => {
@@ -202,7 +204,9 @@ function CheckoutPage() {
   const lastFixAt = useRef(0);
   const lastGeocodeAt = useRef(0);
   const [accuracyMeters, setAccuracyMeters] = useState<number | null>(null);
-  const [pay, setPay] = useState<"gpay" | "online" | "upi" | "card" | "cod" | "demo">("gpay");
+  const isImportedCart = Boolean(cart.storeId?.startsWith("imported:"));
+  const [pay, setPay] = useState<"gpay" | "online" | "upi" | "card" | "cod" | "demo">(isImportedCart ? "demo" : "gpay");
+  useEffect(() => { if (isImportedCart) setPay("demo"); }, [isImportedCart]);
   const [showAdd, setShowAdd] = useState(false);
   const [showMap, setShowMap] = useState(false);
   const [newLabel, setNewLabel] = useState("");
@@ -220,8 +224,10 @@ function CheckoutPage() {
   // Razorpay server function hooks
   const createRazorpayOrder = useServerFn(createRazorpayOrderFn);
   const verifyRazorpayPayment = useServerFn(verifyRazorpayPaymentFn);
+  const createImportedTestOrder = useServerFn(createImportedTestOrderFn);
+  const verifyImportedTestPayment = useServerFn(verifyImportedTestPaymentFn);
   const [razorpayAttempt, setRazorpayAttempt] = useState<any>(null);
-  const [paymentRecovery, setPaymentRecovery] = useState<VerifyRazorpayPaymentInput | null>(null);
+  const [paymentRecovery, setPaymentRecovery] = useState<CheckoutVerification | null>(null);
   const [paymentRecoveryError, setPaymentRecoveryError] = useState("");
   const [paymentStatusText, setPaymentStatusText] = useState("");
 
@@ -640,7 +646,7 @@ function CheckoutPage() {
 
     setIsApplyingCoupon(true);
     try {
-      const quote = await evaluateCoupon({
+      const quote = isImportedCart ? evaluateSampleCoupon(code, totals.subtotal) : await evaluateCoupon({
         code,
         subtotal: totals.subtotal,
         rawDeliveryFee,
@@ -685,7 +691,7 @@ function CheckoutPage() {
       toast.error("Confirm the delivery location before continuing.");
       return;
     }
-    if (pay === "cod" || pay === "demo") {
+    if (!isImportedCart && (pay === "cod" || pay === "demo")) {
       void placeOrder();
       return;
     }
@@ -723,13 +729,34 @@ function CheckoutPage() {
     setShowOrderSuccess(true);
   };
 
+  const finishTestPayment = async (verification: CheckoutVerification) => {
+    if (!verification.test_checkout_token) throw new Error("Test checkout token is missing.");
+    const receipt = await verifyImportedTestPayment({ data: {
+      token: verification.test_checkout_token, orderId: verification.razorpay_order_id,
+      paymentId: verification.razorpay_payment_id, signature: verification.razorpay_signature,
+    } });
+    await ordersStore.saveTestReceipt(receipt);
+    cartStore.clear();
+    setPlacedOrder(receipt);
+    setTxnRef(verification.razorpay_payment_id);
+    setPaymentRecovery(null);
+    setRazorpayAttempt(null);
+    setPaymentStep("idle");
+    playPaymentSuccessSound();
+    toast.success("Razorpay test payment verified. No real money charged or delivery dispatched.");
+    setShowOrderSuccess(true);
+  };
+
   const retryPaymentOrderConfirmation = async () => {
     if (!paymentRecovery || isPlacing) return;
     setIsPlacing(true);
     setPaymentStep("authorizing");
     try {
-      const verifyRes = await verifyRazorpayPayment({ data: paymentRecovery });
-      finishVerifiedPayment(verifyRes, paymentRecovery.razorpay_payment_id);
+      if (paymentRecovery.test_checkout_token) await finishTestPayment(paymentRecovery);
+      else {
+        const verifyRes = await verifyRazorpayPayment({ data: paymentRecovery });
+        finishVerifiedPayment(verifyRes, paymentRecovery.razorpay_payment_id);
+      }
     } catch (error) {
       console.error("[razorpay checkout recovery failed]", error);
       const message = error instanceof Error
@@ -757,7 +784,10 @@ function CheckoutPage() {
 
     try {
       // Step 1: Create Razorpay Order on server side (authoritative amount calculation)
-      const rzpOrder = await createRazorpayOrder({
+      const rzpOrder = isImportedCart ? await createImportedTestOrder({ data: {
+        shopId: store.id, items: cart.lines.map(line => ({ product_id: line.productId, qty: line.qty })),
+        address: selectedAddressLine, latitude: destinationCoords.lat, longitude: destinationCoords.lng, couponCode: couponQuote?.code,
+      } }) : await createRazorpayOrder({
         data: {
           items: cart.lines.map((line) => ({ product_id: line.productId, qty: line.qty })),
           address: selectedAddressLine,
@@ -787,7 +817,7 @@ function CheckoutPage() {
           currency: rzpOrder.currency || "INR",
           order_id: rzpOrder.razorpay_order_id,
           name: "LocalShore Marketplace",
-          description: `Order from ${store.name}`,
+          description: `${isImportedCart ? "Test checkout" : "Order"} from ${store.name}`,
           handler: async function (response: any) {
             setPaymentStatusText("Verifying cryptographic signature with server...");
             try {
@@ -798,7 +828,8 @@ function CheckoutPage() {
               ) {
                 throw new Error("Missing required Razorpay payment verification parameters.");
               }
-              const verificationInput: VerifyRazorpayPaymentInput = {
+              const verificationInput: CheckoutVerification = {
+                  test_checkout_token: "test_checkout_token" in rzpOrder ? rzpOrder.test_checkout_token : undefined,
                   payment_attempt_id: rzpOrder.payment_attempt_id,
                   razorpay_order_id: response.razorpay_order_id,
                   razorpay_payment_id: response.razorpay_payment_id,
@@ -811,12 +842,16 @@ function CheckoutPage() {
                   customer_latitude: destinationCoords.lat,
                   customer_longitude: destinationCoords.lng,
                 };
-              const verifyRes = await verifyRazorpayPayment({ data: verificationInput });
-              finishVerifiedPayment(verifyRes, response.razorpay_payment_id);
+              if (verificationInput.test_checkout_token) await finishTestPayment(verificationInput);
+              else {
+                const verifyRes = await verifyRazorpayPayment({ data: verificationInput });
+                finishVerifiedPayment(verifyRes, response.razorpay_payment_id);
+              }
             } catch (err: any) {
               console.error("[razorpay checkout verification failed]", err);
               if (response?.razorpay_order_id && response?.razorpay_payment_id && response?.razorpay_signature) {
                 setPaymentRecovery({
+                  test_checkout_token: "test_checkout_token" in rzpOrder ? rzpOrder.test_checkout_token : undefined,
                   payment_attempt_id: rzpOrder.payment_attempt_id,
                   razorpay_order_id: response.razorpay_order_id,
                   razorpay_payment_id: response.razorpay_payment_id,
@@ -896,7 +931,7 @@ function CheckoutPage() {
 
     try {
       const generatedTxn = `${pay === "demo" ? "TEST" : "COD"}-${crypto.randomUUID().slice(0, 8)}`;
-      const place = pay === "demo" ? ordersStore.placeDemo : ordersStore.place;
+      const place = isImportedCart || pay === "demo" ? ordersStore.placeDemo : ordersStore.place;
       const order = await place({
         storeId: store.id,
         storeName: store.name,
@@ -942,8 +977,8 @@ function CheckoutPage() {
         delayMs={0}
         mode="fullscreen"
         size="xl"
-        message={pay === "demo" ? "Simulating demo payment..." : `Placing your order with ${store?.name || "LocalShore"}...`}
-        subtext={pay === "demo" ? "Checking real inventory. No charge or delivery will be created." : "Verifying item availability & assigning nearest delivery partner"}
+        message={isImportedCart ? paymentStatusText || "Opening Razorpay test checkout…" : pay === "demo" ? "Simulating demo payment..." : `Placing your order with ${store?.name || "LocalShore"}...`}
+        subtext={pay === "demo" ? `${isImportedCart ? "Checking prototype catalog" : "Checking real inventory"}. No charge or delivery will be created.` : "Verifying item availability & assigning nearest delivery partner"}
       />
 
       <div className="px-3 sm:px-5 pt-4 sm:pt-6">
@@ -1225,7 +1260,7 @@ function CheckoutPage() {
           <h2 id="payment-heading" className="font-display text-base font-bold">Payment method</h2>
           <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/5 px-2.5 py-1 text-[11px] font-medium text-primary">
             <ShieldCheck aria-hidden="true" className="h-3.5 w-3.5" />
-            Powered by Razorpay
+            {isImportedCart ? "Powered by Razorpay · test mode" : "Powered by Razorpay"}
           </span>
         </div>
         <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">Choose how you’d like to pay.</p>
@@ -1247,8 +1282,8 @@ function CheckoutPage() {
               icon: CreditCard,
             },
             { id: "cod" as const, label: "Cash on delivery", description: "Pay when your order arrives", icon: Banknote },
-            { id: "demo" as const, label: "Demo payment", description: "Test checkout — no money charged or delivery", icon: Sparkles },
-          ].map((p) => (
+            { id: "demo" as const, label: isImportedCart ? "Razorpay checkout" : "Test payment", description: isImportedCart ? "Open Razorpay payment screen in test mode — no real charges" : "Test checkout — no money charged or delivery", icon: CreditCard },
+          ].filter(p => !isImportedCart || p.id === "demo").map((p) => (
             <label
               key={p.id}
               className={`relative flex min-h-[76px] min-w-0 cursor-pointer items-center gap-3 rounded-xl border p-3 transition-colors focus-within:ring-2 focus-within:ring-primary/50 focus-within:ring-offset-2 ${
@@ -1271,7 +1306,7 @@ function CheckoutPage() {
         <p className="mt-4 flex items-start gap-2 border-t border-border/60 pt-3 text-xs leading-relaxed text-muted-foreground">
           <ShieldCheck aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
           <span>
-            {pay === "demo" ? "Simulation only. Your test receipt stays in this browser. No stock is reserved, seller notified, or delivery dispatched." : pay === "cod"
+            {isImportedCart ? "Complete payment in Razorpay test mode. No real money is charged, no stock reserved, and no seller or delivery partner notified." : pay === "demo" ? "Simulation only. Your test receipt stays in this browser. No stock is reserved, seller notified, or delivery dispatched." : pay === "cod"
               ? "Payment is collected when your order is delivered."
               : "Continue to Razorpay to complete payment. Available options are shown at checkout."}
           </span>
@@ -1462,7 +1497,7 @@ function CheckoutPage() {
               </>
             ) : canPlace ? (
               <>
-                <span>{pay === "demo" ? "Simulate payment" : "Place order"}</span>
+                <span>{isImportedCart ? "Pay with Razorpay" : pay === "demo" ? "Simulate payment" : "Place order"}</span>
                 <span className="hidden md:inline">· ₹{displayTotal}</span>
                 <ArrowRight className="h-5 w-5" />
               </>
@@ -1524,7 +1559,7 @@ function CheckoutPage() {
 
               <div className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-600">
                 <Sparkles className="h-3.5 w-3.5" />
-                {pay === "demo" ? "Demo payment completed" : pay === "cod" ? "Order Confirmed" : "Payment Verified"}
+                {placedOrder?.paymentMethod === "Razorpay test payment (verified)" ? "Razorpay test payment verified" : pay === "demo" ? "Test payment completed" : pay === "cod" ? "Order Confirmed" : "Payment Verified"}
               </div>
 
               <h2 className="mt-3 font-display text-2xl font-bold text-foreground">

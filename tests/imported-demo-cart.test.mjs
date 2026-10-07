@@ -21,6 +21,7 @@ test("public shop demo cart has no live cart, order, payment or dispatch integra
   const source = fs.readFileSync("src/components/imported-demo-catalog.tsx", "utf8");
   assert.doesNotMatch(source, /from ["'].*(?:orders-store|cart-store|razorpay|supabase)/);
   assert.match(source, /amountCharged: 0/);
-  assert.match(source, /Add to demo cart/);
+  assert.match(source, /ProductThumb/);
+  assert.match(source, /QtyStepper/);
   assert.match(source, /key=\{item.id\}/);
 });

@@ -1,5 +1,12 @@
 const CATALOG_RPC_TIMEOUT_MS = 12_000;
 
+/** Retry only failures that can recover without changing the request. */
+export function shouldRetryCatalogQuery(failureCount: number, error: unknown) {
+  if (failureCount >= 2) return false;
+  const message = error instanceof Error ? error.message : String(error ?? "");
+  return /timed?\s*out|timeout|connection|network|fetch|temporar|statement/i.test(message);
+}
+
 type CatalogRpcResponse = {
   data: unknown;
   error: { code?: string; message?: string } | null;

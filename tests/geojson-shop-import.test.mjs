@@ -46,12 +46,15 @@ test("uses an identity key rather than coordinates alone", () => {
 
 test("all provided GeoJSON files parse and assign dataset-driven categories", async () => {
   const { rows, summary } = await collectGeoJsonRows(shopsDir);
-  assert.equal(summary.filesProcessed, 3);
-  assert.equal(summary.recordsFound, 150);
+  assert.equal(summary.filesProcessed, 4);
+  assert.equal(summary.recordsFound, 200);
   assert.equal(summary.invalidCoordinates, 0);
-  assert.equal(summary.errors, 5);
+  assert.equal(summary.errors, 6);
   assert.equal(summary.duplicatesSkipped, 0);
-  assert.equal(rows.length, 145);
+  assert.equal(rows.length, 194);
+  const bakeries = rows.filter(row => row.category === "Bakery");
+  assert.equal(bakeries.length, 49);
+  assert.ok(bakeries.every(row => row.city === "Coimbatore" && row.website === null));
   assert.ok(rows.every((row) => row.latitude >= 8 && row.latitude <= 14));
   assert.ok(rows.every((row) => row.longitude >= 76 && row.longitude <= 79));
   assert.ok(rows.filter((row) => row.category === "Furniture").every((row) => row.city === "Coimbatore"));
@@ -91,18 +94,18 @@ test("rerunning the import upserts the same rows and preserves claimed seller im
     };
   }};
   const first = await importRows({directory: shopsDir, client, dryRun: false});
-  assert.equal(first.inserted, 145);
+  assert.equal(first.inserted, 194);
   assert.equal(first.updated, 0);
   const key = records.keys().next().value;
   records.set(key, {...records.get(key), image_type: "seller", image_source: "seller", cover_image_url: "https://localshore.example/seller.jpg", claim_status: "claimed", claimed_by_seller_id: "seller-id"});
   const second = await importRows({directory: shopsDir, client, dryRun: false});
   assert.equal(second.inserted, 0);
-  assert.equal(second.updated, 145);
-  assert.equal(records.size, 145);
+  assert.equal(second.updated, 194);
+  assert.equal(records.size, 194);
   assert.equal(records.get(key).cover_image_url, "https://localshore.example/seller.jpg");
   assert.equal(records.get(key).claim_status, "claimed");
   assert.equal(records.get(key).claimed_by_seller_id, "seller-id");
-  assert.equal(writes.length, 290);
+  assert.equal(writes.length, 388);
 });
 
 test("Google URL identity preserves distinct query locations but ignores tracking", () => {
@@ -119,6 +122,27 @@ test("map markers use stored database coordinates without geocoding", async () =
   assert.equal(marker.isImported, true);
   assert.equal(marker.shopId, "imported:public-test");
   assert.equal(toImportedMapMarker({id: "invalid", business_name: "Bad", latitude: null, longitude: 77, distance_km: 1}), null);
+});
+
+test("bakery listings load through the map API and retain bakery category and coordinates", async () => {
+  const { fetchNearbyImportedShops, toImportedMapMarker } = await sourceLoader(projectRoot)("src/lib/imported-shops.ts");
+  const result = normalizeFeature({
+    type: "Feature", geometry: { type: "Point", coordinates: [76.9786242, 11.0218787] },
+    properties: { business_name: "Ramakrishna Bakes", website: "https://example.com" },
+  }, "Bakeries_Coimbatore.geojson");
+  const row = { ...result.record, id: "bakery-test", distance_km: 0 };
+  const shops = await fetchNearbyImportedShops(async (name, args) => {
+    assert.equal(name, "get_nearby_imported_shops");
+    assert.equal(args.p_category_slug, "bakery");
+    return { data: [row], error: null };
+  }, { lat: row.latitude, lng: row.longitude, radiusKm: 7, category: "bakery" });
+  assert.equal(shops.length, 1);
+  const marker = toImportedMapMarker(shops[0]);
+  assert.equal(marker.category, "bakery");
+  assert.equal(marker.lat, 11.0218787);
+  assert.equal(marker.lng, 76.9786242);
+  assert.equal(marker.shopId, "imported:bakery-test");
+  assert.equal(marker.website, undefined);
 });
 
 test("imported shop detail selects the exact ID even when businesses share coordinates", async () => {

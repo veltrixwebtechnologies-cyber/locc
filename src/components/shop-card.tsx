@@ -231,7 +231,6 @@ export function ShopCard({
             </p>
           )}
           {shop.isImported && shop.rating > 0 && <p className="mt-2 flex items-center gap-1 text-xs font-bold"><Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />{shop.rating.toFixed(1)} {shop.reviewCount != null && <span className="font-normal text-muted-foreground">({shop.reviewCount} reviews)</span>}</p>}
-          {shop.isImported && shop.website && <a href={shop.website} target="_blank" rel="noreferrer" className="mt-2 inline-block text-xs font-semibold text-primary underline">Visit website</a>}
         </div>
 
         {/* Search Match Context (Relevant products & starting price) */}
@@ -257,7 +256,7 @@ export function ShopCard({
           ) : (
             <div className="flex items-center justify-between text-muted-foreground font-medium">
               <span className="truncate" title={shop.featuredProductName || "Browse shop catalog"}>
-                {shop.isImported ? "Imported directory listing · no seller catalog" : shop.featuredProductName ? `Available: ${shop.featuredProductName}` : "Browse shop catalog"}
+                {shop.featuredProductName ? `${shop.isImported ? "Preview" : "Available"}: ${shop.featuredProductName}` : "Browse shop catalog"}
               </span>
               {shop.startingPrice !== undefined && shop.startingPrice > 0 && (
                 <span className="text-foreground font-bold">
@@ -271,12 +270,7 @@ export function ShopCard({
           {shop.isImported ? <div className="space-y-2 text-[11px] text-muted-foreground">
             <p>{shop.imageType === "seller" && !imgError ? "Seller supplied cover image" : "Unsplash representative cover · not a photo of this business"}</p>
             <div>
-              <p className="mb-1.5 font-semibold">Example product imagery · representative only, not shop stock</p>
-              <div className="grid grid-cols-3 gap-1.5" aria-label="Representative category product imagery">
-                {getRepresentativeItemImages(shop.category, shop.id).map((imageUrl, index) => (
-                  <img key={`${shop.id}-example-${index}`} src={imageUrl} alt={`${shop.category} representative product example ${index + 1}`} loading="lazy" decoding="async" className="h-16 w-full rounded-lg border border-border/60 bg-muted object-cover" />
-                ))}
-              </div>
+              <p className="mb-1.5 font-semibold">Prototype products · sample prices, not confirmed shop stock</p>
             </div>
           </div> : <div className="flex items-center gap-3 pt-1 border-t border-border/40 text-[11px] font-extrabold text-muted-foreground">
             <span

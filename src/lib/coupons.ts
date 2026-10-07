@@ -172,6 +172,12 @@ export async function evaluateCoupon({
   }
 
   // 2. Client-side fallback rule engine for instant feedback and demo products
+  return evaluateSampleCoupon(cleanCode, subtotal);
+}
+
+/** Shared prototype coupon rules, without a live database request. */
+export function evaluateSampleCoupon(code: string, subtotal: number) {
+  const cleanCode = code.trim().toUpperCase();
   const matched = AVAILABLE_COUPONS.find((c) => c.code === cleanCode);
   if (!matched) {
     throw new Error(

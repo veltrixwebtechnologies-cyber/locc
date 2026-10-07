@@ -4,6 +4,7 @@ import type { MapMarkerItem } from "@/lib/map-service/types";
 import type { ShopCardData } from "@/components/shop-card";
 import { isValidCoordinate } from "@/lib/geo";
 import { runCatalogRpcWithTimeout } from "@/lib/catalog-rpc";
+import { getImportedCatalogItems } from "@/lib/imported-demo-cart";
 
 type Rpc = (name: string, args: Record<string, unknown>) => Parameters<typeof runCatalogRpcWithTimeout>[0];
 
@@ -76,6 +77,8 @@ export function toImportedShopCard(shop: ImportedShopRow): ShopCardData | null {
     city: shop.city ?? undefined,
     isImported: true,
     claimStatus: shop.claim_status,
+    featuredProductName: getImportedCatalogItems(shop.category)[0]?.name,
+    startingPrice: Math.min(...getImportedCatalogItems(shop.category).map(item => item.price)),
     website: shop.website ?? undefined,
     googleMapsUrl: shop.google_maps_url ?? undefined,
   };
