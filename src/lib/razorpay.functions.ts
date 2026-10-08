@@ -103,6 +103,29 @@ export const createRazorpayOrderFn = createServerFn({ method: "POST" })
       throw new Error("Unable to retrieve authoritative prices for cart items.");
     }
 
+    // Check the same seller schedule that place_order enforces, before creating
+    // a gateway order. Pass all arguments explicitly to avoid the legacy
+    // get_shop_status overload ambiguity and fail closed if availability is unknown.
+    const sellerId = dbProducts[0]?.seller_id;
+    const { data: shopStatus, error: shopStatusError } = await (context.supabase as any).rpc(
+      "get_shop_status",
+      {
+        _seller_id: sellerId,
+        _at: new Date().toISOString(),
+        _tz: "Asia/Kolkata",
+      },
+    );
+    if (shopStatusError || !shopStatus) {
+      console.error("[razorpay] Unable to verify shop availability before payment", {
+        code: shopStatusError?.code,
+        message: shopStatusError?.message,
+      });
+      throw new Error("We couldn't confirm this shop's availability. No payment was started; please try again shortly.");
+    }
+    if (shopStatus.is_open === false) {
+      throw new Error(shopStatus.label || "This shop is closed today and cannot accept orders.");
+    }
+
     const priceMap = new Map<string, number>();
     if (new Set(dbProducts.map((p: any) => p.seller_id)).size !== 1) throw new Error("Checkout must contain products from one shop");
     (dbProducts || []).forEach((p: any) => {
@@ -315,8 +338,23 @@ export const verifyRazorpayPaymentFn = createServerFn({ method: "POST" })
     });
 
     if (rpcErr || !rpcCreated?.id) {
-      console.error("[razorpay] place_order_once RPC error during verification:", rpcErr);
-      throw new Error("Order creation failed during payment verification. Please contact support.");
+      const correlationId = crypto.randomUUID();
+      const rpcCode = String(rpcErr?.code ?? "unknown").replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 32);
+      const rpcMessage = String(rpcErr?.message ?? "Order RPC returned no order")
+        .replace(/[\r\n\t]+/g, " ")
+        .slice(0, 220);
+      console.error("[razorpay] place_order_once RPC error during verification", {
+        correlationId,
+        code: rpcCode,
+        message: rpcMessage,
+      });
+      const localDiagnostic = process.env.NODE_ENV === "development"
+        ? ` [local RPC diagnostic: ${rpcCode}: ${rpcMessage}]`
+        : "";
+      if (rpcErr?.code === "PGRST202" || /could not find the function/i.test(String(rpcErr?.message ?? ""))) {
+        throw new Error(`Secure order service is unavailable. Do not pay again; contact support with reference ${correlationId}.${localDiagnostic}`);
+      }
+      throw new Error(`Order confirmation is pending. Do not pay again; retry confirmation or contact support with reference ${correlationId}.${localDiagnostic}`);
     }
 
     if (Math.round(Number(rpcCreated.total) * 100) !== Number(attempt.amount_paise)) {

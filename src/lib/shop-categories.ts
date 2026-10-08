@@ -824,19 +824,28 @@ export function getCategoryByIdOrSlug(idOrSlug?: string | null): ShopCategoryCon
     return ALL_SHOP_CATEGORIES[0];
   }
 
-  const normalized = idOrSlug.toLowerCase().trim();
+  const normalized = normalizeCategoryText(idOrSlug);
   const found = ALL_SHOP_CATEGORIES.find(
-    (c) => c.id.toLowerCase() === normalized || c.slug.toLowerCase() === normalized,
+    (c) => normalizeCategoryText(c.id) === normalized || normalizeCategoryText(c.slug) === normalized || normalizeCategoryText(c.name) === normalized,
   );
 
   if (found) return found;
 
   // Fallback matching by keyword
   const keywordMatch = ALL_SHOP_CATEGORIES.find((c) =>
-    c.keywords.some((k) => normalized.includes(k) || k.includes(normalized)),
+    c.keywords.some((k) => normalized.includes(normalizeCategoryText(k)) || normalizeCategoryText(k).includes(normalized)),
   );
 
   return keywordMatch || ALL_SHOP_CATEGORIES[0];
+}
+
+/** Normalize human-entered/display category labels consistently (e.g. Cafés → cafes). */
+function normalizeCategoryText(value: string): string {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
 }
 
 import type { StoreCategory } from "@/lib/mock-data";
@@ -854,7 +863,7 @@ export function catalogCategoryKey(value?: string | null): string | null {
  */
 export function toStoreCategory(value?: string | null): StoreCategory {
   if (!value) return "grocery";
-  const catLower = value.toLowerCase().trim();
+  const catLower = normalizeCategoryText(value);
 
   // Direct match to any category id or slug
   const direct = ALL_SHOP_CATEGORIES.find(

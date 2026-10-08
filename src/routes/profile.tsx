@@ -45,9 +45,13 @@ import {
 
 import { AppShell } from "@/components/app-shell";
 import { useAuth } from "@/lib/auth-store";
-import { cartStore } from "@/lib/cart-store";
-import { useAddresses, addressesStore, type Address } from "@/lib/addresses-store";
-import { useOrders } from "@/lib/orders-store";
+import { cartStore } from "@/modules/shopper/services/cart-store";
+import {
+  useAddresses,
+  addressesStore,
+  type Address,
+} from "@/modules/shopper/services/addresses-store";
+import { useOrders } from "@/modules/shopper/services/orders-store";
 import { useWishlistProducts } from "@/lib/merchandising";
 import { stores } from "@/lib/mock-data";
 import {

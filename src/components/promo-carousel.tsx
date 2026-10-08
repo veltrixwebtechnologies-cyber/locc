@@ -1,7 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { AnimatePresence, m, useReducedMotion } from "motion/react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -182,6 +182,8 @@ export function PromoCarousel() {
   const [activeIndex, setActiveIndex] = useState(0);
   const [direction, setDirection] = useState(1);
   const [paused, setPaused] = useState(false);
+  const touchStart = useRef<{ x: number; y: number } | null>(null);
+  const ignoreClickUntil = useRef(0);
   const bannerQuery = useQuery({
     queryKey: ["homepage-banners"],
     queryFn: async () => {
@@ -279,7 +281,33 @@ export function PromoCarousel() {
         if (event.key === "ArrowRight") showRelative(1);
       }}
     >
-      <div className="group relative min-h-[208px] overflow-hidden rounded-xl bg-card shadow-md ring-1 ring-black/[0.06] md:min-h-[310px]">
+      <div
+        className="group relative min-h-[208px] overflow-hidden rounded-xl bg-card shadow-md ring-1 ring-black/[0.06] touch-pan-y"
+        onPointerDown={(event) => {
+          touchStart.current =
+            event.pointerType === "touch" ? { x: event.clientX, y: event.clientY } : null;
+        }}
+        onPointerUp={(event) => {
+          const start = touchStart.current;
+          touchStart.current = null;
+          if (!start || event.pointerType !== "touch") return;
+          const deltaX = event.clientX - start.x;
+          const deltaY = event.clientY - start.y;
+          if (Math.abs(deltaX) < 48 || Math.abs(deltaX) < Math.abs(deltaY) * 1.25) return;
+          ignoreClickUntil.current = Date.now() + 450;
+          showRelative(deltaX < 0 ? 1 : -1);
+        }}
+        onPointerCancel={() => {
+          touchStart.current = null;
+        }}
+        onClickCapture={(event) => {
+          if (Date.now() < ignoreClickUntil.current) {
+            event.preventDefault();
+            event.stopPropagation();
+            ignoreClickUntil.current = 0;
+          }
+        }}
+      >
         <AnimatePresence mode="sync" initial={false}>
           <m.article
             key={campaign.id}

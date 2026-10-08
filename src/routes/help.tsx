@@ -10,7 +10,7 @@ const FAQS = [
   },
   {
     q: "Can I cancel an order?",
-    a: "Orders can be cancelled before the shop marks them as 'Picking'. Contact the shop directly from the order screen.",
+    a: "Orders can be cancelled before the shop marks them as 'Picking'. For help, contact LocalShore Customer Care from the order screen.",
   },
   {
     q: "What are Verified Local Stores?",
@@ -61,6 +61,9 @@ const TOPIC_CONTENT: Record<string, { title: string; body: string }> = {
   },
 };
 
+const customerCarePhone = String(import.meta.env.VITE_CUSTOMER_CARE_PHONE ?? "").replace(/[^+\d]/g, "");
+const hasCustomerCarePhone = /^\+?\d{8,15}$/.test(customerCarePhone);
+
 export const Route = createFileRoute("/help")({ component: HelpPage });
 
 function HelpPage() {
@@ -97,12 +100,17 @@ function HelpPage() {
         >
           <Mail className="h-4 w-4 text-primary" /> Email us
         </a>
-        <a
-          href="tel:+911800000000"
+        {hasCustomerCarePhone ? <a
+          href={`tel:${customerCarePhone}`}
           className="flex items-center gap-2 rounded-xl bg-card p-4 text-sm ring-1 ring-black/[0.04]"
         >
-          <Phone className="h-4 w-4 text-primary" /> Call support
-        </a>
+          <Phone className="h-4 w-4 text-primary" /> Call Customer Care
+        </a> : <Link
+          to="/customer-care"
+          className="flex items-center gap-2 rounded-xl bg-card p-4 text-sm ring-1 ring-black/[0.04]"
+        >
+          <Phone className="h-4 w-4 text-primary" /> Contact Customer Care
+        </Link>}
       </div>
 
       <p className="mx-5 mt-6 font-mono text-[10px] uppercase tracking-widest text-muted-foreground">

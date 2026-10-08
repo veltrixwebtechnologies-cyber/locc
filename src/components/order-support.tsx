@@ -12,7 +12,7 @@ import {
 import { Link } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import type { Order } from "@/lib/orders-store";
+import type { Order } from "@/modules/shopper/services/orders-store";
 
 type IssueType =
   | "wrong_item"
@@ -120,7 +120,7 @@ export function OrderSupport({ order }: { order: Order }) {
           (!issue || !imageRequired.has(issue) || images.length > 0);
   const itemNames = useMemo(
     () =>
-      order.lines.filter((line) => selectedItems.includes(line.productId)).map((line) => line.name),
+      order.lines.filter((line) => selectedItems.includes(line.orderItemId ?? "")).map((line) => line.name),
     [order.lines, selectedItems],
   );
 
@@ -154,12 +154,7 @@ export function OrderSupport({ order }: { order: Order }) {
     )
       return;
     if (order.status !== "delivered") {
-      toast.error("Support requests can be raised after delivery.");
-      return;
-    }
-    if (!withinWindow) {
-      toast.error("This order is outside the 48-hour reporting window.");
-      return;
+      toast.info("This order is still in progress. Customer Care can still review it.");
     }
     setSubmitting(true);
     try {
@@ -184,41 +179,24 @@ export function OrderSupport({ order }: { order: Order }) {
         }),
       );
       paths.push(...uploaded);
-      const isUuid =
-        /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(order.id);
       setSubmitStage("creating");
       const { data, error } = await withTimeout<{
-        data: { id: string } | null;
+        data: string | null;
         error: Error | null;
       }>(
-        (supabase as any)
-          .from("support_tickets")
-          .insert({
-            user_id: user.id,
-            raised_by: "customer",
-            subject: `${labelFor(issue)} · ${order.code}`,
-            body: comment.trim() || labelFor(issue),
-            priority: issue.startsWith("payment") ? "high" : "normal",
-            status: "open",
-            order_id: isUuid ? order.id : null,
-            issue_type: issue,
-            support_stage: "submitted",
-            selected_product_ids: selectedItems.filter((id) => /^[0-9a-f-]{36}$/i.test(id)),
-            evidence_urls: paths.filter(
-              (path) => path !== (video ? paths[files.indexOf(video)] : ""),
-            ),
-            video_url: video ? (paths[files.indexOf(video)] ?? null) : null,
-            customer_comment: comment.trim() || null,
-            eligible: true,
-            reporting_deadline: new Date(order.createdAt + 48 * 60 * 60 * 1000).toISOString(),
-          })
-          .select("id")
-          .single(),
+        (supabase as any).rpc("create_customer_support_case", {
+          p_order_id: order.id,
+          p_issue_category: issue.startsWith("payment") ? "payment" : issue.startsWith("delivery") || issue === "not_delivered" ? "delivery" : "order",
+          p_issue_type: issue,
+          p_affected_order_item_id: needsItems ? selectedItems[0] ?? null : null,
+          p_initial_message: `${comment.trim() || labelFor(issue)}${itemNames.length ? `\nAffected item(s): ${itemNames.join(", ")}` : ""}`,
+          p_evidence_paths: paths,
+        }),
         "Support ticket creation timed out. Apply the support migration and try again.",
       );
       if (error) throw error;
       if (!data) throw new Error("Support ticket was created without an id.");
-      setSubmittedId(data.id);
+      setSubmittedId(data);
       toast.success("Your issue has been sent to support.");
     } catch (error) {
       console.error("support case submission failed", error);
@@ -312,17 +290,18 @@ export function OrderSupport({ order }: { order: Order }) {
               <div className="mt-3 space-y-2">
                 {order.lines.map((line) => (
                   <label
-                    key={line.productId}
+                    key={line.orderItemId ?? line.productId}
                     className="flex cursor-pointer items-center gap-3 rounded-lg border hairline p-3 text-sm hover:bg-muted"
                   >
                     <input
                       type="checkbox"
-                      checked={selectedItems.includes(line.productId)}
+                      checked={selectedItems.includes(line.orderItemId ?? "")}
+                      disabled={!line.orderItemId}
                       onChange={(e) =>
                         setSelectedItems((current) =>
                           e.target.checked
-                            ? [...current, line.productId]
-                            : current.filter((id) => id !== line.productId),
+                            ? [...current, line.orderItemId ?? ""]
+                            : current.filter((id) => id !== line.orderItemId),
                         )
                       }
                     />{" "}

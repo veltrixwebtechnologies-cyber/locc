@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { sourceLoader } from './load-source.mjs';
-const {cartStore, sanitizeCart} = await sourceLoader(process.cwd())('src/lib/cart-store.ts');
+const {cartStore, sanitizeCart} = await sourceLoader(process.cwd())('src/modules/shopper/services/cart-store.ts');
 const product = {id:'p1',name:'Rice',unit:'1 kg',price:70,stock:4};
 test('corrupt persisted carts cannot crash consumers or cross seller boundaries',()=>{
   for(const value of [null,[],{}, {storeId:'s',lines:'broken'}, {storeId:'s',lines:[null]}])

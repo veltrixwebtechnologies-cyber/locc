@@ -11,6 +11,7 @@ import { isValidCoordinate } from "@/lib/geo";
 import type { MapMarkerItem, MapFilterOptions, MapLocation } from "./types";
 import { isStoreInCategory, toStoreCategory } from "@/lib/shop-categories";
 import { CUSTOMER_VISIBILITY_RADIUS_KM } from "@/lib/location-visibility";
+import { isGeneratedDemoShopName } from "@/lib/demo-neighborhood-shops";
 
 export { toStoreCategory };
 
@@ -89,6 +90,7 @@ export function isTestEntity(name?: string | null): boolean {
   if (!name) return true;
   const lower = name.trim().toLowerCase();
   if (lower.length <= 2) return true;
+  if (isGeneratedDemoShopName(name)) return true;
   const testNames = [
     "sss",
     "ggg",
@@ -128,7 +130,9 @@ export function getMapMarkerItems(
       id: vendor.id,
       name: vendor.shop_name || APPROVED_STORE.name,
       tagline: vendor.business_type || "Approved local vendor",
-      category: toStoreCategory(vendor.category) as StoreCategory,
+      // Shop category is based on the seller's primary business type. Product
+      // categories can differ and must not leak other shops into a category map.
+      category: toStoreCategory(vendor.business_type || vendor.category) as StoreCategory,
       address:
         [vendor.address_line1, vendor.city, vendor.state].filter(Boolean).join(", ") ||
         APPROVED_STORE.address,
@@ -162,22 +166,14 @@ export function getMapMarkerItems(
     );
 
     // Apply max distance filter (relative to active search location)
-    if (computedDistanceKm > CUSTOMER_VISIBILITY_RADIUS_KM) {
+    if (computedDistanceKm > (filters.maxDistanceKm ?? CUSTOMER_VISIBILITY_RADIUS_KM)) {
       return;
     }
 
-    // Apply category filter (checking store category, tagline, and product categories)
+    // Category maps are scoped by the shop's primary business category, not
+    // incidental product categories.
     if (catFilter) {
-      const matchStoreCat =
-        isStoreInCategory(store.category, catFilter, store.rating) ||
-        isStoreInCategory(store.tagline, catFilter, store.rating);
-      const seedProds = productsByStore[store.id] || [];
-      const matchProdCat = seedProds.some((p) =>
-        isStoreInCategory(p.category, catFilter, store.rating),
-      );
-      if (!matchStoreCat && !matchProdCat) {
-        return;
-      }
+      if (!isStoreInCategory(store.category, catFilter, store.rating)) return;
     }
 
     // Apply open now filter
@@ -275,8 +271,9 @@ export function getMapMarkerItems(
       matchingProducts.length,
     );
 
+    const isDemoCatalog = isGeneratedDemoShopName(store.name);
     const productNameDisplay =
-      query && topProduct
+      (query || isDemoCatalog) && topProduct
         ? topProduct.name
         : store.tagline || (topProduct ? topProduct.name : store.name);
 
@@ -302,6 +299,7 @@ export function getMapMarkerItems(
       totalVariants: matchingProducts.length,
       rawStore: { ...store, distanceKm: Number(computedDistanceKm.toFixed(1)) },
       matchingProduct: topProduct,
+      isDemo: isDemoCatalog,
     });
   });
 

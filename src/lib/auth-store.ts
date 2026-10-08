@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { cartStore } from "@/lib/cart-store";
+import { cartStore } from "@/modules/shopper/services/cart-store";
 
 interface AuthState {
   id: string | null;
@@ -45,13 +45,22 @@ function ensureAuthSubscription() {
   if (initialized || typeof window === "undefined") return;
   initialized = true;
   let authRevision = 0;
-  supabase.auth.onAuthStateChange((event, session) => {
-    authRevision++;
-    if (event === "SIGNED_OUT" || (state.id !== null && state.id !== (session?.user?.id ?? null))) {
-      cartStore.clear();
-    }
-    setState(fromUser(session?.user ?? null));
-  });
+  try {
+    supabase.auth.onAuthStateChange((event, session) => {
+      authRevision++;
+      if (event === "SIGNED_OUT" || (state.id !== null && state.id !== (session?.user?.id ?? null))) {
+        cartStore.clear();
+      }
+      setState(fromUser(session?.user ?? null));
+    });
+  } catch (error) {
+    // The storefront should remain browseable when Supabase is not configured
+    // in a preview/deployment environment. Auth and live data will be
+    // unavailable, but local cart/demo flows can still render.
+    console.warn("[LocalShore auth] Supabase auth is unavailable", error);
+    setState(EMPTY_AUTH);
+    return;
+  }
   const initialRevision = authRevision;
   void supabase.auth.getSession().then(({ data }) => {
     // A guest session is normal: preserve its basket. Ignore a stale initial

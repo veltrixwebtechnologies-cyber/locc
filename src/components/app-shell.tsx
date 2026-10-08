@@ -16,7 +16,7 @@ import {
   X,
   ChevronDown,
 } from "lucide-react";
-import { useCart, cartTotals } from "@/lib/cart-store";
+import { useCart, cartTotals } from "@/modules/shopper/services/cart-store";
 import { useAuth } from "@/lib/auth-store";
 import { useLocalShoreRoles } from "@/lib/roles-store";
 import { CategoryMegaMenu, MobileCategoryStrip } from "@/components/category-mega-menu";
@@ -57,7 +57,7 @@ export function requestLocationModal() {
   }
 }
 
-export function AppShell({ children }: { children: ReactNode }) {
+export function AppShell({ children, hideFloatingCart = false }: { children: ReactNode; hideFloatingCart?: boolean }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const urlQuery = useRouterState({ select: (s) => (s.location.search as { q?: string }).q });
   const navigate = useNavigate();
@@ -83,7 +83,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const hasLocation = mounted && deliveryLocation !== null;
 
   const showFloatingCart =
-    itemCount > 0 && !pathname.startsWith("/cart") && !pathname.startsWith("/checkout");
+    !hideFloatingCart && itemCount > 0 && !pathname.startsWith("/cart") && !pathname.startsWith("/checkout");
 
   useEffect(() => {
     setMounted(true);
@@ -104,14 +104,19 @@ export function AppShell({ children }: { children: ReactNode }) {
   // /auth. Catch the recovery event at the app shell so the token session is
   // established before navigating to the password form.
   useEffect(() => {
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((event) => {
-      if (event === "PASSWORD_RECOVERY" && pathname !== "/auth") {
-        void navigate({ to: "/auth", search: { flow: "password-recovery" } });
-      }
-    });
-    return () => subscription.unsubscribe();
+    let subscription: { unsubscribe: () => void } | null = null;
+    try {
+      const result = supabase.auth.onAuthStateChange((event) => {
+        if (event === "PASSWORD_RECOVERY" && pathname !== "/auth") {
+          void navigate({ to: "/auth", search: { flow: "password-recovery" } });
+        }
+      });
+      subscription = result.data.subscription;
+    } catch (error) {
+      // Keep public browsing available when a preview has no Supabase config.
+      console.warn("[LocalShore auth] Password recovery listener unavailable", error);
+    }
+    return () => subscription?.unsubscribe();
   }, [navigate, pathname]);
 
   useEffect(() => {
@@ -696,8 +701,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                     className="inline-flex min-h-10 shrink-0 items-center gap-1 rounded-xl bg-white/15 px-2.5 py-2 text-[11px] font-bold text-white transition hover:bg-white/25 active:scale-95"
                   >
                     <MapPin className="h-3.5 w-3.5" />
-                    <span className="hidden sm:inline">Show map</span>
-                    <span className="sm:hidden">Map</span>
+                    <span>Show map</span>
                   </button>
                 )}
                 <Link

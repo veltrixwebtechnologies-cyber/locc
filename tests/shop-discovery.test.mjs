@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { sourceLoader } from "./load-source.mjs";
 
-const { discoverShops } = await sourceLoader(process.cwd())("src/lib/shop-discovery.ts");
+const { discoverShops } = await sourceLoader(process.cwd())("src/modules/shopper/services/shop-discovery.ts");
 const input = { lat: 11.0183, lng: 76.9725, category: "grocery", query: null, radiusKm: 7 };
 const row = (id, distance, category = "grocery", fallback = false) => ({
   id, shop_name: id, business_type: category, category,
@@ -58,6 +58,16 @@ test("installed RPC preserves explicit zone fallback without calling the legacy 
   assert.deepEqual(result.shops.map(s => s.id), ["near", "zone"]);
   assert.equal(result.effectiveRadiusKm, 7);
   assert.equal(result.legacyMode, false);
+});
+
+test("selected shop category keeps only matching primary business categories", async () => {
+  const result = await discoverShops(async () => ({ data: [
+    { ...row("cafe-primary", 0.4, "grocery"), business_type: "Cafés & Tea Shops", category: "grocery" },
+    { ...row("grocery-primary", 0.5, "cafes"), business_type: "grocery", category: "cafes" },
+    { ...row("coffee-primary", 0.8, "restaurants"), business_type: "coffee shop", category: "restaurants" },
+  ], error: null }), { ...input, category: "cafes" });
+
+  assert.deepEqual(result.shops.map((shop) => shop.id), ["cafe-primary", "coffee-primary"]);
 });
 
 test("empty results do not trigger fallback; real errors remain errors", async () => {

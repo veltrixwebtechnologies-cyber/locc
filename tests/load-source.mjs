@@ -18,17 +18,27 @@ export function sourceLoader(root, mocks = {}) {
         jsx: file.endsWith(".tsx") ? ts.JsxEmit.ReactJSX : ts.JsxEmit.None,
       },
     }).outputText;
-    code = code.replace(/from\s+(["'])([^"']+)\1/g, (_, quote, specifier) => {
+    const resolveSpecifier = (specifier) => {
       if (mocks[specifier])
-        return `from ${JSON.stringify("data:text/javascript;base64," + Buffer.from(mocks[specifier]).toString("base64"))}`;
+        return "data:text/javascript;base64," + Buffer.from(mocks[specifier]).toString("base64");
+      if (specifier.startsWith("node:")) return specifier;
       if (!specifier.startsWith(".") && !specifier.startsWith("@/"))
-        return `from ${JSON.stringify(pathToFileURL(require.resolve(specifier)).href)}`;
+        return pathToFileURL(require.resolve(specifier)).href;
       let target = specifier.startsWith("@/")
         ? path.join(root, "src", specifier.slice(2))
         : path.resolve(path.dirname(file), specifier);
-      if (!path.extname(target)) target += fs.existsSync(target + ".ts") ? ".ts" : ".tsx";
-      return `from ${JSON.stringify(url(target))}`;
-    });
+      if (!fs.existsSync(target)) target += fs.existsSync(target + ".ts") ? ".ts" : ".tsx";
+      return url(target);
+    };
+    code = code.replace(/from\s+(["'])([^"']+)\1/g, (_, _quote, specifier) =>
+      `from ${JSON.stringify(resolveSpecifier(specifier))}`,
+    );
+    // Dynamic server-only imports stay untouched unless a test explicitly
+    // supplies a mock. Recursively resolving every dynamic import can walk
+    // intentional application dependency cycles that static imports avoid.
+    code = code.replace(/import\(\s*(["'])([^"']+)\1\s*\)/g, (match, _quote, specifier) =>
+      mocks[specifier] ? `import(${JSON.stringify(resolveSpecifier(specifier))})` : match,
+    );
     const result =
       "data:text/javascript;base64," +
       Buffer.from(code + "\n//# sourceURL=" + pathToFileURL(file).href).toString("base64");

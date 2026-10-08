@@ -2,7 +2,7 @@ import { Link } from "@tanstack/react-router";
 import { Star } from "lucide-react";
 import { useMemo } from "react";
 import type { MerchandisingProduct } from "@/lib/merchandising";
-import { cartStore, useCart } from "@/lib/cart-store";
+import { cartStore, useCart } from "@/modules/shopper/services/cart-store";
 import { productsByStore, stores, type StoreCategory } from "@/lib/mock-data";
 import { useDeliveryLocation } from "@/lib/location-store";
 import { haversineDistanceKm } from "@/lib/geo";

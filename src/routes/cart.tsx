@@ -1,9 +1,9 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { AppShell } from "@/components/app-shell";
-import { cartStore, useCart, cartTotals } from "@/lib/cart-store";
+import { cartStore, useCart, cartTotals } from "@/modules/shopper/services/cart-store";
 import { QtyStepper } from "@/components/qty-stepper";
-import { getStore, APPROVED_STORE, productsByStore } from "@/lib/mock-data";
+import { getStore, APPROVED_STORE, productsByStore, type StoreCategory } from "@/lib/mock-data";
 import { useAuth } from "@/lib/auth-store";
 import { useDeliveryLocation } from "@/lib/location-store";
 import { isValidCoordinate, haversineDistanceKm } from "@/lib/geo";
@@ -42,6 +42,7 @@ function CartPage() {
   }, []);
 
   const cart = useCart();
+  const isImportedCart = Boolean(cart.storeId?.startsWith("imported:"));
   const auth = useAuth();
   const totals = cartTotals(cart.lines);
   const navigate = useNavigate();
@@ -202,9 +203,9 @@ function CartPage() {
                       <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
                       Check shop availability
                     </span>
-                    <button className="ml-1 hidden text-muted-foreground hover:text-foreground sm:block">
+                    <Link to="/store/$storeId" params={{ storeId: store.id }} search={{ shopLat: shopPin?.lat, shopLng: shopPin?.lng }} aria-label="Return to this shop" className="ml-1 hidden text-muted-foreground hover:text-foreground sm:block">
                       <ArrowRight className="h-4 w-4" />
-                    </button>
+                    </Link>
                   </div>
                 </div>
               )}
@@ -225,9 +226,9 @@ function CartPage() {
                       {/* Product thumbnail */}
                       <div className="h-14 w-14 sm:h-16 sm:w-16 shrink-0 overflow-hidden rounded-xl bg-muted">
                         <ProductThumb
-                          src={cartCatalog.find((product) => product.id === l.productId)?.imageUrl}
+                          src={l.imageUrl ?? cartCatalog.find((product) => product.id === l.productId)?.imageUrl}
                           alt={l.name}
-                          category="grocery"
+                          category={(l.category ?? "grocery") as StoreCategory}
                           fit="contain"
                           className="h-full w-full rounded-xl bg-gradient-to-br from-orange-50 to-amber-50"
                         />
@@ -242,7 +243,7 @@ function CartPage() {
                           {l.unit} · ₹{l.price} each
                         </p>
                         <span className="mt-1 inline-flex items-center gap-1 text-[10px] sm:text-[11px] font-semibold text-emerald-600">
-                          <Check className="h-3 w-3" /> Freshly packed
+                          <Check className="h-3 w-3" /> {isImportedCart ? "Sample product · test checkout" : "Freshly packed"}
                         </span>
                       </div>
 

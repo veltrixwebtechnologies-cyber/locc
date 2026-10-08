@@ -8,7 +8,7 @@ import {
   cancelOrder,
   type OrderStatus,
   type Order,
-} from "@/lib/orders-store";
+} from "@/modules/shopper/services/orders-store";
 import { getStore } from "@/lib/mock-data";
 import { DeliveryMap } from "@/components/delivery-map";
 import { Clock, MessageCircle, Phone, ShieldCheck, Star, Zap, XCircle } from "lucide-react";
@@ -17,10 +17,18 @@ import { m } from "motion/react";
 import { OrderSupport } from "@/components/order-support";
 import { DeliveryAnimation } from "@/components/delivery-animation";
 import { LottieLoading } from "@/components/ui/lottie-loading";
+import { OrderRefundPanel } from "@/components/order-refund-panel";
+import { getOrderProgressIndex } from "@/lib/order-progress";
+import { DemoOrderReceipt } from "@/components/demo-order-receipt";
 
 export const Route = createFileRoute("/order/$orderId")({
-  component: OrderPage,
+  component: OrderRoutePage,
 });
+
+function OrderRoutePage() {
+  const { orderId } = Route.useParams();
+  return orderId.startsWith("demo-") ? <DemoOrderReceipt orderId={orderId} /> : <OrderPage />;
+}
 
 function DeliveryTimingHero({ order }: { order: Order }) {
   const isDelivered = order.status === "delivered";
@@ -230,13 +238,13 @@ function OrderPage() {
   );
 
   const store = order ? getStore(order.storeId) : undefined;
-  const currentIndex = order ? orderStatusFlow.indexOf(order.status) : 0;
+  const currentIndex = order ? getOrderProgressIndex(order.status) : 0;
   const status = order?.status;
   const canCancel =
     order &&
-    order.status !== "delivered" &&
-    order.status !== "cancelled" &&
-    order.status !== "returned";
+    ["new", "accepted", "vendor_accepted", "preparing", "packed", "ready_for_pickup"].includes(
+      order.status,
+    );
 
   const destination = useMemo(() => {
     return order?.destination ?? null;
@@ -281,7 +289,7 @@ function OrderPage() {
     );
   }
 
-  const progress = ((currentIndex + 1) / orderStatusFlow.length) * 100;
+  const progress = currentIndex < 0 ? 0 : ((currentIndex + 1) / orderStatusFlow.length) * 100;
 
   return (
     <AppShell>
@@ -322,7 +330,8 @@ function OrderPage() {
                 </p>
               )}
               <p className="mt-1 text-[11px] text-rose-600/80 dark:text-rose-400/80">
-                If any amount was deducted, a full refund will be credited back automatically.
+                If a payment was captured, check the refund status below or contact Customer Care.
+                Cancellation alone does not confirm a refund.
               </p>
             </div>
           </div>
@@ -374,7 +383,7 @@ function OrderPage() {
         </div>
         <ol className="mt-4 space-y-3">
           {orderStatusFlow.map((s, i) => {
-            const done = i <= currentIndex;
+            const done = currentIndex >= 0 && i <= currentIndex;
             const active = i === currentIndex && s !== "delivered";
             return (
               <m.li
@@ -474,11 +483,14 @@ function OrderPage() {
               <span>Cancel Order</span>
             </button>
             <p className="mt-1.5 text-[10px] text-center text-muted-foreground">
-              Free cancellation before order pickup. Instant refund for prepaid orders.
+              Cancellation availability depends on order progress. Any eligible refund is reviewed
+              and tracked separately.
             </p>
           </div>
         )}
       </section>
+
+      <OrderRefundPanel order={order} />
 
       {order.status === "delivered" && <OrderSupport order={order} />}
 
@@ -614,8 +626,8 @@ function CancelOrderModal({
           )}
 
           <div className="rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200/60 p-3 text-[11px] text-amber-800 dark:text-amber-300">
-            💡 <strong>Note:</strong> Prepaid orders will be automatically refunded to your original
-            payment method within 1–2 business days.
+            💡 <strong>Note:</strong> Cancellation does not itself process a payment refund. Any
+            refund request and its status are shown separately on the order page.
           </div>
         </div>
 

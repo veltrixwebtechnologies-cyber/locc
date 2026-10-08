@@ -11,3 +11,11 @@ test("View All Shops opens the existing nearby shop listing, not Best Shops", ()
   assert.doesNotMatch(link, /to="\/best-shops"/);
   assert.match(readFileSync("src/routes/index.tsx", "utf8"), /id="shops-section"/);
 });
+
+test("opening the nearby map carries the active category and search into map discovery", () => {
+  const source = readFileSync("src/routes/index.tsx", "utf8");
+  const mapMount = source.match(/<LocalShoreMapExperience[\s\S]*?\/>/)?.[0];
+  assert.ok(mapMount);
+  assert.match(mapMount, /initialCategory=\{activeFilter \?\? "all"\}/);
+  assert.match(mapMount, /initialQuery=\{query\}/);
+});

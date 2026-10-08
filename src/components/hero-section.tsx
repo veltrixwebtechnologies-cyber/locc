@@ -31,8 +31,8 @@ import {
 import { scrollToShops } from "@/lib/scroll-utils";
 import { useDeliveryLocation } from "@/lib/location-store";
 import { LocationModal } from "@/components/ui/location-modal";
-import { type SearchResultItem } from "@/lib/search-service";
-import { useLiveSearchResults } from "@/hooks/use-live-search-results";
+import { type SearchResultItem } from "@/modules/shopper/services/search-service";
+import { useLiveSearchResults } from "@/modules/shopper/hooks/use-live-search-results";
 import { AnimatedSearchPlaceholder } from "@/components/ui/animated-search-placeholder";
 
 interface SwiggyFeatureCard {
@@ -236,7 +236,7 @@ export function HeroSection() {
                         loading="eager"
                         decoding="async"
                         {...({ fetchPriority: "high" } as Record<string, string>)}
-                        className="absolute inset-0 h-full w-full object-cover pointer-events-none"
+                        className="absolute inset-0 h-full w-full object-cover"
                       />
                     </div>
                   </motion.div>
@@ -392,10 +392,15 @@ export function HeroSection() {
                                   <button
                                     key={item.id}
                                     type="button"
-                                    onMouseDown={(e) => e.preventDefault()}
+                                    onMouseDown={(e) => {
+                                      if (!(e.target as HTMLElement).closest("img"))
+                                        e.preventDefault();
+                                    }}
                                     onClick={() => {
                                       setIsFocused(false);
-                                      navigate({ to: item.url as any });
+                                      if (item.metadata?.imported === true) {
+                                        if (item.url && item.url !== "#") window.open(item.url, "_blank", "noopener,noreferrer");
+                                      } else navigate({ to: item.url as any });
                                     }}
                                     className="w-full flex items-center gap-3 p-2 rounded-xl hover:bg-[var(--sand)]/80 transition-colors text-left group"
                                   >
@@ -439,7 +444,10 @@ export function HeroSection() {
                                   <button
                                     key={item.id}
                                     type="button"
-                                    onMouseDown={(e) => e.preventDefault()}
+                                    onMouseDown={(e) => {
+                                      if (!(e.target as HTMLElement).closest("img"))
+                                        e.preventDefault();
+                                    }}
                                     onClick={() => {
                                       setIsFocused(false);
                                       navigate({ to: item.url as any });

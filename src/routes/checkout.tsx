@@ -4,17 +4,17 @@ import { createFileRoute, Link, useNavigate, redirect } from "@tanstack/react-ro
 import { useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { AppShell } from "@/components/app-shell";
-import { cartStore, useCart, cartTotals } from "@/lib/cart-store";
+import { cartStore, useCart, cartTotals } from "@/modules/shopper/services/cart-store";
 import { getStore, APPROVED_STORE } from "@/lib/mock-data";
-import { ordersStore, addPlacedOrderToCache } from "@/lib/orders-store";
+import { ordersStore, addPlacedOrderToCache } from "@/modules/shopper/services/orders-store";
 import { supabase } from "@/integrations/supabase/client";
-import { addressesStore, useAddresses } from "@/lib/addresses-store";
+import { addressesStore, useAddresses } from "@/modules/shopper/services/addresses-store";
 import { DeliveryMap } from "@/components/delivery-map";
 import { DeliveryAnimation } from "@/components/delivery-animation";
 import { reverseGeocode } from "@/lib/geocoding.functions";
 import { useDeliveryLocation } from "@/lib/location-store";
 import { isValidCoordinate, haversineDistanceKm } from "@/lib/geo";
-import { AVAILABLE_COUPONS, calculateBillBreakdown, evaluateCoupon } from "@/lib/coupons";
+import { AVAILABLE_COUPONS, calculateBillBreakdown, evaluateCoupon, evaluateSampleCoupon } from "@/lib/coupons";
 import { SmartLottieLoader } from "@/components/ui/smart-lottie-loader";
 import {
   Crosshair,
@@ -37,9 +37,15 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { AnimatePresence, m } from "motion/react";
-import type { Order } from "@/lib/orders-store";
-import { createRazorpayOrderFn, verifyRazorpayPaymentFn } from "@/lib/razorpay.functions";
+import type { Order } from "@/modules/shopper/services/orders-store";
+import {
+  createRazorpayOrderFn,
+  verifyRazorpayPaymentFn,
+  type VerifyRazorpayPaymentInput,
+} from "@/lib/razorpay.functions";
 import { useShopCoordinates } from "@/hooks/use-shop-coordinates";
+import { createImportedTestOrderFn, verifyImportedTestPaymentFn } from "@/lib/imported-razorpay.functions";
+type CheckoutVerification = VerifyRazorpayPaymentInput & { test_checkout_token?: string };
 
 function loadRazorpaySDK(): Promise<boolean> {
   return new Promise((resolve) => {
@@ -198,7 +204,9 @@ function CheckoutPage() {
   const lastFixAt = useRef(0);
   const lastGeocodeAt = useRef(0);
   const [accuracyMeters, setAccuracyMeters] = useState<number | null>(null);
-  const [pay, setPay] = useState<"gpay" | "online" | "upi" | "card" | "cod">("gpay");
+  const isImportedCart = Boolean(cart.storeId?.startsWith("imported:"));
+  const [pay, setPay] = useState<"gpay" | "online" | "upi" | "card" | "cod" | "demo">(isImportedCart ? "demo" : "gpay");
+  useEffect(() => { if (isImportedCart) setPay("demo"); }, [isImportedCart]);
   const [showAdd, setShowAdd] = useState(false);
   const [showMap, setShowMap] = useState(false);
   const [newLabel, setNewLabel] = useState("");
@@ -216,7 +224,11 @@ function CheckoutPage() {
   // Razorpay server function hooks
   const createRazorpayOrder = useServerFn(createRazorpayOrderFn);
   const verifyRazorpayPayment = useServerFn(verifyRazorpayPaymentFn);
+  const createImportedTestOrder = useServerFn(createImportedTestOrderFn);
+  const verifyImportedTestPayment = useServerFn(verifyImportedTestPaymentFn);
   const [razorpayAttempt, setRazorpayAttempt] = useState<any>(null);
+  const [paymentRecovery, setPaymentRecovery] = useState<CheckoutVerification | null>(null);
+  const [paymentRecoveryError, setPaymentRecoveryError] = useState("");
   const [paymentStatusText, setPaymentStatusText] = useState("");
 
   const computedDistanceKm =
@@ -583,6 +595,7 @@ function CheckoutPage() {
           discountType: couponQuote.discount_type,
           discountAmount: couponQuote.discount_amount,
           shippingFee: couponQuote.shipping_fee,
+          total: couponQuote.total,
         }
       : null,
   });
@@ -633,7 +646,7 @@ function CheckoutPage() {
 
     setIsApplyingCoupon(true);
     try {
-      const quote = await evaluateCoupon({
+      const quote = isImportedCart ? evaluateSampleCoupon(code, totals.subtotal) : await evaluateCoupon({
         code,
         subtotal: totals.subtotal,
         rawDeliveryFee,
@@ -654,7 +667,7 @@ function CheckoutPage() {
         discount_amount: quote.discountAmount,
         subtotal: totals.subtotal,
         shipping_fee: updatedBreakdown.deliveryFee,
-        total: updatedBreakdown.total,
+        total: quote.total ?? updatedBreakdown.total,
       });
 
       toast.success(
@@ -669,16 +682,92 @@ function CheckoutPage() {
   };
 
   const openPaymentConfirmation = async () => {
+    if (paymentRecovery) {
+      toast.error("A payment is awaiting order confirmation. Retry confirmation below; do not pay again.");
+      return;
+    }
     if (!selectedAddressLine || isPlacing || isCheckingStock) return;
     if (!canPlace) {
       toast.error("Confirm the delivery location before continuing.");
       return;
     }
-    if (pay === "cod") {
+    if (!isImportedCart && (pay === "cod" || pay === "demo")) {
       void placeOrder();
       return;
     }
     await initiateRazorpayCheckout();
+  };
+
+  const finishVerifiedPayment = (verifyRes: Awaited<ReturnType<typeof verifyRazorpayPayment>>, paymentId: string) => {
+    if (!verifyRes.success || !verifyRes.order || !store) return;
+    cartStore.clear();
+    setTxnRef(paymentId);
+    const newOrderObj = {
+      id: verifyRes.order.id,
+      code: verifyRes.order.code,
+      storeId: verifyRes.order.seller_id,
+      storeName: store.name,
+      lines: cart.lines,
+      subtotal: totals.subtotal,
+      deliveryFee: displayDeliveryFee,
+      total: verifyRes.order.total,
+      address: selectedAddressLine,
+      destination: pinCoords,
+      paymentMethod: pay === "gpay" ? "Google Pay (UPI)" : "Razorpay Online",
+      createdAt: Date.now(),
+      status: "new" as const,
+      etaMin: computedEtaMin,
+      distanceKm: computedDistanceKm,
+    };
+    addPlacedOrderToCache(newOrderObj);
+    setPlacedOrder(newOrderObj);
+    setPaymentRecovery(null);
+    setRazorpayAttempt(null);
+    playPaymentSuccessSound();
+    toast.success(`Payment of ₹${verifyRes.order.total} verified & completed!`);
+    setPaymentStep("idle");
+    setShowOrderSuccess(true);
+  };
+
+  const finishTestPayment = async (verification: CheckoutVerification) => {
+    if (!verification.test_checkout_token) throw new Error("Test checkout token is missing.");
+    const receipt = await verifyImportedTestPayment({ data: {
+      token: verification.test_checkout_token, orderId: verification.razorpay_order_id,
+      paymentId: verification.razorpay_payment_id, signature: verification.razorpay_signature,
+    } });
+    await ordersStore.saveTestReceipt(receipt);
+    cartStore.clear();
+    setPlacedOrder(receipt);
+    setTxnRef(verification.razorpay_payment_id);
+    setPaymentRecovery(null);
+    setRazorpayAttempt(null);
+    setPaymentStep("idle");
+    playPaymentSuccessSound();
+    toast.success("Razorpay test payment verified. No real money charged or delivery dispatched.");
+    setShowOrderSuccess(true);
+  };
+
+  const retryPaymentOrderConfirmation = async () => {
+    if (!paymentRecovery || isPlacing) return;
+    setIsPlacing(true);
+    setPaymentStep("authorizing");
+    try {
+      if (paymentRecovery.test_checkout_token) await finishTestPayment(paymentRecovery);
+      else {
+        const verifyRes = await verifyRazorpayPayment({ data: paymentRecovery });
+        finishVerifiedPayment(verifyRes, paymentRecovery.razorpay_payment_id);
+      }
+    } catch (error) {
+      console.error("[razorpay checkout recovery failed]", error);
+      const message = error instanceof Error
+        ? error.message
+        : "Order confirmation is still pending. Do not pay again; contact support with the payment reference.";
+      setPaymentRecoveryError(message);
+      toast.error(message);
+    } finally {
+      setIsPlacing(false);
+      setPaymentStep("idle");
+    }
   };
 
   const initiateRazorpayCheckout = async () => {
@@ -695,7 +784,10 @@ function CheckoutPage() {
 
     try {
       // Step 1: Create Razorpay Order on server side (authoritative amount calculation)
-      const rzpOrder = await createRazorpayOrder({
+      const rzpOrder = isImportedCart ? await createImportedTestOrder({ data: {
+        shopId: store.id, items: cart.lines.map(line => ({ product_id: line.productId, qty: line.qty })),
+        address: selectedAddressLine, latitude: destinationCoords.lat, longitude: destinationCoords.lng, couponCode: couponQuote?.code,
+      } }) : await createRazorpayOrder({
         data: {
           items: cart.lines.map((line) => ({ product_id: line.productId, qty: line.qty })),
           address: selectedAddressLine,
@@ -725,7 +817,7 @@ function CheckoutPage() {
           currency: rzpOrder.currency || "INR",
           order_id: rzpOrder.razorpay_order_id,
           name: "LocalShore Marketplace",
-          description: `Order from ${store.name}`,
+          description: `${isImportedCart ? "Test checkout" : "Order"} from ${store.name}`,
           handler: async function (response: any) {
             setPaymentStatusText("Verifying cryptographic signature with server...");
             try {
@@ -736,8 +828,8 @@ function CheckoutPage() {
               ) {
                 throw new Error("Missing required Razorpay payment verification parameters.");
               }
-              const verifyRes = await verifyRazorpayPayment({
-                data: {
+              const verificationInput: CheckoutVerification = {
+                  test_checkout_token: "test_checkout_token" in rzpOrder ? rzpOrder.test_checkout_token : undefined,
                   payment_attempt_id: rzpOrder.payment_attempt_id,
                   razorpay_order_id: response.razorpay_order_id,
                   razorpay_payment_id: response.razorpay_payment_id,
@@ -749,38 +841,30 @@ function CheckoutPage() {
                   coupon_code: couponQuote?.code,
                   customer_latitude: destinationCoords.lat,
                   customer_longitude: destinationCoords.lng,
-                },
-              });
-
-              if (verifyRes.success && verifyRes.order) {
-                cartStore.clear();
-                setTxnRef(response.razorpay_payment_id);
-                const newOrderObj = {
-                  id: verifyRes.order.id,
-                  code: verifyRes.order.code,
-                  storeId: verifyRes.order.seller_id,
-                  storeName: store.name,
-                  lines: cart.lines,
-                  subtotal: totals.subtotal,
-                  deliveryFee: displayDeliveryFee,
-                  total: verifyRes.order.total,
-                  address: selectedAddressLine,
-                  destination: destinationCoords,
-                  paymentMethod: pay === "gpay" ? "Google Pay (UPI)" : "Razorpay Online",
-                  createdAt: Date.now(),
-                  status: "new" as const,
-                  etaMin: computedEtaMin,
-                  distanceKm: computedDistanceKm,
                 };
-                addPlacedOrderToCache(newOrderObj);
-                setPlacedOrder(newOrderObj);
-                playPaymentSuccessSound();
-                toast.success(`Payment of ₹${verifyRes.order.total} verified & completed!`);
-                setPaymentStep("idle");
-                setShowOrderSuccess(true);
+              if (verificationInput.test_checkout_token) await finishTestPayment(verificationInput);
+              else {
+                const verifyRes = await verifyRazorpayPayment({ data: verificationInput });
+                finishVerifiedPayment(verifyRes, response.razorpay_payment_id);
               }
             } catch (err: any) {
               console.error("[razorpay checkout verification failed]", err);
+              if (response?.razorpay_order_id && response?.razorpay_payment_id && response?.razorpay_signature) {
+                setPaymentRecovery({
+                  test_checkout_token: "test_checkout_token" in rzpOrder ? rzpOrder.test_checkout_token : undefined,
+                  payment_attempt_id: rzpOrder.payment_attempt_id,
+                  razorpay_order_id: response.razorpay_order_id,
+                  razorpay_payment_id: response.razorpay_payment_id,
+                  razorpay_signature: response.razorpay_signature,
+                  buyer_name: user?.user_metadata?.display_name || user?.email || "Customer",
+                  buyer_phone: user?.phone,
+                  buyer_address: selectedAddressLine,
+                  items: cart.lines.map((line) => ({ product_id: line.productId, qty: line.qty })),
+                  coupon_code: couponQuote?.code,
+                  customer_latitude: destinationCoords.lat,
+                  customer_longitude: destinationCoords.lng,
+                });
+              }
               toast.error(err.message || "Payment signature verification failed.");
             } finally {
               setIsPlacing(false);
@@ -846,8 +930,9 @@ function CheckoutPage() {
     await new Promise((resolve) => setTimeout(resolve, 650));
 
     try {
-      const generatedTxn = `COD-${Math.floor(1000000000 + Math.random() * 9000000000)}`;
-      const order = await ordersStore.place({
+      const generatedTxn = `${pay === "demo" ? "TEST" : "COD"}-${crypto.randomUUID().slice(0, 8)}`;
+      const place = isImportedCart || pay === "demo" ? ordersStore.placeDemo : ordersStore.place;
+      const order = await place({
         storeId: store.id,
         storeName: store.name,
         lines: cart.lines,
@@ -856,7 +941,7 @@ function CheckoutPage() {
         total: displayTotal,
         address: selectedAddressLine,
         destination: destinationCoords,
-        paymentMethod: "Cash on delivery",
+        paymentMethod: pay === "demo" ? "Demo payment (simulated)" : "Cash on delivery",
         couponCode: couponQuote?.code,
         discountAmount,
         etaMin: computedEtaMin,
@@ -870,7 +955,7 @@ function CheckoutPage() {
       // Play audio chime and trigger success UI
       playPaymentSuccessSound();
 
-      toast.success("Order placed! Pay cash on delivery.");
+      toast.success(pay === "demo" ? "Demo payment completed. No money charged or delivery dispatched." : "Order placed! Pay cash on delivery.");
 
       setPaymentStep("idle");
       setShowOrderSuccess(true);
@@ -892,8 +977,8 @@ function CheckoutPage() {
         delayMs={0}
         mode="fullscreen"
         size="xl"
-        message={`Placing your order with ${store?.name || "LocalShore"}...`}
-        subtext="Verifying item availability & assigning nearest delivery partner"
+        message={isImportedCart ? paymentStatusText || "Opening Razorpay test checkout…" : pay === "demo" ? "Simulating demo payment..." : `Placing your order with ${store?.name || "LocalShore"}...`}
+        subtext={pay === "demo" ? `${isImportedCart ? "Checking prototype catalog" : "Checking real inventory"}. No charge or delivery will be created.` : "Verifying item availability & assigning nearest delivery partner"}
       />
 
       <div className="px-3 sm:px-5 pt-4 sm:pt-6">
@@ -904,6 +989,33 @@ function CheckoutPage() {
           Almost there
         </h1>
       </div>
+
+      {paymentRecovery && (
+        <section
+          className="mx-3 sm:mx-5 mt-4 rounded-xl border border-amber-300 bg-amber-50 p-4 text-amber-950"
+          role="alert"
+          aria-live="assertive"
+        >
+          <h2 className="font-display font-bold">Payment response received; order confirmation is pending</h2>
+          <p className="mt-1 text-sm">
+            We could not confirm the final payment/order status yet. Check your payment method and do not pay again while this is unresolved. Retry confirmation below; if it remains pending, contact support with payment reference <span className="font-mono font-semibold">{paymentRecovery.razorpay_payment_id}</span>.
+          </p>
+          {paymentRecoveryError && (
+            <p className="mt-2 rounded-md bg-white/70 p-2 font-mono text-xs" role="status">
+              {paymentRecoveryError}
+            </p>
+          )}
+          <button
+            type="button"
+            onClick={() => void retryPaymentOrderConfirmation()}
+            disabled={isPlacing}
+            className="mt-3 inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-amber-900 px-4 py-2 text-sm font-bold text-white disabled:opacity-60"
+          >
+            {isPlacing ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+            {isPlacing ? "Retrying confirmation…" : "Retry order confirmation"}
+          </button>
+        </section>
+      )}
 
       {/* Items in Order Summary Card */}
       <section className="mx-3 sm:mx-5 mt-4 rounded-2xl bg-card p-3.5 sm:p-4 ring-1 ring-black/[0.05] shadow-xs">
@@ -1148,7 +1260,7 @@ function CheckoutPage() {
           <h2 id="payment-heading" className="font-display text-base font-bold">Payment method</h2>
           <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/5 px-2.5 py-1 text-[11px] font-medium text-primary">
             <ShieldCheck aria-hidden="true" className="h-3.5 w-3.5" />
-            Powered by Razorpay
+            {isImportedCart ? "Powered by Razorpay · test mode" : "Powered by Razorpay"}
           </span>
         </div>
         <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">Choose how you’d like to pay.</p>
@@ -1170,7 +1282,8 @@ function CheckoutPage() {
               icon: CreditCard,
             },
             { id: "cod" as const, label: "Cash on delivery", description: "Pay when your order arrives", icon: Banknote },
-          ].map((p) => (
+            { id: "demo" as const, label: isImportedCart ? "Razorpay checkout" : "Test payment", description: isImportedCart ? "Open Razorpay payment screen in test mode — no real charges" : "Test checkout — no money charged or delivery", icon: CreditCard },
+          ].filter(p => !isImportedCart || p.id === "demo").map((p) => (
             <label
               key={p.id}
               className={`relative flex min-h-[76px] min-w-0 cursor-pointer items-center gap-3 rounded-xl border p-3 transition-colors focus-within:ring-2 focus-within:ring-primary/50 focus-within:ring-offset-2 ${
@@ -1193,7 +1306,7 @@ function CheckoutPage() {
         <p className="mt-4 flex items-start gap-2 border-t border-border/60 pt-3 text-xs leading-relaxed text-muted-foreground">
           <ShieldCheck aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
           <span>
-            {pay === "cod"
+            {isImportedCart ? "Complete payment in Razorpay test mode. No real money is charged, no stock reserved, and no seller or delivery partner notified." : pay === "demo" ? "Simulation only. Your test receipt stays in this browser. No stock is reserved, seller notified, or delivery dispatched." : pay === "cod"
               ? "Payment is collected when your order is delivered."
               : "Continue to Razorpay to complete payment. Available options are shown at checkout."}
           </span>
@@ -1369,7 +1482,7 @@ function CheckoutPage() {
           <button
             type="button"
             onClick={openPaymentConfirmation}
-            disabled={!canPlace || isPlacing || isCheckingStock}
+            disabled={!canPlace || isPlacing || isCheckingStock || !!paymentRecovery}
             className="flex-1 md:w-full rounded-xl bg-[var(--marigold)] py-3 px-4 font-display text-base sm:text-lg font-extrabold text-ink shadow-lg hover:brightness-105 active:scale-[0.98] transition-all disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:brightness-100 flex items-center justify-center gap-2 cursor-pointer"
           >
             {isCheckingStock ? (
@@ -1384,7 +1497,7 @@ function CheckoutPage() {
               </>
             ) : canPlace ? (
               <>
-                <span>Place order</span>
+                <span>{isImportedCart ? "Pay with Razorpay" : pay === "demo" ? "Simulate payment" : "Place order"}</span>
                 <span className="hidden md:inline">· ₹{displayTotal}</span>
                 <ArrowRight className="h-5 w-5" />
               </>
@@ -1446,14 +1559,14 @@ function CheckoutPage() {
 
               <div className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-600">
                 <Sparkles className="h-3.5 w-3.5" />
-                {pay === "cod" ? "Order Confirmed" : "Payment Verified"}
+                {placedOrder?.paymentMethod === "Razorpay test payment (verified)" ? "Razorpay test payment verified" : pay === "demo" ? "Test payment completed" : pay === "cod" ? "Order Confirmed" : "Payment Verified"}
               </div>
 
               <h2 className="mt-3 font-display text-2xl font-bold text-foreground">
-                {pay === "cod" ? "Order Placed Successfully!" : "Payment Successful!"}
+                {pay === "demo" ? "Test checkout complete" : pay === "cod" ? "Order Placed Successfully!" : "Payment Successful!"}
               </h2>
               <p className="mt-1 text-xs text-muted-foreground">
-                {pay === "cod"
+                {pay === "demo" ? "₹0 charged · test receipt only" : pay === "cod"
                   ? `₹${placedOrder?.total ?? displayTotal} due on delivery`
                   : `₹${placedOrder?.total ?? displayTotal} paid to LocalShore`}
               </p>
@@ -1479,9 +1592,9 @@ function CheckoutPage() {
                   </span>
                 </div>
                 <div className="flex justify-between pt-2 text-[11px]">
-                  <span className="text-muted-foreground">Estimated Delivery</span>
+                  <span className="text-muted-foreground">{pay === "demo" ? "Delivery" : "Estimated Delivery"}</span>
                   <span className="font-semibold text-emerald-600">
-                    ~{placedOrder?.etaMin || computedEtaMin} mins
+                    {pay === "demo" ? "Not dispatched" : `~${placedOrder?.etaMin || computedEtaMin} mins`}
                   </span>
                 </div>
               </div>
@@ -1497,7 +1610,7 @@ function CheckoutPage() {
                   }}
                   className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-primary py-3 font-display text-sm font-semibold text-primary-foreground shadow-lg hover:brightness-110 active:scale-[0.98] transition-all"
                 >
-                  Track Order Live
+                  {pay === "demo" ? "View test receipt" : "Track Order Live"}
                   <ArrowRight className="h-4 w-4" />
                 </button>
                 <p className="mt-2 text-[11px] text-muted-foreground">

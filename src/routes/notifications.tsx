@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { AppShell } from "@/components/app-shell";
 import { ChevronLeft } from "lucide-react";
 import { useAuth } from "@/lib/auth-store";
-import { useNotifications } from "@/lib/notifications-store";
+import { useNotifications } from "@/modules/shopper/services/notifications-store";
 
 const KEY = "localshore.notifs.v1";
 interface Prefs {

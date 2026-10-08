@@ -75,7 +75,6 @@ export interface DetailedBillBreakdown {
 
 export function calculateBillBreakdown({
   subtotal,
-  rawDeliveryFee,
   couponQuote,
 }: {
   subtotal: number;
@@ -85,21 +84,23 @@ export function calculateBillBreakdown({
     discountType: "percent" | "flat" | "free_shipping";
     discountAmount: number;
     shippingFee?: number;
+    total?: number;
   } | null;
 }): DetailedBillBreakdown {
   // 5% GST estimate
   const gstAmount = Math.round(subtotal * 0.05);
 
-  // Platform & service fee (₹5 flat, waived if order > ₹500)
-  const platformFee = subtotal > 500 ? 0 : 5;
+  // Match the current order RPC's persisted quote: ₹25 delivery, no separate
+  // platform fee. Keep this in sync with quote_coupon/place_order migrations.
+  const platformFee = 0;
 
-  let effectiveDeliveryFee = subtotal >= 500 ? 0 : rawDeliveryFee;
+  let effectiveDeliveryFee = subtotal > 0 ? 25 : 0;
   let discountAmount = 0;
 
   if (couponQuote) {
     if (couponQuote.discountType === "free_shipping") {
       effectiveDeliveryFee = 0;
-      discountAmount = rawDeliveryFee;
+      discountAmount = couponQuote.discountAmount;
     } else {
       discountAmount = Math.min(couponQuote.discountAmount, subtotal);
       if (couponQuote.shippingFee !== undefined) {
@@ -109,8 +110,12 @@ export function calculateBillBreakdown({
   }
 
   const isFreeDelivery = effectiveDeliveryFee === 0;
-  const total = Math.max(0, subtotal + platformFee + effectiveDeliveryFee - discountAmount);
-  const savingsTotal = discountAmount + (rawDeliveryFee > 0 && isFreeDelivery ? rawDeliveryFee : 0);
+  const quotedTotal = Number(couponQuote?.total);
+  const totalDiscount = couponQuote?.discountType === "free_shipping" ? 0 : discountAmount;
+  const total = Number.isFinite(quotedTotal)
+    ? Math.max(0, quotedTotal)
+    : Math.max(0, subtotal + effectiveDeliveryFee - totalDiscount);
+  const savingsTotal = discountAmount;
 
   return {
     subtotal,
@@ -158,6 +163,7 @@ export async function evaluateCoupon({
         discountType: (quote.discount_type || "flat") as "percent" | "flat" | "free_shipping",
         discountAmount,
         shippingFee,
+        total: Number(quote.total),
         description: `Coupon ${quote.code} applied successfully!`,
       };
     }
@@ -166,6 +172,12 @@ export async function evaluateCoupon({
   }
 
   // 2. Client-side fallback rule engine for instant feedback and demo products
+  return evaluateSampleCoupon(cleanCode, subtotal);
+}
+
+/** Shared prototype coupon rules, without a live database request. */
+export function evaluateSampleCoupon(code: string, subtotal: number) {
+  const cleanCode = code.trim().toUpperCase();
   const matched = AVAILABLE_COUPONS.find((c) => c.code === cleanCode);
   if (!matched) {
     throw new Error(
@@ -188,7 +200,7 @@ export async function evaluateCoupon({
   } else if (matched.discountType === "flat") {
     discountAmount = Math.min(matched.discountValue, subtotal);
   } else if (matched.discountType === "free_shipping") {
-    discountAmount = rawDeliveryFee;
+    discountAmount = 25;
   }
 
   discountAmount = Math.round(discountAmount);
@@ -198,6 +210,11 @@ export async function evaluateCoupon({
     discountType: matched.discountType,
     discountAmount,
     shippingFee: matched.discountType === "free_shipping" ? 0 : undefined,
+    total: Math.max(
+      0,
+      subtotal + (matched.discountType === "free_shipping" ? 0 : 25) -
+        (matched.discountType === "free_shipping" ? 0 : discountAmount),
+    ),
     description: matched.description,
   };
 }

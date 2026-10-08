@@ -1,8 +1,8 @@
 import React, { useMemo } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { SearchResultItem } from "@/lib/search-service";
+import { SearchResultItem } from "@/modules/shopper/services/search-service";
 import { Store, Utensils, ShoppingBag, ChevronRight, X, Search } from "lucide-react";
-import { useLiveSearchResults } from "@/hooks/use-live-search-results";
+import { useLiveSearchResults } from "@/modules/shopper/hooks/use-live-search-results";
 
 interface SwiggyInstantSearchDropdownProps {
   query: string;
@@ -48,6 +48,10 @@ export function SwiggyInstantSearchDropdown({
 
   const handleResultClick = (item: SearchResultItem) => {
     if (onSelectResult) onSelectResult();
+    if (item.metadata?.imported === true) {
+      if (item.url && item.url !== "#") window.open(item.url, "_blank", "noopener,noreferrer");
+      return;
+    }
     const targetUrl = item.url || "";
     if (targetUrl.startsWith("/store/")) {
       const storeId = item.storeId || targetUrl.replace("/store/", "");

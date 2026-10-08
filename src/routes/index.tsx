@@ -3,7 +3,7 @@ import { lazy, Suspense, useEffect, useMemo, useState, startTransition } from "r
 import { Search } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { AwningCard } from "@/components/awning-card";
-import { ShopCard } from "@/components/shop-card";
+import { ShopCard } from "@/modules/shopper/components/shop-card";
 import {
   stores,
   deliveryCategories,
@@ -19,7 +19,7 @@ import { PromoCarousel } from "@/components/promo-carousel";
 import { MarketplaceAdStrip } from "@/components/marketplace-ad-strip";
 import type { MerchandisingProduct } from "@/lib/merchandising";
 import { Reveal } from "@/components/motion/presets";
-import { MarketplaceDiscovery } from "@/components/marketplace-discovery";
+import { MarketplaceDiscovery } from "@/modules/shopper/components/marketplace-discovery";
 import { SwiggyShopRow, SwiggyQuickCategories } from "@/components/swiggy-shop-row";
 import { CategoryDiscoveryView } from "@/components/category-discovery-view";
 import {
@@ -40,7 +40,9 @@ import { EcosystemMerchandisingStrips } from "@/components/ecosystem-merchandisi
 import { isTestEntity } from "@/lib/map-service/store-engine";
 import { useDeliveryLocation } from "@/lib/location-store";
 import { getCategoryByIdOrSlug, toStoreCategory, isStoreInCategory, catalogCategoryKey } from "@/lib/shop-categories";
-import { discoverShops } from "@/lib/shop-discovery";
+import { discoverShops } from "@/modules/shopper/services/shop-discovery";
+import { runCatalogRpcWithTimeout, shouldRetryCatalogQuery } from "@/lib/catalog-rpc";
+import { fetchNearbyImportedShops, toImportedShopCard } from "@/lib/imported-shops";
 import {
   CUSTOMER_VISIBILITY_RADIUS_KM,
   DEFAULT_SHOP_DISCOVERY_RADIUS_KM,
@@ -125,21 +127,17 @@ function Home() {
     queryKey: ["homepage-visible-products", locLat, locLng],
     staleTime: 1000 * 60 * 5,
     gcTime: 1000 * 60 * 10,
-    retry: 1,
+    retry: shouldRetryCatalogQuery,
+    retryDelay: (attempt) => Math.min(750 * 2 ** attempt, 3_000),
     refetchOnWindowFocus: false,
     queryFn: async () => {
       if (!hasConfirmedCoordinates(deliveryLoc)) return [];
-      try {
-        const { data, error } = await (supabase as any).rpc("get_customer_visible_products", {
+      const { data, error } = await runCatalogRpcWithTimeout((supabase as any).rpc("get_customer_visible_products", {
           p_lat: deliveryLoc.lat, p_lng: deliveryLoc.lng, p_query: null,
           p_category_slug: null, p_limit: 100, p_offset: 0,
-        });
-        if (error) throw error;
-        return (data ?? []).filter((p: any) => !isTestEntity(p.name));
-      } catch (err) {
-        console.warn("Products query fallback:", err);
-        return [];
-      }
+        }));
+      if (error) throw new Error(error.message || "Unable to load nearby products");
+      return ((data ?? []) as any[]).filter((p: any) => !isTestEntity(p.name));
     },
   });
 
@@ -147,7 +145,8 @@ function Home() {
     queryKey: ["homepage-visible-shops-v4", locLat, locLng, search.category, query],
     staleTime: 1000 * 60 * 5,
     gcTime: 1000 * 60 * 10,
-    retry: 1,
+    retry: shouldRetryCatalogQuery,
+    retryDelay: (attempt) => Math.min(750 * 2 ** attempt, 3_000),
     refetchOnWindowFocus: false,
     queryFn: async () => {
       if (!deliveryLoc || !hasConfirmedCoordinates(deliveryLoc)) return {
@@ -189,6 +188,18 @@ function Home() {
   });
 
   const [visibleProductLimit, setVisibleProductLimit] = useState(15);
+
+  const publicShops = useQuery({
+    queryKey: ["homepage-public-shops", locLat, locLng, search.category, query],
+    staleTime: 1000 * 60 * 5,
+    retry: shouldRetryCatalogQuery,
+    retryDelay: (attempt) => Math.min(750 * 2 ** attempt, 3_000),
+    enabled: hasConfirmedCoordinates(deliveryLoc),
+    queryFn: () => fetchNearbyImportedShops((name, args) => (supabase as any).rpc(name, args), {
+      lat: deliveryLoc!.lat, lng: deliveryLoc!.lng, radiusKm: DEFAULT_SHOP_DISCOVERY_RADIUS_KM,
+      category: catalogCategoryKey(search.category), query: query.trim() || null,
+    }),
+  });
 
   useEffect(() => {
     setQuery(search.q ?? "");
@@ -360,8 +371,13 @@ function Home() {
   }, [approvedProducts.data, hasConfirmedLocation]);
 
   const displayCategoryName = useMemo(() => getCategoryDisplayName(cat), [cat]);
-  const nearbyLoading =
-    hasConfirmedLocation && (approvedVendors.isLoading || approvedProducts.isLoading);
+  // Seller discovery and imported listings are independent sources. A product
+  // feed timeout must not hide shops, and one shop source can keep the section
+  // useful while the other source is temporarily unavailable.
+  const nearbyShopLoading =
+    hasConfirmedLocation && (approvedVendors.isLoading || publicShops.isLoading);
+  const nearbyShopLoadError = approvedVendors.isError && publicShops.isError;
+  const nearbyProductsLoading = hasConfirmedLocation && approvedProducts.isLoading;
   const homeFallbackZoneNames = Array.from(
     new Set(
       (approvedVendors.data?.shops ?? [])
@@ -380,7 +396,7 @@ function Home() {
       <LiquidGlassCategorySelector
         nearbyShops={approvedVendors.data?.shops ?? []}
         nearbyProducts={approvedProducts.data ?? []}
-        isLoading={nearbyLoading}
+        isLoading={nearbyShopLoading || nearbyProductsLoading}
         hasConfirmedLocation={hasConfirmedLocation}
       />
 
@@ -413,7 +429,7 @@ function Home() {
           </p>
         )}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {nearbyLoading
+          {nearbyShopLoading
             ? Array.from({ length: 8 }, (_, index) => <ShopCardSkeleton key={`shop-skeleton-${index}`} />)
             : filtered.map((store, index) => (
             <ShopCard
@@ -437,13 +453,20 @@ function Home() {
               className="h-full max-w-none"
             />
           ))}
-          {approvedVendors.isError && (
+          {(publicShops.data ?? []).map((row) => {
+            const shop = toImportedShopCard(row);
+            return shop ? <ShopCard key={shop.id} shop={shop} variant="wide" className="h-full max-w-none" /> : null;
+          })}
+          {nearbyShopLoadError && (
             <div className="col-span-full rounded-xl border border-amber-300 bg-amber-50 p-4 text-amber-950" role="alert">
-              <p>We couldn’t load nearby shops. Please try again.</p>
-              <button className="mt-2 rounded-lg px-3 py-2 font-semibold underline focus-visible:outline focus-visible:outline-2" onClick={() => void approvedVendors.refetch()}>Retry shops</button>
+              <p>We couldn’t load nearby shops and products. Please check your connection and retry.</p>
+              <button className="mt-2 rounded-lg px-3 py-2 font-semibold underline focus-visible:outline focus-visible:outline-2" onClick={() => {
+                if (approvedVendors.isError) void approvedVendors.refetch();
+                if (publicShops.isError) void publicShops.refetch();
+              }}>Retry nearby catalog</button>
             </div>
           )}
-          {!nearbyLoading && !approvedVendors.isError && filtered.length === 0 && (
+          {!nearbyShopLoading && !nearbyShopLoadError && filtered.length === 0 && (publicShops.data?.length ?? 0) === 0 && (
             <div className="col-span-full">
               <EmptyState />
             </div>
@@ -489,7 +512,7 @@ function Home() {
           </Link>
         </div>
         <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-          {nearbyLoading
+          {nearbyProductsLoading
             ? Array.from({ length: 8 }, (_, index) => (
                 <div
                   key={`product-skeleton-${index}`}
@@ -504,7 +527,15 @@ function Home() {
               <ProductCard key={product.id} product={product} compact />
             ))}
         </div>
-        {!nearbyLoading && hasConfirmedLocation && homepageProducts.every((product) => product.stock <= 0) && (
+        {!nearbyProductsLoading && approvedProducts.isError && (
+          <div className="mt-4 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950" role="alert">
+            <p>Nearby shops are available, but their live product inventory could not be loaded.</p>
+            <button type="button" className="mt-2 font-semibold underline" onClick={() => void approvedProducts.refetch()}>
+              Retry nearby products
+            </button>
+          </div>
+        )}
+        {!nearbyProductsLoading && !approvedProducts.isError && hasConfirmedLocation && homepageProducts.every((product) => product.stock <= 0) && (
           <p className="mt-4 rounded-xl border border-border bg-card px-4 py-3 text-sm text-muted-foreground">
             No in-stock products were found within {CUSTOMER_VISIBILITY_RADIUS_KM} km of this location yet.
             Try choosing a nearby point or widening your search area.
@@ -531,6 +562,8 @@ function Home() {
           >
             <LocalShoreMapExperience
               initialMapOpen
+              initialQuery={query}
+              initialCategory={activeFilter ?? "all"}
               onCloseMap={() => setIsNearbyMapOpen(false)}
             />
           </Suspense>

@@ -1,0 +1,10 @@
+{
+  "name": "@localshore/core",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Canonical cross-repository LocalShore contracts; shipped as checked-in source snapshots",
+  "exports": {
+    "./*": "./src/*.ts"
+  }
+}

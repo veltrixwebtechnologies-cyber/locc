@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { AppShell } from "@/components/app-shell";
-import { useOrdersState, orderStatusLabel } from "@/lib/orders-store";
+import { useOrdersState, orderStatusLabel } from "@/modules/shopper/services/orders-store";
 import { useAuth } from "@/lib/auth-store";
 import { Clock, Star } from "lucide-react";
 import { LottieLoading } from "@/components/ui/lottie-loading";
