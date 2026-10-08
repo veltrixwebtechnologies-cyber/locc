@@ -16,7 +16,7 @@ import {
   X,
   ChevronDown,
 } from "lucide-react";
-import { useCart, cartTotals } from "@/lib/cart-store";
+import { useCart, cartTotals } from "@/modules/shopper/services/cart-store";
 import { useAuth } from "@/lib/auth-store";
 import { useLocalShoreRoles } from "@/lib/roles-store";
 import { CategoryMegaMenu, MobileCategoryStrip } from "@/components/category-mega-menu";

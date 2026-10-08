@@ -4,11 +4,11 @@ import { createFileRoute, Link, useNavigate, redirect } from "@tanstack/react-ro
 import { useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { AppShell } from "@/components/app-shell";
-import { cartStore, useCart, cartTotals } from "@/lib/cart-store";
+import { cartStore, useCart, cartTotals } from "@/modules/shopper/services/cart-store";
 import { getStore, APPROVED_STORE } from "@/lib/mock-data";
-import { ordersStore, addPlacedOrderToCache } from "@/lib/orders-store";
+import { ordersStore, addPlacedOrderToCache } from "@/modules/shopper/services/orders-store";
 import { supabase } from "@/integrations/supabase/client";
-import { addressesStore, useAddresses } from "@/lib/addresses-store";
+import { addressesStore, useAddresses } from "@/modules/shopper/services/addresses-store";
 import { DeliveryMap } from "@/components/delivery-map";
 import { DeliveryAnimation } from "@/components/delivery-animation";
 import { reverseGeocode } from "@/lib/geocoding.functions";
@@ -37,7 +37,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { AnimatePresence, m } from "motion/react";
-import type { Order } from "@/lib/orders-store";
+import type { Order } from "@/modules/shopper/services/orders-store";
 import {
   createRazorpayOrderFn,
   verifyRazorpayPaymentFn,

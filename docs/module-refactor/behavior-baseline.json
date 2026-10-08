@@ -1,0 +1,578 @@
+[
+  {
+    "original": "src/lib/cart-store.ts",
+    "targets": [
+      "src/modules/shopper/services/cart-store.ts"
+    ],
+    "name": "KEY",
+    "kind": "variable",
+    "hash": "444ec1305fb990ad2b3a1cda8038bd1c162d26f60b013ef8ba97c859b1c2f934"
+  },
+  {
+    "original": "src/lib/cart-store.ts",
+    "targets": [
+      "src/modules/shopper/services/cart-store.ts"
+    ],
+    "name": "sanitizeCart",
+    "kind": "function",
+    "hash": "e02c7156c3341b07a2ec13217b2900b8f4a7186b3af4eb1a8e3da4a9f681ad98"
+  },
+  {
+    "original": "src/lib/cart-store.ts",
+    "targets": [
+      "src/modules/shopper/services/cart-store.ts"
+    ],
+    "name": "load",
+    "kind": "variable",
+    "hash": "46d74168949dc0dace3813d54d77970ffddf19201e3c041a4db2eea6575660ea"
+  },
+  {
+    "original": "src/lib/cart-store.ts",
+    "targets": [
+      "src/modules/shopper/services/cart-store.ts"
+    ],
+    "name": "EMPTY",
+    "kind": "variable",
+    "hash": "3890901f616bb2f9002739529e407db1bae9ca89e3785d4ecaed4a6c9d04f3a2"
+  },
+  {
+    "original": "src/lib/cart-store.ts",
+    "targets": [
+      "src/modules/shopper/services/cart-store.ts"
+    ],
+    "name": "state",
+    "kind": "variable",
+    "hash": "115a5ca46c5237d7da7ebe5e341295cf859b2475e1e071f28de7a2e04e24ba47"
+  },
+  {
+    "original": "src/lib/cart-store.ts",
+    "targets": [
+      "src/modules/shopper/services/cart-store.ts"
+    ],
+    "name": "hydrated",
+    "kind": "variable",
+    "hash": "35f31ce8ab8b5344277036772811808ba4f400bbe0f03681bff976cf7a0be207"
+  },
+  {
+    "original": "src/lib/cart-store.ts",
+    "targets": [
+      "src/modules/shopper/services/cart-store.ts"
+    ],
+    "name": "listeners",
+    "kind": "variable",
+    "hash": "182242373d8babd9389c6018b2cdd921eb83371782706770b5b8656e9e0e9b07"
+  },
+  {
+    "original": "src/lib/cart-store.ts",
+    "targets": [
+      "src/modules/shopper/services/cart-store.ts"
+    ],
+    "name": "persist",
+    "kind": "variable",
+    "hash": "0897d44728c77ef36da6ea20a31e73c08a0ff42b2a038bb90426cbccff72a94a"
+  },
+  {
+    "original": "src/lib/cart-store.ts",
+    "targets": [
+      "src/modules/shopper/services/cart-store.ts"
+    ],
+    "name": "ensureHydrated",
+    "kind": "variable",
+    "hash": "780dca712bb2e5d12c859c8e3d863723e61917a171cd64254852d5c5f0db837c"
+  },
+  {
+    "original": "src/lib/cart-store.ts",
+    "targets": [
+      "src/modules/shopper/services/cart-store.ts"
+    ],
+    "name": "cartStore",
+    "kind": "variable",
+    "hash": "b734a7bff6738a64485c7c695d8dbe98a6bf804280b47c636823f70398fc06f5"
+  },
+  {
+    "original": "src/lib/cart-store.ts",
+    "targets": [
+      "src/modules/shopper/services/cart-store.ts"
+    ],
+    "name": "useCart",
+    "kind": "variable",
+    "hash": "723a8f2aba0189f71c6fc43d6dfa673d8efa6e18d1820c9edfef27b056755acb"
+  },
+  {
+    "original": "src/lib/cart-store.ts",
+    "targets": [
+      "src/modules/shopper/services/cart-store.ts"
+    ],
+    "name": "cartTotals",
+    "kind": "variable",
+    "hash": "f9785def322afcc3c20cc2788004a7963a8e80c63b277a78d58853889d8e26c9"
+  },
+  {
+    "original": "src/lib/orders-store.ts",
+    "targets": [
+      "src/modules/shopper/services/orders-store.ts"
+    ],
+    "name": "isUuid",
+    "kind": "variable",
+    "hash": "6a0e126f4b453f7cb778aabd6df87016a1b89fa90824615ed0b00bcfb1f35555"
+  },
+  {
+    "original": "src/lib/orders-store.ts",
+    "targets": [
+      "src/modules/shopper/services/orders-store.ts"
+    ],
+    "name": "demoOrdersKey",
+    "kind": "variable",
+    "hash": "178b3ee376a8bbeb12b2e92c4a6ca64278f5719ee08f48a831d27c79f4e00c46"
+  },
+  {
+    "original": "src/lib/orders-store.ts",
+    "targets": [
+      "src/modules/shopper/services/orders-store.ts"
+    ],
+    "name": "ORDERS_CACHE_KEY",
+    "kind": "variable",
+    "hash": "8af961eff4e06311867ae113005161063e5439125d3fc12eba309e9eacd4b6d6"
+  },
+  {
+    "original": "src/lib/orders-store.ts",
+    "targets": [
+      "src/modules/shopper/services/orders-store.ts"
+    ],
+    "name": "memoryOrdersCache",
+    "kind": "variable",
+    "hash": "54f4d2f09d80cb114f120e2192678959cdfa49e824456466c9bf80b2f55bb8c5"
+  },
+  {
+    "original": "src/lib/orders-store.ts",
+    "targets": [
+      "src/modules/shopper/services/orders-store.ts"
+    ],
+    "name": "getInitialCachedOrders",
+    "kind": "function",
+    "hash": "cb17fcbbfd5d3d5e12ff67801c0a70e0aa2256622b86957bea28645058edde85"
+  },
+  {
+    "original": "src/lib/orders-store.ts",
+    "targets": [
+      "src/modules/shopper/services/orders-store.ts"
+    ],
+    "name": "updateOrdersCache",
+    "kind": "function",
+    "hash": "3e340cf161d826db8793dfabcb7401e410e3ddee34622fb72c88df5c7860964b"
+  },
+  {
+    "original": "src/lib/orders-store.ts",
+    "targets": [
+      "src/modules/shopper/services/orders-store.ts"
+    ],
+    "name": "addPlacedOrderToCache",
+    "kind": "function",
+    "hash": "c78571f6e887c986173b82cb8bb5aed941d387f81d77b1b6361170ba9f3000d4"
+  },
+  {
+    "original": "src/lib/orders-store.ts",
+    "targets": [
+      "src/modules/shopper/services/orders-store.ts"
+    ],
+    "name": "orderStatusFlow",
+    "kind": "variable",
+    "hash": "162d60276a1986a663ecad149967034c22de5c262f716cfd9265436e0e8b6100"
+  },
+  {
+    "original": "src/lib/orders-store.ts",
+    "targets": [
+      "src/modules/shopper/services/orders-store.ts"
+    ],
+    "name": "orderStatusLabel",
+    "kind": "variable",
+    "hash": "8e49a55f6fcebe5cfabee54b30de29ce8becf37a5a5f0d010c4977450d8a8247"
+  },
+  {
+    "original": "src/lib/orders-store.ts",
+    "targets": [
+      "src/modules/shopper/services/orders-store.ts"
+    ],
+    "name": "fromRow",
+    "kind": "function",
+    "hash": "699f0046bf9d7f65bafcafec3bbc5838d344764af49b29d0d0636c5ddb9fca6c"
+  },
+  {
+    "original": "src/lib/orders-store.ts",
+    "targets": [
+      "src/modules/shopper/services/orders-store.ts"
+    ],
+    "name": "loadOrders",
+    "kind": "function",
+    "hash": "9598bf4fd0610dc9cc58b92d1ed15e9d3304c31c1840d3f876a8f8573b81c558"
+  },
+  {
+    "original": "src/lib/orders-store.ts",
+    "targets": [
+      "src/modules/shopper/services/orders-store.ts"
+    ],
+    "name": "orderErrorMessage",
+    "kind": "variable",
+    "hash": "551c08ad07fd74635a67f4e08e21e172603292600b19511fe880d2daf280ebfc"
+  },
+  {
+    "original": "src/lib/orders-store.ts",
+    "targets": [
+      "src/modules/shopper/services/orders-store.ts"
+    ],
+    "name": "ordersStore",
+    "kind": "variable",
+    "hash": "dafe0df9056e62ef0c8f7b7612de19b05b1c400ee363c6ece4fb325f688acb90"
+  },
+  {
+    "original": "src/lib/orders-store.ts",
+    "targets": [
+      "src/modules/shopper/services/orders-store.ts"
+    ],
+    "name": "advanceDemoOrder",
+    "kind": "function",
+    "hash": "03d09364befded199bf680b7335effb410d0ecb8d74e6ffd95bd312c798358e4"
+  },
+  {
+    "original": "src/lib/orders-store.ts",
+    "targets": [
+      "src/modules/shopper/services/orders-store.ts"
+    ],
+    "name": "loadDemoOrders",
+    "kind": "function",
+    "hash": "dbe3ec35cd36f87b2be99cd24ab782fccd4f2800f7c944df8a5441c5dbe66dec"
+  },
+  {
+    "original": "src/lib/orders-store.ts",
+    "targets": [
+      "src/modules/shopper/services/orders-store.ts"
+    ],
+    "name": "getDemoReceipt",
+    "kind": "function",
+    "hash": "4cf99e54d93243d70fa72241897d49d69dee29ffe24ff9ef1179330f4fbb786b"
+  },
+  {
+    "original": "src/lib/orders-store.ts",
+    "targets": [
+      "src/modules/shopper/services/orders-store.ts"
+    ],
+    "name": "cancelOrder",
+    "kind": "function",
+    "hash": "c0929f3d422006cd25e5deb7aaf238f52ecd9765f30e22bbda2b9bb61dec6fb7"
+  },
+  {
+    "original": "src/lib/orders-store.ts",
+    "targets": [
+      "src/modules/shopper/services/orders-store.ts"
+    ],
+    "name": "useOrders",
+    "kind": "function",
+    "hash": "75ae273c3cde3d8287a84e1b81e141e4842c30529738f185fb08a4906dc84cb4"
+  },
+  {
+    "original": "src/lib/orders-store.ts",
+    "targets": [
+      "src/modules/shopper/services/orders-store.ts"
+    ],
+    "name": "playCustomerOrderChimeSound",
+    "kind": "function",
+    "hash": "b3703d1b357a1180627feb14f2146d4fbb81571b4216953d28407d8ae9ef5e5d"
+  },
+  {
+    "original": "src/lib/orders-store.ts",
+    "targets": [
+      "src/modules/shopper/services/orders-store.ts"
+    ],
+    "name": "useOrdersState",
+    "kind": "function",
+    "hash": "9d8a5b4806a2b550c7d47c80eff0fc102d9cfd2edaf2dfe8035af738c5489dc8"
+  },
+  {
+    "original": "src/lib/demo-payment.ts",
+    "targets": [
+      "src/modules/shopper/services/demo-payment.ts"
+    ],
+    "name": "buildDemoReceipt",
+    "kind": "function",
+    "hash": "4afae8ea09c07cd6821b29d676d9ab0fcd9a8a6994fee4920eff82f0f02b5fc6"
+  },
+  {
+    "original": "src/lib/imported-demo-cart.ts",
+    "targets": [
+      "src/modules/shopper/services/imported-demo-cart.ts"
+    ],
+    "name": "getImportedCatalogItems",
+    "kind": "function",
+    "hash": "94d9a73bc57e0525b534f8cd415854529b43bf0fb9ab17b8451aa060826266e8"
+  },
+  {
+    "original": "src/lib/imported-demo-cart.ts",
+    "targets": [
+      "src/modules/shopper/services/imported-demo-cart.ts"
+    ],
+    "name": "getDemoPrice",
+    "kind": "function",
+    "hash": "e2296c21e6775430b69931353d86da9ceb173e596f55c80687d600e13daaa149"
+  },
+  {
+    "original": "src/lib/imported-demo-cart.ts",
+    "targets": [
+      "src/modules/shopper/services/imported-demo-cart.ts"
+    ],
+    "name": "getImportedDemoTotal",
+    "kind": "function",
+    "hash": "8a3f9e782bde70874be4a833f76e3d1affbb51fcf16fed6cf69b2538e29e37b6"
+  },
+  {
+    "original": "src/lib/imported-storefront.ts",
+    "targets": [
+      "src/modules/shopper/services/imported-storefront.ts"
+    ],
+    "name": "importedCatalogProducts",
+    "kind": "function",
+    "hash": "69db2db98808cd274d71b2bd67180e02b2b7dfefa8ac0b344054d8b150657844"
+  },
+  {
+    "original": "src/lib/imported-storefront.ts",
+    "targets": [
+      "src/modules/shopper/services/imported-storefront.ts"
+    ],
+    "name": "importedStorefront",
+    "kind": "function",
+    "hash": "7c9c76606a6743d9e286df8501666c1b9fd086a793810a833c3b7117fdfa43e4"
+  },
+  {
+    "original": "src/lib/shop-discovery.ts",
+    "targets": [
+      "src/modules/shopper/services/shop-discovery.ts"
+    ],
+    "name": "discoverShops",
+    "kind": "function",
+    "hash": "8f7b90b0eb348e40be803ff796f813b9de3a752acf9ca2e8796aff0bce2d5bfb"
+  },
+  {
+    "original": "src/lib/search-service.ts",
+    "targets": [
+      "src/modules/shopper/services/search-service.ts"
+    ],
+    "name": "DEFAULT_DISH_IMG",
+    "kind": "variable",
+    "hash": "f6c16fdbc29967f666e5a43dc2a3cd95730df52e7fb6b4cbaf1f29bd52f5323d"
+  },
+  {
+    "original": "src/lib/search-service.ts",
+    "targets": [
+      "src/modules/shopper/services/search-service.ts"
+    ],
+    "name": "DEFAULT_SHOP_IMG",
+    "kind": "variable",
+    "hash": "318db91b9465b6f190e6aa132e59e34e52a6911d6ce2aa608d570e405907a797"
+  },
+  {
+    "original": "src/lib/search-service.ts",
+    "targets": [
+      "src/modules/shopper/services/search-service.ts"
+    ],
+    "name": "normalizeForSearch",
+    "kind": "function",
+    "hash": "857d4ed30f7a3ba0725f6068088221d3bebe7a6eda9ae0a9e2f6eea541f75549"
+  },
+  {
+    "original": "src/lib/search-service.ts",
+    "targets": [
+      "src/modules/shopper/services/search-service.ts"
+    ],
+    "name": "stemWord",
+    "kind": "function",
+    "hash": "7e5181fce3462672d66427f4f9d0f6b8fe640200e3c6af2d6f4e7571588b96c0"
+  },
+  {
+    "original": "src/lib/search-service.ts",
+    "targets": [
+      "src/modules/shopper/services/search-service.ts"
+    ],
+    "name": "collapseRepeatedLetters",
+    "kind": "function",
+    "hash": "f21768040eb25d233a8ca5f67f75a77546958a54f3a17ae34dffd4b97b584c12"
+  },
+  {
+    "original": "src/lib/search-service.ts",
+    "targets": [
+      "src/modules/shopper/services/search-service.ts"
+    ],
+    "name": "compactForSearch",
+    "kind": "function",
+    "hash": "83f04d14eb8e4b470d8267fcff9f268ae8896ca755435d7c421c04e9a0888820"
+  },
+  {
+    "original": "src/lib/search-service.ts",
+    "targets": [
+      "src/modules/shopper/services/search-service.ts"
+    ],
+    "name": "tokenizeForSearch",
+    "kind": "function",
+    "hash": "ba86060adbb2d68972e08c0d501448cbf18124e541ce016ed1e78eddcdf3ca12"
+  },
+  {
+    "original": "src/lib/search-service.ts",
+    "targets": [
+      "src/modules/shopper/services/search-service.ts"
+    ],
+    "name": "stemTokens",
+    "kind": "function",
+    "hash": "18af690f5b1bb0623db20f6596e6fdf6500d4225129a05c9e1dac69cb3551d1d"
+  },
+  {
+    "original": "src/lib/search-service.ts",
+    "targets": [
+      "src/modules/shopper/services/search-service.ts"
+    ],
+    "name": "levenshteinDistance",
+    "kind": "function",
+    "hash": "cdce9df746c5d385af5178aab4aaba01f99da0c81dbf54c50e69e804be29bb27"
+  },
+  {
+    "original": "src/lib/search-service.ts",
+    "targets": [
+      "src/modules/shopper/services/search-service.ts"
+    ],
+    "name": "tokenSimilarityScore",
+    "kind": "function",
+    "hash": "b793e04d1fd61a3064efc6218d7e4eda8ae1330575db238a60d0e17c75680376"
+  },
+  {
+    "original": "src/lib/search-service.ts",
+    "targets": [
+      "src/modules/shopper/services/search-service.ts"
+    ],
+    "name": "scoreTextMatch",
+    "kind": "function",
+    "hash": "3a7a94cb18dcef232b21ce43cb91a138124fabf7a57412c15ea0be7ee9657736"
+  },
+  {
+    "original": "src/lib/search-service.ts",
+    "targets": [
+      "src/modules/shopper/services/search-service.ts"
+    ],
+    "name": "normalizeImageUrl",
+    "kind": "function",
+    "hash": "563e0aabe7ef3471a8d0ef3cb9199534610239f0d968f61d2b0781b2d2c6d09d"
+  },
+  {
+    "original": "src/lib/search-service.ts",
+    "targets": [
+      "src/modules/shopper/services/search-service.ts"
+    ],
+    "name": "searchCatalogItems",
+    "kind": "function",
+    "hash": "fd32dd3736d214fb124eb68c14b46c9c9944a566088d3fe8cc6912e83ffd6b8f"
+  },
+  {
+    "original": "src/lib/search-service.ts",
+    "targets": [
+      "src/modules/shopper/services/search-service.ts"
+    ],
+    "name": "getInstantSearchResults",
+    "kind": "function",
+    "hash": "16edc9df43760e20c7090da2de283f0ce8d428184b503531b61e4fc18da600db"
+  },
+  {
+    "original": "src/lib/search-service.ts",
+    "targets": [
+      "src/modules/shopper/services/search-service.ts"
+    ],
+    "name": "executeLocalShoreSearch",
+    "kind": "function",
+    "hash": "3f41569ef42071e723287afc4ee571cf5bd766d6bc90c58c58b690939639ce51"
+  },
+  {
+    "original": "src/lib/notifications-store.ts",
+    "targets": [
+      "src/modules/shopper/services/notifications-store.ts"
+    ],
+    "name": "useNotifications",
+    "kind": "function",
+    "hash": "9be82e17ff5cea72d5cfd63ee9af05e4a3526c40740d8228d4b2f98be50a5b29"
+  },
+  {
+    "original": "src/lib/addresses-store.ts",
+    "targets": [
+      "src/modules/shopper/services/addresses-store.ts"
+    ],
+    "name": "KEY",
+    "kind": "variable",
+    "hash": "21ce79456bfa093f11ad045639b41a3dabd6a9dbb50d82a478864af602782551"
+  },
+  {
+    "original": "src/lib/addresses-store.ts",
+    "targets": [
+      "src/modules/shopper/services/addresses-store.ts"
+    ],
+    "name": "DEFAULTS",
+    "kind": "variable",
+    "hash": "8938845e1193e174e9528482207cc0bf0a48ed0cc9bd925bef6c453afbc47e44"
+  },
+  {
+    "original": "src/lib/addresses-store.ts",
+    "targets": [
+      "src/modules/shopper/services/addresses-store.ts"
+    ],
+    "name": "state",
+    "kind": "variable",
+    "hash": "e48ab44ef628e85c76ce1200eef3c3a9040a5efc91e3cf72444c880d65dca5bc"
+  },
+  {
+    "original": "src/lib/addresses-store.ts",
+    "targets": [
+      "src/modules/shopper/services/addresses-store.ts"
+    ],
+    "name": "hydrated",
+    "kind": "variable",
+    "hash": "35f31ce8ab8b5344277036772811808ba4f400bbe0f03681bff976cf7a0be207"
+  },
+  {
+    "original": "src/lib/addresses-store.ts",
+    "targets": [
+      "src/modules/shopper/services/addresses-store.ts"
+    ],
+    "name": "listeners",
+    "kind": "variable",
+    "hash": "182242373d8babd9389c6018b2cdd921eb83371782706770b5b8656e9e0e9b07"
+  },
+  {
+    "original": "src/lib/addresses-store.ts",
+    "targets": [
+      "src/modules/shopper/services/addresses-store.ts"
+    ],
+    "name": "persist",
+    "kind": "variable",
+    "hash": "9731aee11f189d20530812e49599082ec9d293d70593c67328ab77754e01524c"
+  },
+  {
+    "original": "src/lib/addresses-store.ts",
+    "targets": [
+      "src/modules/shopper/services/addresses-store.ts"
+    ],
+    "name": "ensure",
+    "kind": "variable",
+    "hash": "c9745a7f3cd9d17f49680d7b0ca5ddd72e72ab87c6d79aca01eb3ff0b9cff196"
+  },
+  {
+    "original": "src/lib/addresses-store.ts",
+    "targets": [
+      "src/modules/shopper/services/addresses-store.ts"
+    ],
+    "name": "addressesStore",
+    "kind": "variable",
+    "hash": "4d5a8273f3890ed978a68d55bae2d0a372dac7e4e6e3fbbcfd82c7cd7d6789cb"
+  },
+  {
+    "original": "src/lib/addresses-store.ts",
+    "targets": [
+      "src/modules/shopper/services/addresses-store.ts"
+    ],
+    "name": "useAddresses",
+    "kind": "variable",
+    "hash": "6adce1d15fe570fa4df1f96972bc666cd0cd8185abd8dca7cf715d5b851c49af"
+  }
+]

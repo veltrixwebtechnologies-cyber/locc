@@ -26,7 +26,7 @@ import {
   type MerchandisingProduct,
 } from "@/lib/merchandising";
 import { useAuth } from "@/lib/auth-store";
-import { cartStore, useCart } from "@/lib/cart-store";
+import { cartStore, useCart } from "@/modules/shopper/services/cart-store";
 import { QtyStepper } from "@/components/qty-stepper";
 import { flyProductToCart } from "@/lib/fly-to-cart";
 import { toast } from "sonner";

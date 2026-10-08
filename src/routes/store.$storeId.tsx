@@ -27,7 +27,7 @@ import {
   type Product,
   type Store,
 } from "@/lib/mock-data";
-import { cartStore, useCart, cartTotals } from "@/lib/cart-store";
+import { cartStore, useCart, cartTotals } from "@/modules/shopper/services/cart-store";
 import { QtyStepper } from "@/components/qty-stepper";
 import { ProductThumb } from "@/components/product-thumb";
 import { recordProductEvent, recordRecentProductView } from "@/lib/merchandising";
@@ -63,7 +63,7 @@ import { RelatedProductsSection } from "@/components/related-products-section";
 import { adaptMockProduct } from "@/lib/recommendations/recommendation-engine";
 import { AppShell } from "@/components/app-shell";
 import { fetchImportedShopById } from "@/lib/imported-shops";
-import { importedStorefront } from "@/lib/imported-storefront";
+import { importedStorefront } from "@/modules/shopper/services/imported-storefront";
 
 export const Route = createFileRoute("/store/$storeId")({
   validateSearch: (search: Record<string, unknown>): { sq?: string; category?: string; shopLat?: number; shopLng?: number } => ({

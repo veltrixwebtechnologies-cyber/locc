@@ -16,7 +16,7 @@ import {
   Package,
 } from "lucide-react";
 import { categoryLabel, type Store } from "@/lib/mock-data";
-import { ShopCard } from "@/components/shop-card";
+import { ShopCard } from "@/modules/shopper/components/shop-card";
 import { scrollToShops } from "@/lib/scroll-utils";
 import { useDeliveryLocation } from "@/lib/location-store";
 import { SmartLottieLoader } from "@/components/ui/smart-lottie-loader";

@@ -3,7 +3,7 @@ import { lazy, Suspense, useEffect, useMemo, useState, startTransition } from "r
 import { Search } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { AwningCard } from "@/components/awning-card";
-import { ShopCard } from "@/components/shop-card";
+import { ShopCard } from "@/modules/shopper/components/shop-card";
 import {
   stores,
   deliveryCategories,
@@ -19,7 +19,7 @@ import { PromoCarousel } from "@/components/promo-carousel";
 import { MarketplaceAdStrip } from "@/components/marketplace-ad-strip";
 import type { MerchandisingProduct } from "@/lib/merchandising";
 import { Reveal } from "@/components/motion/presets";
-import { MarketplaceDiscovery } from "@/components/marketplace-discovery";
+import { MarketplaceDiscovery } from "@/modules/shopper/components/marketplace-discovery";
 import { SwiggyShopRow, SwiggyQuickCategories } from "@/components/swiggy-shop-row";
 import { CategoryDiscoveryView } from "@/components/category-discovery-view";
 import {
@@ -40,7 +40,7 @@ import { EcosystemMerchandisingStrips } from "@/components/ecosystem-merchandisi
 import { isTestEntity } from "@/lib/map-service/store-engine";
 import { useDeliveryLocation } from "@/lib/location-store";
 import { getCategoryByIdOrSlug, toStoreCategory, isStoreInCategory, catalogCategoryKey } from "@/lib/shop-categories";
-import { discoverShops } from "@/lib/shop-discovery";
+import { discoverShops } from "@/modules/shopper/services/shop-discovery";
 import { runCatalogRpcWithTimeout, shouldRetryCatalogQuery } from "@/lib/catalog-rpc";
 import { fetchNearbyImportedShops, toImportedShopCard } from "@/lib/imported-shops";
 import {

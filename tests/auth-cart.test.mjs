@@ -8,7 +8,7 @@ test('initial guest auth preserves cart; explicit logout clears; stale reads can
  try {
   const {authStore}=await sourceLoader(process.cwd(),{
    '@/integrations/supabase/client':'export const supabase={auth:{onAuthStateChange:fn=>globalThis.__authAudit.onChange(fn),getSession:()=>globalThis.__authAudit.session()}};',
-   '@/lib/cart-store':'export const cartStore={clear:()=>globalThis.__authAudit.clear()};',
+   '@/modules/shopper/services/cart-store':'export const cartStore={clear:()=>globalThis.__authAudit.clear()};',
   })('src/lib/auth-store.ts');
   authStore.getSnapshot();
   callback('INITIAL_SESSION',null);

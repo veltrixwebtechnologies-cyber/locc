@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import { sourceLoader } from "./load-source.mjs";
 const { getDemoPrice, getImportedDemoTotal } = await sourceLoader(process.cwd())(
-  "src/lib/imported-demo-cart.ts",
+  "src/modules/shopper/services/imported-demo-cart.ts",
 );
 test("category demo prices and cart totals are deterministic", () => {
   assert.equal(getDemoPrice("Jeans", "Fashion & Apparel"), 1299);
@@ -18,7 +18,7 @@ test("category demo prices and cart totals are deterministic", () => {
     assert.throws(() => getImportedDemoTotal(items, { "shop-a:1": qty }));
 });
 test("public shop demo cart has no live cart, order, payment or dispatch integration", () => {
-  const source = fs.readFileSync("src/components/imported-demo-catalog.tsx", "utf8");
+  const source = fs.readFileSync("src/modules/shopper/components/imported-demo-catalog.tsx", "utf8");
   assert.doesNotMatch(source, /from ["'].*(?:orders-store|cart-store|razorpay|supabase)/);
   assert.match(source, /amountCharged: 0/);
   assert.match(source, /ProductThumb/);

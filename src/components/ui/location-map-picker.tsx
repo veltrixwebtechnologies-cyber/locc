@@ -16,7 +16,7 @@ import { loadGoogleMaps } from "@/lib/google-maps-loader";
 import { supabase } from "@/integrations/supabase/client";
 import { isTestEntity } from "@/lib/map-service/store-engine";
 import { isGeneratedDemoShopName } from "@/lib/demo-neighborhood-shops";
-import { discoverShops } from "@/lib/shop-discovery";
+import { discoverShops } from "@/modules/shopper/services/shop-discovery";
 import { DEFAULT_SHOP_DISCOVERY_RADIUS_KM } from "@/lib/location-visibility";
 import { getFallbackShopImage } from "@/lib/image-utils";
 import { localShoreShopMarker } from "@/lib/localshore-shop-marker";

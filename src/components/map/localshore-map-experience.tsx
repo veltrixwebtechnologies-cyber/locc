@@ -38,9 +38,9 @@ import {
 import { catalogCategoryKey, getCategoryByIdOrSlug } from "@/lib/shop-categories";
 import { isValidCoordinate } from "@/lib/geo";
 import { CUSTOMER_VISIBILITY_RADIUS_KM, DEFAULT_SHOP_DISCOVERY_RADIUS_KM, hasConfirmedCoordinates } from "@/lib/location-visibility";
-import { discoverShops } from "@/lib/shop-discovery";
+import { discoverShops } from "@/modules/shopper/services/shop-discovery";
 import { fetchNearbyImportedShops, toImportedMapMarker } from "@/lib/imported-shops";
-import { ShopCard } from "@/components/shop-card";
+import { ShopCard } from "@/modules/shopper/components/shop-card";
 
 interface Props {
   initialQuery?: string;

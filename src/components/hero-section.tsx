@@ -31,8 +31,8 @@ import {
 import { scrollToShops } from "@/lib/scroll-utils";
 import { useDeliveryLocation } from "@/lib/location-store";
 import { LocationModal } from "@/components/ui/location-modal";
-import { type SearchResultItem } from "@/lib/search-service";
-import { useLiveSearchResults } from "@/hooks/use-live-search-results";
+import { type SearchResultItem } from "@/modules/shopper/services/search-service";
+import { useLiveSearchResults } from "@/modules/shopper/hooks/use-live-search-results";
 import { AnimatedSearchPlaceholder } from "@/components/ui/animated-search-placeholder";
 
 interface SwiggyFeatureCard {

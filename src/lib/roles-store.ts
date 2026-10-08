@@ -1,8 +1,10 @@
+import type { LocalShoreRole } from "@/shared/core/roles";
+export type { LocalShoreRole } from "@/shared/core/roles";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/lib/auth-store";
 import { supabase } from "@/integrations/supabase/client";
 
-export type LocalShoreRole = "customer" | "seller" | "delivery_partner" | "admin";
+
 
 export function useLocalShoreRoles() {
   const auth = useAuth();

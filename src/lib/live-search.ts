@@ -1,6 +1,9 @@
-import { discoverShops } from "./shop-discovery";
+import { discoverShops } from "@/modules/shopper/services/shop-discovery";
 import { DEFAULT_SHOP_DISCOVERY_RADIUS_KM, CUSTOMER_VISIBILITY_RADIUS_KM } from "./location-visibility";
-import { searchCatalogItems, type SearchResultItem } from "./search-service";
+import {
+  searchCatalogItems,
+  type SearchResultItem,
+} from "@/modules/shopper/services/search-service";
 import { runCatalogRpcWithTimeout } from "./catalog-rpc";
 import { getImportedShopHref, type ImportedShopRow } from "./imported-shops";
 import { isValidCoordinate } from "./geo";

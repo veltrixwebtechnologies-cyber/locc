@@ -5,10 +5,10 @@ import { sourceLoader } from "./load-source.mjs";
 
 const load = sourceLoader(process.cwd());
 const { importedStorefront, importedCatalogProducts } = await load(
-  "src/lib/imported-storefront.ts",
+  "src/modules/shopper/services/imported-storefront.ts",
 );
-const { cartStore, sanitizeCart } = await load("src/lib/cart-store.ts");
-const { buildDemoReceipt } = await load("src/lib/demo-payment.ts");
+const { cartStore, sanitizeCart } = await load("src/modules/shopper/services/cart-store.ts");
+const { buildDemoReceipt } = await load("src/modules/shopper/services/demo-payment.ts");
 test("public shop identity, coordinates and category survive the shared shopping flow", () => {
   const shop = {
     id: "shop-a",
@@ -83,6 +83,6 @@ test("map shop opens the existing storefront and sample carts cannot enter live 
   assert.match(checkout, /isImportedCart \|\| pay === "demo" \? ordersStore.placeDemo/);
   assert.match(checkout, /isImportedCart \? await createImportedTestOrder/);
   assert.match(checkout, /!isImportedCart && \(pay === "cod" \|\| pay === "demo"\)/);
-  const orders = fs.readFileSync("src/lib/orders-store.ts", "utf8");
-  assert.match(orders, /if \(order.storeId.startsWith\("imported:"\)\) throw new Error/);
+  const orders = fs.readFileSync("src/modules/shopper/services/orders-store.ts", "utf8");
+  assert.match(orders, /if \(order.storeId.startsWith\("imported:"\)\)\s+throw new Error/);
 });

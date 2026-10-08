@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth-store";
-import type { Order } from "@/lib/orders-store";
+import type { Order } from "@/modules/shopper/services/orders-store";
 
 const REASONS = [
   ["CUSTOMER_CANCELLATION", "Cancellation"],

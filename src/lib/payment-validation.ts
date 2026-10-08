@@ -1,4 +1,6 @@
-export interface PaymentItem { product_id: string; qty: number }
+import type { PaymentItem } from "@/shared/core/payments";
+export type { PaymentItem } from "@/shared/core/payments";
+
 export function validatePaymentItems(items: unknown): asserts items is PaymentItem[] {
   if (!Array.isArray(items) || items.length === 0 || items.length > 100) throw new Error("Invalid cart items");
   const ids = new Set<string>();

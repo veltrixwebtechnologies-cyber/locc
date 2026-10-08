@@ -1,10 +1,12 @@
+import type { ImportedShopRow } from "@/shared/core/imported-shops";
+export type { ImportedShopRow } from "@/shared/core/imported-shops";
 import type { StoreCategory } from "@/lib/mock-data";
 import { toStoreCategory } from "@/lib/shop-categories";
 import type { MapMarkerItem } from "@/lib/map-service/types";
-import type { ShopCardData } from "@/components/shop-card";
+import type { ShopCardData } from "@/modules/shopper/components/shop-card";
 import { isValidCoordinate } from "@/lib/geo";
 import { runCatalogRpcWithTimeout } from "@/lib/catalog-rpc";
-import { getImportedCatalogItems } from "@/lib/imported-demo-cart";
+import { getImportedCatalogItems } from "@/modules/shopper/services/imported-demo-cart";
 
 type Rpc = (name: string, args: Record<string, unknown>) => Parameters<typeof runCatalogRpcWithTimeout>[0];
 
@@ -36,24 +38,7 @@ export async function fetchNearbyImportedShops(rpc: Rpc, input: {
   return Array.isArray(response.data) ? (response.data as ImportedShopRow[]).filter((shop) => toImportedShopCard(shop) !== null) : [];
 }
 
-export interface ImportedShopRow {
-  id: string;
-  business_name: string;
-  category: string;
-  formatted_address: string | null;
-  city: string | null;
-  state: string | null;
-  latitude: number;
-  longitude: number;
-  distance_km: number;
-  website: string | null;
-  google_maps_url: string | null;
-  rating: number | string | null;
-  review_count: number | null;
-  cover_image_url: string | null;
-  image_type: string | null;
-  claim_status: string;
-}
+
 
 export function toImportedShopCard(shop: ImportedShopRow): ShopCardData | null {
   if (!shop.id || !shop.business_name || shop.latitude == null || shop.longitude == null || shop.distance_km == null) return null;

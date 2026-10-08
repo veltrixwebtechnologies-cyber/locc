@@ -1,9 +1,9 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { parseCoordinates } from "./coordinates";
-import { getImportedCatalogItems } from "./imported-demo-cart";
+import { getImportedCatalogItems } from "@/modules/shopper/services/imported-demo-cart";
 import { calculateBillBreakdown, evaluateSampleCoupon } from "./coupons";
-import { buildDemoReceipt } from "./demo-payment";
+import { buildDemoReceipt } from "@/modules/shopper/services/demo-payment";
 import { assertCapturedPayment } from "./payment-validation";
 import {
   testCredentials,

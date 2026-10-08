@@ -12,7 +12,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { redisGet, redisSet, redisGetVersion, hashFilters, redisRateLimit } from "@/lib/redis.server";
 import { isTestEntity } from "@/lib/map-service/store-engine";
 import { isValidCoordinate } from "./geo";
-import { discoverShops } from "./shop-discovery";
+import { discoverShops } from "@/modules/shopper/services/shop-discovery";
 import { catalogCategoryKey } from "./shop-categories";
 
 export type SortOrder =

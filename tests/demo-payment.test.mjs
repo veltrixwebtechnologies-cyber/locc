@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import { sourceLoader } from "./load-source.mjs";
-const { buildDemoReceipt } = await sourceLoader(process.cwd())("src/lib/demo-payment.ts");
+const { buildDemoReceipt } = await sourceLoader(process.cwd())("src/modules/shopper/services/demo-payment.ts");
 const product = {
   id: "product-1",
   seller_id: "seller-1",
@@ -61,7 +61,7 @@ test("demo payment bypasses the gateway and persists separately without a live o
   assert.match(checkout, /pay === "cod" \|\| pay === "demo"/);
   assert.match(checkout, /pay === "demo" \? ordersStore.placeDemo : ordersStore.place/);
   const source = fs
-    .readFileSync("src/lib/orders-store.ts", "utf8")
+    .readFileSync("src/modules/shopper/services/orders-store.ts", "utf8")
     .split("async placeDemo")[1]
     .split("async place(")[0];
   assert.doesNotMatch(source, /\.rpc\(|\.insert\(|\.update\(|updateOrdersCache/);

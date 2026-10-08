@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { sourceLoader } from "./load-source.mjs";
 
-const { discoverShops } = await sourceLoader(process.cwd())("src/lib/shop-discovery.ts");
+const { discoverShops } = await sourceLoader(process.cwd())("src/modules/shopper/services/shop-discovery.ts");
 const input = { lat: 11.0183, lng: 76.9725, category: "grocery", query: null, radiusKm: 7 };
 const row = (id, distance, category = "grocery", fallback = false) => ({
   id, shop_name: id, business_type: category, category,

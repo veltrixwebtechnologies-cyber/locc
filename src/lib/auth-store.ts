@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { cartStore } from "@/lib/cart-store";
+import { cartStore } from "@/modules/shopper/services/cart-store";
 
 interface AuthState {
   id: string | null;
