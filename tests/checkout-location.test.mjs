@@ -32,6 +32,9 @@ function checkoutCallback(name, scope) {
 test("current location selection and unpinned saved address never invent a destination", () => {
   const values = {};
   const choose = checkoutCallback("chooseAddr", {
+    locationEdited: { current: false },
+    addr: "previous",
+    activeDeliveryLocation: null,
     stopLiveLocation() {},
     setConfirmedLocation(v) {
       values.confirmed = v;
@@ -59,6 +62,7 @@ test("checkout rejects coarse GPS and late callbacks after manual selection", as
   const values = {},
     pending = [];
   const scope = {
+    locationEdited: { current: false },
     usableGPS,
     acquisitionRevision: { current: 1 },
     geocodeRevision: { current: 0 },

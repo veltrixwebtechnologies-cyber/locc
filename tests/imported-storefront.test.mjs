@@ -9,6 +9,27 @@ const { importedStorefront, importedCatalogProducts } = await load(
 );
 const { cartStore, sanitizeCart } = await load("src/modules/shopper/services/cart-store.ts");
 const { buildDemoReceipt } = await load("src/modules/shopper/services/demo-payment.ts");
+const { adaptMockProduct, getRecommendations } = await load(
+  "src/lib/recommendations/recommendation-engine.ts",
+);
+test("imported furniture basket recommends same-shop products without repeating basket items", () => {
+  const products = importedCatalogProducts("imported:furniture-a", "Furniture A", "Furniture");
+  const table = products.find((product) => product.name === "Dining Table");
+  const suggestions = getRecommendations({
+    sourceProducts: [adaptMockProduct(table)],
+    candidates: products.map(adaptMockProduct),
+    cartProductIds: new Set([table.id]),
+    selectedShopId: table.storeId,
+    maxResults: 6,
+  });
+  assert.equal(suggestions.length, 6);
+  for (const { product } of suggestions) {
+    assert.equal(product.seller_id, table.storeId);
+    assert.notEqual(product.id, table.id);
+    assert.equal(product.category, table.category);
+    assert.ok(product.image_url);
+  }
+});
 test("public shop identity, coordinates and category survive the shared shopping flow", () => {
   const shop = {
     id: "shop-a",

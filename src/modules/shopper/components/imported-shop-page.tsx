@@ -118,10 +118,10 @@ export function ImportedShopPage({
               </div>
             </section>
             <section className="mt-6">
-              <h2 className="font-display text-xl font-bold">Demo product catalog</h2>
+              <h2 className="font-display text-xl font-bold">Product catalog</h2>
               <p className="mt-1 text-sm text-muted-foreground">
                 Try shopping with representative {shop.category.toLowerCase()} images from Unsplash
-                and sample prices. Not this business’s confirmed inventory. Demo checkout only — no
+                and sample prices. Not this business’s confirmed inventory. Test checkout only — no
                 real payment or delivery.
               </p>
               <label className="mt-4 flex items-center gap-3 rounded-2xl border bg-card px-4 py-3">

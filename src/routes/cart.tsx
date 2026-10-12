@@ -27,8 +27,10 @@ import {
 } from "lucide-react";
 import { m, AnimatePresence } from "motion/react";
 import { CartRelatedProducts } from "@/components/related-products-section";
+import { CartNearbyShops } from "@/modules/shopper/components/cart-nearby-shops";
 import { useShopCoordinates } from "@/hooks/use-shop-coordinates";
 import { ProductThumb } from "@/components/product-thumb";
+import { getFallbackProductImage } from "@/lib/image-utils";
 
 const cartCatalog = Object.values(productsByStore).flat();
 
@@ -226,7 +228,9 @@ function CartPage() {
                       {/* Product thumbnail */}
                       <div className="h-14 w-14 sm:h-16 sm:w-16 shrink-0 overflow-hidden rounded-xl bg-muted">
                         <ProductThumb
-                          src={l.imageUrl ?? cartCatalog.find((product) => product.id === l.productId)?.imageUrl}
+                          src={isImportedCart && l.productId.startsWith("sample:")
+                            ? getFallbackProductImage(l.name, l.category)
+                            : l.imageUrl ?? cartCatalog.find((product) => product.id === l.productId)?.imageUrl}
                           alt={l.name}
                           category={(l.category ?? "grocery") as StoreCategory}
                           fit="contain"
@@ -336,6 +340,7 @@ function CartPage() {
 
               {/* ── Cart-aware contextual add-ons ───────────────── */}
               <CartRelatedProducts />
+              <CartNearbyShops />
 
               {/* ── Trust badges strip ──────────────────────── */}
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">

@@ -416,7 +416,7 @@ export function LocalShoreMapExperience({
 
                       {/* Top Pick Badge */}
                       <div className="absolute top-2.5 left-2.5 rounded-full bg-white/95 backdrop-blur-xs px-2.5 py-1 text-[10px] font-bold text-slate-900 shadow-sm border border-slate-200/40">
-                        {item.isImported ? "Public listing · unclaimed" : item.isDemo ? "Demo shop · live catalog" : item.distanceKm <= 2 ? "Top Pick" : "Verified Store"}
+                        {item.isImported ? "Public listing · unclaimed" : item.isDemo ? "Shop preview · sample catalog" : item.distanceKm <= 2 ? "Top Pick" : "Verified Store"}
                       </div>
 
                       {/* Wishlist Button */}
@@ -469,7 +469,7 @@ export function LocalShoreMapExperience({
 
                         <p className="text-[11px] font-semibold text-[#981495] flex items-center gap-1.5 mt-1">
                           <span className="h-1.5 w-1.5 rounded-full bg-[#981495] inline-block animate-pulse" />
-                          {item.isImported ? "Directory information · no LocalShore seller account" : item.isDemo ? "Demo seller · listed products" : "Available for pickup & instant delivery"}
+                          {item.isImported ? "Directory information · no LocalShore seller account" : item.isDemo ? "Sample shop · listed products" : "Available for pickup & instant delivery"}
                         </p>
                       </div>
 
@@ -486,7 +486,7 @@ export function LocalShoreMapExperience({
                           </>}
                         </div>
                         <span className="inline-flex items-center gap-1 rounded-full bg-[var(--sand)] px-3.5 py-1.5 text-[11px] font-bold text-[#981495] group-hover:bg-[#981495] group-hover:text-white transition-all shadow-2xs">
-                          {item.isImported ? "View public listing" : item.isDemo ? "Browse demo shop" : "View Shop"}
+                          {item.isImported ? "View public listing" : item.isDemo ? "View Local Shop" : "View Shop"}
                           <ArrowRight className="h-3.5 w-3.5" />
                         </span>
                       </div>

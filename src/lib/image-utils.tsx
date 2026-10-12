@@ -4,6 +4,46 @@ export function getFallbackProductImage(name?: string | null, category?: string 
   const n = (name || "").toLowerCase();
   const c = (category || "").toLowerCase();
 
+  // Exact catalog items take precedence over broad category placeholders.
+  const catalogPhotos: Record<string, string> = {
+    sofas: "1555041469-a586c61ea9bc",
+    "coffee table": "1533090161767-e6ffed986c88",
+    "dining table": "1617806118233-18e1de247200",
+    "dining chairs": "1598300042247-d088f8ab3a91",
+    beds: "1505693416388-ac5ce068fe85",
+    wardrobes: "1595428774223-ef52624120d2",
+    bookshelves: "1594620302200-9a762244a156",
+    "office chairs": "1592078615290-033ee584e267",
+    "side tables": "1499933374294-4584851497cc",
+    "home decor": "1513519245088-0e12902e5a38",
+    "t-shirts": "1521572163474-6864f9cf17ab",
+    jeans: "1542272604-787c3835535d",
+    shirts: "1596755094514-f87e34085b2c",
+    sarees: "1610030469983-98e550d6193c",
+    chudidars: "1585487000160-6ebcfceb0d03",
+    leggings: "1506629082955-511b1aa562c8",
+    dresses: "1595777457583-95e059d581b8",
+    "kids wear": "1519689680058-324335c77eba",
+    "birthday cake": "1578985545062-69928b1d9587",
+    "chocolate cake": "1606890737304-57a1ca8a5b62",
+    "black forest cake": "1464305795204-6f5bbfc7fb81",
+    "bread loaf": "1509440159596-0249088772ff",
+    bun: "1586444248902-2f64eddc13df",
+    puffs: "1623334044303-241021148842",
+    cookies: "1558961363-fa8fdf82db35",
+    samosa: "1601050690597-df0568f70950",
+  };
+  // No trustworthy photo is configured for these items. Use a clearly labelled
+  // placeholder instead of a broken URL or a misleading photo of another item.
+  if (["kurtis", "innerwear", "gulab jamun", "mysore pak"].includes(n.trim())) {
+    const label = n.trim().replace(/\b\w/g, (char) => char.toUpperCase());
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400"><rect width="400" height="400" rx="24" fill="#faf5ff"/><rect x="90" y="85" width="220" height="165" rx="20" fill="#f3e8ff" stroke="#d8b4fe"/><text x="200" y="185" text-anchor="middle" font-family="sans-serif" font-size="24" fill="#701a75">${label}</text><text x="200" y="300" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#64748b">Product photo unavailable</text></svg>`;
+    return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
+  }
+  if (catalogPhotos[n.trim()]) {
+    return `https://images.unsplash.com/photo-${catalogPhotos[n.trim()]}?auto=format&fit=crop&w=800&q=80`;
+  }
+
   // Prefer a product-specific image over a broad category image whenever the
   // catalog gives us a recognizable product name.
   if (n.includes("water bottle") || n.includes("bottle")) {
@@ -55,12 +95,7 @@ export function getFallbackProductImage(name?: string | null, category?: string 
     return "https://images.unsplash.com/photo-1596461404969-9ae70f2830c1?auto=format&fit=crop&w=800&q=80";
   }
 
-  if (
-    c.includes("flower") ||
-    c.includes("gift") ||
-    n.includes("flower") ||
-    n.includes("bouquet")
-  ) {
+  if (c.includes("flower") || c.includes("gift") || n.includes("flower") || n.includes("bouquet")) {
     return "https://images.unsplash.com/photo-1490750967868-88aa4486c946?auto=format&fit=crop&w=800&q=80";
   }
 
@@ -238,10 +273,7 @@ export function getFallbackProductImage(name?: string | null, category?: string 
     return "https://images.unsplash.com/photo-1610832958506-aa56368176cf?auto=format&fit=crop&w=800&q=80";
   }
 
-  if (
-    c.includes("grocery") ||
-    c.includes("kirana")
-  ) {
+  if (c.includes("grocery") || c.includes("kirana")) {
     return "https://images.unsplash.com/photo-1586201375761-83865001e31c?auto=format&fit=crop&w=800&q=80";
   }
 
@@ -402,20 +434,28 @@ const REPRESENTATIVE_ITEM_IMAGES: Record<string, string[]> = {
 };
 
 /** Generic category examples for directory-only shops; never seller stock photos. */
-export function getRepresentativeItemImages(category?: string | null, seed?: string | null): string[] {
+export function getRepresentativeItemImages(
+  category?: string | null,
+  seed?: string | null,
+): string[] {
   const normalized = String(category ?? "").toLowerCase();
   const key = normalized.includes("furniture") ? "furniture" : "fashion";
   const images = REPRESENTATIVE_ITEM_IMAGES[key];
   const seedText = String(seed ?? "localshore-shop");
-  const offset = [...seedText].reduce((total, char) => total + char.charCodeAt(0), 0) % images.length;
+  const offset =
+    [...seedText].reduce((total, char) => total + char.charCodeAt(0), 0) % images.length;
   return Array.from({ length: 3 }, (_, index) => images[(offset + index) % images.length]);
 }
 
 /** Deterministic, category-appropriate storefront fallback for shop cards. */
 export function getFallbackShopImage(category?: string | null, seed?: string | null): string {
-  const normalized = String(category ?? "").toLowerCase().replace(/[^a-z0-9]+/g, "_");
+  const normalized = String(category ?? "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "_");
   const key = Object.keys(SHOP_IMAGE_VARIANTS).find((candidate) => normalized.includes(candidate));
-  const variants = (key && SHOP_IMAGE_VARIANTS[key]) || [getFallbackProductImage("LocalShore shop", category)];
+  const variants = (key && SHOP_IMAGE_VARIANTS[key]) || [
+    getFallbackProductImage("LocalShore shop", category),
+  ];
   const seedText = String(seed ?? "localshore-shop");
   const hash = [...seedText].reduce((total, char) => total + char.charCodeAt(0), 0);
   return variants[hash % variants.length];
@@ -484,10 +524,7 @@ function shouldUseCategoryFallback(
   ) {
     return true;
   }
-  if (
-    source.includes("photo-1607623814075-e51df1bdc82f") &&
-    /(flower|gift|bouquet)/.test(text)
-  ) {
+  if (source.includes("photo-1607623814075-e51df1bdc82f") && /(flower|gift|bouquet)/.test(text)) {
     return true;
   }
   return false;

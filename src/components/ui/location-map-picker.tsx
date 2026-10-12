@@ -773,7 +773,7 @@ export function LocationMapPicker({
             <div className="flex items-center justify-between border-b border-[#EEE7F3] px-3.5 py-3">
               <div>
                 <p className="text-sm font-black text-[#21162B]">Nearby shops</p>
-                <p className="text-[10px] font-semibold text-[#7D7485]">{shopsLoading ? "Finding nearby shops…" : `${localShops.length} shops · ${displayShops.filter((shop) => shop.isImported).length} public listings · ${displayShops.filter((shop) => shop.isDemo).length} demo catalogs`}</p>
+                <p className="text-[10px] font-semibold text-[#7D7485]">{shopsLoading ? "Finding nearby shops…" : `${localShops.length} shops · ${displayShops.filter((shop) => shop.isImported).length} public listings · ${displayShops.filter((shop) => shop.isDemo).length} sample catalogs`}</p>
               </div>
               <Store className="h-4 w-4 text-[#981495]" />
             </div>
@@ -811,7 +811,7 @@ export function LocationMapPicker({
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-[11px] font-black text-[#21162B]">{shop.shopName}</span>
                     <span className="block truncate text-[10px] font-semibold text-[#7D7485]">{shop.category}</span>
-                    {shop.isDemo && <span className="block text-[9px] font-bold text-amber-700">Demo catalog · approximate area</span>}
+                    {shop.isDemo && <span className="block text-[9px] font-bold text-amber-700">Sample catalog · approximate area</span>}
                     {shop.isImported && <span className="block text-[9px] font-bold text-sky-700">Public shop · prototype catalog</span>}
                     <span className="mt-0.5 flex items-center gap-1.5 text-[10px] font-bold text-[#981495]">
                       {shop.isOpen !== undefined && <span className={shop.isOpen ? "text-emerald-700" : "text-slate-500"}>{shop.isOpen ? "Open now" : "Closed"} ·</span>}
@@ -889,7 +889,7 @@ export function LocationMapPicker({
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-black text-[#21162B]">{selectedShop.shopName}</p>
                 <p className="truncate text-[11px] font-semibold text-[#7D7485]">
-                {selectedShop.category} · {selectedShop.distanceKm.toFixed(1)} km away{selectedShop.isDemo ? " · demo catalog" : selectedShop.isImported ? " · public listing" : ""}
+                {selectedShop.category} · {selectedShop.distanceKm.toFixed(1)} km away{selectedShop.isDemo ? " · sample catalog" : selectedShop.isImported ? " · public listing" : ""}
                 </p>
                 <p className="truncate text-[10px] text-[#7D7485]">{selectedShop.address || "LocalShore shop"}</p>
                 {selectedShop.isImported && <p className="truncate text-[10px] font-semibold text-sky-700">{selectedShop.rating ? `★ ${selectedShop.rating.toFixed(1)}${selectedShop.reviewCount ? ` (${selectedShop.reviewCount} reviews)` : ""} · ` : ""}Prototype catalog · test checkout only</p>}

@@ -87,14 +87,14 @@ export function ImportedDemoCatalog({
           </article>
         ))}
       </div>
-      {!visible.length && <p className="mt-4">No demo products match your search.</p>}
+      {!visible.length && <p className="mt-4">No sample products match your search.</p>}
       {count > 0 && (
         <section
           id="imported-shop-cart"
           className="mt-6 scroll-mt-24 rounded-2xl border bg-card p-5"
-          aria-label="Demo cart"
+          aria-label="Sample cart"
         >
-          <h3 className="font-bold">Demo cart · {shopName}</h3>
+          <h3 className="font-bold">Sample cart · {shopName}</h3>
           <p className="my-2">
             {count} items · sample total ₹{total.toLocaleString("en-IN")}
           </p>
@@ -106,7 +106,7 @@ export function ImportedDemoCatalog({
             onClick={() => setCheckout(true)}
             className="rounded-xl bg-primary px-5 py-3 text-primary-foreground"
           >
-            Checkout demo cart
+            Checkout sample cart
           </button>
         </section>
       )}
@@ -138,9 +138,9 @@ export function ImportedDemoCatalog({
       {checkout && count > 0 && (
         <section
           className="mt-5 rounded-2xl border border-amber-300 bg-card p-5"
-          aria-label="Demo checkout"
+          aria-label="Test checkout"
         >
-          <h3 className="text-lg font-bold">Demo checkout</h3>
+          <h3 className="text-lg font-bold">Test checkout</h3>
           <ul className="my-3 space-y-2">
             {items
               .filter((item) => quantities[item.id])
@@ -153,7 +153,7 @@ export function ImportedDemoCatalog({
           </ul>
           <p>Simulated total: ₹{total.toLocaleString("en-IN")} · Amount charged: ₹0</p>
           <p className="my-3 text-sm text-muted-foreground">
-            These are representative demo products, not inventory confirmed by this business. No
+            These are representative sample products, not inventory confirmed by this business. No
             order is sent to the shop.
           </p>
           <button
@@ -191,7 +191,7 @@ export function ImportedDemoCatalog({
       )}
       {receipt && (
         <section role="status" className="mt-6 rounded-2xl border border-emerald-300 bg-card p-5">
-          <h3 className="text-lg font-bold">Demo payment completed</h3>
+          <h3 className="text-lg font-bold">Test payment completed</h3>
           <p>
             {receipt.code} · {shopName}
           </p>
