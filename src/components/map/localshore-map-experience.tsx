@@ -232,7 +232,7 @@ export function LocalShoreMapExperience({
 
   const handleUseGPS = async () => {
     try {
-      const freshLoc = await detectCurrentGPSLocation({ silent: false });
+      const freshLoc = await detectCurrentGPSLocation({ silent: false, allowApproximate: true });
       setUserLocation({
         lat: freshLoc.lat,
         lng: freshLoc.lng,
