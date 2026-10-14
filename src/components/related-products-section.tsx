@@ -2,13 +2,15 @@ import { Link } from "@tanstack/react-router";
 import { Star } from "lucide-react";
 import { useMemo } from "react";
 import type { MerchandisingProduct } from "@/lib/merchandising";
-import { cartStore, useCart } from "@/lib/cart-store";
+import { cartStore, useCart } from "@/modules/shopper/services/cart-store";
 import { productsByStore, stores, type StoreCategory } from "@/lib/mock-data";
 import { useDeliveryLocation } from "@/lib/location-store";
 import { haversineDistanceKm } from "@/lib/geo";
 import { ProductThumb } from "@/components/product-thumb";
 import { QtyStepper } from "@/components/qty-stepper";
 import { WishlistButton } from "@/components/wishlist-button";
+import { importedCatalogProducts } from "@/modules/shopper/services/imported-storefront";
+import { useShopCoordinates } from "@/hooks/use-shop-coordinates";
 import { toast } from "sonner";
 import { adaptMockProduct, getRecommendations } from "@/lib/recommendations/recommendation-engine";
 import type {
@@ -51,12 +53,22 @@ function RelatedProductCard({
   cart: ReturnType<typeof useCart>;
 }) {
   const product = recommendation.product;
+  const isImported = product.seller_id.startsWith("imported:");
+  const shopCoordinates = useShopCoordinates(isImported ? product.seller_id : null);
+  const productLink = isImported
+    ? {
+        to: "/product/$productId" as const,
+        params: { productId: product.id },
+        search: { shopLat: shopCoordinates.data?.lat, shopLng: shopCoordinates.data?.lng },
+        disabled: !shopCoordinates.data,
+      }
+    : { to: "/product/$productId" as const, params: { productId: product.id } };
   const price = Number(product.discount_price ?? product.selling_price);
   const quantity = cart.lines.find((line) => line.productId === product.id)?.qty ?? 0;
   return (
     <article className="group flex w-[190px] shrink-0 flex-col overflow-hidden rounded-xl border border-border/70 bg-background p-2.5 shadow-xs transition hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md sm:w-[210px]">
       <div className="relative">
-        <Link to="/product/$productId" params={{ productId: product.id }} className="block">
+        <Link {...productLink} className="block">
           <ProductThumb
             src={product.image_url ?? undefined}
             alt={product.name}
@@ -82,8 +94,7 @@ function RelatedProductCard({
         </div>
       </div>
       <Link
-        to="/product/$productId"
-        params={{ productId: product.id }}
+        {...productLink}
         className="mt-2 line-clamp-2 min-h-8 text-xs font-bold leading-tight text-foreground hover:text-primary"
       >
         {product.name}
@@ -112,7 +123,7 @@ function RelatedProductCard({
             </p>
           )}
           <p className="text-[10px] font-semibold text-emerald-700">
-            {product.stock > 0 ? "In stock" : "Unavailable"}
+            {isImported ? "Sample product" : product.stock > 0 ? "In stock" : "Unavailable"}
           </p>
         </div>
         <QtyStepper
@@ -125,6 +136,8 @@ function RelatedProductCard({
               unit: product.category ?? "item",
               price,
               stock: product.stock,
+              imageUrl: product.image_url ?? undefined,
+              category: product.category ?? undefined,
             });
             toast.success(`Added ${product.name} to cart`);
           }}
@@ -132,7 +145,9 @@ function RelatedProductCard({
           addClassName="rounded-lg bg-primary px-2.5 py-1.5 text-[11px] font-bold text-primary-foreground hover:bg-primary/90"
         />
       </div>
-      <p className="mt-1 text-[9px] text-muted-foreground">{deliveryLabel(product)}</p>
+      <p className="mt-1 text-[9px] text-muted-foreground">
+        {isImported ? "Representative image · test checkout" : deliveryLabel(product)}
+      </p>
     </article>
   );
 }
@@ -266,10 +281,28 @@ export function CartRelatedProducts() {
         name: line.name,
         unit: line.unit,
         price: line.price,
-        category: line.unit,
+        category: line.category ?? line.unit,
         stock: line.availableStock ?? 20,
       }),
     );
+    if (cart.storeId?.startsWith("imported:")) {
+      const category = cart.lines.find((line) => line.category)?.category;
+      if (!category) return [];
+      return getRecommendations({
+        sourceProducts,
+        candidates: importedCatalogProducts(
+          cart.storeId,
+          cart.storeName ?? "Local shop",
+          category,
+        ).map((product) => ({
+          ...adaptMockProduct(product),
+          shop_name: cart.storeName ?? "Local shop",
+        })),
+        cartProductIds: new Set(cart.lines.map((line) => line.productId)),
+        selectedShopId: cart.storeId,
+        maxResults: 6,
+      });
+    }
     const pool = Object.values(productsByStore)
       .flat()
       .map(adaptMockProduct)
@@ -290,7 +323,7 @@ export function CartRelatedProducts() {
       selectedShopId: cart.storeId ?? undefined,
       maxResults: 6,
     });
-  }, [cart.lines, cart.storeId, deliveryLocation]);
+  }, [cart.lines, cart.storeId, cart.storeName, deliveryLocation]);
   if (!suggestions.length) return null;
   return (
     <div className="min-w-0 max-w-full rounded-2xl border border-border bg-card p-4 shadow-sm">
@@ -300,7 +333,12 @@ export function CartRelatedProducts() {
       <p className="mt-0.5 text-[11px] text-muted-foreground">
         Based on everything in your basket. Products already in your cart are hidden.
       </p>
-      <div tabIndex={0} role="region" aria-label="Suggested products, scroll horizontally for more" className="mt-3 flex w-full min-w-0 max-w-full snap-x snap-proximity gap-3 overflow-x-auto overscroll-x-contain pb-3 [&>article]:snap-start">
+      <div
+        tabIndex={0}
+        role="region"
+        aria-label="Suggested products, scroll horizontally for more"
+        className="mt-3 flex w-full min-w-0 max-w-full snap-x snap-proximity gap-3 overflow-x-auto overscroll-x-contain pb-3 [&>article]:snap-start"
+      >
         {suggestions.map((recommendation) => (
           <RelatedProductCard
             key={recommendation.product.id}

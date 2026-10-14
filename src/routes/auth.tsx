@@ -112,6 +112,8 @@ function AuthPage() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [forgotPassword, setForgotPassword] = useState(false);
+  const [resetSent, setResetSent] = useState(false);
+  const [resetCooldown, setResetCooldown] = useState(0);
   const [passwordRecovery, setPasswordRecovery] = useState(flow === "password-recovery");
   const [newPassword, setNewPassword] = useState("");
   const [confirmNewPassword, setConfirmNewPassword] = useState("");
@@ -507,6 +509,7 @@ function AuthPage() {
 
   const sendPasswordReset = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (resetCooldown > 0) return;
     if (!email.trim()) {
       setError("Please enter your email address.");
       return;
@@ -522,8 +525,9 @@ function AuthPage() {
         redirectTo: `${window.location.origin}/auth?flow=password-recovery`,
       });
       if (authError) throw authError;
-      toast.success("Password reset instructions sent to your email!");
-      setForgotPassword(false);
+      setResetSent(true);
+      setResetCooldown(30);
+      toast.success("Password reset link sent. Check your inbox or spam folder.");
     } catch (err) {
       console.error("Password reset error", err);
       setError(authFriendlyError(err, "Could not send password reset email."));
@@ -531,6 +535,12 @@ function AuthPage() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (resetCooldown <= 0) return;
+    const timer = window.setInterval(() => setResetCooldown((value) => Math.max(0, value - 1)), 1000);
+    return () => window.clearInterval(timer);
+  }, [resetCooldown]);
 
   const updateRecoveredPassword = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -1214,6 +1224,21 @@ function AuthPage() {
             </form>
           ) : forgotPassword ? (
             <form onSubmit={sendPasswordReset} className="mt-5 space-y-4">
+              {resetSent ? (
+                <div className="space-y-4 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800">
+                  <p className="font-bold">Check your inbox or spam folder.</p>
+                  <p>If an account exists for this email, we sent a secure password reset link.</p>
+                  <button
+                    type="submit"
+                    disabled={loading || resetCooldown > 0}
+                    className="font-bold text-[#981495] underline disabled:opacity-50"
+                  >
+                    {resetCooldown > 0 ? `Resend email in ${resetCooldown}s` : "Resend email"}
+                  </button>
+                </div>
+              ) : null}
+              {!resetSent && (
+                <>
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">Email Address</label>
                 <div className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-3.5 py-3 transition-all focus-within:border-[#981495] focus-within:bg-white focus-within:ring-4 focus-within:ring-[#981495]/10">
@@ -1228,6 +1253,8 @@ function AuthPage() {
                   />
                 </div>
               </div>
+                </>
+              )}
 
               {error && (
                 <div className="rounded-xl bg-red-50 border border-red-200 p-3 text-xs font-bold text-red-600">
@@ -1235,7 +1262,7 @@ function AuthPage() {
                 </div>
               )}
 
-              <button
+              {!resetSent && <button
                 type="submit"
                 disabled={loading}
                 className="group w-full inline-flex items-center justify-center gap-2.5 rounded-2xl bg-gradient-to-r from-[#981495] to-[#700b6e] hover:from-[#821280] hover:to-[#5c095a] text-white font-extrabold py-3.5 px-5 text-sm sm:text-base shadow-md shadow-[#981495]/25 hover:shadow-lg hover:shadow-[#981495]/35 transition-all hover:scale-[1.005] active:scale-[0.995] disabled:opacity-60 cursor-pointer"
@@ -1251,13 +1278,15 @@ function AuthPage() {
                     <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
                   </>
                 )}
-              </button>
+              </button>}
 
               <div className="text-center pt-1">
                 <button
                   type="button"
                   onClick={() => {
                     setForgotPassword(false);
+                    setResetSent(false);
+                    setResetCooldown(0);
                     setError(null);
                   }}
                   className="text-xs font-bold text-[#981495] hover:underline"

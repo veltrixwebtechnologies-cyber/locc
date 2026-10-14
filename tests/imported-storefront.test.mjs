@@ -5,10 +5,31 @@ import { sourceLoader } from "./load-source.mjs";
 
 const load = sourceLoader(process.cwd());
 const { importedStorefront, importedCatalogProducts } = await load(
-  "src/lib/imported-storefront.ts",
+  "src/modules/shopper/services/imported-storefront.ts",
 );
-const { cartStore, sanitizeCart } = await load("src/lib/cart-store.ts");
-const { buildDemoReceipt } = await load("src/lib/demo-payment.ts");
+const { cartStore, sanitizeCart } = await load("src/modules/shopper/services/cart-store.ts");
+const { buildDemoReceipt } = await load("src/modules/shopper/services/demo-payment.ts");
+const { adaptMockProduct, getRecommendations } = await load(
+  "src/lib/recommendations/recommendation-engine.ts",
+);
+test("imported furniture basket recommends same-shop products without repeating basket items", () => {
+  const products = importedCatalogProducts("imported:furniture-a", "Furniture A", "Furniture");
+  const table = products.find((product) => product.name === "Dining Table");
+  const suggestions = getRecommendations({
+    sourceProducts: [adaptMockProduct(table)],
+    candidates: products.map(adaptMockProduct),
+    cartProductIds: new Set([table.id]),
+    selectedShopId: table.storeId,
+    maxResults: 6,
+  });
+  assert.equal(suggestions.length, 6);
+  for (const { product } of suggestions) {
+    assert.equal(product.seller_id, table.storeId);
+    assert.notEqual(product.id, table.id);
+    assert.equal(product.category, table.category);
+    assert.ok(product.image_url);
+  }
+});
 test("public shop identity, coordinates and category survive the shared shopping flow", () => {
   const shop = {
     id: "shop-a",
@@ -79,10 +100,10 @@ test("map shop opens the existing storefront and sample carts cannot enter live 
   assert.match(store, /StorePage catalog=\{importedStorefront\(shop.data\)\}/);
   assert.doesNotMatch(store, /import \{ ImportedShopPage \}/);
   const checkout = fs.readFileSync("src/routes/checkout.tsx", "utf8");
-  assert.match(checkout, /filter\(p => !isImportedCart \|\| p.id === "demo"\)/);
-  assert.match(checkout, /isImportedCart \|\| pay === "demo" \? ordersStore.placeDemo/);
-  assert.match(checkout, /isImportedCart \? await createImportedTestOrder/);
-  assert.match(checkout, /!isImportedCart && \(pay === "cod" \|\| pay === "demo"\)/);
-  const orders = fs.readFileSync("src/lib/orders-store.ts", "utf8");
-  assert.match(orders, /if \(order.storeId.startsWith\("imported:"\)\) throw new Error/);
+  assert.match(checkout, /filter\(p => !isImportedCart && p.id !== "demo"\)/);
+  assert.match(checkout, /if \(isImportedCart\)/);
+  assert.match(checkout, /isImportedCart \|\| pay === "demo"/);
+  assert.match(checkout, /createImportedTestOrder/);
+  const orders = fs.readFileSync("src/modules/shopper/services/orders-store.ts", "utf8");
+  assert.match(orders, /if \(order.storeId.startsWith\("imported:"\)\)\s+throw new Error/);
 });

@@ -7,7 +7,7 @@ import { SUPPORT_CATEGORIES, SUPPORT_FAQS, type SupportCategory } from "@/lib/pl
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useAuth } from "@/lib/auth-store";
-import { useOrdersState, type Order } from "@/lib/orders-store";
+import { useOrdersState, type Order } from "@/modules/shopper/services/orders-store";
 
 export const Route = createFileRoute("/customer-care")({ component: CustomerCarePage });
 const noOrderCategories = new Set(["account", "gift_card", "rewards", "other"]);

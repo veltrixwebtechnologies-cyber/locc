@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { useLiveSearchResults } from "./use-live-search-results";
+import { useLiveSearchResults } from "@/modules/shopper/hooks/use-live-search-results";
 import {
   rankAndGroupShopsBySearchQuery,
   type ShopRecommendation,

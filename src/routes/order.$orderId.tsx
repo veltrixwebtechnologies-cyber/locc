@@ -8,7 +8,7 @@ import {
   cancelOrder,
   type OrderStatus,
   type Order,
-} from "@/lib/orders-store";
+} from "@/modules/shopper/services/orders-store";
 import { getStore } from "@/lib/mock-data";
 import { DeliveryMap } from "@/components/delivery-map";
 import { Clock, MessageCircle, Phone, ShieldCheck, Star, Zap, XCircle } from "lucide-react";

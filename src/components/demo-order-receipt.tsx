@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { AppShell } from "@/components/app-shell";
-import { getDemoReceipt } from "@/lib/orders-store";
+import { getDemoReceipt } from "@/modules/shopper/services/orders-store";
 
 export function DemoOrderReceipt({ orderId }: { orderId: string }) {
   const {

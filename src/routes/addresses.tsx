@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { AppShell } from "@/components/app-shell";
-import { addressesStore, useAddresses } from "@/lib/addresses-store";
+import { addressesStore, useAddresses } from "@/modules/shopper/services/addresses-store";
 import { useAuth } from "@/lib/auth-store";
 import { ChevronLeft, MapPin, Trash2, Plus } from "lucide-react";
 

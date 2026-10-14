@@ -1,4 +1,4 @@
-import type { OrderStatus } from "./orders-store";
+import type { OrderStatus } from "@/modules/shopper/services/orders-store";
 
 /** Resolve persisted legacy/current order statuses to the customer timeline. */
 export function getOrderProgressIndex(status: OrderStatus): number {

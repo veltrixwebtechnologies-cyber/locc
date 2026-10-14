@@ -1,8 +1,8 @@
 import React, { useMemo } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { SearchResultItem } from "@/lib/search-service";
+import { SearchResultItem } from "@/modules/shopper/services/search-service";
 import { Store, Utensils, ShoppingBag, ChevronRight, X, Search } from "lucide-react";
-import { useLiveSearchResults } from "@/hooks/use-live-search-results";
+import { useLiveSearchResults } from "@/modules/shopper/hooks/use-live-search-results";
 
 interface SwiggyInstantSearchDropdownProps {
   query: string;

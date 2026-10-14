@@ -21,7 +21,7 @@ import {
 import { WishlistButton } from "@/components/wishlist-button";
 import { m } from "motion/react";
 import { Reveal, SkeletonCard, cardMotion, spring } from "@/components/motion/presets";
-import { cartStore, useCart } from "@/lib/cart-store";
+import { cartStore, useCart } from "@/modules/shopper/services/cart-store";
 import { QtyStepper } from "@/components/qty-stepper";
 import { flyProductToCart } from "@/lib/fly-to-cart";
 import { SafeProductImage } from "@/lib/image-utils";

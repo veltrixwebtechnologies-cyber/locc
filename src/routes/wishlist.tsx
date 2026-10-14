@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/app-shell";
 import { useAuth } from "@/lib/auth-store";
-import { cartStore } from "@/lib/cart-store";
+import { cartStore } from "@/modules/shopper/services/cart-store";
 import {
   resolveProductImageUrl,
   useToggleWishlist,

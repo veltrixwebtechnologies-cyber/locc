@@ -1,8 +1,9 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { AppShell } from "@/components/app-shell";
-import { useOrdersState, orderStatusLabel } from "@/lib/orders-store";
+import { useOrdersState, orderStatusLabel } from "@/modules/shopper/services/orders-store";
 import { useAuth } from "@/lib/auth-store";
-import { Clock, Star } from "lucide-react";
+import { useMemo, useState } from "react";
+import { Clock, Search, Star } from "lucide-react";
 import { LottieLoading } from "@/components/ui/lottie-loading";
 
 export const Route = createFileRoute("/orders")({
@@ -39,8 +40,34 @@ function OrdersSkeleton() {
 function OrdersPage() {
   const auth = useAuth();
   const { orders, isLoading } = useOrdersState();
+  const [filter, setFilter] = useState<
+    "all" | "processing" | "shipped" | "delivered" | "cancelled"
+  >("all");
+  const [query, setQuery] = useState("");
 
   const signedIn = Boolean(auth.id || auth.phone || auth.email);
+  const filteredOrders = useMemo(
+    () =>
+      orders.filter((order) => {
+        const status = order.status;
+        const matchesFilter =
+          filter === "all" ||
+          (filter === "processing" &&
+            ["new", "confirmed", "preparing", "ready_for_pickup"].includes(status)) ||
+          (filter === "shipped" &&
+            ["out_for_delivery", "assigned", "picked_up"].includes(status)) ||
+          (filter === "delivered" && status === "delivered") ||
+          (filter === "cancelled" && ["cancelled", "refunded"].includes(status));
+        const needle = query.trim().toLowerCase();
+        return (
+          matchesFilter &&
+          (!needle ||
+            order.code.toLowerCase().includes(needle) ||
+            order.storeName.toLowerCase().includes(needle))
+        );
+      }),
+    [orders, filter, query],
+  );
 
   if (!signedIn) {
     return (
@@ -69,7 +96,46 @@ function OrdersPage() {
         <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
           Your orders
         </p>
-        <h1 className="mt-1 font-display text-3xl">History</h1>
+        <h1 className="mt-1 font-display text-3xl">My Orders</h1>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Track every local purchase in one place.
+        </p>
+        <div className="mt-4 flex items-center gap-2 rounded-xl border hairline bg-card px-3 py-2">
+          <Search className="h-4 w-4 text-muted-foreground" />
+          <input
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="Search order number or shop"
+            className="min-w-0 flex-1 bg-transparent text-sm outline-none"
+          />
+        </div>
+        <div
+          className="mt-3 flex gap-2 overflow-x-auto pb-1"
+          role="tablist"
+          aria-label="Order status filters"
+        >
+          {[
+            ["all", "All"],
+            ["processing", "Processing"],
+            ["shipped", "Shipped"],
+            ["delivered", "Delivered"],
+            ["cancelled", "Cancelled"],
+          ].map(([value, label]) => (
+            <button
+              key={value}
+              type="button"
+              role="tab"
+              aria-selected={filter === value}
+              onClick={() => setFilter(value as typeof filter)}
+              className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-bold ${filter === value ? "bg-primary text-primary-foreground" : "bg-card text-muted-foreground ring-1 ring-black/[0.06]"}`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+        <p className="mt-3 text-xs font-semibold text-muted-foreground">
+          {filteredOrders.length} order{filteredOrders.length === 1 ? "" : "s"}
+        </p>
       </div>
 
       {isLoading && orders.length === 0 ? (
@@ -88,9 +154,13 @@ function OrdersPage() {
             Find a shop
           </Link>
         </div>
+      ) : filteredOrders.length === 0 ? (
+        <div className="mx-5 mt-8 rounded-xl border hairline bg-card p-6 text-center text-sm text-muted-foreground">
+          No orders match this search or status.
+        </div>
       ) : (
         <ul className="mx-5 mt-4 space-y-3 pb-6">
-          {orders.map((o) => {
+          {filteredOrders.map((o) => {
             const isDelivered = o.status === "delivered";
             const isCancelled = o.status === "cancelled";
             return (

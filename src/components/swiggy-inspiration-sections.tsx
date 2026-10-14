@@ -2,7 +2,7 @@ import { useMemo, useEffect, useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { Star, ChevronRight, ChevronLeft, CheckCircle2, Plus } from "lucide-react";
 import type { MerchandisingProduct } from "@/lib/merchandising";
-import { cartStore } from "@/lib/cart-store";
+import { cartStore } from "@/modules/shopper/services/cart-store";
 import { flyProductToCart } from "@/lib/fly-to-cart";
 import { resolveImageUrl } from "@/lib/image-utils";
 

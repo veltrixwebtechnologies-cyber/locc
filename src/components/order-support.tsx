@@ -12,7 +12,7 @@ import {
 import { Link } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import type { Order } from "@/lib/orders-store";
+import type { Order } from "@/modules/shopper/services/orders-store";
 
 type IssueType =
   | "wrong_item"

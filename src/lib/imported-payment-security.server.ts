@@ -1,5 +1,5 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
-import type { DemoOrderInput } from "./demo-payment";
+import type { DemoOrderInput } from "@/modules/shopper/services/demo-payment";
 
 export interface TestCheckoutToken {
   userId: string;

@@ -438,14 +438,14 @@ export function LiquidGlassCategorySelector({
 
   return (
     <div
-      className={`${isPillLayout ? "sticky top-[53px] md:top-[74px] my-1.5 z-40" : "relative z-30 my-7"} px-3 transform-gpu sm:px-6 lg:px-8`}
+      className={`${isPillLayout ? "sticky top-[53px] md:top-[74px] my-2 z-40" : "relative z-30 my-9"} px-3 transform-gpu sm:px-6 lg:px-8`}
     >
       <div
         className={`relative mx-auto w-full ${isPillLayout ? "max-w-[calc(100vw-1rem)] rounded-full border border-[#f0abfc]/60 bg-white/75 p-1 shadow-[0_8px_32px_rgba(60,20,70,0.10)] backdrop-blur-xl sm:p-1.5" : "max-w-[1710px]"}`}
       >
         {!isPillLayout && (
           <div className="mb-3 flex items-center justify-between px-1">
-            <h2 className="font-display text-xl font-black tracking-tight text-[#211735] sm:text-3xl">
+            <h2 className="font-display text-2xl font-black tracking-[-0.03em] text-[#211735] sm:text-3xl">
               Shop by category
             </h2>
             <button

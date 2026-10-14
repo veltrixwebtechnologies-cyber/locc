@@ -16,7 +16,7 @@ import { loadGoogleMaps } from "@/lib/google-maps-loader";
 import { supabase } from "@/integrations/supabase/client";
 import { isTestEntity } from "@/lib/map-service/store-engine";
 import { isGeneratedDemoShopName } from "@/lib/demo-neighborhood-shops";
-import { discoverShops } from "@/lib/shop-discovery";
+import { discoverShops } from "@/modules/shopper/services/shop-discovery";
 import { DEFAULT_SHOP_DISCOVERY_RADIUS_KM } from "@/lib/location-visibility";
 import { getFallbackShopImage } from "@/lib/image-utils";
 import { localShoreShopMarker } from "@/lib/localshore-shop-marker";
@@ -602,23 +602,6 @@ export function LocationMapPicker({
     return removeShopMarkers;
   }, [isGoogleMapReady, isLeafletMapReady, displayShops, mapStart, mapZoom, selectedShop?.id]);
 
-  // Fit the map once to the actual delivery point and returned shop locations.
-  // Keep this separate from marker redraws so selecting/zooming a shop never
-  // snaps the map back to its original extent.
-  useEffect(() => {
-    const map = mapRef.current;
-    const googleApi = window.google;
-    if (MAP_PROVIDER !== "google" || !isGoogleMapReady || !map || !googleApi?.maps || displayShops.length === 0) return;
-    const bounds = new googleApi.maps.LatLngBounds();
-    if (mapStart) bounds.extend({ lat: mapStart.lat, lng: mapStart.lng });
-    displayShops.forEach((shop) => bounds.extend({ lat: shop.lat, lng: shop.lng }));
-    map.fitBounds(bounds, { top: 52, right: 52, bottom: 52, left: 52 });
-    googleApi.maps.event.addListenerOnce(map, "bounds_changed", () => {
-      const zoom = map.getZoom();
-      if (typeof zoom === "number" && zoom > 15) map.setZoom(15);
-    });
-  }, [isGoogleMapReady, displayShops, mapStart]);
-
   // Handle live GPS detection
   const handleGPSLocate = async () => {
     setIsLocating(true);
@@ -767,13 +750,13 @@ export function LocationMapPicker({
 
       {/* LocalShore map canvas. Google mode uses a quiet branded style and
           LocalShore seller markers; OSM mode keeps the existing Leaflet map. */}
-      <div className={`relative isolate w-full shrink-0 overflow-hidden rounded-[24px] border border-[#E9DDF0] bg-[#FAF7FC] shadow-sm ${MAP_PROVIDER === "google" ? "h-[min(62vh,680px)] min-h-[360px] sm:min-h-[460px] lg:flex" : "h-[min(52vh,560px)] min-h-[300px] sm:min-h-[380px]"}`}>
+      <div className={`relative isolate w-full shrink-0 overflow-hidden rounded-[24px] border border-[#E9DDF0] bg-[#FAF7FC] shadow-sm ${MAP_PROVIDER === "google" ? "h-[min(48vh,520px)] min-h-[320px] sm:min-h-[380px] lg:flex" : "h-[min(46vh,500px)] min-h-[280px] sm:min-h-[340px]"}`}>
         {MAP_PROVIDER === "google" && (
           <aside className="hidden min-w-0 overflow-hidden border-r border-[#EEE7F3] bg-white lg:flex lg:w-[230px] lg:shrink-0 lg:flex-col">
             <div className="flex items-center justify-between border-b border-[#EEE7F3] px-3.5 py-3">
               <div>
                 <p className="text-sm font-black text-[#21162B]">Nearby shops</p>
-                <p className="text-[10px] font-semibold text-[#7D7485]">{shopsLoading ? "Finding nearby shops…" : `${localShops.length} shops · ${displayShops.filter((shop) => shop.isImported).length} public listings · ${displayShops.filter((shop) => shop.isDemo).length} demo catalogs`}</p>
+                <p className="text-[10px] font-semibold text-[#7D7485]">{shopsLoading ? "Finding nearby shops…" : `${localShops.length} shops · ${displayShops.filter((shop) => shop.isImported).length} public listings · ${displayShops.filter((shop) => shop.isDemo).length} sample catalogs`}</p>
               </div>
               <Store className="h-4 w-4 text-[#981495]" />
             </div>
@@ -811,7 +794,7 @@ export function LocationMapPicker({
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-[11px] font-black text-[#21162B]">{shop.shopName}</span>
                     <span className="block truncate text-[10px] font-semibold text-[#7D7485]">{shop.category}</span>
-                    {shop.isDemo && <span className="block text-[9px] font-bold text-amber-700">Demo catalog · approximate area</span>}
+                    {shop.isDemo && <span className="block text-[9px] font-bold text-amber-700">Sample catalog · approximate area</span>}
                     {shop.isImported && <span className="block text-[9px] font-bold text-sky-700">Public shop · prototype catalog</span>}
                     <span className="mt-0.5 flex items-center gap-1.5 text-[10px] font-bold text-[#981495]">
                       {shop.isOpen !== undefined && <span className={shop.isOpen ? "text-emerald-700" : "text-slate-500"}>{shop.isOpen ? "Open now" : "Closed"} ·</span>}
@@ -889,7 +872,7 @@ export function LocationMapPicker({
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-black text-[#21162B]">{selectedShop.shopName}</p>
                 <p className="truncate text-[11px] font-semibold text-[#7D7485]">
-                {selectedShop.category} · {selectedShop.distanceKm.toFixed(1)} km away{selectedShop.isDemo ? " · demo catalog" : selectedShop.isImported ? " · public listing" : ""}
+                {selectedShop.category} · {selectedShop.distanceKm.toFixed(1)} km away{selectedShop.isDemo ? " · sample catalog" : selectedShop.isImported ? " · public listing" : ""}
                 </p>
                 <p className="truncate text-[10px] text-[#7D7485]">{selectedShop.address || "LocalShore shop"}</p>
                 {selectedShop.isImported && <p className="truncate text-[10px] font-semibold text-sky-700">{selectedShop.rating ? `★ ${selectedShop.rating.toFixed(1)}${selectedShop.reviewCount ? ` (${selectedShop.reviewCount} reviews)` : ""} · ` : ""}Prototype catalog · test checkout only</p>}

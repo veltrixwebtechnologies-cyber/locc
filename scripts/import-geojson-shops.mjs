@@ -5,7 +5,7 @@ import { createClient } from "@supabase/supabase-js";
 import { dedupeKey, googlePlaceIdentity, normalizeFeature } from "./geojson-shop-normalizer.mjs";
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
-const inputDir = path.resolve(scriptDir, "../../Shops");
+const inputDir = path.resolve(scriptDir, "../../assets/Shops");
 
 export async function collectGeoJsonRows(directory = inputDir) {
   const summary = {

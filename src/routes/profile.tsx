@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import {
   User,
@@ -45,9 +45,13 @@ import {
 
 import { AppShell } from "@/components/app-shell";
 import { useAuth } from "@/lib/auth-store";
-import { cartStore } from "@/lib/cart-store";
-import { useAddresses, addressesStore, type Address } from "@/lib/addresses-store";
-import { useOrders } from "@/lib/orders-store";
+import { cartStore } from "@/modules/shopper/services/cart-store";
+import {
+  useAddresses,
+  addressesStore,
+  type Address,
+} from "@/modules/shopper/services/addresses-store";
+import { useOrders } from "@/modules/shopper/services/orders-store";
 import { useWishlistProducts } from "@/lib/merchandising";
 import { stores } from "@/lib/mock-data";
 import {
@@ -99,6 +103,18 @@ function ProfilePage() {
   const [editName, setEditName] = useState(auth.name || "");
   const [editLanguage, setEditLanguage] = useState(profileExtra.preferredLanguage);
   const [editHub, setEditHub] = useState(profileExtra.preferredHub);
+
+  // Auth/profile data hydrates asynchronously after the first render. Keep
+  // the edit form aligned with the signed-in account instead of retaining the
+  // initial guest values.
+  useEffect(() => {
+    setEditName(auth.name === "Guest" ? "" : auth.name);
+  }, [auth.name]);
+
+  useEffect(() => {
+    setEditLanguage(profileExtra.preferredLanguage);
+    setEditHub(profileExtra.preferredHub);
+  }, [profileExtra.preferredLanguage, profileExtra.preferredHub]);
 
   // New address state
   const [newAddrLabel, setNewAddrLabel] = useState("Home");

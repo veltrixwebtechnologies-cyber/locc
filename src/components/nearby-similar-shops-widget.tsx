@@ -12,7 +12,7 @@ import {
 import { motion } from "motion/react";
 import { getNearbyStoreRecommendations } from "@/lib/nearby-recommendation-engine";
 import { useDeliveryLocation } from "@/lib/location-store";
-import { cartStore } from "@/lib/cart-store";
+import { cartStore } from "@/modules/shopper/services/cart-store";
 import { flyProductToCart } from "@/lib/fly-to-cart";
 import { toast } from "sonner";
 

@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import { sourceLoader } from "./load-source.mjs";
-const { buildDemoReceipt } = await sourceLoader(process.cwd())("src/lib/demo-payment.ts");
+const { buildDemoReceipt } = await sourceLoader(process.cwd())("src/modules/shopper/services/demo-payment.ts");
 const product = {
   id: "product-1",
   seller_id: "seller-1",
@@ -56,12 +56,12 @@ test("demo checkout rejects missing, unrelated, duplicate, stale and unavailable
   assert.throws(() => buildDemoReceipt({ ...input, subtotal: 1 }, [product], "id"));
   assert.throws(() => buildDemoReceipt({ ...input, total: NaN }, [product], "id"));
 });
-test("demo payment bypasses the gateway and persists separately without a live order RPC", () => {
+test("demo payment is not available in the live checkout flow", () => {
   const checkout = fs.readFileSync("src/routes/checkout.tsx", "utf8");
-  assert.match(checkout, /pay === "cod" \|\| pay === "demo"/);
-  assert.match(checkout, /pay === "demo" \? ordersStore.placeDemo : ordersStore.place/);
+  assert.match(checkout, /isImportedCart \|\| pay === "demo"/);
+  assert.doesNotMatch(checkout, /pay === "demo" \? ordersStore\.placeDemo/);
   const source = fs
-    .readFileSync("src/lib/orders-store.ts", "utf8")
+    .readFileSync("src/modules/shopper/services/orders-store.ts", "utf8")
     .split("async placeDemo")[1]
     .split("async place(")[0];
   assert.doesNotMatch(source, /\.rpc\(|\.insert\(|\.update\(|updateOrdersCache/);

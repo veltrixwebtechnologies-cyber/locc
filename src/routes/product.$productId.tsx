@@ -26,7 +26,7 @@ import {
   type MerchandisingProduct,
 } from "@/lib/merchandising";
 import { useAuth } from "@/lib/auth-store";
-import { cartStore, useCart } from "@/lib/cart-store";
+import { cartStore, useCart } from "@/modules/shopper/services/cart-store";
 import { QtyStepper } from "@/components/qty-stepper";
 import { flyProductToCart } from "@/lib/fly-to-cart";
 import { toast } from "sonner";
@@ -40,15 +40,26 @@ import { SearchShopRecommendations } from "@/components/search-shop-recommendati
 import { NearbySimilarShopsWidget } from "@/components/nearby-similar-shops-widget";
 import { LottieLoading } from "@/components/ui/lottie-loading";
 import { RelatedProductsSection } from "@/components/related-products-section";
+import { ImportedProductDetail } from "@/modules/shopper/components/imported-product-detail";
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 export const Route = createFileRoute("/product/$productId")({
-  validateSearch: (search: Record<string, unknown>): { sq?: string } => ({
+  validateSearch: (search: Record<string, unknown>): { sq?: string; shopLat?: number; shopLng?: number } => ({
     sq: (search.sq as string) || (search.q as string) || undefined,
+    shopLat: search.shopLat != null && search.shopLat !== "" && Number.isFinite(Number(search.shopLat)) ? Number(search.shopLat) : undefined,
+    shopLng: search.shopLng != null && search.shopLng !== "" && Number.isFinite(Number(search.shopLng)) ? Number(search.shopLng) : undefined,
   }),
-  component: ProductPage,
+  component: ProductRoutePage,
 });
+
+function ProductRoutePage() {
+  const { productId } = Route.useParams();
+  const search = Route.useSearch();
+  return productId.startsWith("sample:")
+    ? <ImportedProductDetail productId={productId} lat={search.shopLat} lng={search.shopLng} />
+    : <ProductPage />;
+}
 
 function ProductPage() {
   const { productId } = Route.useParams();

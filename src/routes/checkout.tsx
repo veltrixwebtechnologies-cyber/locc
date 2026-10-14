@@ -4,11 +4,11 @@ import { createFileRoute, Link, useNavigate, redirect } from "@tanstack/react-ro
 import { useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { AppShell } from "@/components/app-shell";
-import { cartStore, useCart, cartTotals } from "@/lib/cart-store";
+import { cartStore, useCart, cartTotals } from "@/modules/shopper/services/cart-store";
 import { getStore, APPROVED_STORE } from "@/lib/mock-data";
-import { ordersStore, addPlacedOrderToCache } from "@/lib/orders-store";
+import { ordersStore, addPlacedOrderToCache } from "@/modules/shopper/services/orders-store";
 import { supabase } from "@/integrations/supabase/client";
-import { addressesStore, useAddresses } from "@/lib/addresses-store";
+import { addressesStore, useAddresses } from "@/modules/shopper/services/addresses-store";
 import { DeliveryMap } from "@/components/delivery-map";
 import { DeliveryAnimation } from "@/components/delivery-animation";
 import { reverseGeocode } from "@/lib/geocoding.functions";
@@ -37,7 +37,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { AnimatePresence, m } from "motion/react";
-import type { Order } from "@/lib/orders-store";
+import type { Order } from "@/modules/shopper/services/orders-store";
 import {
   createRazorpayOrderFn,
   verifyRazorpayPaymentFn,
@@ -45,6 +45,7 @@ import {
 } from "@/lib/razorpay.functions";
 import { useShopCoordinates } from "@/hooks/use-shop-coordinates";
 import { createImportedTestOrderFn, verifyImportedTestPaymentFn } from "@/lib/imported-razorpay.functions";
+import { runCatalogRpcWithTimeout } from "@/lib/catalog-rpc";
 type CheckoutVerification = VerifyRazorpayPaymentInput & { test_checkout_token?: string };
 
 function loadRazorpaySDK(): Promise<boolean> {
@@ -198,6 +199,27 @@ function CheckoutPage() {
       : "";
 
   const [confirmedLocation, setConfirmedLocation] = useState(initialSignature);
+  const locationEdited = useRef(false);
+  const [checkoutHydrated, setCheckoutHydrated] = useState(false);
+  useEffect(() => { setCheckoutHydrated(true); }, []);
+  // Location/address stores hydrate after the initial server render. Initialise
+  // from their actual pins once available, never overwrite a customer's edit.
+  useEffect(() => {
+    if (!checkoutHydrated || locationEdited.current || pinCoords) return;
+    const currentPin = parseCoordinates(activeDeliveryLocation?.lat, activeDeliveryLocation?.lng);
+    const saved = savedAddresses[0];
+    const savedPin = parseCoordinates(saved?.lat, saved?.lng);
+    if (currentPin) {
+      setAddr(CURRENT_LOCATION_ID);
+      setPinCoords(currentPin);
+      setCurrentAddress(activeDeliveryLocation?.label || activeDeliveryLocation?.area || "Selected map location");
+      setConfirmedLocation("");
+    } else if (savedPin && saved) {
+      setAddr(saved.id);
+      setPinCoords(savedPin);
+      setConfirmedLocation("");
+    }
+  }, [checkoutHydrated, activeDeliveryLocation, savedAddresses, pinCoords]);
   const [confirmedNewAddress, setConfirmedNewAddress] = useState("");
   const acquisitionRevision = useRef(0);
   const geocodeRevision = useRef(0);
@@ -215,6 +237,8 @@ function CheckoutPage() {
   const [isPlacing, setIsPlacing] = useState(false);
   const [showOrderSuccess, setShowOrderSuccess] = useState(false);
   const [isCheckingStock, setIsCheckingStock] = useState(true);
+  const [stockCheckError, setStockCheckError] = useState("");
+  const [stockCheckRevision, setStockCheckRevision] = useState(0);
   const [couponCode, setCouponCode] = useState("");
   const [couponQuote, setCouponQuote] = useState<CouponQuote | null>(null);
   const [isApplyingCoupon, setIsApplyingCoupon] = useState(false);
@@ -253,13 +277,15 @@ function CheckoutPage() {
   const [countdown, setCountdown] = useState(4);
 
   const chooseAddr = (id: string) => {
+    locationEdited.current = true;
+    if (id === addr) return;
     stopLiveLocation();
     setConfirmedLocation("");
     setAddr(id);
     setAccuracyMeters(null);
     if (id === CURRENT_LOCATION_ID) {
-      setPinCoords(null);
-      setCurrentAddress("");
+      setPinCoords(parseCoordinates(activeDeliveryLocation?.lat, activeDeliveryLocation?.lng));
+      setCurrentAddress(activeDeliveryLocation?.label || activeDeliveryLocation?.area || "");
       setManualAddress("");
       return;
     }
@@ -269,6 +295,7 @@ function CheckoutPage() {
 
   const updatePin = (coords: { lat: number; lng: number }) => {
     if (!parseCoordinates(coords.lat, coords.lng)) return;
+    locationEdited.current = true;
     stopLiveLocation();
     setPinCoords(coords);
     setConfirmedLocation("");
@@ -317,6 +344,7 @@ function CheckoutPage() {
       return;
     }
     if (position.timestamp <= lastFixAt.current) return;
+    locationEdited.current = true;
     lastFixAt.current = position.timestamp;
     const coords = { lat: position.coords.latitude, lng: position.coords.longitude };
     setPinCoords(coords);
@@ -461,8 +489,11 @@ function CheckoutPage() {
   }, []);
 
   useEffect(() => {
-    if (!activeDeliveryLocation && savedAddresses.length === 0) locateUser();
-  }, []);
+    if (checkoutHydrated && !activeDeliveryLocation && savedAddresses.length === 0 && !locationEdited.current) {
+      locationEdited.current = true;
+      locateUser();
+    }
+  }, [checkoutHydrated, activeDeliveryLocation, savedAddresses]);
 
   useEffect(() => {
     return () => stopLiveLocation();
@@ -489,6 +520,7 @@ function CheckoutPage() {
     }
 
     setIsCheckingStock(true);
+    setStockCheckError("");
     const validateStock = async () => {
       const productIds = cartProductIds.split(",");
       const databaseProductIds = productIds.filter(isProductUuid);
@@ -498,16 +530,17 @@ function CheckoutPage() {
         if (active) setIsCheckingStock(false);
         return;
       }
-      let { data, error } = await (supabase as any)
-        .from("approved_product_catalog")
-        .select("id,stock")
-        .in("id", databaseProductIds);
+      const readStock = async (table: string, ids: string[]) => {
+        const result = await runCatalogRpcWithTimeout((supabase as any).from(table).select("id,stock").in("id", ids));
+        return {
+          data: Array.isArray(result.data) ? result.data as { id: string; stock: number | null }[] : [],
+          error: result.error,
+        };
+      };
+      let { data, error } = await readStock("approved_product_catalog", databaseProductIds);
 
       if (error) {
-        const fallback = await (supabase as any)
-          .from("products")
-          .select("id,stock")
-          .in("id", databaseProductIds);
+        const fallback = await readStock("products", databaseProductIds);
         data = fallback.data;
         error = fallback.error;
       } else {
@@ -517,10 +550,7 @@ function CheckoutPage() {
         );
 
         if (missingProductIds.length > 0) {
-          const fallback = await (supabase as any)
-            .from("products")
-            .select("id,stock")
-            .in("id", missingProductIds);
+          const fallback = await readStock("products", missingProductIds);
 
           if (!fallback.error) {
             data = [...(data ?? []), ...(fallback.data ?? [])];
@@ -533,7 +563,12 @@ function CheckoutPage() {
       if (!active) return;
       if (error) {
         console.error("[checkout] stock validation failed", error);
-        toast.error("Product availability could not be checked. Please try again.");
+        setStockCheckError("Product availability could not be checked. Please retry before payment.");
+        return;
+      }
+      const foundIds = new Set((data ?? []).map((product: { id: string }) => product.id));
+      if (databaseProductIds.some(id => !foundIds.has(id))) {
+        setStockCheckError("Some products could not be verified. Your basket has been kept. Retry availability or review your cart.");
         return;
       }
       const stockByProduct = Object.fromEntries(
@@ -556,7 +591,7 @@ function CheckoutPage() {
       .catch((error) => {
         if (!active) return;
         console.error("[checkout] stock validation failed", error);
-        toast.error("Product availability could not be checked. Please try again.");
+        setStockCheckError("Product availability could not be checked. Please retry before payment.");
       })
       .finally(() => {
         if (active) setIsCheckingStock(false);
@@ -565,7 +600,7 @@ function CheckoutPage() {
     return () => {
       active = false;
     };
-  }, [cartProductIds]);
+  }, [cartProductIds, stockCheckRevision]);
 
   useEffect(() => {
     if (!showOrderSuccess || !placedOrder) return;
@@ -682,11 +717,15 @@ function CheckoutPage() {
   };
 
   const openPaymentConfirmation = async () => {
+    if (isImportedCart) {
+      toast.error("This sample shop is not connected to a seller yet. Choose a verified LocalShore shop to place a real order.");
+      return;
+    }
     if (paymentRecovery) {
       toast.error("A payment is awaiting order confirmation. Retry confirmation below; do not pay again.");
       return;
     }
-    if (!selectedAddressLine || isPlacing || isCheckingStock) return;
+    if (!selectedAddressLine || isPlacing || isCheckingStock || stockCheckError) return;
     if (!canPlace) {
       toast.error("Confirm the delivery location before continuing.");
       return;
@@ -912,6 +951,10 @@ function CheckoutPage() {
   };
 
   const placeOrder = async () => {
+    if (isImportedCart || pay === "demo") {
+      toast.error("Test checkout is disabled. Choose a verified LocalShore shop for a real order.");
+      return;
+    }
     const destinationCoords = parseCoordinates(pinCoords?.lat, pinCoords?.lng);
     if (!canPlace || !destinationCoords) {
       toast.error("Confirm the delivery address and entrance pin first.");
@@ -930,9 +973,8 @@ function CheckoutPage() {
     await new Promise((resolve) => setTimeout(resolve, 650));
 
     try {
-      const generatedTxn = `${pay === "demo" ? "TEST" : "COD"}-${crypto.randomUUID().slice(0, 8)}`;
-      const place = isImportedCart || pay === "demo" ? ordersStore.placeDemo : ordersStore.place;
-      const order = await place({
+      const generatedTxn = `COD-${crypto.randomUUID().slice(0, 8)}`;
+      const order = await ordersStore.place({
         storeId: store.id,
         storeName: store.name,
         lines: cart.lines,
@@ -941,7 +983,7 @@ function CheckoutPage() {
         total: displayTotal,
         address: selectedAddressLine,
         destination: destinationCoords,
-        paymentMethod: pay === "demo" ? "Demo payment (simulated)" : "Cash on delivery",
+        paymentMethod: "Cash on delivery",
         couponCode: couponQuote?.code,
         discountAmount,
         etaMin: computedEtaMin,
@@ -955,7 +997,7 @@ function CheckoutPage() {
       // Play audio chime and trigger success UI
       playPaymentSuccessSound();
 
-      toast.success(pay === "demo" ? "Demo payment completed. No money charged or delivery dispatched." : "Order placed! Pay cash on delivery.");
+      toast.success("Order placed! Pay cash on delivery.");
 
       setPaymentStep("idle");
       setShowOrderSuccess(true);
@@ -977,7 +1019,7 @@ function CheckoutPage() {
         delayMs={0}
         mode="fullscreen"
         size="xl"
-        message={isImportedCart ? paymentStatusText || "Opening Razorpay test checkout…" : pay === "demo" ? "Simulating demo payment..." : `Placing your order with ${store?.name || "LocalShore"}...`}
+        message={isImportedCart ? paymentStatusText || "Opening Razorpay test checkout…" : pay === "demo" ? "Processing test payment..." : `Placing your order with ${store?.name || "LocalShore"}...`}
         subtext={pay === "demo" ? `${isImportedCart ? "Checking prototype catalog" : "Checking real inventory"}. No charge or delivery will be created.` : "Verifying item availability & assigning nearest delivery partner"}
       />
 
@@ -1086,7 +1128,7 @@ function CheckoutPage() {
         {showMap && (
           <div className="mt-3">
             <DeliveryMap
-              store={store ? { lat: store.lat, lng: store.lng, label: store.name } : undefined}
+              store={shopPin && store && isValidCoordinate(shopPin.lat, shopPin.lng) ? { lat: shopPin.lat, lng: shopPin.lng, label: store.name } : undefined}
               destination={pinCoords}
               accuracyMeters={accuracyMeters}
               interactive
@@ -1158,7 +1200,7 @@ function CheckoutPage() {
           <label className="flex items-start gap-2 rounded-lg border p-3 text-sm">
             <input
               type="checkbox"
-              checked={canPlace}
+              checked={pinConfirmed}
               disabled={!locationSignature}
               onChange={(event) => {
                 stopLiveLocation();
@@ -1260,7 +1302,7 @@ function CheckoutPage() {
           <h2 id="payment-heading" className="font-display text-base font-bold">Payment method</h2>
           <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/5 px-2.5 py-1 text-[11px] font-medium text-primary">
             <ShieldCheck aria-hidden="true" className="h-3.5 w-3.5" />
-            {isImportedCart ? "Powered by Razorpay · test mode" : "Powered by Razorpay"}
+            {isImportedCart ? "Seller connection required" : "Powered by Razorpay"}
           </span>
         </div>
         <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">Choose how you’d like to pay.</p>
@@ -1283,7 +1325,7 @@ function CheckoutPage() {
             },
             { id: "cod" as const, label: "Cash on delivery", description: "Pay when your order arrives", icon: Banknote },
             { id: "demo" as const, label: isImportedCart ? "Razorpay checkout" : "Test payment", description: isImportedCart ? "Open Razorpay payment screen in test mode — no real charges" : "Test checkout — no money charged or delivery", icon: CreditCard },
-          ].filter(p => !isImportedCart || p.id === "demo").map((p) => (
+          ].filter(p => !isImportedCart && p.id !== "demo").map((p) => (
             <label
               key={p.id}
               className={`relative flex min-h-[76px] min-w-0 cursor-pointer items-center gap-3 rounded-xl border p-3 transition-colors focus-within:ring-2 focus-within:ring-primary/50 focus-within:ring-offset-2 ${
@@ -1303,6 +1345,11 @@ function CheckoutPage() {
             </label>
           ))}
         </fieldset>
+        {isImportedCart && (
+          <p className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs leading-relaxed text-amber-900">
+            This is a sample catalog and is not connected to a seller, inventory, payment account, or delivery partner. Real checkout is available only for verified LocalShore shops.
+          </p>
+        )}
         <p className="mt-4 flex items-start gap-2 border-t border-border/60 pt-3 text-xs leading-relaxed text-muted-foreground">
           <ShieldCheck aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
           <span>
@@ -1441,6 +1488,7 @@ function CheckoutPage() {
         <Row label={`Item subtotal (${totals.itemCount})`} value={`₹${totals.subtotal}`} />
         {shopCoordinates.isError && <p role="alert" className="text-sm text-red-700">Shop location could not be loaded. <button type="button" className="underline" onClick={() => void shopCoordinates.refetch()}>Retry shop location</button></p>}
         {shopCoordinates.isSuccess && !shopPin && <p role="alert" className="text-sm text-amber-800">This shop needs a valid map pin before delivery can be confirmed.</p>}
+        {stockCheckError && <div role="alert" className="my-3 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900"><p>{stockCheckError}</p><button type="button" onClick={() => setStockCheckRevision(value => value + 1)} className="mt-2 font-bold underline">Retry availability</button> · <Link to="/cart" className="underline">Review cart</Link></div>}
         <Row label="Govt. Taxes & GST (5% incl.)" value={`₹${billBreakdown.gstAmount}`} />
         <Row
           label="Delivery fee"
@@ -1482,7 +1530,7 @@ function CheckoutPage() {
           <button
             type="button"
             onClick={openPaymentConfirmation}
-            disabled={!canPlace || isPlacing || isCheckingStock || !!paymentRecovery}
+            disabled={isImportedCart || !canPlace || isPlacing || isCheckingStock || !!stockCheckError || !!paymentRecovery}
             className="flex-1 md:w-full rounded-xl bg-[var(--marigold)] py-3 px-4 font-display text-base sm:text-lg font-extrabold text-ink shadow-lg hover:brightness-105 active:scale-[0.98] transition-all disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:brightness-100 flex items-center justify-center gap-2 cursor-pointer"
           >
             {isCheckingStock ? (
@@ -1495,14 +1543,14 @@ function CheckoutPage() {
                 <Loader2 className="h-5 w-5 animate-spin" />
                 <span>Placing order…</span>
               </>
-            ) : canPlace ? (
+            ) : stockCheckError ? "Retry product availability" : canPlace ? (
               <>
                 <span>{isImportedCart ? "Pay with Razorpay" : pay === "demo" ? "Simulate payment" : "Place order"}</span>
                 <span className="hidden md:inline">· ₹{displayTotal}</span>
                 <ArrowRight className="h-5 w-5" />
               </>
             ) : (
-              "Confirm Delivery Address"
+              pinConfirmed ? "Waiting for shop location" : "Confirm Delivery Address"
             )}
           </button>
         </div>

@@ -16,7 +16,7 @@ import {
   X,
   ChevronDown,
 } from "lucide-react";
-import { useCart, cartTotals } from "@/lib/cart-store";
+import { useCart, cartTotals } from "@/modules/shopper/services/cart-store";
 import { useAuth } from "@/lib/auth-store";
 import { useLocalShoreRoles } from "@/lib/roles-store";
 import { CategoryMegaMenu, MobileCategoryStrip } from "@/components/category-mega-menu";
@@ -57,7 +57,13 @@ export function requestLocationModal() {
   }
 }
 
-export function AppShell({ children, hideFloatingCart = false }: { children: ReactNode; hideFloatingCart?: boolean }) {
+export function AppShell({
+  children,
+  hideFloatingCart = false,
+}: {
+  children: ReactNode;
+  hideFloatingCart?: boolean;
+}) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const urlQuery = useRouterState({ select: (s) => (s.location.search as { q?: string }).q });
   const navigate = useNavigate();
@@ -83,7 +89,10 @@ export function AppShell({ children, hideFloatingCart = false }: { children: Rea
   const hasLocation = mounted && deliveryLocation !== null;
 
   const showFloatingCart =
-    !hideFloatingCart && itemCount > 0 && !pathname.startsWith("/cart") && !pathname.startsWith("/checkout");
+    !hideFloatingCart &&
+    itemCount > 0 &&
+    !pathname.startsWith("/cart") &&
+    !pathname.startsWith("/checkout");
 
   useEffect(() => {
     setMounted(true);
@@ -312,18 +321,18 @@ export function AppShell({ children, hideFloatingCart = false }: { children: Rea
 
       {/* Desktop top nav */}
       <header
-        className={`sticky top-0 z-50 hidden border-b hairline bg-background/95 backdrop-blur transition-shadow duration-300 md:block ${
+        className={`sticky top-0 z-50 hidden bg-transparent transition-shadow duration-300 md:block ${
           scrolled ? "shadow-[0_8px_28px_-22px_rgba(42,27,74,0.55)]" : "shadow-none"
         }`}
       >
-        {/* Full-width container with edge-to-edge padding */}
-        <div className="flex h-[72px] w-full items-center gap-2 2xl:gap-6 px-4 md:px-6 lg:px-8 2xl:px-12">
+        {/* Floating marketplace navigation bar */}
+        <div className="flex h-[68px] w-full min-w-0 items-center gap-1.5 overflow-hidden border-b border-[#eadcf2] bg-white/90 px-3 backdrop-blur-xl md:gap-2 md:px-4 lg:px-5 2xl:px-8">
           {/* Logo (Far-left content boundary) */}
           <Link
             to="/"
             search={{ category: undefined, q: undefined }}
             onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-            className="flex shrink-0 items-center gap-2.5"
+            className="flex min-w-0 shrink-0 items-center gap-2"
           >
             <m.img
               src="/assets/localshore-logo.jpeg"
@@ -332,20 +341,20 @@ export function AppShell({ children, hideFloatingCart = false }: { children: Rea
               height={54}
               whileHover={{ scale: 1.03 }}
               whileTap={{ scale: 0.98 }}
-              className="h-12 w-[190px] object-cover object-center mix-blend-multiply"
+              className="h-10 w-[158px] object-cover object-center mix-blend-multiply lg:h-11 lg:w-[170px]"
             />
           </Link>
 
           {pathname === "/" && (
             <>
               {/* Vertical Divider (Equal top/bottom spacing) */}
-              <div className="h-6 w-px bg-border/80 shrink-0 mx-1" />
+              <div className="mx-0.5 h-6 w-px shrink-0 bg-border/80" />
 
               {/* Location Selector (Deliver to -> Location -> Chevron) */}
               <button
                 type="button"
                 onClick={requestLocationModal}
-                className="flex shrink-0 items-center gap-2 text-left cursor-pointer hover:opacity-85 transition group min-w-0"
+                className="flex w-[118px] shrink-0 items-center gap-1.5 text-left cursor-pointer transition group min-w-0 hover:opacity-85 lg:w-[128px]"
               >
                 <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--sand)] text-primary">
                   {gpsState.status === "detecting" ? (
@@ -397,13 +406,18 @@ export function AppShell({ children, hideFloatingCart = false }: { children: Rea
             }}
             onFocus={() => setSearchFocused(true)}
             onBlur={(event) => {
-              if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setSearchFocused(false);
+              if (!event.currentTarget.contains(event.relatedTarget as Node | null))
+                setSearchFocused(false);
             }}
             onKeyDown={(event) => {
               if (event.key === "Escape") setSearchFocused(false);
             }}
           >
-            <button type="submit" aria-label="Submit search" className="shrink-0 rounded-full p-1 text-muted-foreground hover:text-primary">
+            <button
+              type="submit"
+              aria-label="Submit search"
+              className="shrink-0 rounded-full p-1 text-muted-foreground hover:text-primary"
+            >
               <Search className="h-4 w-4" />
             </button>
             <div className="relative min-w-0 flex-1">
@@ -417,7 +431,7 @@ export function AppShell({ children, hideFloatingCart = false }: { children: Rea
                 onChange={(event) => setHeaderQuery(event.target.value)}
                 placeholder=""
                 aria-label="Search shops, products, brands"
-                className="relative z-10 w-full min-w-0 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+                className="relative z-10 w-full min-w-0 bg-transparent text-[13px] outline-none placeholder:text-muted-foreground"
               />
             </div>
             <AnimatePresence>
@@ -434,7 +448,7 @@ export function AppShell({ children, hideFloatingCart = false }: { children: Rea
           </m.form>
 
           {/* Navigation Links */}
-          <nav className="flex shrink-0 items-center gap-1 lg:gap-1.5">
+          <nav className="flex min-w-0 shrink-0 items-center gap-0.5 lg:gap-1">
             {tabs.map((t) => {
               const active = t.match(pathname);
               const Icon = t.icon;
@@ -450,7 +464,7 @@ export function AppShell({ children, hideFloatingCart = false }: { children: Rea
                   <Link
                     to={t.to}
                     data-cart-target={t.to === "/cart" ? "" : undefined}
-                    className={`relative inline-flex items-center gap-1.5 lg:gap-2 rounded-lg px-2.5 lg:px-3 py-2 text-xs lg:text-sm font-medium transition-colors ${
+                    className={`relative inline-flex items-center gap-1.5 lg:gap-2 rounded-full px-2.5 lg:px-3 py-2.5 text-[11px] lg:text-xs font-medium transition-colors ${
                       active
                         ? "bg-primary text-primary-foreground font-bold shadow-xs"
                         : "text-foreground hover:bg-muted"
@@ -486,7 +500,7 @@ export function AppShell({ children, hideFloatingCart = false }: { children: Rea
             })}
             <Link
               to="/customer-care"
-              className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-2 text-xs font-semibold text-foreground transition-colors hover:bg-muted lg:px-3 lg:text-sm"
+              className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-2.5 text-[11px] font-semibold text-foreground transition-colors hover:bg-[#faf5fc] lg:px-3 lg:text-xs"
               aria-label="Customer Care"
             >
               <Headphones className="h-4 w-4 text-primary" />
@@ -497,9 +511,9 @@ export function AppShell({ children, hideFloatingCart = false }: { children: Rea
               aria-label={roleState.hasRole("seller") ? "Open SellerHub" : "Become a Seller"}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 text-xs font-bold text-primary transition-colors hover:bg-primary/10 lg:text-sm"
+              className="inline-flex items-center rounded-full border border-[#dca9ef] bg-gradient-to-r from-[#c026d3] to-[#981495] px-2.5 py-2.5 text-[11px] font-bold text-white shadow-[0_6px_18px_rgba(152,20,149,0.2)] transition-all hover:-translate-y-0.5 hover:shadow-lg lg:px-3 lg:text-xs"
             >
-              {roleState.hasRole("seller") ? "Open SellerHub" : "Become a Seller"}
+              Open SellerHub
             </a>
             <a
               href={DELIVERY_HUB_URL}
@@ -510,7 +524,7 @@ export function AppShell({ children, hideFloatingCart = false }: { children: Rea
               }
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center rounded-lg border border-foreground/10 bg-background px-3 py-2 text-xs font-bold text-foreground transition-colors hover:bg-muted lg:text-sm"
+              className="inline-flex items-center rounded-full border border-[#e2d8e8] bg-white px-2.5 py-2.5 text-[11px] font-bold text-foreground transition-all hover:-translate-y-0.5 hover:bg-[#faf5fc] lg:px-3 lg:text-xs"
             >
               {roleState.hasRole("delivery_partner")
                 ? "Open Delivery Hub"
@@ -520,7 +534,7 @@ export function AppShell({ children, hideFloatingCart = false }: { children: Rea
               <DropdownMenuTrigger asChild>
                 <button
                   type="button"
-                  className={`ml-1 inline-flex items-center gap-2 rounded-lg border px-2.5 py-2 text-sm font-medium transition-colors lg:ml-2 ${
+                  className={`ml-1 inline-flex items-center gap-2 rounded-full border px-2.5 py-2 text-xs font-medium transition-colors lg:ml-2 ${
                     profileMenuOpen || pathname.startsWith("/profile")
                       ? "border-primary/20 bg-primary/10 text-primary"
                       : "hairline bg-card text-foreground hover:bg-muted"

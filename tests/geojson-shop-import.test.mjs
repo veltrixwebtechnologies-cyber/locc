@@ -12,7 +12,7 @@ import {
 } from "../scripts/geojson-shop-normalizer.mjs";
 
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const shopsDir = path.resolve(projectRoot, "../Shops");
+const shopsDir = path.resolve(projectRoot, "../assets/Shops");
 
 test("cleans scrape labels and rejects postal codes as phone numbers", () => {
   assert.equal(cleanText("\uE0C8 12 Main Rd \uE0B0"), "12 Main Rd");

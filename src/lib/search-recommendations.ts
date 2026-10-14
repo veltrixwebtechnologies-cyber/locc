@@ -1,4 +1,4 @@
-import { SearchResultItem } from "./search-service";
+import { SearchResultItem } from "@/modules/shopper/services/search-service";
 import { stores, getStore } from "./mock-data";
 
 export interface ShopRecommendation {

@@ -27,7 +27,7 @@ import {
   type Product,
   type Store,
 } from "@/lib/mock-data";
-import { cartStore, useCart, cartTotals } from "@/lib/cart-store";
+import { cartStore, useCart, cartTotals } from "@/modules/shopper/services/cart-store";
 import { QtyStepper } from "@/components/qty-stepper";
 import { ProductThumb } from "@/components/product-thumb";
 import { recordProductEvent, recordRecentProductView } from "@/lib/merchandising";
@@ -63,7 +63,7 @@ import { RelatedProductsSection } from "@/components/related-products-section";
 import { adaptMockProduct } from "@/lib/recommendations/recommendation-engine";
 import { AppShell } from "@/components/app-shell";
 import { fetchImportedShopById } from "@/lib/imported-shops";
-import { importedStorefront } from "@/lib/imported-storefront";
+import { importedStorefront } from "@/modules/shopper/services/imported-storefront";
 
 export const Route = createFileRoute("/store/$storeId")({
   validateSearch: (search: Record<string, unknown>): { sq?: string; category?: string; shopLat?: number; shopLng?: number } => ({
@@ -560,7 +560,7 @@ function StorePage({ catalog }: { catalog?: ReturnType<typeof importedStorefront
           <div className="absolute top-4 right-4 z-20">
             <div className="inline-flex items-center gap-1.5 rounded-full bg-[#fffafd]/95 backdrop-blur-md px-3.5 py-1.5 text-xs font-black text-slate-900 shadow-xl border border-[#f0abfc]/80">
               <ShieldCheck className="h-4 w-4 text-[#981495] fill-[#981495]/20" />
-              <span>{isImported ? "Public shop" : isDemoShop ? "Demo shop" : "Local shop"}</span>
+              <span>{isImported ? "Public shop" : isDemoShop ? "Shop preview" : "Local shop"}</span>
             </div>
           </div>
 
@@ -601,7 +601,7 @@ function StorePage({ catalog }: { catalog?: ReturnType<typeof importedStorefront
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2 mb-1">
                 <span className="inline-flex items-center gap-1 rounded-full bg-[var(--sand)]/90 px-2.5 py-0.5 text-[10px] font-bold text-[#981495] border border-[#f0abfc]">
-                  {isImported ? "Prototype catalog" : isDemoShop ? "Demo catalog — sample products" : "LocalShore Merchant"}
+                  {isImported ? "Prototype catalog" : isDemoShop ? "Sample product catalog" : "LocalShore Merchant"}
                 </span>
               </div>
 
@@ -919,6 +919,7 @@ function StorePage({ catalog }: { catalog?: ReturnType<typeof importedStorefront
                           {unit}
                         </div>
 
+                        <Link to="/product/$productId" params={{ productId: p.id }} search={isImported ? { shopLat: store.lat, shopLng: store.lng } : {}} aria-label={`View details for ${p.name}`} className="block h-full w-full">
                         <ProductThumb
                           src={p.imageUrl}
                           alt={p.name}
@@ -928,6 +929,7 @@ function StorePage({ catalog }: { catalog?: ReturnType<typeof importedStorefront
                           category={p.category as Store["category"]}
                           size="lg"
                         />
+                        </Link>
 
                         {/* ADD Button positioned at bottom-right corner of image frame (Matching Image 2 position!) */}
                         <div className="absolute right-2 bottom-2 z-20">
@@ -954,9 +956,9 @@ function StorePage({ catalog }: { catalog?: ReturnType<typeof importedStorefront
 
                       {/* Product details section */}
                       <Link
-                        to={isImported ? "/store/$storeId" : "/product/$productId"}
-                        params={isImported ? { storeId: store.id } : { productId: p.id }}
-                        search={isImported ? { sq: p.name, shopLat: store.lat, shopLng: store.lng } : {}}
+                        to="/product/$productId"
+                        params={{ productId: p.id }}
+                        search={isImported ? { shopLat: store.lat, shopLng: store.lng } : {}}
                         onClick={() => {
                           if (!isImported) {
                             void recordProductEvent(p.id, "view");
