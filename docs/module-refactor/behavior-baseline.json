@@ -303,7 +303,7 @@
     ],
     "name": "getImportedCatalogItems",
     "kind": "function",
-    "hash": "94d9a73bc57e0525b534f8cd415854529b43bf0fb9ab17b8451aa060826266e8"
+    "hash": "1b5a4627a6a4ff46e3c90d02ef1a7b714fef09d86d60a761ca094f0d18499701"
   },
   {
     "original": "src/lib/imported-demo-cart.ts",
@@ -312,7 +312,7 @@
     ],
     "name": "getDemoPrice",
     "kind": "function",
-    "hash": "e2296c21e6775430b69931353d86da9ceb173e596f55c80687d600e13daaa149"
+    "hash": "4d0b39b592282600b17441e158f0ab7a5e09956b13393a002aed423140dd3ba8"
   },
   {
     "original": "src/lib/imported-demo-cart.ts",

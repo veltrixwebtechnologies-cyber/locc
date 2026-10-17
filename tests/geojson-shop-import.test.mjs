@@ -46,15 +46,24 @@ test("uses an identity key rather than coordinates alone", () => {
 
 test("all provided GeoJSON files parse and assign dataset-driven categories", async () => {
   const { rows, summary } = await collectGeoJsonRows(shopsDir);
-  assert.equal(summary.filesProcessed, 4);
-  assert.equal(summary.recordsFound, 200);
+  assert.equal(summary.filesProcessed, 7);
+  assert.equal(summary.recordsFound, 323);
   assert.equal(summary.invalidCoordinates, 0);
   assert.equal(summary.errors, 6);
   assert.equal(summary.duplicatesSkipped, 0);
-  assert.equal(rows.length, 194);
+  assert.equal(rows.length, 317);
   const bakeries = rows.filter(row => row.category === "Bakery");
   assert.equal(bakeries.length, 49);
   assert.ok(bakeries.every(row => row.city === "Coimbatore" && row.website === null));
+  const electronics = rows.filter(row => row.category === "Electronics");
+  assert.equal(electronics.length, 49);
+  assert.ok(electronics.every(row => row.city === "Coimbatore"));
+  const flowers = rows.filter(row => row.category === "Flowers");
+  assert.equal(flowers.length, 37);
+  assert.ok(flowers.every(row => row.city === "Coimbatore"));
+  const gifts = rows.filter(row => row.category === "Gifts");
+  assert.equal(gifts.length, 37);
+  assert.ok(gifts.every(row => row.city === "Coimbatore"));
   assert.ok(rows.every((row) => row.latitude >= 8 && row.latitude <= 14));
   assert.ok(rows.every((row) => row.longitude >= 76 && row.longitude <= 79));
   assert.ok(rows.filter((row) => row.category === "Furniture").every((row) => row.city === "Coimbatore"));
@@ -94,18 +103,18 @@ test("rerunning the import upserts the same rows and preserves claimed seller im
     };
   }};
   const first = await importRows({directory: shopsDir, client, dryRun: false});
-  assert.equal(first.inserted, 194);
+  assert.equal(first.inserted, 317);
   assert.equal(first.updated, 0);
   const key = records.keys().next().value;
   records.set(key, {...records.get(key), image_type: "seller", image_source: "seller", cover_image_url: "https://localshore.example/seller.jpg", claim_status: "claimed", claimed_by_seller_id: "seller-id"});
   const second = await importRows({directory: shopsDir, client, dryRun: false});
   assert.equal(second.inserted, 0);
-  assert.equal(second.updated, 194);
-  assert.equal(records.size, 194);
+  assert.equal(second.updated, 317);
+  assert.equal(records.size, 317);
   assert.equal(records.get(key).cover_image_url, "https://localshore.example/seller.jpg");
   assert.equal(records.get(key).claim_status, "claimed");
   assert.equal(records.get(key).claimed_by_seller_id, "seller-id");
-  assert.equal(writes.length, 388);
+  assert.equal(writes.length, 634);
 });
 
 test("Google URL identity preserves distinct query locations but ignores tracking", () => {

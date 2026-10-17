@@ -36,8 +36,14 @@ export function ImportedShopPage({
           /bakery|baker/i.test(shop.category)
             ? "bakery"
             : /furniture/i.test(shop.category)
-              ? "home_decor"
-              : "individual_fashion",
+              ? "furniture"
+              : /electro/i.test(shop.category)
+                ? "electronics"
+                : /flower|florist/i.test(shop.category)
+                  ? "flowers"
+                  : /gift/i.test(shop.category)
+                    ? "gifts"
+                    : "fashion",
         ),
       }))
     : [];

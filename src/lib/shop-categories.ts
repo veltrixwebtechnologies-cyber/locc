@@ -87,6 +87,16 @@ export const CATEGORY_PHOTOS: Record<string, string> = {
   sports:
     "https://images.unsplash.com/photo-1517649763962-0c623266010b?auto=format&fit=crop&w=160&q=80",
   toys: "https://images.unsplash.com/photo-1515488042361-ee00e0ddd4e4?auto=format&fit=crop&w=160&q=80",
+  gifts:
+    "https://images.unsplash.com/photo-1549465220-1a8b9238cd48?auto=format&fit=crop&w=160&q=80",
+  flowers:
+    "https://images.unsplash.com/photo-1563241527-3004b7be0ffd?auto=format&fit=crop&w=160&q=80",
+  hardware:
+    "https://images.unsplash.com/photo-1504148455328-c376907d081c?auto=format&fit=crop&w=160&q=80",
+  pet_shops:
+    "https://images.unsplash.com/photo-1583337130417-3346a1be7dee?auto=format&fit=crop&w=160&q=80",
+  pooja:
+    "https://images.unsplash.com/photo-1604608672516-f1b9f2f8f7f8?auto=format&fit=crop&w=160&q=80",
 };
 
 export interface ShopCategoryConfig {

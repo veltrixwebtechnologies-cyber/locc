@@ -23,6 +23,24 @@ const CATEGORY_IMAGES = {
     "photo-1608198093002-ad4e005484df",
     "photo-1555507036-ab1f4038808a",
   ],
+  Electronics: [
+    "photo-1498049794561-7780e7231661",
+    "photo-1550009158-9ebf69173e03",
+    "photo-1593784991095-a205069470b6",
+    "photo-1545454675-3531b543be5d",
+  ],
+  Flowers: [
+    "photo-1563241527-3004b7be0ffd",
+    "photo-1490750967868-88aa4486c946",
+    "photo-1508610048659-a06b669e3321",
+    "photo-1526047932273-341f2a7631f9",
+  ],
+  Gifts: [
+    "photo-1549465220-1a8b9238cd48",
+    "photo-1513885535727-862c7e189727",
+    "photo-1512909006721-3d6018887383",
+    "photo-1576402187878-974f70c890a5",
+  ],
 };
 
 export function cleanText(value) {
@@ -63,7 +81,14 @@ export function googlePlaceIdentity(value) {
   const urlValue = normalizeUrl(value);
   if (!urlValue) return null;
   const url = new URL(urlValue);
-  const placeId = url.searchParams.get("query_place_id") ?? url.searchParams.get("place_id") ?? url.searchParams.get("cid") ?? urlValue.match(/!19s([^!/?#]+)/u)?.[1] ?? urlValue.match(/!1s([^!/?#]+)/u)?.[1];
+  const placeId =
+    url.searchParams.get("query_place_id") ??
+    url.searchParams.get("place_id") ??
+    url.searchParams.get("cid") ??
+    urlValue.match(/!19s([^!/?#]+)/u)?.[1] ??
+    urlValue.match(/!1s(0x[0-9a-f]+:[0-9a-fx]+)/iu)?.[1] ??
+    urlValue.match(/!1s(ChIJ[^!/?#]+)/u)?.[1] ??
+    (!urlValue.match(/!1s([^!/?#]+)/u)?.[1]?.includes("+") ? urlValue.match(/!1s([^!/?#]+)/u)?.[1] : null);
   if (!placeId) return null;
   try { return decodeURIComponent(placeId); }
   catch { return placeId; }
@@ -75,14 +100,14 @@ export function normalizeOpeningHours(value) {
   return text;
 }
 
-export function stablePlaceKey(googleMapsUrl, businessName, formattedAddress, latitude, longitude) {
+export function stablePlaceKey(googleMapsUrl, businessName, formattedAddress, latitude, longitude, explicitPlaceId) {
   let identity = "";
-  const mapsUrl = normalizeUrl(googleMapsUrl);
-  if (mapsUrl) {
-    const placeId = googlePlaceIdentity(mapsUrl);
-    if (placeId) {
-      identity = `google-place:${placeId}`;
-    } else {
+  const placeId = (explicitPlaceId && cleanText(explicitPlaceId)) || (googleMapsUrl ? googlePlaceIdentity(googleMapsUrl) : null);
+  if (placeId) {
+    identity = `google-place:${placeId}`;
+  } else if (googleMapsUrl) {
+    const mapsUrl = normalizeUrl(googleMapsUrl);
+    if (mapsUrl) {
       const url = new URL(mapsUrl);
       for (const parameter of [...url.searchParams.keys()]) {
         if (/^(utm_|hl$|authuser$)/u.test(parameter)) url.searchParams.delete(parameter);
@@ -142,25 +167,33 @@ export function normalizeFeature(feature, fileName) {
   }
   const properties = feature.properties && typeof feature.properties === "object" ? feature.properties : {};
   const dataset = path.basename(fileName);
-  const category = /furniture/iu.test(dataset)
+  const primaryCat = cleanText(properties.primary_category) || "";
+  const category = /furniture/iu.test(dataset) || /furniture/iu.test(primaryCat)
     ? "Furniture"
-    : /Dress_Shops_and_Apparels/iu.test(dataset)
+    : /Dress_Shops_and_Apparels/iu.test(dataset) || /apparel|fashion|clothing|dress/iu.test(primaryCat)
       ? "Fashion & Apparel"
-      : /Bakeries/iu.test(dataset)
+      : /Bakeries/iu.test(dataset) || /bakery|bakes/iu.test(primaryCat)
         ? "Bakery"
-        : null;
+        : /electronic/iu.test(dataset) || /electronic|computer/iu.test(primaryCat)
+          ? "Electronics"
+          : /flower/iu.test(dataset) || /flower|florist/iu.test(primaryCat)
+            ? "Flowers"
+            : /gift/iu.test(dataset) || /gift/iu.test(primaryCat)
+              ? "Gifts"
+              : null;
   if (!category) return { error: "Unknown dataset category; add an explicit filename mapping before importing" };
   const businessName = cleanText(properties.business_name);
   if (!businessName) return { error: "business_name is missing" };
 
   const address = cleanText(properties.formatted_address);
-  const postalCode = address?.match(/\b\d{6}\b/u)?.[0] ?? null;
+  const postalCode = cleanText(properties.postal_code) || address?.match(/\b\d{6}\b/u)?.[0] || null;
   const fileImpliesBengaluru = /banglore|bangalore|bengaluru/iu.test(fileName);
   const city = fileImpliesBengaluru ? "Bengaluru" : "Coimbatore";
   const state = fileImpliesBengaluru ? "Karnataka" : "Tamil Nadu";
-  const sourcePlaceKey = stablePlaceKey(properties.google_maps_url, businessName, address, latitude, longitude);
+  const explicitPlaceId = cleanText(properties.place_id);
+  const sourcePlaceKey = stablePlaceKey(properties.google_maps_url, businessName, address, latitude, longitude, explicitPlaceId);
   const image = representativeImage(category, sourcePlaceKey);
-  const rawPhone = cleanText(properties.primary_phone);
+  const rawPhone = cleanText(properties.phone ?? properties.primary_phone);
   const phone = normalizePhone(rawPhone);
   const rawRating = properties.rating;
   const record = {
@@ -189,9 +222,11 @@ export function normalizeFeature(feature, fileName) {
     image_attribution: image.attribution,
     claim_status: "unclaimed",
   };
+  const hasRawPhone = (properties.phone != null && String(properties.phone).trim().length > 0) ||
+    (properties.primary_phone != null && String(properties.primary_phone).trim().length > 0);
   return {
     record,
-    invalidPhone: properties.primary_phone != null && String(properties.primary_phone).trim().length > 0 && !phone,
+    invalidPhone: hasRawPhone && !phone,
     invalidRating: rawRating != null && parseRating(rawRating) == null,
     coordinateOrder: { latitude: coordinates[1], longitude: coordinates[0] },
   };

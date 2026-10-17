@@ -64,6 +64,8 @@ const DEMO_SHOP_FEATURES: Partial<Record<StoreCategory, { name: string; imageUrl
   fashion: { name: "T-Shirts", imageUrl: "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&w=640&q=80" },
   electronics: { name: "Smartphones", imageUrl: "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?auto=format&fit=crop&w=640&q=80" },
   home_kitchen: { name: "Cookware", imageUrl: "https://images.unsplash.com/photo-1556911220-e15b29be8c8f?auto=format&fit=crop&w=640&q=80" },
+  flowers: { name: "Fresh Jasmine Garland", imageUrl: "https://images.unsplash.com/photo-1563241527-3004b7be0ffd?auto=format&fit=crop&w=640&q=80" },
+  gifts: { name: "Customized Photo Frame", imageUrl: "https://images.unsplash.com/photo-1549465220-1a8b9238cd48?auto=format&fit=crop&w=640&q=80" },
 };
 import { LocalShoreOffers } from "@/components/localshore-offers";
 import { LiquidGlassCategorySelector } from "@/components/liquid-glass-category-selector";

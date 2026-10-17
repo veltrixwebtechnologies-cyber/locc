@@ -53,7 +53,13 @@ export function ImportedDemoCatalog({
                     ? "bakery"
                     : /furniture/i.test(category)
                       ? "home_decor"
-                      : "individual_fashion"
+                      : /electro/i.test(category)
+                        ? "electronics"
+                        : /flower|florist/i.test(category)
+                          ? "flowers"
+                          : /gift/i.test(category)
+                            ? "gifts"
+                            : "individual_fashion"
                 }
                 size="lg"
               />

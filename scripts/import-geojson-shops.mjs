@@ -221,7 +221,12 @@ function printSummary(summary) {
 }
 
 if (process.argv[1] && pathToFileURL(path.resolve(process.argv[1])).href === import.meta.url) {
-  importRows().catch((error) => {
+  const dirArgIndex = process.argv.indexOf("--dir");
+  const targetDir =
+    dirArgIndex !== -1 && process.argv[dirArgIndex + 1]
+      ? path.resolve(process.argv[dirArgIndex + 1])
+      : inputDir;
+  importRows({ directory: targetDir }).catch((error) => {
     console.error(error instanceof Error ? error.message : String(error));
     process.exitCode = 1;
   });

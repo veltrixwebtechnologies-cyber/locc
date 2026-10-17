@@ -32,6 +32,42 @@ export function getFallbackProductImage(name?: string | null, category?: string 
     puffs: "1623334044303-241021148842",
     cookies: "1558961363-fa8fdf82db35",
     samosa: "1601050690597-df0568f70950",
+
+    // Electronics
+    "4k smart led tv 43 inch": "1593784991095-a205069470b6",
+    "surround soundbar 120w speaker": "1545454675-3531b543be5d",
+    "true wireless bluetooth earbuds": "1590658268037-6bf12165a8df",
+    "type-c 65w fast charger adapter": "1583863788434-e58a36330cf0",
+    "10000mah power bank fast charge": "1609592424109-dd9892f1b177",
+    "smart fitness watch with spo2": "1579586337278-3befd40fd17a",
+    "portable bluetooth speaker waterproof": "1608043152269-423dbba4e7e1",
+    "mixer grinder 750w 3 jars": "1574269909862-7e1d70bb8078",
+    "electric steam iron 1200w": "1585659722983-3a675dabf23d",
+    "induction cooktop 2000w": "1556911220-e15b29be8c8f",
+
+    // Flowers
+    "fresh jasmine garland (மல்லிப்பூ)": "1563241527-3004b7be0ffd",
+    "red rose flower bouquet": "1518709268805-4e9042af9f23",
+    "mixed floral bouquet (lilies & roses)": "1526047932273-341f2a7631f9",
+    "traditional pooja flower mix (உதிரிப்பூ)": "1508610048659-a06b669e3321",
+    "marigold garland (சாமந்தி மாலை)": "1598880940371-c756e015fea1",
+    "lotus flowers for pooja (pack of 2)": "1606567595334-d39972c85dbe",
+    "fragrant tube rose garland (சம்பங்கி)": "1490750967868-88aa4486c946",
+    "orchid table flower arrangement": "1525310072745-f49212b5ac6d",
+    "bridal flower veni for hair": "1561181286-d3fee7d55364",
+    "carnation flower bunch (10 stems)": "1589244159943-460088ed5c92",
+
+    // Gifts
+    "customized wooden photo frame": "1549465220-1a8b9238cd48",
+    "personalized magic ceramic mug": "1514432324607-a09d9b4aefdd",
+    "handmade festive gift hamper": "1549465220-1a8b9238cd48",
+    "scented soy wax candle set": "1603006905003-be475563bc59",
+    "crystal rotating led photo lamp": "1513885535727-862c7e189727",
+    "teddy bear & chocolate gift combo": "1559454403-b8fb88521f11",
+    "laser engraved metal pen & keychain set": "1583485088034-697b5bc36b92",
+    "vintage musical box gift": "1512909006721-3d6018887383",
+    "personalized name led night lamp": "1507473885765-e6ed057f782c",
+    "celebration greeting card with envelope": "1586075010923-2dd4570fb338",
   };
   // No trustworthy photo is configured for these items. Use a clearly labelled
   // placeholder instead of a broken URL or a misleading photo of another item.
@@ -431,6 +467,30 @@ const REPRESENTATIVE_ITEM_IMAGES: Record<string, string[]> = {
     "https://images.unsplash.com/photo-1513519245088-0e12902e5a38?auto=format&fit=crop&w=320&q=75",
     "https://images.unsplash.com/photo-1493663284031-b7e3aefcae8e?auto=format&fit=crop&w=320&q=75",
   ],
+  electronics: [
+    "https://images.unsplash.com/photo-1593784991095-a205069470b6?auto=format&fit=crop&w=320&q=75",
+    "https://images.unsplash.com/photo-1545454675-3531b543be5d?auto=format&fit=crop&w=320&q=75",
+    "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?auto=format&fit=crop&w=320&q=75",
+    "https://images.unsplash.com/photo-1498049794561-7780e7231661?auto=format&fit=crop&w=320&q=75",
+  ],
+  flowers: [
+    "https://images.unsplash.com/photo-1563241527-3004b7be0ffd?auto=format&fit=crop&w=320&q=75",
+    "https://images.unsplash.com/photo-1490750967868-88aa4486c946?auto=format&fit=crop&w=320&q=75",
+    "https://images.unsplash.com/photo-1508610048659-a06b669e3321?auto=format&fit=crop&w=320&q=75",
+    "https://images.unsplash.com/photo-1526047932273-341f2a7631f9?auto=format&fit=crop&w=320&q=75",
+  ],
+  gifts: [
+    "https://images.unsplash.com/photo-1549465220-1a8b9238cd48?auto=format&fit=crop&w=320&q=75",
+    "https://images.unsplash.com/photo-1513885535727-862c7e189727?auto=format&fit=crop&w=320&q=75",
+    "https://images.unsplash.com/photo-1512909006721-3d6018887383?auto=format&fit=crop&w=320&q=75",
+    "https://images.unsplash.com/photo-1576402187878-974f70c890a5?auto=format&fit=crop&w=320&q=75",
+  ],
+  bakery: [
+    "https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=320&q=75",
+    "https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&w=320&q=75",
+    "https://images.unsplash.com/photo-1608198093002-ad4e005484df?auto=format&fit=crop&w=320&q=75",
+    "https://images.unsplash.com/photo-1555507036-ab1f4038808a?auto=format&fit=crop&w=320&q=75",
+  ],
 };
 
 /** Generic category examples for directory-only shops; never seller stock photos. */
@@ -439,8 +499,18 @@ export function getRepresentativeItemImages(
   seed?: string | null,
 ): string[] {
   const normalized = String(category ?? "").toLowerCase();
-  const key = normalized.includes("furniture") ? "furniture" : "fashion";
-  const images = REPRESENTATIVE_ITEM_IMAGES[key];
+  const key = normalized.includes("furniture")
+    ? "furniture"
+    : normalized.includes("electro")
+      ? "electronics"
+      : normalized.includes("flower") || normalized.includes("florist")
+        ? "flowers"
+        : normalized.includes("gift")
+          ? "gifts"
+          : normalized.includes("bake") || normalized.includes("cake")
+            ? "bakery"
+            : "fashion";
+  const images = REPRESENTATIVE_ITEM_IMAGES[key] ?? REPRESENTATIVE_ITEM_IMAGES.fashion;
   const seedText = String(seed ?? "localshore-shop");
   const offset =
     [...seedText].reduce((total, char) => total + char.charCodeAt(0), 0) % images.length;

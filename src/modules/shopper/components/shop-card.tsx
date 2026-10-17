@@ -62,8 +62,10 @@ const SHOP_CATEGORY_LABELS: Record<string, string> = {
   grocery: "Kirana & Grocery",
   pharmacy: "Pharmacy & Care",
   fashion: "Fashion & Apparel",
-  electronics: "Electronics & Mobiles",
+  electronics: "Electronics & Appliances",
   home_kitchen: "Home & Kitchen",
+  flowers: "Flower Shops & Florists",
+  gifts: "Gift Shops & Novelties",
 };
 
 function getShopCategoryLabel(category: string) {
