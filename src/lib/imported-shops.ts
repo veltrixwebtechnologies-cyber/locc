@@ -40,6 +40,36 @@ export async function fetchNearbyImportedShops(rpc: Rpc, input: {
 
 
 
+export function extractBusinessNameFromUrl(url?: string | null): string | null {
+  if (!url || typeof url !== "string") return null;
+  const match = url.match(/\/maps\/place\/([^/@?#]+)/iu);
+  if (!match) return null;
+  const raw = decodeURIComponent(match[1])
+    .replace(/[+_]+/gu, " ")
+    .replace(/[-–—]+$/gu, "")
+    .trim();
+  if (!raw || /can'?t reach the internet|google maps/iu.test(raw)) return null;
+  return raw
+    .split(/\s+/gu)
+    .map((word) =>
+      word.length > 2 && (word === word.toUpperCase() || word === word.toLowerCase())
+        ? word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+        : word,
+    )
+    .join(" ");
+}
+
+export function cleanShopName(name?: string | null, url?: string | null, category?: string | null): string {
+  const trimmed = (name ?? "").trim();
+  if (!trimmed || /can'?t reach the internet|google maps can'?t/iu.test(trimmed)) {
+    const fromUrl = extractBusinessNameFromUrl(url);
+    if (fromUrl) return fromUrl;
+    if (category) return `${category} Store`;
+    return "Local Store";
+  }
+  return trimmed;
+}
+
 export function toImportedShopCard(shop: ImportedShopRow): ShopCardData | null {
   if (!shop.id || !shop.business_name || shop.latitude == null || shop.longitude == null || shop.distance_km == null) return null;
   const lat = Number(shop.latitude);
@@ -47,9 +77,10 @@ export function toImportedShopCard(shop: ImportedShopRow): ShopCardData | null {
   const distanceKm = Number(shop.distance_km);
   if (!isValidCoordinate(lat, lng) || !Number.isFinite(distanceKm) || distanceKm < 0) return null;
   const rating = Number(shop.rating ?? 0);
+  const name = cleanShopName(shop.business_name, shop.google_maps_url, shop.category);
   return {
     id: `imported:${shop.id}`,
-    name: shop.business_name,
+    name,
     category: shop.category,
     imageUrl: shop.cover_image_url,
     imageType: shop.image_type ?? "representative",
@@ -80,7 +111,7 @@ export function toImportedMapMarker(shop: ImportedShopRow): MapMarkerItem | null
   return {
     id: `marker-${card.id}`,
     shopId: card.id,
-    shopName: shop.business_name,
+    shopName: card.name,
     category,
     lat,
     lng,

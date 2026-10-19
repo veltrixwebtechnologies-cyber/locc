@@ -212,3 +212,14 @@ export const cartTotals = (lines: CartLine[]) => {
   const subtotal = lines.reduce((n, l) => n + l.qty * l.price, 0);
   return { itemCount, subtotal };
 };
+
+export function replaceCartState(next: CartState, options?: { skipPersist?: boolean }) {
+  ensureHydrated();
+  state = sanitizeCart(next);
+  if (!options?.skipPersist) {
+    persist();
+  } else {
+    listeners.forEach((l) => l());
+  }
+}
+

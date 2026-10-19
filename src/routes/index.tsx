@@ -3,7 +3,7 @@ import { lazy, Suspense, useEffect, useMemo, useState, startTransition } from "r
 import { Search } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { AwningCard } from "@/components/awning-card";
-import { ShopCard } from "@/modules/shopper/components/shop-card";
+import { ShopCard, type ShopCardData } from "@/modules/shopper/components/shop-card";
 import {
   stores,
   deliveryCategories,
@@ -308,6 +308,36 @@ function Home() {
     hasConfirmedLocation,
   ]);
 
+  const combinedNearbyShops = useMemo<ShopCardData[]>(() => {
+    const list: ShopCardData[] = [];
+    filtered.forEach((store) => {
+      list.push({
+        id: store.id,
+        name: store.name,
+        category: categoryLabel[store.category] ?? store.category,
+        imageUrl: store.imageUrl,
+        featuredProductName: store.featuredProductName,
+        rating: store.rating,
+        distanceKm: store.distanceKm,
+        isFallback: store.isFallback,
+        fallbackZoneName: store.fallbackZoneName,
+        isOpen: store.isOpen,
+        address: store.address,
+        description: store.tagline,
+      });
+    });
+    (publicShops.data ?? []).forEach((row) => {
+      const shop = toImportedShopCard(row);
+      if (shop) list.push(shop);
+    });
+    return list.sort((a, b) => {
+      const distA = a.distanceKm ?? Infinity;
+      const distB = b.distanceKm ?? Infinity;
+      if (distA !== distB) return distA - distB;
+      return a.name.localeCompare(b.name);
+    });
+  }, [filtered, publicShops.data]);
+
   const homepageProducts = useMemo<MerchandisingProduct[]>(() => {
     const liveProducts = (approvedProducts.data ?? []).map((product: any) => ({
       id: product.id,
@@ -433,32 +463,15 @@ function Home() {
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {nearbyShopLoading
             ? Array.from({ length: 8 }, (_, index) => <ShopCardSkeleton key={`shop-skeleton-${index}`} />)
-            : filtered.map((store, index) => (
+            : combinedNearbyShops.map((shop, index) => (
             <ShopCard
-              key={store.id}
+              key={shop.id}
               priority={index === 0}
-              shop={{
-                id: store.id,
-                name: store.name,
-                category: categoryLabel[store.category] ?? store.category,
-                imageUrl: store.imageUrl,
-                featuredProductName: store.featuredProductName,
-                rating: store.rating,
-                distanceKm: store.distanceKm,
-                isFallback: store.isFallback,
-                fallbackZoneName: store.fallbackZoneName,
-                isOpen: store.isOpen,
-                address: store.address,
-                description: store.tagline,
-              }}
+              shop={shop}
               variant="wide"
               className="h-full max-w-none"
             />
           ))}
-          {(publicShops.data ?? []).map((row) => {
-            const shop = toImportedShopCard(row);
-            return shop ? <ShopCard key={shop.id} shop={shop} variant="wide" className="h-full max-w-none" /> : null;
-          })}
           {nearbyShopLoadError && (
             <div className="col-span-full rounded-xl border border-amber-300 bg-amber-50 p-4 text-amber-950" role="alert">
               <p>We couldn’t load nearby shops and products. Please check your connection and retry.</p>
@@ -468,7 +481,7 @@ function Home() {
               }}>Retry nearby catalog</button>
             </div>
           )}
-          {!nearbyShopLoading && !nearbyShopLoadError && filtered.length === 0 && (publicShops.data?.length ?? 0) === 0 && (
+          {!nearbyShopLoading && !nearbyShopLoadError && combinedNearbyShops.length === 0 && (
             <div className="col-span-full">
               <EmptyState />
             </div>

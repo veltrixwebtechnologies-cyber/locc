@@ -94,6 +94,25 @@ export function googlePlaceIdentity(value) {
   catch { return placeId; }
 }
 
+export function extractBusinessNameFromUrl(url) {
+  if (!url || typeof url !== "string") return null;
+  const match = url.match(/\/maps\/place\/([^/@?#]+)/iu);
+  if (!match) return null;
+  const raw = decodeURIComponent(match[1])
+    .replace(/[+_]+/gu, " ")
+    .replace(/[-–—]+$/gu, "")
+    .trim();
+  if (!raw || /can'?t reach the internet|google maps/iu.test(raw)) return null;
+  return raw
+    .split(/\s+/gu)
+    .map((word) =>
+      word.length > 2 && (word === word.toUpperCase() || word === word.toLowerCase())
+        ? word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+        : word,
+    )
+    .join(" ");
+}
+
 export function normalizeOpeningHours(value) {
   const text = cleanText(value);
   if (!text || /^(hours|opening hours|add hours|closed|unknown|n\/a)$/iu.test(text)) return null;
@@ -181,9 +200,16 @@ export function normalizeFeature(feature, fileName) {
             : /gift/iu.test(dataset) || /gift/iu.test(primaryCat)
               ? "Gifts"
               : null;
-  if (!category) return { error: "Unknown dataset category; add an explicit filename mapping before importing" };
-  const businessName = cleanText(properties.business_name);
+  let businessName = cleanText(properties.business_name);
   if (!businessName) return { error: "business_name is missing" };
+  if (/can'?t reach the internet|google maps can'?t/iu.test(businessName)) {
+    const recovered = extractBusinessNameFromUrl(properties.google_maps_url);
+    if (recovered) {
+      businessName = recovered;
+    } else {
+      return { error: "invalid business_name: contains scraper error page text" };
+    }
+  }
 
   const address = cleanText(properties.formatted_address);
   const postalCode = cleanText(properties.postal_code) || address?.match(/\b\d{6}\b/u)?.[0] || null;

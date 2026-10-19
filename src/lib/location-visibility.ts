@@ -4,6 +4,7 @@ export const CUSTOMER_VISIBILITY_RADIUS_KM = 5;
 export const CUSTOMER_VISIBILITY_RADIUS_METERS = 5000;
 export const DEFAULT_SHOP_DISCOVERY_RADIUS_KM = 7;
 export const SHOP_DISCOVERY_RADIUS_OPTIONS_KM = [5, 7, 10] as const;
+export const MAX_SHOP_DISCOVERY_RADIUS_KM = 10;
 
 export function hasConfirmedCoordinates<T extends { lat?: number; lng?: number }>(location: T | null | undefined): location is T & { lat: number; lng: number } {
   return (

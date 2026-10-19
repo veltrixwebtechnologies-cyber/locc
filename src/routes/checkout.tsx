@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { AppShell } from "@/components/app-shell";
 import { cartStore, useCart, cartTotals } from "@/modules/shopper/services/cart-store";
+import { persistentCart } from "@/modules/shopper/services/persistent-cart";
 import { getStore, APPROVED_STORE } from "@/lib/mock-data";
 import { ordersStore, addPlacedOrderToCache } from "@/modules/shopper/services/orders-store";
 import { supabase } from "@/integrations/supabase/client";
@@ -740,6 +741,7 @@ function CheckoutPage() {
   const finishVerifiedPayment = (verifyRes: Awaited<ReturnType<typeof verifyRazorpayPayment>>, paymentId: string) => {
     if (!verifyRes.success || !verifyRes.order || !store) return;
     cartStore.clear();
+    void persistentCart.clearPurchased();
     setTxnRef(paymentId);
     const newOrderObj = {
       id: verifyRes.order.id,
@@ -776,6 +778,7 @@ function CheckoutPage() {
     } });
     await ordersStore.saveTestReceipt(receipt);
     cartStore.clear();
+    void persistentCart.clearPurchased();
     setPlacedOrder(receipt);
     setTxnRef(verification.razorpay_payment_id);
     setPaymentRecovery(null);
@@ -991,6 +994,7 @@ function CheckoutPage() {
       });
 
       cartStore.clear();
+      void persistentCart.clearPurchased();
       setTxnRef(generatedTxn);
       setPlacedOrder(order);
 
@@ -1486,8 +1490,16 @@ function CheckoutPage() {
           </span>
         </div>
         <Row label={`Item subtotal (${totals.itemCount})`} value={`₹${totals.subtotal}`} />
-        {shopCoordinates.isError && <p role="alert" className="text-sm text-red-700">Shop location could not be loaded. <button type="button" className="underline" onClick={() => void shopCoordinates.refetch()}>Retry shop location</button></p>}
-        {shopCoordinates.isSuccess && !shopPin && <p role="alert" className="text-sm text-amber-800">This shop needs a valid map pin before delivery can be confirmed.</p>}
+        {shopCoordinates.isError && (!shopPin || !isValidCoordinate(shopPin.lat, shopPin.lng)) && (
+          <p role="alert" className="text-sm text-red-700">
+            Shop location could not be loaded. <button type="button" className="underline" onClick={() => void shopCoordinates.refetch()}>Retry shop location</button>
+          </p>
+        )}
+        {(!shopPin || !isValidCoordinate(shopPin.lat, shopPin.lng)) && !shopCoordinates.isError && !shopCoordinates.isLoading && (
+          <p role="alert" className="text-sm text-amber-800">
+            This shop needs a valid map pin before delivery can be confirmed.
+          </p>
+        )}
         {stockCheckError && <div role="alert" className="my-3 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900"><p>{stockCheckError}</p><button type="button" onClick={() => setStockCheckRevision(value => value + 1)} className="mt-2 font-bold underline">Retry availability</button> · <Link to="/cart" className="underline">Review cart</Link></div>}
         <Row label="Govt. Taxes & GST (5% incl.)" value={`₹${billBreakdown.gstAmount}`} />
         <Row

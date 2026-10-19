@@ -3,6 +3,7 @@ import { Link } from "@tanstack/react-router";
 import { Store, MapPin, Star, Sparkles, ArrowRight, Lightbulb } from "lucide-react";
 import { motion } from "motion/react";
 import { calculateDistanceKm } from "@/lib/geo";
+import { cleanShopName } from "@/lib/imported-shops";
 
 export interface ComplementaryShop {
   id: string;
@@ -86,7 +87,7 @@ export const ComplementaryShopsWidget: React.FC<ComplementaryShopsWidgetProps> =
                     </div>
                     <div className="min-w-0">
                       <h4 className="font-display font-extrabold text-sm text-slate-900 truncate leading-tight group-hover/card:text-[#981495] transition-colors">
-                        {shop.business_name}
+                        {cleanShopName(shop.business_name)}
                       </h4>
                       <p className="text-[11px] font-semibold text-slate-500 truncate mt-0.5">
                         {shop.business_type || "Verified Local Partner"}

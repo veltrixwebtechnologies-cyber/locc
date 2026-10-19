@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { cartStore } from "@/modules/shopper/services/cart-store";
+import { persistentCart } from "@/modules/shopper/services/persistent-cart";
 
 interface AuthState {
   id: string | null;
@@ -44,12 +45,17 @@ function setState(next: AuthState) {
 function ensureAuthSubscription() {
   if (initialized || typeof window === "undefined") return;
   initialized = true;
+  persistentCart.init();
   let authRevision = 0;
   try {
     supabase.auth.onAuthStateChange((event, session) => {
       authRevision++;
       if (event === "SIGNED_OUT" || (state.id !== null && state.id !== (session?.user?.id ?? null))) {
         cartStore.clear();
+        persistentCart.handleLogout();
+      } else if (session?.user?.id) {
+        const isNewLogin = state.id !== session.user.id && event === "SIGNED_IN";
+        void persistentCart.handleLogin(session.user.id, isNewLogin);
       }
       setState(fromUser(session?.user ?? null));
     });
@@ -66,7 +72,11 @@ function ensureAuthSubscription() {
     // A guest session is normal: preserve its basket. Ignore a stale initial
     // read if a newer sign-in/sign-out event has already updated the state.
     if (authRevision !== initialRevision) return;
-    setState(fromUser(data.session?.user ?? null));
+    const user = data.session?.user ?? null;
+    if (user?.id) {
+      void persistentCart.handleLogin(user.id, false);
+    }
+    setState(fromUser(user));
   }).catch(() => {
     // Temporary auth connectivity failure must not erase a local basket.
   });

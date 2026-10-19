@@ -611,11 +611,16 @@ function markerPillMarkup(marker: MapMarkerItem): string {
   const image = isValidImageUrl(marker.productImage)
     ? marker.productImage!
     : getFallbackProductImage(marker.productName, marker.category);
+  const distanceLabel = typeof marker.distanceKm === "number" && Number.isFinite(marker.distanceKm)
+    ? marker.distanceKm < 1
+      ? `${Math.round(marker.distanceKm * 1000)}m`
+      : `${marker.distanceKm.toFixed(1)}km`
+    : "";
   return `
     <img class="marker-shop-image" src="${escapeAttribute(image)}" alt="" aria-hidden="true" />
     <span class="marker-price-content">
       <span class="font-extrabold">${escapeAttribute(marker.priceDisplay)}</span>
-      <span class="shop-name-tag">${escapeAttribute(marker.shopName)}</span>
+      <span class="shop-name-tag">${escapeAttribute(marker.shopName)}${distanceLabel ? ` · ${distanceLabel}` : ""}</span>
     </span>
   `;
 }

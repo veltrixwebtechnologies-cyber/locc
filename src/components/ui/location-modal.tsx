@@ -121,19 +121,10 @@ export function LocationModal({ isOpen, onClose }: LocationModalProps) {
       });
       setPendingGPSLocation(detected);
       setMapOrigin("gps");
-      // Move straight to the map preview so the customer can see and adjust
-      // the live position before confirming the delivery entrance.
-      setViewMode("map");
       const accuracy = detected.accuracy ?? 0;
-      if (accuracy <= MAX_CUSTOMER_DELIVERY_ACCURACY_M) {
-        toast.success("Precise location detected", {
-          description: `${detected.area || detected.label} · Accuracy ±${Math.round(accuracy)}m`,
-        });
-      } else {
-        toast.info("Approximate location found", {
-          description: `Accuracy ±${Math.round(accuracy)}m. Adjust the pin to your entrance before saving.`,
-        });
-      }
+      toast.success("Current location detected", {
+        description: `${detected.area || detected.label} (±${Math.round(accuracy)}m). Click 'Confirm current location' below to save.`,
+      });
     } catch (error) {
       if (import.meta.env?.DEV) console.warn("[LocalShore GPS] modal request failed", error);
       // Keep the saved address and show the GPS error with explicit choices.
@@ -146,20 +137,9 @@ export function LocationModal({ isOpen, onClose }: LocationModalProps) {
   const selectedLocation = pendingGPSLocation ?? activeLocation;
 
   const handleConfirmSelectedLocation = () => {
-    const candidate = pendingGPSLocation;
+    const candidate = pendingGPSLocation ?? activeLocation;
     if (!candidate) {
       onClose();
-      return;
-    }
-    if (
-      typeof pendingGPSLocation.accuracy === "number" &&
-      pendingGPSLocation.accuracy > MAX_CUSTOMER_DELIVERY_ACCURACY_M
-    ) {
-      setMapOrigin("gps");
-      setViewMode("map");
-      toast.info("Adjust the pin for an exact delivery entrance", {
-        description: `GPS accuracy is approximately ±${Math.round(pendingGPSLocation.accuracy)}m.`,
-      });
       return;
     }
     commitDetectedLocation(candidate);
@@ -244,9 +224,10 @@ export function LocationModal({ isOpen, onClose }: LocationModalProps) {
   };
 
   const handleMapLocationSelect = (loc: DeliveryLocation) => {
-    setPendingGPSLocation(loc);
-    setViewMode("quick");
-    toast.info("Pin selected. Review and confirm it to save.");
+    commitDetectedLocation(loc);
+    setPendingGPSLocation(null);
+    toast.success("Delivery location saved", { description: loc.label });
+    onClose();
   };
 
   // Get dynamic popular areas ONLY when user explicitly requests/confirms location
@@ -271,7 +252,11 @@ export function LocationModal({ isOpen, onClose }: LocationModalProps) {
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 10 }}
           transition={{ type: "spring", stiffness: 350, damping: 28 }}
-          className={`relative my-auto flex max-h-[calc(100dvh-1rem)] w-full flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white p-3 shadow-[0_24px_80px_rgba(15,23,42,0.24)] sm:max-h-[min(760px,calc(100dvh-2rem))] sm:rounded-3xl sm:p-5 md:p-6 ${viewMode === "map" ? "max-w-5xl md:max-h-[min(820px,calc(100dvh-2rem))]" : "max-w-xl"}`}
+          className={`relative my-auto flex w-full flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white p-3 shadow-[0_24px_80px_rgba(15,23,42,0.24)] sm:rounded-3xl sm:p-5 md:p-6 ${
+            viewMode === "map"
+              ? "h-[calc(100dvh-1.5rem)] max-w-5xl sm:h-[min(820px,calc(100dvh-2rem))]"
+              : "max-h-[calc(100dvh-1rem)] max-w-xl sm:max-h-[min(760px,calc(100dvh-2rem))]"
+          }`}
         >
           {/* Header */}
           <div className="flex shrink-0 items-start justify-between gap-3 border-b border-slate-100 pb-3">
@@ -340,79 +325,73 @@ export function LocationModal({ isOpen, onClose }: LocationModalProps) {
 
           {/* Body Content */}
           {viewMode === "map" ? (
-            <div className="min-h-0 flex-1 overflow-y-auto pt-3 md:overflow-hidden">
-              {mapFix && mapFix.accuracy > MAX_CUSTOMER_DELIVERY_ACCURACY_M && (
-                <p
-                  className="mb-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-medium leading-relaxed text-amber-900"
-                  role="status"
-                >
-                  Your device provided an approximate area. For an exact delivery point, zoom in,
-                  place the pin at your entrance, and confirm it.
-                </p>
-              )}
+            <div className="min-h-0 flex-1 flex flex-col pt-2.5 overflow-hidden">
               <LocationMapPicker
-                initialLat={mapFix?.lat ?? activeLocation?.lat}
-                initialLng={mapFix?.lng ?? activeLocation?.lng}
-                initialAccuracy={mapFix?.accuracy}
-                requiresManualConfirmation={
-                  !!mapFix && mapFix.accuracy > MAX_CUSTOMER_DELIVERY_ACCURACY_M
-                }
+                initialLat={pendingGPSLocation?.lat ?? mapFix?.lat ?? activeLocation?.lat}
+                initialLng={pendingGPSLocation?.lng ?? mapFix?.lng ?? activeLocation?.lng}
+                initialAccuracy={pendingGPSLocation?.accuracy ?? mapFix?.accuracy}
+                initialArea={pendingGPSLocation?.area ?? activeLocation?.area}
+                initialCity={pendingGPSLocation?.city ?? activeLocation?.city}
+                initialLabel={pendingGPSLocation?.label ?? activeLocation?.label}
+                requiresManualConfirmation={false}
                 onSelectLocation={handleMapLocationSelect}
                 onBack={() => setViewMode("quick")}
               />
             </div>
           ) : (
             <div className="min-h-0 flex-1 space-y-3 overflow-y-auto px-0.5 pb-1 pt-3.5">
-              {/* Active Selected Location Summary Card (if user previously selected a location) */}
+              {/* Active Selected Location Summary Card */}
               {selectedLocation && (
-                <div className="rounded-2xl border border-[#f0abfc] bg-[var(--sand)]/70 p-3.5">
+                <div className="rounded-2xl border-2 border-[#981495]/30 bg-[var(--sand)]/80 p-3.5 shadow-sm">
                   <div className="flex items-start gap-3">
-                    <div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-[#981495] text-white shadow-sm">
+                    <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[#981495] text-white shadow-md">
                       <MapPin className="h-5 w-5 stroke-[2.2]" />
                     </div>
                     <div className="min-w-0 flex-1">
                       <span className="text-[10px] font-black text-[#981495] uppercase tracking-wider block">
                         {pendingGPSLocation
-                          ? "Detected Location · Review Before Saving"
+                          ? "📍 Current Location Detected"
                           : "Selected Delivery Location"}
                       </span>
-                      <h4 className="break-words text-sm font-black leading-snug text-slate-900">
-                        📍 {selectedLocation.area || selectedLocation.city}
+                      <h4 className="break-words text-sm font-black leading-snug text-slate-900 mt-0.5 sm:text-base">
+                        {selectedLocation.area || selectedLocation.city}
                       </h4>
                       <p
                         title={selectedLocation.label}
-                        className="break-words text-xs font-medium leading-relaxed text-slate-600"
+                        className="break-words text-xs font-semibold leading-relaxed text-slate-600 mt-0.5"
                       >
                         {selectedLocation.label}
                       </p>
-                      {selectedLocation.isGPS && typeof selectedLocation.accuracy === "number" && (
-                        <p className="text-xs text-slate-600 mt-1">
-                          {selectedLocation.lat.toFixed(6)}, {selectedLocation.lng.toFixed(6)}
-                          {" · Accuracy radius ±"}
-                          {Math.round(selectedLocation.accuracy)}m
+                      {typeof selectedLocation.accuracy === "number" && (
+                        <p className="text-[11px] font-medium text-slate-500 mt-1">
+                          GPS Accuracy: ±{Math.round(selectedLocation.accuracy)}m
                           {selectedLocation.accuracy <= MAX_CUSTOMER_DELIVERY_ACCURACY_M
                             ? " · High accuracy"
-                            : " · Approximate — adjust pin"}
+                            : " · Approximate area"}
                         </p>
                       )}
                     </div>
                   </div>
 
-                  <button
-                    type="button"
-                    onClick={() =>
-                      dynamicPopularAreas.length > 0
-                        ? setShowPopularAreas((prev) => !prev)
-                        : openMap()
-                    }
-                    className="mt-3 inline-flex min-h-10 items-center gap-1 rounded-xl border border-[#d58bd8] bg-white px-3 py-2 text-xs font-black text-[#981495] shadow-xs transition-colors hover:bg-[var(--sand)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#981495] focus-visible:ring-offset-2"
-                  >
-                    {dynamicPopularAreas.length > 0
-                      ? showPopularAreas
-                        ? "Hide Areas"
-                        : "View Areas"
-                      : "Adjust pin"}
-                  </button>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={() => openMap("gps")}
+                      className="inline-flex min-h-10 items-center gap-1.5 rounded-xl border border-[#d58bd8] bg-white px-3.5 py-2 text-xs font-black text-[#981495] shadow-xs transition-colors hover:bg-[var(--sand)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#981495]"
+                    >
+                      <Map className="h-3.5 w-3.5" />
+                      Adjust pin on map
+                    </button>
+                    {dynamicPopularAreas.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => setShowPopularAreas((prev) => !prev)}
+                        className="inline-flex min-h-10 items-center gap-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-700 shadow-xs transition-colors hover:bg-slate-50"
+                      >
+                        {showPopularAreas ? "Hide Areas" : "View Areas"}
+                      </button>
+                    )}
+                  </div>
                 </div>
               )}
 
@@ -420,9 +399,10 @@ export function LocationModal({ isOpen, onClose }: LocationModalProps) {
                 <button
                   type="button"
                   onClick={handleConfirmSelectedLocation}
-                  className="min-h-12 w-full rounded-xl bg-[#981495] px-4 py-3 text-sm font-black text-white shadow-[0_10px_24px_rgba(152,20,149,0.22)] transition hover:bg-[#7d1079] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#981495] focus-visible:ring-offset-2 active:translate-y-px"
+                  className="min-h-12 w-full flex items-center justify-center gap-2 rounded-xl bg-[#981495] px-4 py-3 text-sm font-black text-white shadow-[0_10px_24px_rgba(152,20,149,0.22)] transition hover:bg-[#7d1079] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#981495] focus-visible:ring-offset-2 active:translate-y-px"
                 >
-                  {pendingGPSLocation ? "Use detected location" : "Use selected address"}
+                  <Check className="h-4 w-4 stroke-[3]" />
+                  {pendingGPSLocation ? "Confirm current location" : "Confirm selected address"}
                 </button>
               )}
 

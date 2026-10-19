@@ -102,6 +102,9 @@ interface LocationMapPickerProps {
   initialLat?: number;
   initialLng?: number;
   initialAccuracy?: number;
+  initialArea?: string;
+  initialCity?: string;
+  initialLabel?: string;
   requiresManualConfirmation?: boolean;
   onSelectLocation: (loc: DeliveryLocation) => void;
   onBack?: () => void;
@@ -111,6 +114,9 @@ export function LocationMapPicker({
   initialLat,
   initialLng,
   initialAccuracy,
+  initialArea,
+  initialCity,
+  initialLabel,
   requiresManualConfirmation = false,
   onSelectLocation,
   onBack,
@@ -137,9 +143,9 @@ export function LocationMapPicker({
     label: string;
     pincode?: string;
   }>({
-    area: "",
-    city: "",
-    label: "Select your delivery entrance",
+    area: initialArea || "",
+    city: initialCity || "",
+    label: initialLabel || "Select your delivery entrance",
   });
 
   const [isGeocoding, setIsGeocoding] = useState(false);
@@ -225,7 +231,13 @@ export function LocationMapPicker({
           rating: Number(shop.rating ?? 0),
           reviewCount: shop.review_count ?? undefined,
         }));
-        if (!cancelled) setLocalShops([...registeredShops, ...importedListings]);
+        const combined = [...registeredShops, ...importedListings].sort((a, b) => {
+          const distA = a.distanceKm ?? Infinity;
+          const distB = b.distanceKm ?? Infinity;
+          if (distA !== distB) return distA - distB;
+          return a.shopName.localeCompare(b.shopName);
+        });
+        if (!cancelled) setLocalShops(combined);
       } catch {
         if (!cancelled) setShopsError("We couldn’t load nearby shops. Please try again.");
       } finally {
@@ -531,6 +543,20 @@ export function LocationMapPicker({
     };
   }, [mapStart, handlePositionChange, performReverseGeocode]);
 
+  // Keep map container responsive on window or modal resize
+  useEffect(() => {
+    if (!mapContainerRef.current) return;
+    const observer = new ResizeObserver(() => {
+      if (googleModeRef.current && mapRef.current && (window as any).google?.maps) {
+        (window as any).google.maps.event.trigger(mapRef.current, "resize");
+      } else if (mapRef.current?.invalidateSize) {
+        mapRef.current.invalidateSize();
+      }
+    });
+    observer.observe(mapContainerRef.current);
+    return () => observer.disconnect();
+  }, [isGoogleMapReady, isLeafletMapReady]);
+
   // Render registered stores and imported public listings on either map provider.
   useEffect(() => {
     const removeShopMarkers = () => {
@@ -613,11 +639,17 @@ export function LocationMapPicker({
       });
       if (gpsLoc && isValidCoordinate(gpsLoc.lat, gpsLoc.lng)) {
         initialAccuracyRef.current = gpsLoc.accuracy ?? undefined;
+        setCoords({ lat: gpsLoc.lat, lng: gpsLoc.lng });
         setMapStart({ lat: gpsLoc.lat, lng: gpsLoc.lng });
-        setHasPositionedPin(
-          typeof gpsLoc.accuracy === "number" &&
-            gpsLoc.accuracy <= MAX_CUSTOMER_DELIVERY_ACCURACY_M,
-        );
+        if (gpsLoc.area || gpsLoc.label) {
+          setAddressDetails({
+            area: gpsLoc.area || "",
+            city: gpsLoc.city || "",
+            label: gpsLoc.label || "",
+            pincode: gpsLoc.pincode,
+          });
+        }
+        setHasPositionedPin(true);
         handlePositionChange(gpsLoc.lat, gpsLoc.lng, true);
         toast.success(
           gpsLoc.accuracy && gpsLoc.accuracy <= MAX_CUSTOMER_DELIVERY_ACCURACY_M
@@ -678,41 +710,46 @@ export function LocationMapPicker({
   };
 
   const handleConfirm = () => {
-    if (!coords || isGeocoding || !hasPositionedPin || !isValidCoordinate(coords.lat, coords.lng)) return;
+    if (!coords || !isValidCoordinate(coords.lat, coords.lng)) return;
     const finalLocation: DeliveryLocation = {
-      id: `manual-map-${Date.now()}`,
-      label: addressDetails.label || `${addressDetails.area}, ${addressDetails.city}`,
-      area: addressDetails.area,
-      city: addressDetails.city,
+      id: `confirmed-${Date.now()}`,
+      label:
+        addressDetails.label && addressDetails.label !== "Select your delivery entrance"
+          ? addressDetails.label
+          : `${addressDetails.area || "Delivery location"}, ${addressDetails.city || ""}`.replace(/^, |, $/g, ""),
+      area: addressDetails.area || "Current location",
+      city: addressDetails.city || "",
       lat: coords.lat,
       lng: coords.lng,
       pincode: addressDetails.pincode,
+      isGPS: true,
     };
     onSelectLocation(finalLocation);
   };
 
   return (
-    <div className="flex flex-col w-full relative shrink-0 rounded-[28px] bg-white p-3 sm:p-4">
+    <div className="flex flex-col w-full h-full min-h-0 flex-1 overflow-hidden">
       {/* Map Search Bar & Back Button */}
-      <div className="relative z-[1000] flex shrink-0 flex-col gap-3 bg-white pb-3 sm:gap-4 sm:pb-4">
+      <div className="relative z-[1000] flex shrink-0 flex-col gap-2.5 bg-white pb-2.5">
         <div className="flex items-center gap-2">
           {onBack && (
             <button
               type="button"
               onClick={onBack}
-              className="grid h-10 w-10 place-items-center rounded-xl bg-white/95 text-slate-700 shadow-md backdrop-blur-md hover:bg-white hover:text-[#981495] transition-all border border-slate-100"
+              aria-label="Back to quick options"
+              className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-white text-slate-700 shadow-sm border border-slate-200 hover:bg-slate-50 hover:text-[#981495] transition-all"
             >
               <ArrowLeft className="h-5 w-5" />
             </button>
           )}
-          <div className="relative flex-1 flex items-center gap-2 rounded-xl bg-white/95 px-3.5 py-2.5 shadow-lg backdrop-blur-md border border-slate-100">
+          <div className="relative flex-1 flex items-center gap-2 rounded-xl bg-slate-50 px-3.5 py-2.5 border border-slate-200 focus-within:bg-white focus-within:border-[#981495] focus-within:ring-2 focus-within:ring-[#981495]/20 transition-all">
             <Search className="h-4 w-4 text-slate-400 shrink-0" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => void handleMapSearch(e.target.value)}
               placeholder="Search area, street or landmark"
-              className="w-full bg-transparent text-sm sm:text-base font-semibold text-slate-900 outline-none placeholder:text-slate-400"
+              className="w-full bg-transparent text-sm font-semibold text-slate-900 outline-none placeholder:text-slate-400"
               autoComplete="off"
             />
             {isSearching && <Loader2 className="h-4 w-4 text-[#981495] animate-spin shrink-0" />}
@@ -722,7 +759,7 @@ export function LocationMapPicker({
               type="button"
               onClick={handleGPSLocate}
               disabled={isLocating}
-              className="hidden shrink-0 items-center gap-2 rounded-xl bg-[#981495] px-3.5 py-3 text-xs font-black text-white shadow-lg shadow-[#981495]/15 transition hover:bg-[#7d1079] disabled:opacity-60 sm:flex"
+              className="hidden shrink-0 items-center gap-2 rounded-xl bg-[#981495] px-3.5 py-2.5 text-xs font-black text-white shadow-md shadow-[#981495]/15 transition hover:bg-[#7d1079] disabled:opacity-60 sm:flex"
             >
               {isLocating ? <Loader2 className="h-4 w-4 animate-spin" /> : <LocateFixed className="h-4 w-4" />}
               Use my location
@@ -750,7 +787,7 @@ export function LocationMapPicker({
 
       {/* LocalShore map canvas. Google mode uses a quiet branded style and
           LocalShore seller markers; OSM mode keeps the existing Leaflet map. */}
-      <div className={`relative isolate w-full shrink-0 overflow-hidden rounded-[24px] border border-[#E9DDF0] bg-[#FAF7FC] shadow-sm ${MAP_PROVIDER === "google" ? "h-[min(48vh,520px)] min-h-[320px] sm:min-h-[380px] lg:flex" : "h-[min(46vh,500px)] min-h-[280px] sm:min-h-[340px]"}`}>
+      <div className={`relative isolate w-full flex-1 min-h-[220px] overflow-hidden rounded-2xl border border-[#E9DDF0] bg-[#FAF7FC] shadow-sm ${MAP_PROVIDER === "google" ? "lg:flex" : ""}`}>
         {MAP_PROVIDER === "google" && (
           <aside className="hidden min-w-0 overflow-hidden border-r border-[#EEE7F3] bg-white lg:flex lg:w-[230px] lg:shrink-0 lg:flex-col">
             <div className="flex items-center justify-between border-b border-[#EEE7F3] px-3.5 py-3">
@@ -816,7 +853,7 @@ export function LocationMapPicker({
             )}
           </aside>
         )}
-        <div className="relative h-full min-h-[280px] min-w-0 sm:min-h-0 lg:min-w-0 lg:flex-1">
+        <div className="relative h-full min-h-[220px] min-w-0 flex-1">
         {mapStart ? (
           <div ref={mapContainerRef} className="w-full h-full" />
         ) : (
@@ -902,7 +939,7 @@ export function LocationMapPicker({
           onClick={handleGPSLocate}
           disabled={isLocating}
           title="Center on current GPS position"
-          className={`absolute bottom-6 z-[1000] grid h-11 w-11 place-items-center rounded-2xl bg-white/95 text-[#981495] shadow-xl backdrop-blur-md border border-slate-100 hover:bg-[var(--sand)] transition-colors cursor-pointer ${MAP_PROVIDER === "google" ? "right-3" : "left-3"}`}
+          className={`absolute bottom-3 z-[1000] grid h-10 w-10 place-items-center rounded-xl bg-white text-[#981495] shadow-lg border border-slate-200 hover:bg-slate-50 transition-colors cursor-pointer ${MAP_PROVIDER === "google" ? "right-3" : "left-3"}`}
         >
           {isLocating ? (
             <Loader2 className="h-5 w-5 animate-spin" />
@@ -912,50 +949,47 @@ export function LocationMapPicker({
         </button>
 
         {/* Floating hint label */}
-        <div className="absolute top-3 left-1/2 z-[1000] w-max max-w-[calc(100%-6rem)] -translate-x-1/2 pointer-events-none rounded-full bg-slate-950/75 px-3 py-1.5 text-center text-[10px] font-bold text-white shadow-lg backdrop-blur-sm">
+        <div className="absolute top-3 left-1/2 z-[1000] w-max max-w-[calc(100%-4rem)] -translate-x-1/2 pointer-events-none rounded-full bg-slate-950/80 px-3.5 py-1.5 text-center text-[10px] sm:text-[11px] font-bold text-white shadow-lg backdrop-blur-sm">
           {requiresManualConfirmation && !hasPositionedPin
-            ? "Move the pin to your exact entrance"
-            : "Tap the map, drag the map, or drag the pin to your exact entrance"}
+            ? "Approximate area · Drag pin to your entrance or confirm directly"
+            : "Drag the pin or tap the map to adjust entrance"}
         </div>
         </div>
       </div>
 
       {/* Selected Address Preview & Confirmation Card */}
-      <div className="mt-3 grid gap-3 rounded-[22px] border border-slate-200 bg-white p-3 shadow-sm sm:grid-cols-[1fr_auto] sm:items-center sm:p-4">
-        {MAP_PROVIDER === "google" && !hasPositionedPin && (
-          <div className="flex flex-1 items-start gap-2 rounded-xl bg-[#FFF8ED] px-3 py-2.5 text-[11px] font-semibold text-amber-800 ring-1 ring-amber-200">
-            <Navigation className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
-            Your device provided an approximate area. Move the pin to your exact entrance and confirm it.
-          </div>
-        )}
-        <div className="flex min-w-0 items-center gap-3">
-          <div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-[var(--sand)] text-[#981495] mt-0.5">
+      <div className="mt-2.5 shrink-0 flex flex-col sm:flex-row items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm sm:px-4 sm:py-3">
+        <div className="flex min-w-0 items-center gap-3 w-full sm:w-auto flex-1">
+          <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[var(--sand)] text-[#981495]">
             {isGeocoding ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
+              <Loader2 className="h-5 w-5 animate-spin" />
             ) : (
               <MapPin className="h-5 w-5 stroke-[2.2]" />
             )}
           </div>
           <div className="flex-1 min-w-0">
             <span className="block text-[10px] font-black uppercase tracking-wider text-slate-400">
-              {hasPositionedPin ? "Selected location" : "Unconfirmed device estimate"}
+              Selected delivery location
             </span>
-            <h4 className="truncate text-base font-black leading-snug text-slate-900 sm:text-lg">
-              {addressDetails.area}
+            <h4 className="truncate text-sm font-black leading-snug text-slate-900 sm:text-base">
+              {addressDetails.area || "Selected location"}
             </h4>
             <p className="truncate text-xs font-medium text-slate-500">{addressDetails.label}</p>
-            <p className="mt-1 text-xs font-semibold text-[#981495]">{shopsLoading ? "Finding nearby shops…" : `${displayShops.length} shops nearby`}{coords && isGeocoding ? " · Updating address…" : ""}</p>
+            <p className="mt-0.5 text-[11px] font-semibold text-[#981495]">
+              {shopsLoading ? "Finding nearby shops…" : `${displayShops.length} shops nearby`}
+              {coords && isGeocoding ? " · Updating address…" : ""}
+            </p>
           </div>
         </div>
 
         <button
           type="button"
           onClick={handleConfirm}
-          disabled={isGeocoding || !coords || !hasPositionedPin}
-          className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[#981495] px-7 py-4 text-sm font-black text-white shadow-lg shadow-[#981495]/20 transition-all hover:bg-[#7b1078] active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto sm:min-w-[250px]"
+          disabled={!coords}
+          className="flex w-full sm:w-auto shrink-0 items-center justify-center gap-2 rounded-xl bg-[#981495] px-7 py-3.5 text-sm font-black text-white shadow-lg shadow-[#981495]/20 transition-all hover:bg-[#7b1078] active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
         >
           <Check className="h-4 w-4 stroke-[3]" />
-          {hasPositionedPin ? "Confirm location" : "Move pin to confirm exact location"}
+          Confirm location
         </button>
       </div>
     </div>

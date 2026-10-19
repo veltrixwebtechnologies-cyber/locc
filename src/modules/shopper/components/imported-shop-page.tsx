@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft, Loader2, MapPin, Search, Star } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { supabase } from "@/integrations/supabase/client";
-import { fetchImportedShopById } from "@/lib/imported-shops";
+import { fetchImportedShopById, cleanShopName } from "@/lib/imported-shops";
 import { getFallbackShopImage, getFallbackProductImage } from "@/lib/image-utils";
 import { ImportedDemoCatalog } from "@/modules/shopper/components/imported-demo-catalog";
 import { getImportedCatalogItems } from "@/modules/shopper/services/imported-demo-cart";
@@ -26,7 +26,13 @@ export function ImportedShopPage({
     staleTime: 5 * 60 * 1000,
     retry: false,
   });
-  const shop = shopQuery.data;
+  const rawShop = shopQuery.data;
+  const shop = rawShop
+    ? {
+        ...rawShop,
+        business_name: cleanShopName(rawShop.business_name, rawShop.google_maps_url, rawShop.category),
+      }
+    : undefined;
   const previews = shop
     ? getImportedCatalogItems(shop.category).map((item) => ({
         ...item,

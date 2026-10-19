@@ -5,7 +5,7 @@ import {
   type SearchResultItem,
 } from "@/modules/shopper/services/search-service";
 import { runCatalogRpcWithTimeout } from "./catalog-rpc";
-import { getImportedShopHref, type ImportedShopRow } from "./imported-shops";
+import { getImportedShopHref, cleanShopName, type ImportedShopRow } from "./imported-shops";
 import { isValidCoordinate } from "./geo";
 
 type Rpc = Parameters<typeof discoverShops>[0];
@@ -102,7 +102,12 @@ export async function searchLiveCatalog(rpc: Rpc, input: {lat: number; lng: numb
     storeId: shop.id, distanceKm: shop.distance_km, matchScore: 0,
   }));
   const importedRows = imported && !imported.error && Array.isArray(imported.data)
-    ? (imported.data as ImportedShopRow[]).filter((shop) => shop.id && typeof shop.business_name === "string" && shop.business_name.trim())
+    ? (imported.data as ImportedShopRow[])
+        .map((shop) => ({
+          ...shop,
+          business_name: cleanShopName(shop.business_name, shop.google_maps_url, shop.category),
+        }))
+        .filter((shop) => shop.id && typeof shop.business_name === "string" && shop.business_name.trim())
     : [];
   const importedMatches = searchCatalogItems(shopSearchText, importedRows.map((shop) => ({
     id: shop.id,

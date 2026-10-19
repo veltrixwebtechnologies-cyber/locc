@@ -23,7 +23,7 @@ const MAP_PROVIDER = import.meta.env.VITE_MAP_PROVIDER === "google" ? "google" :
 
 import type { MapFilterOptions, MapLocation, MapMarkerItem } from "@/lib/map-service/types";
 import { getMapMarkerItems, isTestEntity } from "@/lib/map-service/store-engine";
-import { geocodeSearch } from "@/lib/map-service/providers";
+import { geocodeSearch, calculateHaversineDistanceKm } from "@/lib/map-service/providers";
 import { Link } from "@tanstack/react-router";
 import { categoryColor, categoryLabel } from "@/lib/mock-data";
 import { getFallbackProductImage, isValidImageUrl } from "@/lib/image-utils";
@@ -37,7 +37,13 @@ import {
 } from "@/lib/location-store";
 import { catalogCategoryKey, getCategoryByIdOrSlug } from "@/lib/shop-categories";
 import { isValidCoordinate } from "@/lib/geo";
-import { CUSTOMER_VISIBILITY_RADIUS_KM, DEFAULT_SHOP_DISCOVERY_RADIUS_KM, hasConfirmedCoordinates } from "@/lib/location-visibility";
+import {
+  CUSTOMER_VISIBILITY_RADIUS_KM,
+  DEFAULT_SHOP_DISCOVERY_RADIUS_KM,
+  MAX_SHOP_DISCOVERY_RADIUS_KM,
+  hasConfirmedCoordinates,
+  formatNearbyDistance,
+} from "@/lib/location-visibility";
 import { discoverShops } from "@/modules/shopper/services/shop-discovery";
 import { fetchNearbyImportedShops, toImportedMapMarker } from "@/lib/imported-shops";
 import { ShopCard } from "@/modules/shopper/components/shop-card";
@@ -84,12 +90,12 @@ export function LocalShoreMapExperience({
   const [locationSuggestions, setLocationSuggestions] = useState<any[]>([]);
   const [isSearchingLocation, setIsSearchingLocation] = useState(false);
 
-  // Search & Filter State - Defaults to 3 km radius near user location initially
+  // Search & Filter State - Defaults to 10 km discovery radius so shops from 0 to 7, 8, 9, 10 km are shown
   const [query, setQuery] = useState(initialQuery);
   const [filters, setFilters] = useState<MapFilterOptions>({
     query: initialQuery,
     category: mapCategory ?? undefined,
-    maxDistanceKm: CUSTOMER_VISIBILITY_RADIUS_KM,
+    maxDistanceKm: MAX_SHOP_DISCOVERY_RADIUS_KM,
   });
   const [selectedMarkerId, setSelectedMarkerId] = useState<string | null>(null);
   const [hoveredMarkerId, setHoveredMarkerId] = useState<string | null>(null);
@@ -128,7 +134,7 @@ export function LocalShoreMapExperience({
   });
 
   const approvedVendors = useQuery({
-    queryKey: ["customer-visible-shops", deliveryLoc?.lat, deliveryLoc?.lng, query, mapCategory],
+    queryKey: ["customer-visible-shops", deliveryLoc?.lat, deliveryLoc?.lng, query, mapCategory, filters.maxDistanceKm],
     staleTime: 1000 * 60 * 5,
     gcTime: 1000 * 60 * 10,
     retry: 1,
@@ -143,7 +149,7 @@ export function LocalShoreMapExperience({
             lng: deliveryLoc.lng,
             query: query || null,
             category: mapCategory ?? null,
-            radiusKm: DEFAULT_SHOP_DISCOVERY_RADIUS_KM,
+            radiusKm: filters.maxDistanceKm ?? MAX_SHOP_DISCOVERY_RADIUS_KM,
           },
         );
         return shops.filter((shop) => !isTestEntity(shop.shop_name));
@@ -163,15 +169,17 @@ export function LocalShoreMapExperience({
     queryFn: async () => {
       return fetchNearbyImportedShops((name, args) => (supabase as any).rpc(name, args), {
         lat: deliveryLoc!.lat, lng: deliveryLoc!.lng,
-        radiusKm: filters.maxDistanceKm ?? DEFAULT_SHOP_DISCOVERY_RADIUS_KM,
+        radiusKm: filters.maxDistanceKm ?? MAX_SHOP_DISCOVERY_RADIUS_KM,
         category: mapCategory ?? null, query: query || null,
       });
     },
   });
 
-  // Calculate Product-Aware Map Markers
+  // Calculate Product-Aware Map Markers ordered strictly nearest to farthest (0 to 7 km, 8 km, 9 km+)
   const markerItems: MapMarkerItem[] = useMemo(() => {
     if (!userLocation) return [];
+    const maxDistance = filters.maxDistanceKm ?? MAX_SHOP_DISCOVERY_RADIUS_KM;
+
     const sellerMarkers = getMapMarkerItems(
       userLocation,
       filters,
@@ -182,15 +190,42 @@ export function LocalShoreMapExperience({
     const importedMarkers = (importedShops.data ?? [])
       .map(toImportedMapMarker)
       .filter((marker): marker is MapMarkerItem => marker !== null);
-    const markers = [...sellerMarkers, ...importedMarkers];
 
-    // Keep one marker per shop. Imported IDs have a distinct namespace and
-    // cannot collide with seller account IDs.
+    // Compute exact Haversine distance from active userLocation for every marker
+    const allMarkersWithAccurateDistance = [...sellerMarkers, ...importedMarkers].map((marker) => {
+      const distanceKm = Number(
+        calculateHaversineDistanceKm(
+          userLocation.lat,
+          userLocation.lng,
+          marker.lat,
+          marker.lng,
+        ).toFixed(1),
+      );
+      return {
+        ...marker,
+        distanceKm,
+      };
+    });
+
+    // Enforce max distance radius filter
+    const withinRadius = allMarkersWithAccurateDistance.filter(
+      (marker) => marker.distanceKm <= maxDistance,
+    );
+
+    // Deduplicate so each shop has exactly one marker
     const seenShopIds = new Set<string>();
-    return markers.filter((marker) => {
+    const uniqueMarkers = withinRadius.filter((marker) => {
       if (seenShopIds.has(marker.shopId)) return false;
       seenShopIds.add(marker.shopId);
       return true;
+    });
+
+    // CRITICAL: Sort strictly ascending from nearest to farthest (0 km, 1 km, ..., 7 km, 8 km, 9 km+)
+    return uniqueMarkers.sort((a, b) => {
+      if (a.distanceKm !== b.distanceKm) {
+        return a.distanceKm - b.distanceKm;
+      }
+      return a.shopName.localeCompare(b.shopName);
     });
   }, [userLocation, filters, approvedProducts.data, approvedVendors.data, importedShops.data]);
 
@@ -313,11 +348,35 @@ export function LocalShoreMapExperience({
           <p className="mt-0.5 text-xs md:text-sm text-slate-500 font-medium">
             <strong className="text-slate-900 font-bold">{markerItems.length} shop listings</strong>{" "}
             {selectedCategoryLabel ? `in ${selectedCategoryLabel}` : "near your selected location"}
+            {markerItems.length > 0 && (
+              <span className="inline-block ml-1 text-slate-500 font-medium">
+                · Ordered from nearest (<strong className="text-slate-800">{markerItems[0]?.distanceKm.toFixed(1)} km</strong>) to farthest (<strong className="text-slate-800">{markerItems[markerItems.length - 1]?.distanceKm.toFixed(1)} km</strong>)
+              </span>
+            )}
           </p>
         </div>
 
-        {/* Action Button: One-Button Map Toggle */}
-        <div className="flex items-center gap-2">
+        {/* Action Controls: Distance Radius Filter & Map Toggle */}
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Distance Radius Filter Buttons */}
+          <div className="inline-flex items-center rounded-full bg-slate-100 p-0.5 border border-slate-200/80 shadow-2xs">
+            {[5, 7, 10].map((radius) => (
+              <button
+                key={radius}
+                type="button"
+                onClick={() => setFilters((prev) => ({ ...prev, maxDistanceKm: radius }))}
+                className={`rounded-full px-2.5 py-1 text-xs font-bold transition-all ${
+                  (filters.maxDistanceKm ?? MAX_SHOP_DISCOVERY_RADIUS_KM) === radius
+                    ? "bg-[#981495] text-white shadow-xs"
+                    : "text-slate-600 hover:text-slate-900"
+                }`}
+                aria-label={`Show shops up to ${radius} km away`}
+              >
+                {radius} km
+              </button>
+            ))}
+          </div>
+
           <button
             type="button"
             onClick={() => {
@@ -445,6 +504,12 @@ export function LocalShoreMapExperience({
                       >
                         {catName}
                       </span>
+
+                      {/* Distance Badge */}
+                      <div className="absolute bottom-2.5 right-2.5 flex items-center gap-1 rounded-full bg-black/65 backdrop-blur-xs px-2.5 py-0.5 text-[10px] font-bold text-white shadow-sm border border-white/20">
+                        <MapPin className="h-3 w-3 text-amber-400" />
+                        <span>{formatNearbyDistance(item.distanceKm)}</span>
+                      </div>
                     </div>
 
                     {/* Card Content Body */}
@@ -463,9 +528,14 @@ export function LocalShoreMapExperience({
                           </div>}
                         </div>
 
-                        <p className="text-xs text-slate-500 line-clamp-1 mt-0.5">
-                          {item.isImported ? item.address : item.productName}
-                        </p>
+                        <div className="flex items-center justify-between gap-1 text-xs text-slate-500 mt-0.5">
+                          <p className="line-clamp-1">
+                            {item.isImported ? item.address : item.productName}
+                          </p>
+                          <span className="shrink-0 font-bold text-[#981495] bg-[#fbf0fc] px-1.5 py-0.5 rounded text-[10px]">
+                            {formatNearbyDistance(item.distanceKm)}
+                          </span>
+                        </div>
 
                         <p className="text-[11px] font-semibold text-[#981495] flex items-center gap-1.5 mt-1">
                           <span className="h-1.5 w-1.5 rounded-full bg-[#981495] inline-block animate-pulse" />

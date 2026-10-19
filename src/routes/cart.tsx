@@ -2,6 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { AppShell } from "@/components/app-shell";
 import { cartStore, useCart, cartTotals } from "@/modules/shopper/services/cart-store";
+import { persistentCart } from "@/modules/shopper/services/persistent-cart";
 import { QtyStepper } from "@/components/qty-stepper";
 import { getStore, APPROVED_STORE, productsByStore, type StoreCategory } from "@/lib/mock-data";
 import { useAuth } from "@/lib/auth-store";
@@ -160,29 +161,37 @@ function CartPage() {
       {/* ── Main content ────────────────────────────────────────── */}
       <div className="mx-auto max-w-6xl px-5 py-6 md:px-8">
         {cart.lines.length === 0 ? (
-          <m.div
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="mt-10 rounded-3xl border border-border bg-card p-14 text-center shadow-sm"
-          >
-            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 text-3xl">
-              🛒
+          !persistentCart.isRestored() ? (
+            <div className="mt-10 rounded-3xl border border-border bg-card p-14 text-center shadow-sm animate-pulse">
+              <div className="mx-auto h-16 w-16 rounded-full bg-primary/10" />
+              <div className="mx-auto mt-4 h-6 w-48 rounded-md bg-muted" />
+              <div className="mx-auto mt-2 h-4 w-72 rounded-md bg-muted" />
             </div>
-            <h2 className="mt-4 font-display text-xl font-bold text-foreground">
-              Your basket is empty
-            </h2>
-            <p className="mt-2 text-sm text-muted-foreground">
-              Pick a shop and add a few things — you can only order from one shop at a time.
-            </p>
-            <Link
-              to="/"
-              search={{ category: undefined, q: undefined }}
-              className="mt-5 inline-flex items-center gap-2 rounded-full bg-primary px-6 py-2.5 text-sm font-bold text-primary-foreground hover:bg-primary/90 transition-colors"
+          ) : (
+            <m.div
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mt-10 rounded-3xl border border-border bg-card p-14 text-center shadow-sm"
             >
-              <ShoppingBag className="h-4 w-4" />
-              Find a shop
-            </Link>
-          </m.div>
+              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 text-3xl">
+                🛒
+              </div>
+              <h2 className="mt-4 font-display text-xl font-bold text-foreground">
+                Your basket is empty
+              </h2>
+              <p className="mt-2 text-sm text-muted-foreground">
+                Pick a shop and add a few things — you can only order from one shop at a time.
+              </p>
+              <Link
+                to="/"
+                search={{ category: undefined, q: undefined }}
+                className="mt-5 inline-flex items-center gap-2 rounded-full bg-primary px-6 py-2.5 text-sm font-bold text-primary-foreground hover:bg-primary/90 transition-colors"
+              >
+                <ShoppingBag className="h-4 w-4" />
+                Find a shop
+              </Link>
+            </m.div>
+          )
         ) : (
           <div className="grid min-w-0 grid-cols-1 items-start gap-6 md:grid-cols-[minmax(0,1fr)_300px] lg:grid-cols-[minmax(0,1fr)_340px] pb-44 md:pb-0">
             {/* ── LEFT COLUMN ─────────────────────────────────── */}
@@ -217,7 +226,7 @@ function CartPage() {
                 <AnimatePresence initial={false}>
                   {cart.lines.map((l, idx) => (
                     <m.div
-                      key={l.productId}
+                      key={`${l.storeId}:${l.productId}`}
                       layout
                       initial={{ opacity: 0, height: 0 }}
                       animate={{ opacity: 1, height: "auto" }}
@@ -244,6 +253,9 @@ function CartPage() {
                           {l.name}
                         </p>
                         <p className="text-xs text-muted-foreground mt-0.5">
+                          {cart.storeId === "multi" && l.storeId ? (
+                            <span className="font-medium text-primary mr-1.5">{getStore(l.storeId)?.name ?? "Local shop"} ·</span>
+                          ) : null}
                           {l.unit} · ₹{l.price} each
                         </p>
                         <span className="mt-1 inline-flex items-center gap-1 text-[10px] sm:text-[11px] font-semibold text-emerald-600">

@@ -3,8 +3,8 @@ import { isValidCoordinate, haversineDistanceKm } from "@/lib/geo";
 
 // Default OpenStreetMap tile provider (No API key required)
 const CUSTOM_TILE_URL =
-  import.meta.env.VITE_MAP_TILE_URL || "https://tile.openstreetmap.org/{z}/{x}/{y}.png";
-const CUSTOM_STYLE_URL = import.meta.env.VITE_MAP_STYLE_URL;
+  import.meta.env?.VITE_MAP_TILE_URL || "https://tile.openstreetmap.org/{z}/{x}/{y}.png";
+const CUSTOM_STYLE_URL = import.meta.env?.VITE_MAP_STYLE_URL;
 
 export function getMapLibreStyle() {
   if (CUSTOM_STYLE_URL) {

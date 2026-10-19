@@ -62,7 +62,7 @@ import { LottieLoading } from "@/components/ui/lottie-loading";
 import { RelatedProductsSection } from "@/components/related-products-section";
 import { adaptMockProduct } from "@/lib/recommendations/recommendation-engine";
 import { AppShell } from "@/components/app-shell";
-import { fetchImportedShopById } from "@/lib/imported-shops";
+import { fetchImportedShopById, cleanShopName } from "@/lib/imported-shops";
 import { importedStorefront } from "@/modules/shopper/services/imported-storefront";
 
 export const Route = createFileRoute("/store/$storeId")({
@@ -352,7 +352,13 @@ function StorePage({ catalog }: { catalog?: ReturnType<typeof importedStorefront
     },
   });
 
-  const store = approved.data?.store ?? loaded.store;
+  const rawStore = approved.data?.store ?? loaded.store;
+  const store = rawStore
+    ? {
+        ...rawStore,
+        name: cleanShopName(rawStore.name, (rawStore as any).google_maps_url, rawStore.category),
+      }
+    : rawStore;
   const liveProds = approved.data?.products ?? [];
   const isLiveSellerStore = isUuid(loaded.store.id) && loaded.store.id !== APPROVED_STORE.id;
   const products = (

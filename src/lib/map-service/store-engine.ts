@@ -166,7 +166,7 @@ export function getMapMarkerItems(
     );
 
     // Apply max distance filter (relative to active search location)
-    if (computedDistanceKm > (filters.maxDistanceKm ?? CUSTOMER_VISIBILITY_RADIUS_KM)) {
+    if (computedDistanceKm > (filters.maxDistanceKm ?? 10)) {
       return;
     }
 
@@ -303,6 +303,11 @@ export function getMapMarkerItems(
     });
   });
 
-  // Sort markers by distance
-  return markers.sort((a, b) => a.distanceKm - b.distanceKm);
+  // Sort markers strictly by distance (nearest to farthest)
+  return markers.sort((a, b) => {
+    if (a.distanceKm !== b.distanceKm) {
+      return a.distanceKm - b.distanceKm;
+    }
+    return a.shopName.localeCompare(b.shopName);
+  });
 }

@@ -122,15 +122,7 @@ function getInitialLocation(): DeliveryLocation | null {
   if (typeof window === "undefined") return null;
   const stored = getStoredLocation();
   if (stored && hasUserChosenLocation()) {
-    // Never reuse a coarse automatic GPS fix on a later visit. A manually
-    // confirmed pin is retained because it is an explicit customer choice.
-    if (
-      stored.isGPS &&
-      (typeof stored.accuracy !== "number" || !Number.isFinite(stored.accuracy) ||
-        stored.accuracy < 0 || stored.accuracy > MAX_CUSTOMER_DELIVERY_ACCURACY_M ||
-        typeof stored.capturedAt !== "number" || !Number.isFinite(stored.capturedAt) ||
-        Date.now() - stored.capturedAt > MAX_LOCATION_AGE_MS || stored.capturedAt > Date.now() + 1000)
-    ) {
+    if (!parseCoordinates(stored.lat, stored.lng)) {
       try {
         localStorage.removeItem(STORAGE_KEY);
         localStorage.removeItem(CONFIRMED_KEY);
