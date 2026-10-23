@@ -1,8 +1,8 @@
-import React, { useMemo } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { SearchResultItem } from "@/modules/shopper/services/search-service";
-import { Store, Utensils, ShoppingBag, ChevronRight, X, Search } from "lucide-react";
+import { Store, Utensils, ShoppingBag, ChevronRight, X, Search, Clock, Trash2 } from "lucide-react";
 import { useLiveSearchResults } from "@/modules/shopper/hooks/use-live-search-results";
+import { useRecentSearches, addRecentSearch } from "@/lib/recent-searches";
 
 interface SwiggyInstantSearchDropdownProps {
   query: string;
@@ -43,28 +43,35 @@ export function SwiggyInstantSearchDropdown({
   className = "",
 }: SwiggyInstantSearchDropdownProps) {
   const navigate = useNavigate();
+  const { recentSearches, removeSearch, clearSearches } = useRecentSearches();
 
   const { results, isLoading, error, needsLocation, retry } = useLiveSearchResults(query);
 
   const handleResultClick = (item: SearchResultItem) => {
     if (onSelectResult) onSelectResult();
-    if (item.metadata?.imported === true) {
-      if (item.url && item.url !== "#") window.open(item.url, "_blank", "noopener,noreferrer");
-      return;
+    const effectiveQuery = query.trim() || item.title;
+    if (effectiveQuery) {
+      addRecentSearch(effectiveQuery);
     }
+
     const targetUrl = item.url || "";
     if (targetUrl.startsWith("/store/")) {
-      const storeId = item.storeId || targetUrl.replace("/store/", "");
+      const [path, searchStr] = targetUrl.split("?");
+      const rawStoreId = path.slice("/store/".length);
+      const storeId = decodeURIComponent(rawStoreId);
+      const sp = new URLSearchParams(searchStr || "");
+      const shopLat = sp.get("shopLat") ? Number(sp.get("shopLat")) : undefined;
+      const shopLng = sp.get("shopLng") ? Number(sp.get("shopLng")) : undefined;
       void navigate({
         to: "/store/$storeId",
         params: { storeId },
-        search: { sq: undefined, category: undefined },
+        search: { sq: undefined, category: undefined, shopLat, shopLng },
       });
     } else if (targetUrl.startsWith("/product/")) {
       const productId = targetUrl.slice("/product/".length).split("?")[0];
       void navigate({ to: "/product/$productId", params: { productId }, search: { sq: query } });
-    } else {
-      void navigate({ to: item.url as any });
+    } else if (targetUrl && targetUrl !== "#") {
+      void navigate({ to: targetUrl as any });
     }
   };
 
@@ -73,9 +80,60 @@ export function SwiggyInstantSearchDropdown({
       <div
         className={`w-full bg-background rounded-2xl border hairline shadow-2xl p-4 animate-in fade-in zoom-in-95 duration-150 ${className}`}
       >
-        <div className="flex items-center justify-between pb-2 mb-2 border-b border-border/50">
+        {/* Recent Searches Section */}
+        {recentSearches.length > 0 && (
+          <div className="mb-4 pb-3 border-b border-border/50">
+            <div className="flex items-center justify-between pb-2">
+              <span className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                <Clock className="w-3.5 h-3.5" />
+                <span>Recent Searches</span>
+              </span>
+              <button
+                type="button"
+                onClick={clearSearches}
+                className="text-[11px] font-semibold text-muted-foreground hover:text-destructive transition-colors cursor-pointer"
+              >
+                Clear all
+              </button>
+            </div>
+            <div className="flex flex-wrap gap-1.5 pt-1">
+              {recentSearches.map((term) => (
+                <div
+                  key={term}
+                  className="inline-flex items-center gap-1.5 rounded-full bg-muted/80 hover:bg-muted text-xs font-medium pl-3 pr-1.5 py-1 text-foreground transition-colors"
+                >
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onSelectResult?.();
+                      addRecentSearch(term);
+                      void navigate({ to: "/search", search: { q: term } });
+                    }}
+                    className="cursor-pointer text-left hover:text-primary transition-colors"
+                  >
+                    {term}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      removeSearch(term);
+                    }}
+                    aria-label={`Remove ${term}`}
+                    className="h-4 w-4 rounded-full hover:bg-black/10 dark:hover:bg-white/10 grid place-items-center text-muted-foreground hover:text-foreground cursor-pointer"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Popular Categories / Quick Picks */}
+        <div className="flex items-center justify-between pb-2 mb-2">
           <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-            Search nearby shops and products
+            Popular Categories
           </span>
         </div>
         <div className="space-y-1">
@@ -83,15 +141,18 @@ export function SwiggyInstantSearchDropdown({
             { label: "Grocery", cat: "Category" },
             { label: "Bakery", cat: "Category" },
             { label: "Pharmacy", cat: "Category" },
+            { label: "Fashion", cat: "Category" },
+            { label: "Electronics", cat: "Category" },
           ].map((item) => (
             <button
               key={item.label}
               type="button"
               onClick={() => {
                 onSelectResult?.();
-                void navigate({ to: "/search", search: { q: item.label } });
+                addRecentSearch(item.label);
+                void navigate({ to: "/search", search: { q: item.label, category: item.label.toLowerCase() } });
               }}
-              className="flex items-center justify-between w-full px-3 py-2 text-left rounded-xl hover:bg-muted/80 transition-colors text-sm group"
+              className="flex items-center justify-between w-full px-3 py-2 text-left rounded-xl hover:bg-muted/80 transition-colors text-sm group cursor-pointer"
             >
               <div className="flex items-center gap-2.5">
                 <Search className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />

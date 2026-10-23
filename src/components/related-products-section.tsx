@@ -3,6 +3,7 @@ import { Star } from "lucide-react";
 import { useMemo } from "react";
 import type { MerchandisingProduct } from "@/lib/merchandising";
 import { cartStore, useCart } from "@/modules/shopper/services/cart-store";
+import { cartConflictManager } from "@/modules/shopper/services/cart-conflict";
 import { productsByStore, stores, type StoreCategory } from "@/lib/mock-data";
 import { useDeliveryLocation } from "@/lib/location-store";
 import { haversineDistanceKm } from "@/lib/geo";
@@ -130,7 +131,7 @@ function RelatedProductCard({
           qty={quantity}
           max={product.stock}
           onAdd={() => {
-            cartStore.add(product.seller_id, product.shop_name, {
+            const added = cartConflictManager.addWithConflictCheck(product.seller_id, product.shop_name, {
               id: product.id,
               name: product.name,
               unit: product.category ?? "item",
@@ -139,7 +140,9 @@ function RelatedProductCard({
               imageUrl: product.image_url ?? undefined,
               category: product.category ?? undefined,
             });
-            toast.success(`Added ${product.name} to cart`);
+            if (added) {
+              toast.success(`Added ${product.name} to cart`);
+            }
           }}
           onChange={(next) => cartStore.setQty(product.id, next)}
           addClassName="rounded-lg bg-primary px-2.5 py-1.5 text-[11px] font-bold text-primary-foreground hover:bg-primary/90"

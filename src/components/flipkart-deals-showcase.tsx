@@ -377,11 +377,11 @@ export function FlipkartBestDealsShowcase({
         {/* Product Cards Row */}
         <div ref={scrollRef} className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-4">
           {displayItems.map((item: any) => {
-            const price = item.selling_price ?? item.price ?? 0;
-            const mrp = item.mrp ?? (price ? Math.round(price * 1.25) : 0);
+            const price = Number(item.selling_price ?? item.price ?? 0);
+            const mrp = item.mrp != null && Number(item.mrp) > price ? Number(item.mrp) : null;
             const dealTag =
               item.deal ??
-              (mrp && price ? `${Math.round(((mrp - price) / mrp) * 100)}% OFF` : "Best Deal");
+              (mrp && price ? `${Math.round(((mrp - price) / mrp) * 100)}% OFF` : null);
 
             return (
               <m.div
@@ -414,13 +414,13 @@ export function FlipkartBestDealsShowcase({
                     </h3>
                     <div className="mt-1 flex items-baseline gap-2">
                       <span className="text-sm font-black text-slate-900">₹{price}</span>
-                      {mrp > price && (
+                      {mrp && mrp > price && (
                         <span className="text-[11px] font-medium text-slate-400 line-through">
                           ₹{mrp}
                         </span>
                       )}
                     </div>
-                    <p className="mt-0.5 text-xs font-black text-[#981495]">{dealTag}</p>
+                    {dealTag && <p className="mt-0.5 text-xs font-black text-[#981495]">{dealTag}</p>}
                   </div>
                 </Link>
               </m.div>

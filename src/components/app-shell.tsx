@@ -28,6 +28,8 @@ import { SwiggyInstantSearchDropdown } from "@/components/ui/swiggy-instant-sear
 import { hasUserChosenLocation, useDeliveryLocation, useGPSStatus } from "@/lib/location-store";
 import { LocationModal } from "@/components/ui/location-modal";
 import { supabase } from "@/integrations/supabase/client";
+import { ReplaceCartDialog } from "@/components/cart/replace-cart-dialog";
+import { addRecentSearch } from "@/lib/recent-searches";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -282,40 +284,83 @@ export function AppShell({
         </div>
       </header>
 
-      {/* Delivery location is shown on the customer home page only. */}
+      {/* Delivery location and Mobile Search bar on the customer home page */}
       {pathname === "/" && (
-        <div className="sticky top-[57px] z-40 border-b hairline bg-background px-3 py-1.5 shadow-2xs sm:hidden md:hidden">
+        <div className="sticky top-[57px] z-40 border-b hairline bg-background/95 backdrop-blur px-3 pt-1.5 pb-2.5 shadow-2xs sm:hidden md:hidden space-y-2">
+          {/* Location row */}
           <button
             type="button"
             onClick={requestLocationModal}
-            className="flex min-h-9 w-full items-center gap-2 rounded-lg px-2 text-left transition-colors hover:bg-muted/70 active:bg-muted"
+            className="flex min-h-8 w-full items-center gap-2 rounded-lg px-2 text-left transition-colors hover:bg-muted/70 active:bg-muted cursor-pointer"
             aria-label={
               hasLocation
                 ? `Change delivery location, currently ${deliveryLocation!.area || deliveryLocation!.label}`
                 : "Select delivery location"
             }
           >
-            <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-primary/10 text-primary">
+            <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-primary/10 text-primary">
               {gpsState.status === "detecting" ? (
-                <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                <span className="h-3 w-3 animate-spin rounded-full border-2 border-primary border-t-transparent" />
               ) : (
-                <MapPin className="h-4 w-4" />
+                <MapPin className="h-3.5 w-3.5" />
               )}
             </span>
             <span className="min-w-0 flex-1">
-              <span className="block text-[9px] font-semibold uppercase tracking-wide text-muted-foreground">
-                {gpsState.status === "detecting" ? "Finding your location" : "Deliver to"}
-              </span>
-              <span className="block truncate text-xs font-bold text-foreground">
-                {gpsState.status === "detecting"
-                  ? "Please wait…"
-                  : hasLocation
-                    ? deliveryLocation!.area || deliveryLocation!.label
-                    : "Select your location"}
+              <span className="flex items-center gap-1">
+                <span className="text-[9px] font-semibold uppercase tracking-wide text-muted-foreground">
+                  {gpsState.status === "detecting" ? "Finding location" : "Deliver to"}
+                </span>
+                <span className="truncate text-xs font-bold text-foreground">
+                  {gpsState.status === "detecting"
+                    ? "Please wait…"
+                    : hasLocation
+                      ? deliveryLocation!.area || deliveryLocation!.label.split(",")[0]
+                      : "Select your location"}
+                </span>
+                <ChevronDown className="h-3 w-3 shrink-0 text-muted-foreground" />
               </span>
             </span>
-            <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" />
           </button>
+
+          {/* Prominent Full-Width Mobile Search Bar */}
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              const trimmed = headerQuery.trim();
+              if (trimmed) addRecentSearch(trimmed);
+              void navigate({ to: "/search", search: { q: trimmed } });
+            }}
+            className="relative flex items-center rounded-2xl border hairline bg-slate-50 dark:bg-slate-900/60 px-3.5 py-2.5 shadow-xs transition-colors focus-within:border-primary/50 focus-within:bg-background focus-within:ring-2 focus-within:ring-primary/10"
+          >
+            <Search className="h-4 w-4 shrink-0 text-muted-foreground mr-2.5" />
+            <div className="relative min-w-0 flex-1">
+              <AnimatedSearchPlaceholder
+                phrases={HEADER_SEARCH_PLACEHOLDERS}
+                active={!headerQuery}
+                className="text-xs text-muted-foreground"
+              />
+              <input
+                value={headerQuery}
+                onChange={(e) => setHeaderQuery(e.target.value)}
+                onFocus={() => {
+                  if (!headerQuery) {
+                    void navigate({ to: "/search", search: { q: "" } });
+                  }
+                }}
+                aria-label="Search shops, products and brands"
+                className="relative z-10 w-full min-w-0 bg-transparent text-xs font-medium outline-none placeholder:text-muted-foreground text-foreground"
+              />
+            </div>
+            {headerQuery && (
+              <button
+                type="button"
+                onClick={() => setHeaderQuery("")}
+                className="p-1 text-muted-foreground hover:text-foreground shrink-0 cursor-pointer"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            )}
+          </form>
         </div>
       )}
 
@@ -326,7 +371,7 @@ export function AppShell({
         }`}
       >
         {/* Floating marketplace navigation bar */}
-        <div className="flex h-[68px] w-full min-w-0 items-center gap-1.5 overflow-hidden border-b border-[#eadcf2] bg-white/90 px-3 backdrop-blur-xl md:gap-2 md:px-4 lg:px-5 2xl:px-8">
+        <div className="flex h-[68px] w-full min-w-0 items-center gap-1.5 overflow-visible border-b border-[#eadcf2] bg-white/90 px-3 backdrop-blur-xl md:gap-2 md:px-4 lg:px-5 2xl:px-8">
           {/* Logo (Far-left content boundary) */}
           <Link
             to="/"
@@ -397,10 +442,12 @@ export function AppShell({
             onSubmit={(event) => {
               event.preventDefault();
               setSearchFocused(false);
+              const trimmed = headerQuery.trim();
+              if (trimmed) addRecentSearch(trimmed);
               void navigate({
                 to: "/search",
                 search: {
-                  q: headerQuery.trim(),
+                  q: trimmed,
                 },
               });
             }}
@@ -612,6 +659,7 @@ export function AppShell({
       </main>
 
       <ShopperFooter />
+      <ReplaceCartDialog />
 
       {/* Mobile bottom tab bar */}
       <nav className="fixed inset-x-0 bottom-0 z-40 border-t hairline bg-background/95 backdrop-blur pb-[env(safe-area-inset-bottom,0px)] md:hidden">

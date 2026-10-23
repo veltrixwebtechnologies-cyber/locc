@@ -1,5 +1,6 @@
 import {
   MAX_CUSTOMER_DELIVERY_ACCURACY_M,
+  MAX_APPROXIMATE_GPS_PREVIEW_ACCURACY_M,
   MAX_LOCATION_AGE_MS,
   parseCoordinates,
 } from "./coordinates";
@@ -76,7 +77,7 @@ export interface GPSFix {
 let bestGPSFix: GPSFix | null = null;
 // Coarse Wi-Fi/IP geolocation can be tens or hundreds of kilometres off.
 // Such a result is not useful as a map starting point or delivery preview.
-export const MAX_APPROXIMATE_GPS_PREVIEW_ACCURACY_M = 5_000;
+export { MAX_APPROXIMATE_GPS_PREVIEW_ACCURACY_M };
 
 function hasFreshGPSFix(position: GeolocationPosition, now = Date.now()): boolean {
   return (
@@ -491,7 +492,13 @@ export async function detectCurrentGPSLocation(options?: {
   };
 
   const processPosition = async (position: GeolocationPosition): Promise<DeliveryLocation> => {
-    if (!hasFreshGPSFix(position) || (!allowApproximate && !hasFreshPreciseGPSFix(position)))
+    const isPrecise = hasFreshPreciseGPSFix(position);
+    const isBoundedApproximate =
+      allowApproximate &&
+      hasFreshGPSFix(position) &&
+      position.coords.accuracy <= MAX_APPROXIMATE_GPS_PREVIEW_ACCURACY_M;
+
+    if (!isPrecise && !isBoundedApproximate)
       throw new Error("Location is invalid or out of date. Refresh and try again.");
     const { latitude: lat, longitude: lng, accuracy } = position.coords;
     // A coarse desktop/IP estimate is still useful as a map starting point.
@@ -632,10 +639,15 @@ export async function detectCurrentGPSLocation(options?: {
             };
             notifyListeners();
           }
-          // A precise fix is preferred, but map/manual-pin flows explicitly
-          // allow an approximate first fix so the user can adjust the pin
-          // instead of waiting forever on desktop Wi-Fi/IP geolocation.
-          if (!hasFreshPreciseGPSFix(position) && !allowApproximate) return;
+          // A precise fix (accuracy <= 100m) is preferred.
+          // Map preview flows allow an approximate fix, but accuracy must still
+          // be bounded within MAX_APPROXIMATE_GPS_PREVIEW_ACCURACY_M (5,000m).
+          // Unbounded coarse IP readings (e.g. ±100,000m) are rejected.
+          if (!hasFreshPreciseGPSFix(position)) {
+            if (!allowApproximate || position.coords.accuracy > MAX_APPROXIMATE_GPS_PREVIEW_ACCURACY_M) {
+              return;
+            }
+          }
           cleanup();
           processPosition(position).then(resolve, (error) => {
             if (requestRevision === locationRevision) {

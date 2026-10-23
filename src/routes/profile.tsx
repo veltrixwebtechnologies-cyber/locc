@@ -5,8 +5,6 @@ import {
   User,
   Mail,
   Phone,
-  ShieldCheck,
-  Award,
   MapPin,
   CreditCard,
   Package,
@@ -14,12 +12,9 @@ import {
   Ticket,
   Sparkles,
   Store,
-  Clock,
-  Star,
   ChevronRight,
   Bell,
   Truck,
-  Sliders,
   HelpCircle,
   LogOut,
   Plus,
@@ -28,21 +23,17 @@ import {
   CheckCircle2,
   Map,
   Lock,
-  Smartphone,
-  Globe,
   MessageSquare,
   X,
+  Copy,
   Check,
-  Zap,
+  Home,
+  Briefcase,
+  Sliders,
   ArrowRight,
-  TrendingUp,
-  Shield,
-  Layers,
-  ThumbsUp,
-  AlertCircle,
-  Percent,
+  ShieldCheck,
+  Globe,
 } from "lucide-react";
-
 import { AppShell } from "@/components/app-shell";
 import { useAuth } from "@/lib/auth-store";
 import { cartStore } from "@/modules/shopper/services/cart-store";
@@ -53,7 +44,6 @@ import {
 } from "@/modules/shopper/services/addresses-store";
 import { useOrders } from "@/modules/shopper/services/orders-store";
 import { useWishlistProducts } from "@/lib/merchandising";
-import { stores } from "@/lib/mock-data";
 import {
   profileStore,
   useProfileExtra,
@@ -78,43 +68,30 @@ function ProfilePage() {
 
   const signedIn = Boolean(auth.id || auth.phone || auth.email);
 
-  // Active sub-tab state for smooth browsing
+  // Streamlined 4 core profile tabs
   const [activeTab, setActiveTab] = useState<
-    | "all"
-    | "account"
-    | "localshore"
-    | "activity"
-    | "offers"
-    | "delivery"
-    | "notifications"
-    | "settings"
-    | "support"
-  >("all");
+    "addresses" | "orders" | "rewards" | "preferences"
+  >("addresses");
 
   // Modals state
   const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
   const [isAddAddressOpen, setIsAddAddressOpen] = useState(false);
   const [isAddPaymentOpen, setIsAddPaymentOpen] = useState(false);
   const [isRedeemOpen, setIsRedeemOpen] = useState(false);
-  const [isReviewOpen, setIsReviewOpen] = useState<string | null>(null);
   const [isSecurityOpen, setIsSecurityOpen] = useState(false);
 
   // Form states
   const [editName, setEditName] = useState(auth.name || "");
   const [editLanguage, setEditLanguage] = useState(profileExtra.preferredLanguage);
-  const [editHub, setEditHub] = useState(profileExtra.preferredHub);
+  const [copiedCoupon, setCopiedCoupon] = useState<string | null>(null);
 
-  // Auth/profile data hydrates asynchronously after the first render. Keep
-  // the edit form aligned with the signed-in account instead of retaining the
-  // initial guest values.
   useEffect(() => {
     setEditName(auth.name === "Guest" ? "" : auth.name);
   }, [auth.name]);
 
   useEffect(() => {
     setEditLanguage(profileExtra.preferredLanguage);
-    setEditHub(profileExtra.preferredHub);
-  }, [profileExtra.preferredLanguage, profileExtra.preferredHub]);
+  }, [profileExtra.preferredLanguage]);
 
   // New address state
   const [newAddrLabel, setNewAddrLabel] = useState("Home");
@@ -125,17 +102,6 @@ function ProfilePage() {
   const [newPayTitle, setNewPayTitle] = useState("");
   const [newPaySub, setNewPaySub] = useState("");
 
-  // Review form state
-  const [reviewRating, setReviewRating] = useState(5);
-  const [reviewComment, setReviewComment] = useState("");
-
-  // Filtered favorite stores
-  const favoriteStores = stores.filter((s) => profileExtra.favoriteShopIds.includes(s.id));
-  const visitedStores = stores.filter((s) => profileExtra.recentlyVisitedShopIds.includes(s.id));
-
-  // Active recent order preview
-  const recentOrder = orders[0];
-
   const maskPhone = (phone?: string | null) => {
     if (!phone) return "+91 ••••• •••••";
     const cleaned = phone.replace(/\D/g, "");
@@ -145,24 +111,33 @@ function ProfilePage() {
     return phone;
   };
 
+  const getAddressIcon = (label: string) => {
+    const l = label.toLowerCase();
+    if (l.includes("home")) return Home;
+    if (l.includes("work") || l.includes("office")) return Briefcase;
+    return MapPin;
+  };
+
+  const recentOrder = orders[0];
+
   return (
     <AppShell>
-      <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8">
-        {/* ── 1. PROFILE HERO ──────────────────────────────────────────────── */}
-        <div className="overflow-hidden rounded-3xl border border-[var(--sand)] bg-gradient-to-br from-[var(--sand)]/80 via-white to-amber-50/40 p-5 shadow-xs sm:p-7">
+      <div className="mx-auto max-w-5xl px-4 py-6 sm:px-6 lg:px-8">
+        {/* ── 1. PROFILE HEADER CARD ───────────────────────────────────────── */}
+        <div className="overflow-hidden rounded-3xl border border-purple-100/80 bg-gradient-to-br from-purple-50/70 via-white to-amber-50/30 p-5 shadow-xs sm:p-7">
           {signedIn ? (
             <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-center gap-4 sm:gap-6">
                 <div className="relative">
-                  <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-tr from-[#981495] to-primary font-display text-2xl font-bold text-white shadow-md shadow-[#981495]/20 sm:h-20 sm:w-20 sm:text-3xl">
+                  <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-tr from-[#981495] to-[#c026d3] font-display text-2xl font-bold text-white shadow-md shadow-[#981495]/20 sm:h-20 sm:w-20 sm:text-3xl">
                     {auth.name
                       ? auth.name
                           .split(" ")
-                          .map((n) => n[0])
+                          .map((n: string) => n[0])
                           .join("")
                           .substring(0, 2)
                           .toUpperCase()
-                      : "LM"}
+                      : "LS"}
                   </div>
                   <span className="absolute -bottom-1 -right-1 grid h-6 w-6 place-items-center rounded-full bg-emerald-500 text-white ring-2 ring-white">
                     <CheckCircle2 className="h-3.5 w-3.5" />
@@ -170,40 +145,36 @@ function ProfilePage() {
                 </div>
 
                 <div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     <h1 className="font-display text-2xl font-bold text-slate-900 sm:text-3xl">
                       {auth.name || "LocalShore Member"}
                     </h1>
-                    <span className="inline-flex items-center gap-1 rounded-full bg-[var(--sand)] px-2.5 py-0.5 text-xs font-bold text-[#981495] border border-[#f0abfc]">
-                      <Sparkles className="h-3 w-3 fill-[#c026d3] text-[#c026d3]" /> LocalShore
-                      Member
+                    <span className="inline-flex items-center gap-1 rounded-full bg-purple-50 px-2.5 py-0.5 text-xs font-bold text-[#981495] border border-purple-200">
+                      <Sparkles className="h-3 w-3 fill-[#c026d3] text-[#c026d3]" />
+                      LocalShore Member
                     </span>
                   </div>
 
-                  <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 font-mono text-xs text-slate-600">
-                    <span className="flex items-center gap-1">
-                      <Mail className="h-3.5 w-3.5 text-[#c026d3]" />
+                  <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-slate-600">
+                    <span className="inline-flex items-center gap-1.5 rounded-lg bg-white/80 px-2.5 py-1 font-mono border border-slate-200/60 shadow-2xs">
+                      <Mail className="h-3.5 w-3.5 text-[#981495]" />
                       {auth.email || "No email registered"}
                     </span>
-                    <span className="flex items-center gap-1">
-                      <Phone className="h-3.5 w-3.5 text-[#c026d3]" />
+                    <span className="inline-flex items-center gap-1.5 rounded-lg bg-white/80 px-2.5 py-1 font-mono border border-slate-200/60 shadow-2xs">
+                      <Phone className="h-3.5 w-3.5 text-[#981495]" />
                       {maskPhone(auth.phone)}
-                    </span>
-                    <span className="flex items-center gap-1 text-emerald-700 font-semibold">
-                      <MapPin className="h-3.5 w-3.5" />
-                      Hub: {profileExtra.preferredHub}
                     </span>
                   </div>
                 </div>
               </div>
 
-              <div className="flex items-center gap-3 pt-2 sm:pt-0">
+              <div className="flex items-center gap-2.5 pt-2 sm:pt-0">
                 <button
                   type="button"
                   onClick={() => setIsEditProfileOpen(true)}
-                  className="inline-flex items-center gap-1.5 rounded-xl border border-[#f0abfc] bg-white px-4 py-2 text-xs font-bold text-[#981495] shadow-xs transition hover:bg-[var(--sand)]"
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-purple-200 bg-white px-4 py-2 text-xs font-bold text-[#981495] shadow-xs transition hover:bg-purple-50"
                 >
-                  <Edit3 className="h-3.5 w-3.5" /> Edit profile
+                  <Edit3 className="h-3.5 w-3.5" /> Edit Profile
                 </button>
                 <button
                   type="button"
@@ -222,16 +193,15 @@ function ProfilePage() {
           ) : (
             <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
               <div className="max-w-xl">
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--sand)] px-3 py-1 text-xs font-bold text-[#981495] border border-[#f0abfc]">
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-purple-50 px-3 py-1 text-xs font-bold text-[#981495] border border-purple-200">
                   <Store className="h-3.5 w-3.5" /> Your Neighborhood, Delivered
                 </span>
                 <h1 className="mt-2 font-display text-2xl font-bold text-slate-900 sm:text-3xl">
                   Welcome to LocalShore 👋
                 </h1>
                 <p className="mt-2 text-sm text-slate-600 leading-relaxed">
-                  Sign in to track orders in real time, save delivery addresses, follow your
-                  favorite local shops, unlock exclusive neighborhood discounts, and earn LocalShore
-                  Shore Points.
+                  Sign in to track orders in real time, save delivery addresses, unlock exclusive
+                  coupons, and earn Shore Points on every local purchase.
                 </p>
               </div>
 
@@ -239,14 +209,14 @@ function ProfilePage() {
                 <Link
                   to="/auth"
                   search={{ redirect: "/profile" }}
-                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#981495] px-5 py-3 text-sm font-bold text-white shadow-md shadow-[#981495]/20 transition hover:bg-[#981495]"
+                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#981495] px-5 py-3 text-sm font-bold text-white shadow-md shadow-[#981495]/20 transition hover:bg-[#831080]"
                 >
                   <User className="h-4 w-4" /> Sign in / Create account
                 </Link>
                 <Link
                   to="/"
                   search={{ category: undefined, q: undefined }}
-                  className="inline-flex items-center justify-center gap-2 rounded-xl border border-[#f0abfc] bg-white px-5 py-2.5 text-xs font-bold text-[#981495] transition hover:bg-[var(--sand)]"
+                  className="inline-flex items-center justify-center gap-2 rounded-xl border border-purple-200 bg-white px-5 py-2.5 text-xs font-bold text-[#981495] transition hover:bg-purple-50"
                 >
                   <Store className="h-3.5 w-3.5" /> Explore local shops
                 </Link>
@@ -261,67 +231,61 @@ function ProfilePage() {
             <h2 className="font-display text-base font-bold text-slate-900">
               Why create a LocalShore account?
             </h2>
-            <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+            <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
               {[
                 {
                   title: "Live Order Tracking",
-                  desc: "Follow instant 20-min store delivery",
+                  desc: "Follow instant 20-30 min store deliveries",
                   icon: Package,
                 },
                 {
                   title: "Saved Addresses",
-                  desc: "One-tap checkout for home & work",
+                  desc: "1-tap checkout for home, office, & others",
                   icon: MapPin,
                 },
                 {
-                  title: "Follow Local Shops",
-                  desc: "Get updates from neighborhood stores",
-                  icon: Store,
-                },
-                {
-                  title: "Wishlist & Price Alerts",
-                  desc: "Save products and catch discounts",
-                  icon: Heart,
-                },
-                {
-                  title: "Local Offers",
-                  desc: "Unlock exclusive neighborhood coupons",
+                  title: "Exclusive Coupons",
+                  desc: "Save with neighborhood promo codes",
                   icon: Ticket,
                 },
                 {
                   title: "Shore Points",
-                  desc: "Earn rewards on every local purchase",
+                  desc: "Earn loyalty discounts on every order",
                   icon: Sparkles,
                 },
               ].map((b, i) => (
                 <div
                   key={i}
-                  className="rounded-2xl border border-slate-200/80 bg-white p-3.5 text-center shadow-xs"
+                  className="rounded-2xl border border-slate-200/80 bg-white p-4 text-center shadow-xs"
                 >
-                  <div className="mx-auto grid h-9 w-9 place-items-center rounded-xl bg-[var(--sand)] text-[#981495]">
-                    <b.icon className="h-4 w-4" />
+                  <div className="mx-auto grid h-10 w-10 place-items-center rounded-xl bg-purple-50 text-[#981495]">
+                    <b.icon className="h-5 w-5" />
                   </div>
-                  <h3 className="mt-2 text-xs font-bold text-slate-900">{b.title}</h3>
-                  <p className="mt-1 text-[11px] text-slate-500 leading-tight">{b.desc}</p>
+                  <h3 className="mt-2.5 text-xs font-bold text-slate-900">{b.title}</h3>
+                  <p className="mt-1 text-[11px] text-slate-500 leading-snug">{b.desc}</p>
                 </div>
               ))}
             </div>
           </div>
         )}
 
-        {/* ── 2. QUICK ACCOUNT SUMMARY ────────────────────────────────────── */}
+        {/* ── 2. QUICK ACCOUNT STATS ───────────────────────────────────────── */}
         {signedIn && (
-          <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
             <button
               type="button"
-              onClick={() => setActiveTab("activity")}
-              className="flex items-center gap-3.5 rounded-2xl border border-[var(--sand)] bg-white p-3.5 text-left shadow-xs transition hover:border-[#f0abfc] hover:shadow-md group"
+              onClick={() => setActiveTab("orders")}
+              className={`flex items-center gap-3.5 rounded-2xl border p-3.5 text-left shadow-xs transition group ${
+                activeTab === "orders"
+                  ? "border-[#981495] bg-purple-50/40 ring-1 ring-[#981495]/30"
+                  : "border-slate-200/80 bg-white hover:border-purple-200 hover:shadow-sm"
+              }`}
             >
-              <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-amber-50 text-amber-600 transition group-hover:bg-amber-100">
-                <Package className="h-5.5 w-5.5" />
+              <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-amber-50 text-amber-600">
+                <Package className="h-5 w-5" />
               </div>
               <div>
-                <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
                   Orders
                 </p>
                 <p className="text-base font-extrabold text-slate-900">
@@ -330,15 +294,37 @@ function ProfilePage() {
               </div>
             </button>
 
-            <Link
-              to="/wishlist"
-              className="flex items-center gap-3.5 rounded-2xl border border-[var(--sand)] bg-white p-3.5 text-left shadow-xs transition hover:border-[#f0abfc] hover:shadow-md group"
+            <button
+              type="button"
+              onClick={() => setActiveTab("addresses")}
+              className={`flex items-center gap-3.5 rounded-2xl border p-3.5 text-left shadow-xs transition group ${
+                activeTab === "addresses"
+                  ? "border-[#981495] bg-purple-50/40 ring-1 ring-[#981495]/30"
+                  : "border-slate-200/80 bg-white hover:border-purple-200 hover:shadow-sm"
+              }`}
             >
-              <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-rose-50 text-rose-600 transition group-hover:bg-rose-100">
-                <Heart className="h-5.5 w-5.5" />
+              <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-sky-50 text-sky-600">
+                <MapPin className="h-5 w-5" />
               </div>
               <div>
-                <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                  Addresses
+                </p>
+                <p className="text-base font-extrabold text-slate-900">
+                  {addresses.length} Saved
+                </p>
+              </div>
+            </button>
+
+            <Link
+              to="/wishlist"
+              className="flex items-center gap-3.5 rounded-2xl border border-slate-200/80 bg-white p-3.5 text-left shadow-xs transition hover:border-purple-200 hover:shadow-sm group"
+            >
+              <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-rose-50 text-rose-600">
+                <Heart className="h-5 w-5" />
+              </div>
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
                   Wishlist
                 </p>
                 <p className="text-base font-extrabold text-slate-900">
@@ -349,32 +335,18 @@ function ProfilePage() {
 
             <button
               type="button"
-              onClick={() => setActiveTab("offers")}
-              className="flex items-center gap-3.5 rounded-2xl border border-[var(--sand)] bg-white p-3.5 text-left shadow-xs transition hover:border-[#f0abfc] hover:shadow-md group"
+              onClick={() => setActiveTab("rewards")}
+              className={`flex items-center gap-3.5 rounded-2xl border p-3.5 text-left shadow-xs transition group ${
+                activeTab === "rewards"
+                  ? "border-[#981495] bg-purple-50/40 ring-1 ring-[#981495]/30"
+                  : "border-slate-200/80 bg-white hover:border-purple-200 hover:shadow-sm"
+              }`}
             >
-              <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-[var(--sand)] text-[#981495] transition group-hover:bg-[var(--sand)]">
-                <Ticket className="h-5.5 w-5.5" />
+              <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-purple-50 text-[#981495]">
+                <Sparkles className="h-5 w-5" />
               </div>
               <div>
-                <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
-                  Coupons
-                </p>
-                <p className="text-base font-extrabold text-slate-900">
-                  {profileExtra.savedCoupons.length} Available
-                </p>
-              </div>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setActiveTab("offers")}
-              className="flex items-center gap-3.5 rounded-2xl border border-[var(--sand)] bg-white p-3.5 text-left shadow-xs transition hover:border-[#f0abfc] hover:shadow-md group"
-            >
-              <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-emerald-50 text-emerald-600 transition group-hover:bg-emerald-100">
-                <Sparkles className="h-5.5 w-5.5" />
-              </div>
-              <div>
-                <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
                   Rewards
                 </p>
                 <p className="text-base font-extrabold text-slate-900">
@@ -385,642 +357,639 @@ function ProfilePage() {
           </div>
         )}
 
-        {/* ── NAVIGATION TABS (AUTHENTICATED) ───────────────────────────────── */}
+        {/* ── 3. CLEAN SEGMENTED NAVIGATION TABS ────────────────────────────── */}
         {signedIn && (
-          <div className="mt-6 flex overflow-x-auto border-b border-slate-200 pb-1 scrollbar-none gap-2">
+          <div className="mt-6 flex rounded-2xl bg-slate-100 p-1 border border-slate-200/70 overflow-x-auto scrollbar-none">
             {[
-              { id: "all", label: "Overview" },
-              { id: "account", label: "Account & Addresses" },
-              { id: "localshore", label: "Your LocalShore" },
-              { id: "activity", label: "Shopping Activity" },
-              { id: "offers", label: "Rewards & Offers" },
-              { id: "delivery", label: "Delivery & Alerts" },
-              { id: "settings", label: "Settings & Support" },
-            ].map((tab) => (
-              <button
-                key={tab.id}
-                type="button"
-                onClick={() => setActiveTab(tab.id as any)}
-                className={`whitespace-nowrap rounded-xl px-4 py-2 text-xs font-bold transition ${
-                  activeTab === tab.id
-                    ? "bg-[#981495] text-white shadow-xs"
-                    : "text-slate-600 hover:bg-[var(--sand)] hover:text-[#981495]"
-                }`}
-              >
-                {tab.label}
-              </button>
-            ))}
+              { id: "addresses", label: "Addresses & Details", icon: MapPin },
+              { id: "orders", label: "My Orders", icon: Package },
+              { id: "rewards", label: "Rewards & Coupons", icon: Sparkles },
+              { id: "preferences", label: "Preferences & Support", icon: Sliders },
+            ].map((tab) => {
+              const Icon = tab.icon;
+              const isActive = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => setActiveTab(tab.id as any)}
+                  className={`flex flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-xl py-2.5 px-3 text-xs font-bold transition ${
+                    isActive
+                      ? "bg-white text-[#981495] shadow-xs"
+                      : "text-slate-600 hover:text-slate-900"
+                  }`}
+                >
+                  <Icon className={`h-4 w-4 ${isActive ? "text-[#981495]" : "text-slate-400"}`} />
+                  {tab.label}
+                </button>
+              );
+            })}
           </div>
         )}
 
-        {/* ── MAIN CONTENT AREA ────────────────────────────────────────────── */}
+        {/* ── 4. TAB CONTENTS ──────────────────────────────────────────────── */}
         {signedIn && (
-          <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-12">
-            {/* LEFT COLUMN: Main Account Management */}
-            <div className="space-y-6 lg:col-span-8">
-              {/* 3. ACCOUNT SECTION */}
-              {(activeTab === "all" || activeTab === "account") && (
-                <section className="rounded-3xl border border-slate-200/80 bg-white p-5 shadow-xs sm:p-6">
-                  <div className="flex items-center justify-between border-b border-slate-100 pb-4">
-                    <div>
-                      <h2 className="font-display text-lg font-bold text-slate-900 flex items-center gap-2">
-                        <User className="h-5 w-5 text-[#981495]" /> Account Settings
-                      </h2>
-                      <p className="text-xs text-slate-500">
-                        Manage personal details, addresses, and payment methods
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="mt-5 space-y-5">
-                    {/* Personal Info Row */}
-                    <div className="flex flex-col gap-3 rounded-2xl bg-[var(--sand)]/40 p-4 border border-[var(--sand)]/60 sm:flex-row sm:items-center sm:justify-between">
+          <div className="mt-6 space-y-6">
+            {/* ── TAB 1: ADDRESSES & DETAILS ─────────────────────────────────── */}
+            {activeTab === "addresses" && (
+              <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
+                {/* Left 8 Cols: Delivery Addresses */}
+                <div className="space-y-6 lg:col-span-8">
+                  <section className="rounded-3xl border border-slate-200/80 bg-white p-5 shadow-xs sm:p-6">
+                    <div className="flex items-center justify-between border-b border-slate-100 pb-4">
                       <div>
-                        <p className="text-xs font-bold uppercase tracking-wider text-[#981495]">
-                          Personal Information
-                        </p>
-                        <p className="mt-1 text-sm font-semibold text-slate-900">
-                          {auth.name || "Customer"}
-                        </p>
-                        <p className="text-xs text-slate-600">
-                          {auth.email} • {maskPhone(auth.phone)}
+                        <h2 className="font-display text-lg font-bold text-slate-900 flex items-center gap-2">
+                          <MapPin className="h-5 w-5 text-[#981495]" /> Saved Delivery Addresses
+                        </h2>
+                        <p className="text-xs text-slate-500">
+                          Manage where your groceries and goods are delivered
                         </p>
                       </div>
                       <button
                         type="button"
-                        onClick={() => setIsEditProfileOpen(true)}
-                        className="inline-flex items-center gap-1 text-xs font-bold text-[#981495] hover:underline"
+                        onClick={() => setIsAddAddressOpen(true)}
+                        className="inline-flex items-center gap-1.5 rounded-xl bg-[#981495] px-3.5 py-2 text-xs font-bold text-white shadow-xs hover:bg-[#831080] transition"
                       >
-                        Edit profile →
+                        <Plus className="h-3.5 w-3.5" /> Add Address
                       </button>
                     </div>
 
-                    {/* Saved Addresses Sub-Section */}
-                    <div>
-                      <div className="flex items-center justify-between">
-                        <h3 className="text-sm font-bold text-slate-900 flex items-center gap-1.5">
-                          <MapPin className="h-4 w-4 text-[#981495]" /> Saved Addresses (
-                          {addresses.length})
-                        </h3>
+                    {addresses.length === 0 ? (
+                      <div className="mt-6 rounded-2xl border border-dashed border-slate-200 p-8 text-center bg-slate-50/50">
+                        <MapPin className="mx-auto h-8 w-8 text-slate-400" />
+                        <h3 className="mt-2 text-sm font-bold text-slate-800">No saved addresses</h3>
+                        <p className="mt-1 text-xs text-slate-500 max-w-sm mx-auto">
+                          Add your home, work, or apartment address to enable fast, 1-tap ordering.
+                        </p>
                         <button
                           type="button"
                           onClick={() => setIsAddAddressOpen(true)}
-                          className="inline-flex items-center gap-1 text-xs font-bold text-[#981495] hover:bg-[var(--sand)] px-2.5 py-1 rounded-lg transition"
+                          className="mt-4 inline-flex items-center gap-1.5 rounded-xl bg-[#981495] px-4 py-2 text-xs font-bold text-white shadow-xs hover:bg-[#831080]"
                         >
-                          <Plus className="h-3.5 w-3.5" /> Add Address
+                          <Plus className="h-3.5 w-3.5" /> Add your first address
                         </button>
                       </div>
-
-                      {addresses.length === 0 ? (
-                        <div className="mt-3 rounded-2xl border border-dashed border-slate-200 p-5 text-center">
-                          <MapPin className="mx-auto h-6 w-6 text-slate-400" />
-                          <p className="mt-2 text-xs font-medium text-slate-700">
-                            No saved addresses found
-                          </p>
-                          <button
-                            type="button"
-                            onClick={() => setIsAddAddressOpen(true)}
-                            className="mt-2 text-xs font-bold text-[#981495] underline"
-                          >
-                            + Add a new delivery address
-                          </button>
-                        </div>
-                      ) : (
-                        <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
-                          {addresses.map((addr, idx) => (
+                    ) : (
+                      <div className="mt-5 grid grid-cols-1 gap-3.5 sm:grid-cols-2">
+                        {addresses.map((addr, idx) => {
+                          const IconComponent = getAddressIcon(addr.label);
+                          return (
                             <div
                               key={addr.id}
-                              className="relative flex flex-col justify-between rounded-2xl border border-slate-200 p-4 transition hover:border-[#f0abfc] hover:shadow-xs"
+                              className="group relative flex flex-col justify-between rounded-2xl border border-slate-200/90 bg-white p-4 transition hover:border-purple-200 hover:shadow-xs"
                             >
                               <div>
                                 <div className="flex items-center justify-between">
-                                  <span className="inline-flex items-center gap-1 text-xs font-bold text-[#981495]">
-                                    <MapPin className="h-3.5 w-3.5 text-[#981495]" /> {addr.label}
+                                  <span className="inline-flex items-center gap-1.5 rounded-lg bg-purple-50 px-2.5 py-1 text-xs font-bold text-[#981495]">
+                                    <IconComponent className="h-3.5 w-3.5" />
+                                    {addr.label}
                                   </span>
                                   {idx === 0 && (
-                                    <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-800">
+                                    <span className="rounded-full bg-emerald-50 border border-emerald-200 px-2 py-0.5 text-[10px] font-bold text-emerald-700">
                                       Default
                                     </span>
                                   )}
                                 </div>
-                                <p className="mt-2 line-clamp-2 text-xs text-slate-600 leading-snug">
+                                <p className="mt-3 text-xs text-slate-700 leading-relaxed font-medium">
                                   {addr.line}
                                 </p>
                               </div>
 
-                              <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-2 text-[11px]">
-                                <span className="font-mono text-slate-400">
-                                  Lat: {typeof addr.lat === "number" ? addr.lat.toFixed(2) : "—"},
-                                  Lng: {typeof addr.lng === "number" ? addr.lng.toFixed(2) : "—"}
-                                </span>
+                              <div className="mt-4 flex items-center justify-end border-t border-slate-100 pt-2.5">
                                 <button
                                   type="button"
                                   onClick={() => {
                                     addressesStore.remove(addr.id);
                                     toast.success("Address removed");
                                   }}
-                                  className="text-rose-600 font-bold hover:underline inline-flex items-center gap-0.5"
+                                  className="inline-flex items-center gap-1 text-[11px] font-bold text-slate-400 transition hover:text-rose-600"
                                 >
-                                  <Trash2 className="h-3 w-3" /> Remove
+                                  <Trash2 className="h-3.5 w-3.5" /> Remove
                                 </button>
                               </div>
                             </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Payment Methods Sub-Section */}
-                    <div className="border-t border-slate-100 pt-5">
-                      <div className="flex items-center justify-between">
-                        <h3 className="text-sm font-bold text-slate-900 flex items-center gap-1.5">
-                          <CreditCard className="h-4 w-4 text-[#981495]" /> Payment Methods
-                        </h3>
-                        <button
-                          type="button"
-                          onClick={() => setIsAddPaymentOpen(true)}
-                          className="inline-flex items-center gap-1 text-xs font-bold text-[#981495] hover:bg-[var(--sand)] px-2.5 py-1 rounded-lg transition"
-                        >
-                          <Plus className="h-3.5 w-3.5" /> Add Payment
-                        </button>
-                      </div>
-
-                      <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
-                        {profileExtra.paymentMethods.map((pay) => (
-                          <div
-                            key={pay.id}
-                            className="flex items-center justify-between rounded-2xl border border-slate-200 p-3.5"
-                          >
-                            <div className="flex items-center gap-3">
-                              <div className="grid h-9 w-9 place-items-center rounded-xl bg-[var(--sand)] text-[#981495] font-bold text-xs">
-                                {pay.type === "upi" ? "UPI" : "CARD"}
-                              </div>
-                              <div>
-                                <p className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
-                                  {pay.title}
-                                  {pay.isDefault && (
-                                    <span className="rounded-full bg-[var(--sand)] px-2 py-0.2 text-[9px] font-bold text-[#981495]">
-                                      Default
-                                    </span>
-                                  )}
-                                </p>
-                                <p className="text-[11px] font-mono text-slate-500">
-                                  {pay.subtitle}
-                                </p>
-                              </div>
-                            </div>
-
-                            <button
-                              type="button"
-                              onClick={() => {
-                                profileStore.deletePaymentMethod(pay.id);
-                                toast.success("Payment method removed");
-                              }}
-                              className="text-slate-400 hover:text-rose-600 transition"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                </section>
-              )}
-
-              {/* 4. LOCALSHORE-SPECIFIC SECTION */}
-              {(activeTab === "all" || activeTab === "localshore") && (
-                <section className="rounded-3xl border border-[var(--sand)] bg-white p-5 shadow-xs sm:p-6">
-                  <div className="flex items-center justify-between border-b border-slate-100 pb-4">
-                    <div>
-                      <h2 className="font-display text-lg font-bold text-slate-900 flex items-center gap-2">
-                        <Store className="h-5 w-5 text-[#981495]" /> Your LocalShore
-                      </h2>
-                      <p className="text-xs text-slate-500">
-                        Neighborhood sellers, favorite stores, and local offers
-                      </p>
-                    </div>
-                    <Link
-                      to="/"
-                      search={{ category: undefined, q: undefined }}
-                      className="text-xs font-bold text-[#981495] hover:underline inline-flex items-center gap-1"
-                    >
-                      Discover all shops <ChevronRight className="h-3.5 w-3.5" />
-                    </Link>
-                  </div>
-
-                  {/* Favorite Shops */}
-                  <div className="mt-5">
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                      Favorite Shops ({favoriteStores.length})
-                    </h3>
-                    {favoriteStores.length === 0 ? (
-                      <p className="mt-2 text-xs text-slate-500">
-                        No favorite shops saved yet. Click the heart icon on any store to follow it!
-                      </p>
-                    ) : (
-                      <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
-                        {favoriteStores.map((shop) => (
-                          <Link
-                            key={shop.id}
-                            to="/store/$storeId"
-                            params={{ storeId: shop.id }}
-                            className="group flex flex-col justify-between rounded-2xl border border-slate-200 p-3.5 transition hover:border-[#f0abfc] hover:shadow-sm"
-                          >
-                            <div>
-                              <div className="flex items-center justify-between">
-                                <span className="inline-flex items-center gap-1 text-[11px] font-bold text-[#981495]">
-                                  <Store className="h-3.5 w-3.5" /> {shop.category}
-                                </span>
-                                <span className="flex items-center gap-1 text-xs font-bold text-amber-600">
-                                  <Star className="h-3.5 w-3.5 fill-amber-400" /> {shop.rating}
-                                </span>
-                              </div>
-                              <h4 className="mt-2 text-xs font-bold text-slate-900 group-hover:text-[#981495] transition">
-                                {shop.name}
-                              </h4>
-                              <p className="text-[11px] text-slate-500 truncate">{shop.address}</p>
-                            </div>
-                            <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-2 text-[11px]">
-                              <span className="font-semibold text-slate-600">
-                                {shop.distanceKm} km away
-                              </span>
-                              <span className="font-bold text-[#981495]">Visit Shop →</span>
-                            </div>
-                          </Link>
-                        ))}
+                          );
+                        })}
                       </div>
                     )}
-                  </div>
+                  </section>
 
-                  {/* Recently Visited Shops */}
-                  <div className="mt-6 border-t border-slate-100 pt-5">
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                      Recently Visited Sellers
-                    </h3>
-                    <div className="mt-3 flex overflow-x-auto gap-3 pb-2 scrollbar-none">
-                      {visitedStores.map((shop) => (
-                        <Link
-                          key={shop.id}
-                          to="/store/$storeId"
-                          params={{ storeId: shop.id }}
-                          className="flex shrink-0 items-center gap-3 rounded-2xl border border-slate-200/90 bg-slate-50/50 p-2.5 pr-4 transition hover:bg-[var(--sand)]/50"
+                  {/* Payment Methods */}
+                  <section className="rounded-3xl border border-slate-200/80 bg-white p-5 shadow-xs sm:p-6">
+                    <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+                      <div>
+                        <h2 className="font-display text-lg font-bold text-slate-900 flex items-center gap-2">
+                          <CreditCard className="h-5 w-5 text-[#981495]" /> Payment Methods
+                        </h2>
+                        <p className="text-xs text-slate-500">
+                          Saved UPI IDs and cards for seamless checkout
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setIsAddPaymentOpen(true)}
+                        className="inline-flex items-center gap-1 text-xs font-bold text-[#981495] hover:bg-purple-50 px-3 py-1.5 rounded-xl border border-purple-200 transition"
+                      >
+                        <Plus className="h-3.5 w-3.5" /> Add Payment
+                      </button>
+                    </div>
+
+                    <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                      {profileExtra.paymentMethods.map((pay) => (
+                        <div
+                          key={pay.id}
+                          className="flex items-center justify-between rounded-2xl border border-slate-200 p-3.5 bg-slate-50/40"
                         >
-                          <div className="h-9 w-9 shrink-0 overflow-hidden rounded-xl bg-[var(--sand)] flex items-center justify-center font-bold text-[#981495] text-xs">
-                            {shop.name[0]}
+                          <div className="flex items-center gap-3">
+                            <div className="grid h-9 w-9 place-items-center rounded-xl bg-purple-100/70 text-[#981495] font-bold text-[11px]">
+                              {pay.type === "upi" ? "UPI" : "CARD"}
+                            </div>
+                            <div>
+                              <p className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                                {pay.title}
+                                {pay.isDefault && (
+                                  <span className="rounded-full bg-purple-50 px-2 py-0.2 text-[9px] font-bold text-[#981495]">
+                                    Default
+                                  </span>
+                                )}
+                              </p>
+                              <p className="text-[11px] font-mono text-slate-500">{pay.subtitle}</p>
+                            </div>
                           </div>
-                          <div>
-                            <p className="text-xs font-bold text-slate-900">{shop.name}</p>
-                            <p className="text-[10px] text-slate-500">
-                              {shop.distanceKm} km · {shop.etaMin} mins
-                            </p>
-                          </div>
-                        </Link>
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              profileStore.deletePaymentMethod(pay.id);
+                              toast.success("Payment method removed");
+                            }}
+                            className="text-slate-400 hover:text-rose-600 transition p-1"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
                       ))}
                     </div>
-                  </div>
-                </section>
-              )}
+                  </section>
+                </div>
 
-              {/* 5. SHOPPING ACTIVITY SECTION */}
-              {(activeTab === "all" || activeTab === "activity") && (
+                {/* Right 4 Cols: Account Details Summary */}
+                <div className="space-y-6 lg:col-span-4">
+                  <section className="rounded-3xl border border-slate-200/80 bg-white p-5 shadow-xs">
+                    <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                      <h2 className="font-display text-base font-bold text-slate-900 flex items-center gap-2">
+                        <User className="h-4.5 w-4.5 text-[#981495]" /> Profile Information
+                      </h2>
+                      <button
+                        type="button"
+                        onClick={() => setIsEditProfileOpen(true)}
+                        className="text-xs font-bold text-[#981495] hover:underline"
+                      >
+                        Edit
+                      </button>
+                    </div>
+
+                    <div className="mt-4 space-y-3.5 text-xs">
+                      <div>
+                        <span className="text-slate-400 block font-medium">Full Name</span>
+                        <p className="mt-0.5 text-sm font-bold text-slate-900">
+                          {auth.name || "Customer"}
+                        </p>
+                      </div>
+
+                      <div className="border-t border-slate-100 pt-2.5">
+                        <span className="text-slate-400 block font-medium">Email Address</span>
+                        <p className="mt-0.5 font-mono text-xs font-semibold text-slate-800">
+                          {auth.email || "No email registered"}
+                        </p>
+                      </div>
+
+                      <div className="border-t border-slate-100 pt-2.5">
+                        <span className="text-slate-400 block font-medium">Mobile Number</span>
+                        <p className="mt-0.5 font-mono text-xs font-semibold text-slate-800">
+                          {maskPhone(auth.phone)}
+                        </p>
+                      </div>
+
+                      <div className="border-t border-slate-100 pt-2.5">
+                        <span className="text-slate-400 block font-medium">Preferred Language</span>
+                        <p className="mt-0.5 font-semibold text-slate-800 flex items-center gap-1.5">
+                          <Globe className="h-3.5 w-3.5 text-[#981495]" />
+                          {profileExtra.preferredLanguage}
+                        </p>
+                      </div>
+                    </div>
+                  </section>
+
+                  {/* Security overview */}
+                  <section className="rounded-3xl border border-slate-200/80 bg-white p-5 shadow-xs">
+                    <h2 className="font-display text-base font-bold text-slate-900 flex items-center gap-2 border-b border-slate-100 pb-3">
+                      <ShieldCheck className="h-4.5 w-4.5 text-[#981495]" /> Security & Account
+                    </h2>
+                    <div className="mt-3.5 space-y-2 text-xs">
+                      <div className="flex items-center justify-between py-1.5 text-slate-600">
+                        <span>Account Status</span>
+                        <span className="font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200 text-[11px]">
+                          Active & Verified
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between py-1.5 text-slate-600">
+                        <span>Authentication</span>
+                        <span className="font-medium text-slate-800">SMS / Email OTP</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setIsSecurityOpen(true)}
+                        className="mt-2 w-full rounded-xl border border-slate-200 py-2 text-center text-xs font-bold text-slate-700 hover:bg-slate-50 transition"
+                      >
+                        Manage Security Settings
+                      </button>
+                    </div>
+                  </section>
+                </div>
+              </div>
+            )}
+
+            {/* ── TAB 2: MY ORDERS ───────────────────────────────────────────── */}
+            {activeTab === "orders" && (
+              <div className="space-y-6">
+                {recentOrder ? (
+                  <div className="overflow-hidden rounded-3xl border border-emerald-200 bg-gradient-to-br from-emerald-50/70 via-white to-emerald-50/30 p-5 shadow-xs sm:p-6">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="h-2.5 w-2.5 rounded-full bg-emerald-500 animate-pulse" />
+                          <span className="text-xs font-bold uppercase tracking-wider text-emerald-900">
+                            Active Order #{recentOrder.code || recentOrder.id.slice(0, 8)}
+                          </span>
+                          <span className="rounded-full bg-emerald-200/80 px-2.5 py-0.5 text-[10px] font-extrabold text-emerald-900 capitalize">
+                            {recentOrder.status.replace(/_/g, " ")}
+                          </span>
+                        </div>
+                        <h3 className="mt-2 text-lg font-bold text-slate-900">
+                          {recentOrder.storeName}
+                        </h3>
+                        <p className="mt-1 text-xs text-slate-600">
+                          {recentOrder.lines.length} items · Total ₹{recentOrder.total}
+                        </p>
+                      </div>
+                      <Link
+                        to="/order/$orderId"
+                        params={{ orderId: recentOrder.id }}
+                        className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-700 px-5 py-2.5 text-xs font-bold text-white shadow-xs hover:bg-emerald-800 transition"
+                      >
+                        Track Order Live <ArrowRight className="h-3.5 w-3.5" />
+                      </Link>
+                    </div>
+                  </div>
+                ) : null}
+
                 <section className="rounded-3xl border border-slate-200/80 bg-white p-5 shadow-xs sm:p-6">
                   <div className="flex items-center justify-between border-b border-slate-100 pb-4">
                     <div>
                       <h2 className="font-display text-lg font-bold text-slate-900 flex items-center gap-2">
-                        <Package className="h-5 w-5 text-[#981495]" /> Shopping Activity
+                        <Package className="h-5 w-5 text-[#981495]" /> Order History
                       </h2>
-                      <p className="text-xs text-slate-500">Recent orders, reviews, and wishlist</p>
+                      <p className="text-xs text-slate-500">
+                        View past receipts, store details, and delivery statuses
+                      </p>
                     </div>
-                    <Link to="/orders" className="text-xs font-bold text-[#981495] hover:underline">
-                      View all orders →
+                    <Link
+                      to="/orders"
+                      className="text-xs font-bold text-[#981495] hover:underline inline-flex items-center gap-1"
+                    >
+                      View all orders <ChevronRight className="h-3.5 w-3.5" />
                     </Link>
                   </div>
 
-                  {/* Active Order Banner Preview */}
-                  {recentOrder ? (
-                    <div className="mt-5 rounded-2xl border border-emerald-200 bg-emerald-50/40 p-4">
-                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <span className="h-2.5 w-2.5 rounded-full bg-emerald-500 animate-pulse" />
-                            <span className="text-xs font-bold text-emerald-900 uppercase">
-                              Order #{recentOrder.code || recentOrder.id.slice(0, 8)}
-                            </span>
-                            <span className="rounded-full bg-emerald-200 px-2 py-0.5 text-[10px] font-bold text-emerald-900 capitalize">
-                              {recentOrder.status.replace(/_/g, " ")}
-                            </span>
-                          </div>
-                          <p className="mt-1 text-xs text-slate-700">
-                            {recentOrder.storeName} · {recentOrder.lines.length} items · Total ₹
-                            {recentOrder.total}
-                          </p>
-                        </div>
-                        <Link
-                          to="/order/$orderId"
-                          params={{ orderId: recentOrder.id }}
-                          className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-emerald-700 px-4 py-2 text-xs font-bold text-white shadow-xs hover:bg-emerald-800 transition"
-                        >
-                          Track order →
-                        </Link>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="mt-5 rounded-2xl border border-slate-200 p-4 text-center">
-                      <p className="text-xs text-slate-600">No active orders right now.</p>
+                  {orders.length === 0 ? (
+                    <div className="mt-6 rounded-2xl border border-dashed border-slate-200 p-8 text-center bg-slate-50/50">
+                      <Package className="mx-auto h-8 w-8 text-slate-400" />
+                      <h3 className="mt-2 text-sm font-bold text-slate-800">No orders placed yet</h3>
+                      <p className="mt-1 text-xs text-slate-500 max-w-sm mx-auto">
+                        Discover verified nearby shops in your neighborhood with fast 20–30 minute
+                        delivery.
+                      </p>
                       <Link
                         to="/"
                         search={{ category: undefined, q: undefined }}
-                        className="mt-1 text-xs font-bold text-[#981495] underline"
+                        className="mt-4 inline-flex items-center gap-1.5 rounded-xl bg-[#981495] px-4 py-2 text-xs font-bold text-white shadow-xs hover:bg-[#831080]"
                       >
-                        Start shopping from neighborhood stores
+                        <Store className="h-3.5 w-3.5" /> Explore nearby shops
                       </Link>
                     </div>
-                  )}
-
-                  {/* Reviews Pending */}
-                  <div className="mt-6 border-t border-slate-100 pt-5">
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                      Rate Your Recent Purchases
-                    </h3>
-                    {profileExtra.pendingReviewItems.length === 0 ? (
-                      <p className="mt-2 text-xs text-slate-500">
-                        All purchased items have been reviewed! Thank you.
-                      </p>
-                    ) : (
-                      <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
-                        {profileExtra.pendingReviewItems.map((rev) => (
-                          <div
-                            key={rev.id}
-                            className="flex items-center justify-between rounded-2xl border border-amber-200 bg-amber-50/40 p-3.5"
-                          >
-                            <div>
-                              <p className="text-xs font-bold text-slate-900">{rev.productName}</p>
-                              <p className="text-[11px] text-slate-600">
-                                {rev.shopName} · {rev.purchasedDate}
-                              </p>
-                            </div>
-                            <button
-                              type="button"
-                              onClick={() => setIsReviewOpen(rev.id)}
-                              className="rounded-xl bg-amber-500 px-3 py-1.5 text-xs font-bold text-slate-950 shadow-xs hover:bg-amber-400 transition"
-                            >
-                              Rate now
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </section>
-              )}
-
-              {/* 6. OFFERS & REWARDS SECTION */}
-              {(activeTab === "all" || activeTab === "offers") && (
-                <section className="rounded-3xl border border-[var(--sand)] bg-white p-5 shadow-xs sm:p-6">
-                  <div className="flex items-center justify-between border-b border-slate-100 pb-4">
-                    <div>
-                      <h2 className="font-display text-lg font-bold text-slate-900 flex items-center gap-2">
-                        <Sparkles className="h-5 w-5 text-[#981495]" /> LocalShore Rewards & Offers
-                      </h2>
-                      <p className="text-xs text-slate-500">
-                        Points, active coupons, and cashback credits
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Points Card */}
-                  <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2">
-                    <div className="rounded-2xl bg-gradient-to-br from-[#981495] to-[#981495] p-5 text-white shadow-md">
-                      <div className="flex items-center justify-between">
-                        <span className="inline-flex items-center gap-1 text-xs font-bold uppercase tracking-wider text-[#f0abfc]">
-                          <Sparkles className="h-3.5 w-3.5 fill-[#f0abfc]" /> LocalShore Balance
-                        </span>
-                        <span className="rounded-full bg-white/20 px-2.5 py-0.5 text-[10px] font-bold text-white">
-                          Loyalty Tier 1
-                        </span>
-                      </div>
-                      <p className="mt-3 font-display text-3xl font-extrabold text-white">
-                        {profileExtra.rewardsPoints} Shore Points
-                      </p>
-                      <p className="mt-1 text-xs text-[#f0abfc]">
-                        100 Points = ₹50 Discount Voucher
-                      </p>
-                      <button
-                        type="button"
-                        onClick={() => setIsRedeemOpen(true)}
-                        className="mt-4 inline-flex items-center gap-1.5 rounded-xl bg-white px-4 py-2 text-xs font-bold text-[#981495] shadow-sm hover:bg-[var(--sand)] transition"
-                      >
-                        Redeem points →
-                      </button>
-                    </div>
-
-                    {/* Store Credits */}
-                    <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
-                      <p className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                        Refund & Store Credits
-                      </p>
-                      <p className="mt-3 font-display text-3xl font-extrabold text-slate-900">
-                        ₹150.00
-                      </p>
-                      <p className="mt-1 text-xs text-slate-600">
-                        Auto-applied at checkout for instant delivery
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Saved Coupons List */}
-                  <div className="mt-6">
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                      Available Coupons ({profileExtra.savedCoupons.length})
-                    </h3>
-                    <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
-                      {profileExtra.savedCoupons.map((c, i) => (
+                  ) : (
+                    <div className="mt-4 divide-y divide-slate-100">
+                      {orders.map((order) => (
                         <div
-                          key={i}
-                          className="flex items-center justify-between rounded-2xl border border-[#f0abfc] bg-[var(--sand)]/50 p-3.5"
+                          key={order.id}
+                          className="flex flex-col gap-3 py-4 first:pt-2 last:pb-0 sm:flex-row sm:items-center sm:justify-between"
                         >
                           <div>
                             <div className="flex items-center gap-2">
-                              <span className="font-mono text-xs font-bold text-[#981495] bg-white px-2 py-0.5 rounded border border-[#f0abfc]">
+                              <span className="font-mono text-xs font-bold text-slate-900">
+                                #{order.code || order.id.slice(0, 8)}
+                              </span>
+                              <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-700 capitalize">
+                                {order.status.replace(/_/g, " ")}
+                              </span>
+                            </div>
+                            <p className="mt-1 text-xs font-semibold text-slate-800">
+                              {order.storeName}
+                            </p>
+                            <p className="text-[11px] text-slate-500">
+                              {order.lines.length} {order.lines.length === 1 ? "item" : "items"} · ₹
+                              {order.total}
+                            </p>
+                          </div>
+
+                          <Link
+                            to="/order/$orderId"
+                            params={{ orderId: order.id }}
+                            className="inline-flex items-center gap-1 text-xs font-bold text-[#981495] hover:underline"
+                          >
+                            View details →
+                          </Link>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </section>
+              </div>
+            )}
+
+            {/* ── TAB 3: REWARDS & COUPONS ───────────────────────────────────── */}
+            {activeTab === "rewards" && (
+              <div className="space-y-6">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  {/* Shore Points */}
+                  <div className="rounded-3xl bg-gradient-to-br from-[#981495] via-[#7e117b] to-[#5a0c58] p-6 text-white shadow-md">
+                    <div className="flex items-center justify-between">
+                      <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-purple-200">
+                        <Sparkles className="h-4 w-4 fill-purple-200" /> Shore Points Balance
+                      </span>
+                      <span className="rounded-full bg-white/20 px-2.5 py-0.5 text-[10px] font-bold text-white">
+                        Loyalty Tier 1
+                      </span>
+                    </div>
+                    <p className="mt-3 font-display text-4xl font-extrabold text-white">
+                      {profileExtra.rewardsPoints}
+                    </p>
+                    <p className="mt-1 text-xs text-purple-200">
+                      Earn 10 points for every ₹100 spent · 100 Points = ₹50 Voucher
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => setIsRedeemOpen(true)}
+                      className="mt-5 inline-flex items-center gap-1.5 rounded-xl bg-white px-4 py-2 text-xs font-bold text-[#981495] shadow-xs hover:bg-purple-50 transition"
+                    >
+                      Redeem Points →
+                    </button>
+                  </div>
+
+                  {/* Store Credits */}
+                  <div className="rounded-3xl border border-slate-200/90 bg-white p-6 shadow-xs flex flex-col justify-between">
+                    <div>
+                      <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                        Refund & Store Credits
+                      </span>
+                      <p className="mt-3 font-display text-4xl font-extrabold text-slate-900">
+                        ₹150.00
+                      </p>
+                      <p className="mt-1 text-xs text-slate-500">
+                        Available wallet credits automatically apply on your next order checkout.
+                      </p>
+                    </div>
+                    <div className="mt-4 pt-3 border-t border-slate-100 text-xs text-slate-500 font-medium">
+                      ✓ Instant settlement on delivery cancellations
+                    </div>
+                  </div>
+                </div>
+
+                {/* Available Coupons */}
+                <section className="rounded-3xl border border-slate-200/80 bg-white p-5 shadow-xs sm:p-6">
+                  <div className="border-b border-slate-100 pb-4">
+                    <h2 className="font-display text-lg font-bold text-slate-900 flex items-center gap-2">
+                      <Ticket className="h-5 w-5 text-[#981495]" /> Available Neighborhood Coupons
+                    </h2>
+                    <p className="text-xs text-slate-500">
+                      Exclusive promo codes for your next neighborhood order
+                    </p>
+                  </div>
+
+                  <div className="mt-4 grid grid-cols-1 gap-3.5 sm:grid-cols-2">
+                    {profileExtra.savedCoupons.map((c, i) => {
+                      const isCopied = copiedCoupon === c.code;
+                      return (
+                        <div
+                          key={i}
+                          className="flex items-center justify-between rounded-2xl border border-dashed border-purple-300 bg-purple-50/40 p-4 transition hover:bg-purple-50/70"
+                        >
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <span className="font-mono text-xs font-bold text-[#981495] bg-white px-2.5 py-0.5 rounded-md border border-purple-200 shadow-2xs">
                                 {c.code}
                               </span>
                               <span className="text-xs font-extrabold text-[#981495]">
                                 {c.discountText}
                               </span>
                             </div>
-                            <p className="mt-1 text-xs text-slate-700">{c.title}</p>
-                            <p className="text-[10px] text-slate-500">
-                              Min. order ₹{c.minOrder} · {c.expires}
+                            <p className="mt-1.5 text-xs font-semibold text-slate-800">{c.title}</p>
+                            <p className="text-[11px] text-slate-500">
+                              Min order ₹{c.minOrder} · Valid until {c.expires}
                             </p>
                           </div>
+
                           <button
                             type="button"
                             onClick={() => {
                               navigator.clipboard?.writeText(c.code);
-                              toast.success(`Coupon ${c.code} copied to clipboard!`);
+                              setCopiedCoupon(c.code);
+                              toast.success(`Coupon ${c.code} copied!`);
+                              setTimeout(() => setCopiedCoupon(null), 2500);
                             }}
-                            className="rounded-xl border border-[#f0abfc] bg-white px-3 py-1.5 text-xs font-bold text-[#981495] transition hover:bg-[var(--sand)]"
+                            className={`rounded-xl px-3 py-1.5 text-xs font-bold transition flex items-center gap-1 ${
+                              isCopied
+                                ? "bg-emerald-600 text-white"
+                                : "bg-white text-[#981495] border border-purple-200 hover:bg-purple-100/60"
+                            }`}
                           >
-                            Copy
+                            {isCopied ? (
+                              <>
+                                <Check className="h-3 w-3" /> Copied
+                              </>
+                            ) : (
+                              <>
+                                <Copy className="h-3 w-3" /> Copy
+                              </>
+                            )}
                           </button>
                         </div>
-                      ))}
-                    </div>
+                      );
+                    })}
                   </div>
                 </section>
-              )}
-            </div>
+              </div>
+            )}
 
-            {/* RIGHT COLUMN: Settings, Delivery & Support */}
-            <div className="space-y-6 lg:col-span-4">
-              {/* 8. DELIVERY PREFERENCES */}
-              {(activeTab === "all" || activeTab === "delivery" || activeTab === "settings") && (
-                <section className="rounded-3xl border border-slate-200/80 bg-white p-5 shadow-xs">
-                  <h2 className="font-display text-base font-bold text-slate-900 flex items-center gap-2 border-b border-slate-100 pb-3">
-                    <Truck className="h-4.5 w-4.5 text-[#981495]" /> Delivery Preferences
-                  </h2>
+            {/* ── TAB 4: PREFERENCES & SUPPORT ───────────────────────────────── */}
+            {activeTab === "preferences" && (
+              <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
+                {/* Left 6 cols: Delivery Preferences */}
+                <div className="space-y-6 lg:col-span-6">
+                  <section className="rounded-3xl border border-slate-200/80 bg-white p-5 shadow-xs sm:p-6">
+                    <h2 className="font-display text-base font-bold text-slate-900 flex items-center gap-2 border-b border-slate-100 pb-3">
+                      <Truck className="h-4.5 w-4.5 text-[#981495]" /> Delivery Preferences
+                    </h2>
 
-                  <div className="mt-4 space-y-3.5 text-xs">
-                    <label className="flex items-center justify-between cursor-pointer rounded-xl bg-slate-50 p-2.5">
-                      <span className="font-bold text-slate-800">Contactless Delivery</span>
-                      <input
-                        type="checkbox"
-                        checked={profileExtra.deliveryPreferences.contactless}
-                        onChange={(e) =>
-                          profileStore.updateDeliveryPreferences({ contactless: e.target.checked })
-                        }
-                        className="h-4 w-4 rounded accent-[#981495]"
-                      />
-                    </label>
-
-                    <label className="flex items-center justify-between cursor-pointer rounded-xl bg-slate-50 p-2.5">
-                      <span className="font-bold text-slate-800">Call Before Delivery</span>
-                      <input
-                        type="checkbox"
-                        checked={profileExtra.deliveryPreferences.callBeforeDelivery}
-                        onChange={(e) =>
-                          profileStore.updateDeliveryPreferences({
-                            callBeforeDelivery: e.target.checked,
-                          })
-                        }
-                        className="h-4 w-4 rounded accent-[#981495]"
-                      />
-                    </label>
-
-                    <div>
-                      <span className="font-bold text-slate-800 block mb-1">Preferred Slot</span>
-                      <select
-                        value={profileExtra.deliveryPreferences.preferredSlot}
-                        onChange={(e) =>
-                          profileStore.updateDeliveryPreferences({ preferredSlot: e.target.value })
-                        }
-                        className="w-full rounded-xl border border-slate-200 bg-white p-2 text-xs font-semibold text-slate-800"
-                      >
-                        <option value="Anytime">Anytime (Instant 20-30 min)</option>
-                        <option value="Morning">Morning (8 AM - 12 PM)</option>
-                        <option value="Evening">Evening (4 PM - 8 PM)</option>
-                      </select>
-                    </div>
-
-                    <div>
-                      <span className="font-bold text-slate-800 block mb-1">
-                        Delivery Instructions
-                      </span>
-                      <textarea
-                        value={profileExtra.deliveryPreferences.instructions}
-                        onChange={(e) =>
-                          profileStore.updateDeliveryPreferences({ instructions: e.target.value })
-                        }
-                        rows={2}
-                        className="w-full rounded-xl border border-slate-200 bg-white p-2 text-xs text-slate-800 placeholder:text-slate-400"
-                        placeholder="e.g. Leave with gate guard"
-                      />
-                    </div>
-                  </div>
-                </section>
-              )}
-
-              {/* 7. NOTIFICATIONS PREFERENCES */}
-              {(activeTab === "all" ||
-                activeTab === "notifications" ||
-                activeTab === "settings") && (
-                <section className="rounded-3xl border border-slate-200/80 bg-white p-5 shadow-xs">
-                  <h2 className="font-display text-base font-bold text-slate-900 flex items-center gap-2 border-b border-slate-100 pb-3">
-                    <Bell className="h-4.5 w-4.5 text-[#981495]" /> Notifications
-                  </h2>
-
-                  <div className="mt-4 space-y-2 text-xs">
-                    {[
-                      { key: "orderStatus", label: "Order Status Updates" },
-                      { key: "priceDrops", label: "Price Drops on Wishlist" },
-                      { key: "nearbyShopOffers", label: "Nearby Shop Offers" },
-                      { key: "localDeals", label: "Local Deals & Discounts" },
-                      { key: "promotionalOffers", label: "Promotional SMS / Email" },
-                    ].map((item) => (
-                      <label
-                        key={item.key}
-                        className="flex items-center justify-between cursor-pointer py-1.5 border-b hairline last:border-0"
-                      >
-                        <span className="font-semibold text-slate-700">{item.label}</span>
+                    <div className="mt-4 space-y-3.5 text-xs">
+                      <label className="flex items-center justify-between cursor-pointer rounded-xl bg-slate-50 p-3 border border-slate-200/60">
+                        <div>
+                          <span className="font-bold text-slate-800 block">Contactless Delivery</span>
+                          <span className="text-[11px] text-slate-500">
+                            Rider leaves packages at doorstep or security
+                          </span>
+                        </div>
                         <input
                           type="checkbox"
-                          checked={(profileExtra.notificationSettings as any)[item.key]}
-                          onChange={() => profileStore.toggleNotification(item.key as any)}
+                          checked={profileExtra.deliveryPreferences.contactless}
+                          onChange={(e) =>
+                            profileStore.updateDeliveryPreferences({ contactless: e.target.checked })
+                          }
                           className="h-4 w-4 rounded accent-[#981495]"
                         />
                       </label>
-                    ))}
-                  </div>
-                </section>
-              )}
 
-              {/* 10. HELP & SUPPORT */}
-              {(activeTab === "all" || activeTab === "support" || activeTab === "settings") && (
-                <section className="rounded-3xl border border-slate-200/80 bg-white p-5 shadow-xs">
-                  <h2 className="font-display text-base font-bold text-slate-900 flex items-center gap-2 border-b border-slate-100 pb-3">
-                    <HelpCircle className="h-4.5 w-4.5 text-[#981495]" /> Help & Support
-                  </h2>
+                      <label className="flex items-center justify-between cursor-pointer rounded-xl bg-slate-50 p-3 border border-slate-200/60">
+                        <div>
+                          <span className="font-bold text-slate-800 block">Call Before Delivery</span>
+                          <span className="text-[11px] text-slate-500">
+                            Rider phones you upon arrival
+                          </span>
+                        </div>
+                        <input
+                          type="checkbox"
+                          checked={profileExtra.deliveryPreferences.callBeforeDelivery}
+                          onChange={(e) =>
+                            profileStore.updateDeliveryPreferences({
+                              callBeforeDelivery: e.target.checked,
+                            })
+                          }
+                          className="h-4 w-4 rounded accent-[#981495]"
+                        />
+                      </label>
 
-                  <div className="mt-4 space-y-2.5 text-xs">
-                    <Link
-                      to="/help"
-                      className="flex items-center justify-between rounded-xl bg-[var(--sand)]/60 p-3 font-bold text-[#981495] hover:bg-[var(--sand)] transition"
-                    >
-                      <span className="flex items-center gap-2">
-                        <MessageSquare className="h-4 w-4 text-[#981495]" /> LocalShore Help Center
-                      </span>
-                      <ChevronRight className="h-4 w-4" />
-                    </Link>
+                      <div>
+                        <span className="font-bold text-slate-800 block mb-1">
+                          Preferred Delivery Slot
+                        </span>
+                        <select
+                          value={profileExtra.deliveryPreferences.preferredSlot}
+                          onChange={(e) =>
+                            profileStore.updateDeliveryPreferences({ preferredSlot: e.target.value })
+                          }
+                          className="w-full rounded-xl border border-slate-200 bg-white p-2.5 text-xs font-semibold text-slate-800"
+                        >
+                          <option value="Anytime">Anytime (Instant 20-30 min)</option>
+                          <option value="Morning">Morning (8 AM - 12 PM)</option>
+                          <option value="Evening">Evening (4 PM - 8 PM)</option>
+                        </select>
+                      </div>
 
-                    <Link
-                      to="/support"
-                      className="flex items-center justify-between rounded-xl border border-slate-200 p-3 font-semibold text-slate-800 hover:bg-slate-50 transition"
-                    >
-                      <span>My Support Tickets</span>
-                      <ChevronRight className="h-4 w-4 text-slate-400" />
-                    </Link>
+                      <div>
+                        <span className="font-bold text-slate-800 block mb-1">
+                          Standing Delivery Instructions
+                        </span>
+                        <textarea
+                          value={profileExtra.deliveryPreferences.instructions}
+                          onChange={(e) =>
+                            profileStore.updateDeliveryPreferences({ instructions: e.target.value })
+                          }
+                          rows={2}
+                          className="w-full rounded-xl border border-slate-200 bg-white p-2.5 text-xs text-slate-800 placeholder:text-slate-400"
+                          placeholder="e.g., Leave with gate security / Ring doorbell twice"
+                        />
+                      </div>
+                    </div>
+                  </section>
+                </div>
 
-                    <button
-                      type="button"
-                      onClick={() => setIsSecurityOpen(true)}
-                      className="w-full flex items-center justify-between rounded-xl border border-slate-200 p-3 font-semibold text-slate-800 hover:bg-slate-50 transition text-left"
-                    >
-                      <span className="flex items-center gap-2">
-                        <Lock className="h-4 w-4 text-[#981495]" /> Security & Privacy
-                      </span>
-                      <ChevronRight className="h-4 w-4 text-slate-400" />
-                    </button>
-                  </div>
-                </section>
-              )}
-            </div>
+                {/* Right 6 cols: Notifications & Support */}
+                <div className="space-y-6 lg:col-span-6">
+                  {/* Notifications */}
+                  <section className="rounded-3xl border border-slate-200/80 bg-white p-5 shadow-xs sm:p-6">
+                    <h2 className="font-display text-base font-bold text-slate-900 flex items-center gap-2 border-b border-slate-100 pb-3">
+                      <Bell className="h-4.5 w-4.5 text-[#981495]" /> Notifications & Alerts
+                    </h2>
+
+                    <div className="mt-4 space-y-2.5 text-xs">
+                      {[
+                        { key: "orderStatus", label: "Order Status & Live Tracking" },
+                        { key: "priceDrops", label: "Price Drops on Saved Items" },
+                        { key: "localDeals", label: "Exclusive Neighborhood Offers" },
+                      ].map((item) => (
+                        <label
+                          key={item.key}
+                          className="flex items-center justify-between cursor-pointer py-1.5 border-b border-slate-100 last:border-0"
+                        >
+                          <span className="font-semibold text-slate-700">{item.label}</span>
+                          <input
+                            type="checkbox"
+                            checked={(profileExtra.notificationSettings as any)[item.key]}
+                            onChange={() => profileStore.toggleNotification(item.key as any)}
+                            className="h-4 w-4 rounded accent-[#981495]"
+                          />
+                        </label>
+                      ))}
+                    </div>
+                  </section>
+
+                  {/* Help & Support */}
+                  <section className="rounded-3xl border border-slate-200/80 bg-white p-5 shadow-xs sm:p-6">
+                    <h2 className="font-display text-base font-bold text-slate-900 flex items-center gap-2 border-b border-slate-100 pb-3">
+                      <HelpCircle className="h-4.5 w-4.5 text-[#981495]" /> Help & Support
+                    </h2>
+
+                    <div className="mt-4 space-y-2.5 text-xs">
+                      <Link
+                        to="/help"
+                        className="flex items-center justify-between rounded-xl bg-purple-50/70 p-3 font-bold text-[#981495] hover:bg-purple-100/70 transition"
+                      >
+                        <span className="flex items-center gap-2">
+                          <MessageSquare className="h-4 w-4 text-[#981495]" /> LocalShore Help Center
+                        </span>
+                        <ChevronRight className="h-4 w-4" />
+                      </Link>
+
+                      <Link
+                        to="/support"
+                        className="flex items-center justify-between rounded-xl border border-slate-200 p-3 font-semibold text-slate-800 hover:bg-slate-50 transition"
+                      >
+                        <span>My Support Tickets</span>
+                        <ChevronRight className="h-4 w-4 text-slate-400" />
+                      </Link>
+
+                      <button
+                        type="button"
+                        onClick={() => setIsSecurityOpen(true)}
+                        className="w-full flex items-center justify-between rounded-xl border border-slate-200 p-3 font-semibold text-slate-800 hover:bg-slate-50 transition text-left"
+                      >
+                        <span className="flex items-center gap-2">
+                          <Lock className="h-4 w-4 text-[#981495]" /> Security & Privacy
+                        </span>
+                        <ChevronRight className="h-4 w-4 text-slate-400" />
+                      </button>
+                    </div>
+                  </section>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
-        {/* ── FOOTER ────────────────────────────────────────────────────────── */}
+        {/* ── FOOTER NOTE ──────────────────────────────────────────────────── */}
         <p className="mt-12 text-center font-mono text-[10px] uppercase tracking-widest text-slate-400">
-          · Local Shore v0.2 · Coastal India ·
+          · LocalShore · Hyperlocal Neighborhood Commerce ·
         </p>
       </div>
 
@@ -1063,19 +1032,6 @@ function ProfilePage() {
                   <option value="Tamil">Tamil (தமிழ்)</option>
                 </select>
               </div>
-
-              <div>
-                <label className="font-bold text-slate-800 block mb-1">Primary Delivery Hub</label>
-                <select
-                  value={editHub}
-                  onChange={(e) => setEditHub(e.target.value)}
-                  className="w-full rounded-xl border border-slate-200 p-2.5 text-xs text-slate-900"
-                >
-                  <option value="Singanallur">Singanallur</option>
-                  <option value="Pappampatti">Pappampatti</option>
-                  <option value="Ondipudur">Ondipudur</option>
-                </select>
-              </div>
             </div>
 
             <div className="mt-6 flex justify-end gap-2">
@@ -1091,12 +1047,11 @@ function ProfilePage() {
                 onClick={() => {
                   profileStore.updateProfileDetails({
                     preferredLanguage: editLanguage,
-                    preferredHub: editHub,
                   });
                   toast.success("Profile updated!");
                   setIsEditProfileOpen(false);
                 }}
-                className="rounded-xl bg-[#981495] px-5 py-2 text-xs font-bold text-white shadow-xs hover:bg-[#981495]"
+                className="rounded-xl bg-[#981495] px-5 py-2 text-xs font-bold text-white shadow-xs hover:bg-[#831080]"
               >
                 Save Changes
               </button>
@@ -1150,15 +1105,15 @@ function ProfilePage() {
                   onChange={(e) => setNewAddrLine(e.target.value)}
                   rows={3}
                   className="w-full rounded-xl border border-slate-200 p-2.5 text-xs text-slate-900"
-                  placeholder="House/Flat No., Street name, Landmark"
+                  placeholder="House/Flat No., Building name, Street, Landmark"
                 />
               </div>
 
-              <div className="rounded-2xl bg-[var(--sand)]/60 p-3 border border-[var(--sand)] text-[11px] text-[#981495] flex items-center gap-2">
+              <div className="rounded-2xl bg-purple-50 p-3 border border-purple-100 text-[11px] text-[#981495] flex items-center gap-2">
                 <Map className="h-4 w-4 shrink-0 text-[#981495]" />
                 <span>
                   {deliveryLoc
-                    ? "Using your current live delivery location."
+                    ? "Using your current selected delivery location."
                     : "Set your live delivery location before saving this address."}
                 </span>
               </div>
@@ -1193,7 +1148,7 @@ function ProfilePage() {
                   setNewAddrLine("");
                   setIsAddAddressOpen(false);
                 }}
-                className="rounded-xl bg-[#981495] px-5 py-2 text-xs font-bold text-white shadow-xs hover:bg-[#981495]"
+                className="rounded-xl bg-[#981495] px-5 py-2 text-xs font-bold text-white shadow-xs hover:bg-[#831080]"
               >
                 Save Address
               </button>
@@ -1244,12 +1199,12 @@ function ProfilePage() {
               </div>
 
               <div>
-                <label className="font-bold text-slate-800 block mb-1">Title / Name</label>
+                <label className="font-bold text-slate-800 block mb-1">Title / Label</label>
                 <input
                   type="text"
                   value={newPayTitle}
                   onChange={(e) => setNewPayTitle(e.target.value)}
-                  placeholder={newPayType === "upi" ? "e.g. PhonePe UPI" : "e.g. Axis Bank Card"}
+                  placeholder={newPayType === "upi" ? "e.g., GPay / PhonePe" : "e.g., HDFC Salary Card"}
                   className="w-full rounded-xl border border-slate-200 p-2.5 text-xs text-slate-900"
                 />
               </div>
@@ -1262,7 +1217,7 @@ function ProfilePage() {
                   type="text"
                   value={newPaySub}
                   onChange={(e) => setNewPaySub(e.target.value)}
-                  placeholder={newPayType === "upi" ? "user@upi" : "•••• •••• •••• 1234"}
+                  placeholder={newPayType === "upi" ? "username@oksbi" : "•••• •••• •••• 4242"}
                   className="w-full rounded-xl border border-slate-200 p-2.5 text-xs font-mono text-slate-900"
                 />
               </div>
@@ -1294,7 +1249,7 @@ function ProfilePage() {
                   setNewPaySub("");
                   setIsAddPaymentOpen(false);
                 }}
-                className="rounded-xl bg-[#981495] px-5 py-2 text-xs font-bold text-white shadow-xs hover:bg-[#981495]"
+                className="rounded-xl bg-[#981495] px-5 py-2 text-xs font-bold text-white shadow-xs hover:bg-[#831080]"
               >
                 Save Payment Method
               </button>
@@ -1365,83 +1320,12 @@ function ProfilePage() {
                         toast.error(e.message);
                       }
                     }}
-                    className="rounded-xl bg-[#981495] px-3.5 py-1.5 text-xs font-bold text-white shadow-xs disabled:opacity-50 hover:bg-[#981495] transition"
+                    className="rounded-xl bg-[#981495] px-3.5 py-1.5 text-xs font-bold text-white shadow-xs disabled:opacity-50 hover:bg-[#831080] transition"
                   >
                     Redeem
                   </button>
                 </div>
               ))}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* WRITE REVIEW MODAL */}
-      {isReviewOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4">
-          <div className="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <h3 className="font-display text-lg font-bold text-slate-900">Rate Product</h3>
-              <button
-                type="button"
-                onClick={() => setIsReviewOpen(null)}
-                className="text-slate-400 hover:text-slate-700"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            <div className="mt-4 space-y-4 text-xs">
-              <div>
-                <label className="font-bold text-slate-800 block mb-2">Rating</label>
-                <div className="flex gap-2">
-                  {[1, 2, 3, 4, 5].map((star) => (
-                    <button
-                      key={star}
-                      type="button"
-                      onClick={() => setReviewRating(star)}
-                      className="p-1"
-                    >
-                      <Star
-                        className={`h-6 w-6 ${star <= reviewRating ? "fill-amber-400 text-amber-400" : "text-slate-300"}`}
-                      />
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div>
-                <label className="font-bold text-slate-800 block mb-1">Your Review</label>
-                <textarea
-                  value={reviewComment}
-                  onChange={(e) => setReviewComment(e.target.value)}
-                  rows={3}
-                  className="w-full rounded-xl border border-slate-200 p-2.5 text-xs text-slate-900"
-                  placeholder="Tell us about product quality and delivery experience..."
-                />
-              </div>
-            </div>
-
-            <div className="mt-6 flex justify-end gap-2">
-              <button
-                type="button"
-                onClick={() => setIsReviewOpen(null)}
-                className="rounded-xl border border-slate-200 px-4 py-2 text-xs font-bold text-slate-700"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  profileStore.submitReview(isReviewOpen, reviewRating, reviewComment);
-                  toast.success("Review submitted! Thank you.");
-                  setReviewComment("");
-                  setIsReviewOpen(null);
-                }}
-                className="rounded-xl bg-[#981495] px-5 py-2 text-xs font-bold text-white shadow-xs hover:bg-[#981495]"
-              >
-                Submit Review
-              </button>
             </div>
           </div>
         </div>
@@ -1468,9 +1352,9 @@ function ProfilePage() {
               <div className="rounded-2xl border border-slate-200 p-3 flex items-center justify-between">
                 <div>
                   <p className="font-bold text-slate-900">Active Login Sessions</p>
-                  <p className="text-[11px] text-slate-500">Current device (Chrome / Linux)</p>
+                  <p className="text-[11px] text-slate-500">Current device</p>
                 </div>
-                <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-800">
+                <span className="rounded-full bg-emerald-50 border border-emerald-200 px-2 py-0.5 text-[10px] font-bold text-emerald-800">
                   Active
                 </span>
               </div>
@@ -1480,7 +1364,7 @@ function ProfilePage() {
                   <p className="font-bold text-slate-900">Two-Factor Auth (2FA)</p>
                   <p className="text-[11px] text-slate-500">SMS OTP Verification</p>
                 </div>
-                <span className="rounded-full bg-[var(--sand)] px-2 py-0.5 text-[10px] font-bold text-[#981495]">
+                <span className="rounded-full bg-purple-50 border border-purple-200 px-2 py-0.5 text-[10px] font-bold text-[#981495]">
                   Enabled
                 </span>
               </div>
@@ -1490,7 +1374,7 @@ function ProfilePage() {
                 onClick={() => {
                   toast.success("Password reset link sent to your registered email!");
                 }}
-                className="w-full rounded-xl border border-[#f0abfc] bg-[var(--sand)] p-2.5 text-xs font-bold text-[#981495] hover:bg-[var(--sand)] transition text-center"
+                className="w-full rounded-xl border border-purple-200 bg-purple-50/70 p-2.5 text-xs font-bold text-[#981495] hover:bg-purple-100/70 transition text-center"
               >
                 Send Password Reset Email
               </button>
@@ -1500,7 +1384,7 @@ function ProfilePage() {
               <button
                 type="button"
                 onClick={() => setIsSecurityOpen(false)}
-                className="rounded-xl bg-slate-900 px-5 py-2 text-xs font-bold text-white"
+                className="rounded-xl bg-slate-900 px-5 py-2 text-xs font-bold text-white hover:bg-slate-800"
               >
                 Close
               </button>

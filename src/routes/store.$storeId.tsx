@@ -16,6 +16,23 @@ import {
   Sparkles,
   ShieldCheck,
   Package,
+  ShoppingCart,
+  ArrowRight,
+  Layers,
+  Armchair,
+  Lamp,
+  Lightbulb,
+  Utensils,
+  Bed,
+  Briefcase,
+  Apple,
+  Cake,
+  Shirt,
+  Smartphone,
+  Flower2,
+  Gift,
+  BookOpen,
+  Tag,
 } from "lucide-react";
 import {
   getStore,
@@ -28,6 +45,7 @@ import {
   type Store,
 } from "@/lib/mock-data";
 import { cartStore, useCart, cartTotals } from "@/modules/shopper/services/cart-store";
+import { cartConflictManager } from "@/modules/shopper/services/cart-conflict";
 import { QtyStepper } from "@/components/qty-stepper";
 import { ProductThumb } from "@/components/product-thumb";
 import { recordProductEvent, recordRecentProductView } from "@/lib/merchandising";
@@ -51,6 +69,26 @@ const isUuid = (value: string) =>
   // RFC 4122 version/variant bits. Match the UUID format, not those bit flags.
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
 
+function getCategoryIcon(categoryName: string) {
+  const c = categoryName.toLowerCase();
+  if (c === "all") return Layers;
+  if (c.includes("furniture") || c.includes("sofa") || c.includes("chair")) return Armchair;
+  if (c.includes("decor") || c.includes("home")) return Lamp;
+  if (c.includes("light") || c.includes("lamp")) return Lightbulb;
+  if (c.includes("kitchen") || c.includes("cook") || c.includes("dine") || c.includes("dining")) return Utensils;
+  if (c.includes("bed") || c.includes("sleep") || c.includes("mattress")) return Bed;
+  if (c.includes("storage") || c.includes("box") || c.includes("shelf") || c.includes("closet")) return Package;
+  if (c.includes("office") || c.includes("desk") || c.includes("work")) return Briefcase;
+  if (c.includes("grocer") || c.includes("kirana") || c.includes("supermarket") || c.includes("market") || c.includes("staple")) return Apple;
+  if (c.includes("bake") || c.includes("sweet") || c.includes("cake") || c.includes("bread")) return Cake;
+  if (c.includes("cloth") || c.includes("fashion") || c.includes("apparel") || c.includes("wear")) return Shirt;
+  if (c.includes("electro") || c.includes("gadget") || c.includes("mobile") || c.includes("phone")) return Smartphone;
+  if (c.includes("flower") || c.includes("florist")) return Flower2;
+  if (c.includes("gift")) return Gift;
+  if (c.includes("book") || c.includes("stationery")) return BookOpen;
+  return Tag;
+}
+
 import {
   CATEGORY_PHOTOS,
   catalogCategoryKey,
@@ -64,6 +102,7 @@ import { adaptMockProduct } from "@/lib/recommendations/recommendation-engine";
 import { AppShell } from "@/components/app-shell";
 import { fetchImportedShopById, cleanShopName } from "@/lib/imported-shops";
 import { importedStorefront } from "@/modules/shopper/services/imported-storefront";
+import { getBrandCatalogProducts } from "@/lib/brand-products-catalog";
 
 export const Route = createFileRoute("/store/$storeId")({
   validateSearch: (search: Record<string, unknown>): { sq?: string; category?: string; shopLat?: number; shopLng?: number } => ({
@@ -138,9 +177,6 @@ function ImportedStorePage({ shopId, lat, lng }: { shopId: string; lat?: number;
   return <AppShell hideFloatingCart>{shop.isPending ? <div className="grid min-h-64 place-items-center" role="status">Loading shop…</div> : shop.isError ? <div className="p-8 text-center" role="alert"><p>{shop.error.message}</p><button onClick={() => void shop.refetch()} className="mt-4 rounded-xl bg-primary px-5 py-3 text-primary-foreground">Try again</button></div> : <StorePage catalog={importedStorefront(shop.data)} />}</AppShell>;
 }
 
-function getCategoryIcon(_catName: string) {
-  return <Package className="h-4 w-4 text-slate-400" />;
-}
 
 function DemoShopPreview({ shop }: { shop: DemoNeighborhoodShop }) {
   const [query, setQuery] = useState("");
@@ -204,6 +240,12 @@ function StorePage({ catalog }: { catalog?: ReturnType<typeof importedStorefront
   const demoShop = getDemoNeighborhoodShop(loaded.store.id);
   const searchParams = Route.useSearch();
   const requestedCategory = catalogCategoryKey(searchParams.category);
+  const categoryContext = useMemo(() => {
+    if (!searchParams.category || searchParams.category === "all" || searchParams.category === "all-shops") {
+      return null;
+    }
+    return getCategoryByIdOrSlug(searchParams.category);
+  }, [searchParams.category]);
   const approved = useQuery({
     // Bump the key so a previously cached cross-seller result cannot survive the
     // seller-ID scoping fix in this query.
@@ -361,12 +403,19 @@ function StorePage({ catalog }: { catalog?: ReturnType<typeof importedStorefront
     : rawStore;
   const liveProds = approved.data?.products ?? [];
   const isLiveSellerStore = isUuid(loaded.store.id) && loaded.store.id !== APPROVED_STORE.id;
+  const brandProducts = useMemo(() => {
+    if (!isImported) return [];
+    return getBrandCatalogProducts(loaded.store.id, loaded.store.name, loaded.store.category);
+  }, [isImported, loaded.store.id, loaded.store.name, loaded.store.category]);
+
   const products = (
-    isImported ? loaded.products : isLiveSellerStore
-      ? liveProds
-      : loaded.products && loaded.products.length > 0
-        ? loaded.products
-        : (productsByStore[store.id] ?? productsByStore["s_roja_mart"] ?? [])
+    isImported
+      ? (brandProducts.length > 0 ? brandProducts : loaded.products)
+      : isLiveSellerStore
+        ? liveProds
+        : loaded.products && loaded.products.length > 0
+          ? loaded.products
+          : (productsByStore[store.id] ?? [])
   ) as Product[];
 
   const navigate = useNavigate();
@@ -495,7 +544,12 @@ function StorePage({ catalog }: { catalog?: ReturnType<typeof importedStorefront
 
     // Add to the cart before starting the optional animation. A browser that
     // does not support the animation must never prevent the cart mutation.
-    cartStore.add(product.storeId || store.id, product.shopName || store.name, product);
+    const added = cartConflictManager.addWithConflictCheck(
+      product.storeId || store.id,
+      product.shopName || store.name,
+      product,
+    );
+    if (!added) return; // Cart conflict handled by ReplaceCartDialog
     if (!isImported) void recordProductEvent(product.id, "add_to_cart");
     try {
       flyProductToCart(product.id);
@@ -536,14 +590,37 @@ function StorePage({ catalog }: { catalog?: ReturnType<typeof importedStorefront
         >
           <Link
             to="/"
-            search={{ category: "all-shops", q: undefined }}
-            onClick={scrollToShops}
+            search={{ category: undefined, q: undefined }}
             className="flex items-center gap-1 hover:text-[#981495] transition-colors cursor-pointer"
           >
             <span className="text-slate-400">🏠</span>
-            <span>Shops</span>
+            <span>Home</span>
           </Link>
           <ChevronRight className="h-3 w-3 text-slate-400" />
+          {categoryContext ? (
+            <>
+              <Link
+                to="/search"
+                search={{ category: searchParams.category }}
+                className="hover:text-[#981495] transition-colors cursor-pointer font-medium"
+              >
+                {categoryContext.name}
+              </Link>
+              <ChevronRight className="h-3 w-3 text-slate-400" />
+            </>
+          ) : (
+            <>
+              <Link
+                to="/"
+                search={{ category: "all-shops", q: undefined }}
+                onClick={scrollToShops}
+                className="hover:text-[#981495] transition-colors cursor-pointer"
+              >
+                Shops
+              </Link>
+              <ChevronRight className="h-3 w-3 text-slate-400" />
+            </>
+          )}
           <span className="text-slate-900 font-bold truncate max-w-[280px] sm:max-w-none">
             {store.name}
           </span>
@@ -570,18 +647,29 @@ function StorePage({ catalog }: { catalog?: ReturnType<typeof importedStorefront
             </div>
           </div>
 
-          {/* All Shops Top-Left Pill */}
-          <Link
-            to="/"
-            search={{ category: "all-shops", q: undefined }}
-            onClick={() => {
-              scrollToShops();
-            }}
-            className="absolute top-4 left-4 z-40 pointer-events-auto inline-flex items-center gap-1.5 rounded-full bg-[#fffafd]/95 hover:bg-[#fffafd] text-slate-900 backdrop-blur-md px-3.5 py-1.5 text-xs font-bold transition-all shadow-md border border-[#f0abfc]/80 cursor-pointer"
-          >
-            <ArrowLeft className="h-3.5 w-3.5" />
-            <span>All shops</span>
-          </Link>
+          {/* Category-Aware Top-Left Pill */}
+          {categoryContext ? (
+            <Link
+              to="/search"
+              search={{ category: searchParams.category }}
+              className="absolute top-4 left-4 z-40 pointer-events-auto inline-flex items-center gap-1.5 rounded-full bg-[#fffafd]/95 hover:bg-[#fffafd] text-slate-900 backdrop-blur-md px-3.5 py-1.5 text-xs font-bold transition-all shadow-md border border-[#f0abfc]/80 cursor-pointer"
+            >
+              <ArrowLeft className="h-3.5 w-3.5" />
+              <span>Back to {categoryContext.name}</span>
+            </Link>
+          ) : (
+            <Link
+              to="/"
+              search={{ category: "all-shops", q: undefined }}
+              onClick={() => {
+                scrollToShops();
+              }}
+              className="absolute top-4 left-4 z-40 pointer-events-auto inline-flex items-center gap-1.5 rounded-full bg-[#fffafd]/95 hover:bg-[#fffafd] text-slate-900 backdrop-blur-md px-3.5 py-1.5 text-xs font-bold transition-all shadow-md border border-[#f0abfc]/80 cursor-pointer"
+            >
+              <ArrowLeft className="h-3.5 w-3.5" />
+              <span>All shops</span>
+            </Link>
+          )}
 
           {/* Bottom Right Handwritten Watermark (Traditional Elegance Modern Living) */}
           <div className="absolute bottom-4 right-6 z-20 text-right hidden sm:block">
@@ -632,13 +720,17 @@ function StorePage({ catalog }: { catalog?: ReturnType<typeof importedStorefront
                   <span>{isImported || isLiveSellerStore ? "Check opening hours with shop" : store.isOpen ? "Open now" : "Closed"}</span>
                 </div>
 
-                {!isLiveSellerStore && <div className="flex items-center gap-1 rounded-full bg-[var(--sand)]/90 px-2.5 py-1 text-[#700b6e] border border-[#f0abfc]/70 shadow-2xs">
-                  <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
-                  <span>{store.rating.toFixed(1)}</span>
-                  <span className="text-[#981495]/80 font-normal">
-                    ({isImported ? catalog?.reviewCount : Math.floor(store.rating * 240)} reviews)
-                  </span>
-                </div>}
+                {!isLiveSellerStore && typeof store.rating === "number" && store.rating > 0 && (
+                  <div className="flex items-center gap-1 rounded-full bg-[var(--sand)]/90 px-2.5 py-1 text-[#700b6e] border border-[#f0abfc]/70 shadow-2xs">
+                    <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
+                    <span>{store.rating.toFixed(1)}</span>
+                    {Boolean(isImported ? catalog?.reviewCount : (store as any).reviewCount ?? (store as any).review_count) && (
+                      <span className="text-[#981495]/80 font-normal">
+                        ({isImported ? catalog?.reviewCount : ((store as any).reviewCount ?? (store as any).review_count)} reviews)
+                      </span>
+                    )}
+                  </div>
+                )}
 
                 {deliveryLoc && computedDistanceKm !== undefined && (
                   <div className="flex items-center gap-1 rounded-full bg-[var(--sand)]/90 px-2.5 py-1 text-[#981495] border border-[#f0abfc]/80 shadow-2xs">
@@ -652,10 +744,10 @@ function StorePage({ catalog }: { catalog?: ReturnType<typeof importedStorefront
           </div>
         </div>
 
-        {/* ── FULL-WIDTH SEARCH + CATEGORIES + COMPACT FILTER TOOLBAR ── */}
-        <div className="mb-4 space-y-2.5">
+        {/* ── STORE SEARCH + CATEGORIES + COMPACT FILTER TOOLBAR ── */}
+        <div className="relative mb-6 space-y-3">
           {/* Search bar + Filter Toggle */}
-          <div className="relative z-10 rounded-2xl bg-[#fffafd] border-2 border-[#f0abfc]/70 p-2.5 shadow-sm shadow-amber-500/5 flex items-center gap-3">
+          <div className="relative rounded-2xl bg-white border border-[#f0abfc]/80 p-2 sm:p-2.5 shadow-xs flex items-center gap-3 transition-all focus-within:border-[#981495] focus-within:ring-2 focus-within:ring-[#981495]/20">
             <div className="flex-1 flex items-center gap-2.5 px-3 py-1">
               <Search className="h-5 w-5 text-slate-400 shrink-0" />
               <input
@@ -668,7 +760,7 @@ function StorePage({ catalog }: { catalog?: ReturnType<typeof importedStorefront
                 <button
                   type="button"
                   onClick={() => setQuery("")}
-                  className="text-xs font-bold text-slate-400 hover:text-slate-600 px-2"
+                  className="text-xs font-bold text-slate-400 hover:text-slate-600 px-2 cursor-pointer"
                 >
                   Clear
                 </button>
@@ -695,26 +787,28 @@ function StorePage({ catalog }: { catalog?: ReturnType<typeof importedStorefront
 
           {/* Horizontal Scrollable Category Chips for fast mobile browsing */}
           {productCategories.length > 1 && (
-            <div className="flex items-center gap-2 overflow-x-auto pb-1 pt-1 no-scrollbar">
+            <div className="flex items-center gap-2.5 overflow-x-auto pb-1.5 pt-0.5 no-scrollbar scroll-smooth">
               {productCategories.map((cat) => {
                 const active =
                   selectedCategory.toLowerCase() === cat.id.toLowerCase() ||
                   (cat.id === "all" && selectedCategory === "all");
+                const IconComponent = getCategoryIcon(cat.name);
                 return (
                   <button
                     key={cat.id}
                     type="button"
                     onClick={() => setSelectedCategory(cat.id)}
-                    className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-bold transition-all cursor-pointer border ${
+                    className={`inline-flex shrink-0 items-center gap-2 rounded-full px-4 py-2 text-xs font-bold transition-all cursor-pointer border ${
                       active
                         ? "bg-[#981495] text-white border-[#981495] shadow-xs"
-                        : "bg-[#fffafd] text-slate-700 hover:bg-[var(--sand)] border-slate-200/80 hover:border-[#f0abfc]"
+                        : "bg-white text-slate-700 hover:text-[#981495] hover:bg-purple-50/50 border-slate-200/90 hover:border-purple-200 shadow-2xs"
                     }`}
                   >
+                    <IconComponent className={`h-4 w-4 shrink-0 ${active ? "text-white" : "text-[#981495]"}`} />
                     <span>{cat.name}</span>
                     <span
-                      className={`rounded-full px-1.5 py-0.2 text-[10px] font-extrabold ${
-                        active ? "bg-[#fffafd]/20 text-white" : "bg-[var(--sand)] text-[#981495]"
+                      className={`rounded-full px-2 py-0.5 text-[10px] font-extrabold ${
+                        active ? "bg-white/20 text-white" : "bg-slate-100 text-slate-500"
                       }`}
                     >
                       {cat.count}
@@ -727,7 +821,7 @@ function StorePage({ catalog }: { catalog?: ReturnType<typeof importedStorefront
 
           {/* Collapsible compact inline filters */}
           {showFilters && (
-            <div className="rounded-2xl bg-[#fffafd] border-2 border-[#f0abfc]/70 p-4 shadow-md shadow-[#700b6e]/5 flex flex-wrap items-end gap-4">
+            <div className="rounded-2xl bg-white border border-[#f0abfc]/80 p-4 shadow-sm flex flex-wrap items-end gap-4">
               {/* Price Range */}
               <div className="flex items-end gap-2">
                 <div>
@@ -854,12 +948,27 @@ function StorePage({ catalog }: { catalog?: ReturnType<typeof importedStorefront
                 size="md"
               />
             </div>
+          ) : products.length === 0 ? (
+            <div className="rounded-3xl border-2 border-dashed border-[#f0abfc]/80 bg-[#fffafd] p-12 text-center">
+              <div className="mx-auto text-4xl mb-3">🏪</div>
+              <p className="font-bold text-slate-900 text-base">This shop currently has no products listed</p>
+              <p className="mt-1 text-xs text-slate-500 max-w-md mx-auto">
+                We're actively coordinating with this neighborhood merchant to list their fresh inventory. Check back soon or explore other nearby shops.
+              </p>
+              <Link
+                to="/"
+                search={{ category: "all-shops", q: undefined }}
+                className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-[#981495] px-5 py-2 text-xs font-bold text-white shadow-md hover:bg-[#700b6e] transition-colors"
+              >
+                Explore other shops
+              </Link>
+            </div>
           ) : filteredProducts.length === 0 ? (
             <div className="rounded-3xl border-2 border-dashed border-[#f0abfc]/80 bg-[#fffafd] p-12 text-center">
               <div className="mx-auto text-4xl mb-3">🔍</div>
-              <p className="font-bold text-slate-900 text-base">No products found</p>
+              <p className="font-bold text-slate-900 text-base">No products match your filters</p>
               <p className="mt-1 text-xs text-slate-500">
-                Try clearing your search or price filters.
+                Try clearing your search query or price filters.
               </p>
               <button
                 type="button"
@@ -868,8 +977,9 @@ function StorePage({ catalog }: { catalog?: ReturnType<typeof importedStorefront
                   setMinPrice("");
                   setMaxPrice("");
                   setSortBy("popular");
+                  setSelectedCategory("all");
                 }}
-                className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-[#981495] px-4 py-2 text-xs font-bold text-white shadow-md hover:bg-[#981495]"
+                className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-[#981495] px-4 py-2 text-xs font-bold text-white shadow-md hover:bg-[#700b6e] transition-colors cursor-pointer"
               >
                 Reset all filters
               </button>
@@ -885,10 +995,9 @@ function StorePage({ catalog }: { catalog?: ReturnType<typeof importedStorefront
             >
               {filteredProducts.map((p) => {
                 const q = qtyOf(p.id);
-                // The public catalog does not supply MRP; never invent a discount
-                // for a registered seller's products.
-                const mrp = isImported || isLiveSellerStore ? p.price : Math.round(p.price * 1.25);
-                const discountPct = Math.round(((mrp - p.price) / mrp) * 100);
+                // Only show discounts supported by genuine MRP in the catalog data
+                const mrp = (p as any).mrp != null && Number((p as any).mrp) > p.price ? Number((p as any).mrp) : null;
+                const discountPct = mrp ? Math.round(((mrp - p.price) / mrp) * 100) : 0;
                 const unit = p.unit || "1 unit";
 
                 return (
@@ -978,7 +1087,7 @@ function StorePage({ catalog }: { catalog?: ReturnType<typeof importedStorefront
                           <span className="text-base font-black text-slate-900">
                             ₹{p.price.toLocaleString("en-IN")}
                           </span>
-                          {mrp > p.price && (
+                          {mrp && mrp > p.price && (
                             <span className="text-xs font-semibold text-slate-400 line-through">
                               ₹{mrp.toLocaleString("en-IN")}
                             </span>
@@ -1161,54 +1270,86 @@ function StorePage({ catalog }: { catalog?: ReturnType<typeof importedStorefront
           />
         )}
 
-        {!isImported && <ComplementaryShopsWidget
-          currentCategory={store.category}
-          userLat={deliveryLoc?.lat}
-          userLng={deliveryLoc?.lng}
-          shops={[
-            {
-              id: "store-2",
-              business_name: "Nilgiris Supermarket",
-              business_type: "Groceries & Gourmet",
-              rating: 4.6,
-              lat: store.lat ? store.lat + 0.008 : null,
-              lng: store.lng ? store.lng + 0.005 : null,
-              matching_reason: "Popular for daily organic groceries nearby",
-            },
-            {
-              id: "store-3",
-              business_name: "Local Electronics Hub",
-              business_type: "Electronics & Accessories",
-              rating: 4.8,
-              lat: store.lat ? store.lat - 0.005 : null,
-              lng: store.lng ? store.lng - 0.008 : null,
-              matching_reason: "High customer satisfaction for accessories",
-            },
-          ]}
-        />}
+        {!isImported && (
+          <ComplementaryShopsWidget
+            currentCategory={store.category}
+            userLat={deliveryLoc?.lat}
+            userLng={deliveryLoc?.lng}
+            shops={stores
+              .filter((s) => s.id !== store.id && isValidCoordinate(s.lat, s.lng))
+              .slice(0, 3)
+              .map((s) => ({
+                id: s.id,
+                business_name: s.name,
+                business_type: categoryLabel[s.category] || s.category,
+                rating: s.rating,
+                lat: s.lat,
+                lng: s.lng,
+                image_url: s.imageUrl,
+                matching_reason: `Nearby ${categoryLabel[s.category] || s.category} shop`,
+              }))}
+          />
+        )}
       </div>
 
-      {/* Sticky Cart Footer Bar when items are present */}
+      {/* Floating Cart Review Footer Bar (Compact, Sleek & Presentable) */}
       {totals.itemCount > 0 && (
-        <div className="fixed inset-x-0 bottom-0 z-[60] border-t-2 border-[#f0abfc]/80 bg-[#981495] text-white shadow-[0_-8px_30px_rgba(0,0,0,0.35)] backdrop-blur-md">
-          <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-5 py-3.5 md:px-6">
-            <div className="text-sm">
-              <p className="font-mono text-[10px] uppercase tracking-widest text-[#f0abfc] font-bold">
-                {totals.itemCount} item{totals.itemCount > 1 ? "s" : ""} · from{" "}
-                {cart.storeName || store.name}
-              </p>
-              <p className="font-display text-xl font-black text-amber-300">
-                ₹{totals.subtotal.toLocaleString("en-IN")}
-              </p>
+        <div className="fixed inset-x-0 bottom-4 z-[60] px-3 sm:px-4 pointer-events-none">
+          <div className="mx-auto flex max-w-xl items-center justify-between gap-3 rounded-full bg-white/95 backdrop-blur-md border border-[#f0abfc]/80 shadow-[0_10px_35px_-5px_rgba(152,20,149,0.22)] px-3.5 py-2 pointer-events-auto transition-all">
+            {/* Left: Cart Icon with item badge + text & compact thumbnail previews */}
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="relative shrink-0">
+                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-purple-100/80 text-[#981495]">
+                  <ShoppingCart className="h-4.5 w-4.5 text-[#981495]" />
+                </div>
+                <span className="absolute -top-1 -right-1 flex h-4 min-w-4 px-1 items-center justify-center rounded-full bg-rose-500 font-mono text-[9px] font-black text-white ring-2 ring-white">
+                  {totals.itemCount}
+                </span>
+              </div>
+
+              {/* Compact overlapping thumbnails */}
+              <div className="hidden sm:flex items-center -space-x-2 shrink-0">
+                {cart.lines.slice(0, 2).map((item, idx) => (
+                  <img
+                    key={item.productId || idx}
+                    src={resolveImageUrl(item.imageUrl, item.name, item.category)}
+                    alt={item.name}
+                    className="h-7 w-7 rounded-full object-cover border-2 border-white bg-slate-50 shadow-2xs"
+                  />
+                ))}
+              </div>
+
+              <div className="min-w-0">
+                <p className="font-bold text-xs text-slate-900 truncate">
+                  {totals.itemCount} {totals.itemCount === 1 ? "item" : "items"}
+                  <span className="font-normal text-slate-400"> · </span>
+                  <span className="font-semibold text-[#981495] truncate">
+                    {cart.storeName || store.name}
+                  </span>
+                </p>
+              </div>
             </div>
-            <button
-              type="button"
-              onClick={() => navigate({ to: "/cart" })}
-              className="inline-flex items-center gap-2 rounded-full bg-amber-400 hover:bg-amber-300 px-6 py-3 text-xs font-black text-slate-950 shadow-xl transition-all active:scale-95 cursor-pointer hover:shadow-amber-400/20"
-            >
-              <span>Review Cart</span>
-              <span className="text-sm">&rarr;</span>
-            </button>
+
+            {/* Right: Total Price + Compact Action Button */}
+            <div className="flex items-center gap-2.5 sm:gap-3 shrink-0">
+              <div className="text-right">
+                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block leading-none">
+                  Total
+                </span>
+                <span className="font-display text-sm sm:text-base font-black text-[#981495] leading-tight">
+                  ₹{totals.subtotal.toLocaleString("en-IN")}
+                </span>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => navigate({ to: "/cart" })}
+                className="inline-flex items-center gap-1 rounded-full bg-amber-400 hover:bg-amber-500 active:scale-95 px-4 sm:px-5 py-2 text-xs sm:text-sm font-bold text-slate-950 shadow-xs transition-all cursor-pointer"
+              >
+                <span>Review Cart</span>
+                <ArrowRight className="h-3.5 w-3.5" />
+              </button>
+            </div>
           </div>
         </div>
       )}

@@ -1,4 +1,5 @@
-import { type ProductFilterState } from "./filter-types";
+import { type ProductFilterState } from "./filter-types.ts";
+import { reconcileAttributesOnCategoryChange } from "./category-filter-registry.ts";
 
 export const KNOWN_URL_PARAMS = new Set([
   "category",
@@ -82,21 +83,17 @@ export function parseFilterParams(searchParams: Record<string, unknown>): Produc
   const query = cleanString(searchParams.q);
 
   const minPriceStr = cleanString(searchParams.minPrice) || cleanString(searchParams.min_price);
-  const minPrice =
-    nonNegativeNumber(minPriceStr);
+  const minPrice = nonNegativeNumber(minPriceStr);
 
   const maxPriceStr = cleanString(searchParams.maxPrice) || cleanString(searchParams.max_price);
-  const maxPrice =
-    nonNegativeNumber(maxPriceStr);
+  const maxPrice = nonNegativeNumber(maxPriceStr);
 
   const distanceStr =
     cleanString(searchParams.maxDistance) || cleanString(searchParams.max_distance);
-  const maxDistanceKm =
-    nonNegativeNumber(distanceStr);
+  const maxDistanceKm = nonNegativeNumber(distanceStr);
 
   const ratingStr = cleanString(searchParams.rating) || cleanString(searchParams.min_rating);
-  const minRating =
-    nonNegativeNumber(ratingStr);
+  const minRating = nonNegativeNumber(ratingStr);
 
   const inStockStr = cleanString(searchParams.inStock) || cleanString(searchParams.in_stock);
   const inStock = inStockStr === "true";
@@ -110,7 +107,10 @@ export function parseFilterParams(searchParams: Record<string, unknown>): Produc
   const sortBy = cleanString(searchParams.sort) || "relevance";
   const pageStr = cleanString(searchParams.page);
   const pageNumber = nonNegativeNumber(pageStr);
-  const page = pageNumber !== undefined && Number.isSafeInteger(pageNumber) && pageNumber >= 1 ? pageNumber : 1;
+  const page =
+    pageNumber !== undefined && Number.isSafeInteger(pageNumber) && pageNumber >= 1
+      ? pageNumber
+      : 1;
 
   return {
     category,
@@ -175,4 +175,30 @@ export function serializeFilterParams(
   }
 
   return result;
+}
+
+/**
+ * Reconciles the entire ProductFilterState when transitioning across categories or subcategories.
+ * Strips out attributes that do not apply to the new category, resets pagination,
+ * but keeps universal selections (price bounds, search query, sorting, rating, distance, stock status).
+ */
+export function reconcileFilterStateOnCategoryChange(
+  prevState: ProductFilterState,
+  newCategory?: string,
+  newSubcategory?: string,
+): ProductFilterState {
+  const reconciledAttributes = reconcileAttributesOnCategoryChange(
+    newCategory,
+    newSubcategory,
+    prevState.attributes,
+  );
+
+  return {
+    ...prevState,
+    category: newCategory,
+    subcategory: newSubcategory,
+    productType: undefined,
+    attributes: reconciledAttributes,
+    page: 1,
+  };
 }

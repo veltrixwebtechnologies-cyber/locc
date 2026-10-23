@@ -12,7 +12,7 @@
  *
  * Respects prefers-reduced-motion, mobile responsiveness, zero layout shift, and 100% LocalShore branding.
  */
-import { useState, useRef, useMemo } from "react";
+import { useState, useRef, useMemo, useEffect } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { motion, AnimatePresence, useReducedMotion, useScroll, useTransform } from "framer-motion";
 import {
@@ -27,12 +27,19 @@ import {
   ShoppingBag,
   Store,
   ChevronRight,
+  History,
 } from "lucide-react";
 import { scrollToShops } from "@/lib/scroll-utils";
 import { useDeliveryLocation } from "@/lib/location-store";
 import { LocationModal } from "@/components/ui/location-modal";
 import { type SearchResultItem } from "@/modules/shopper/services/search-service";
 import { useLiveSearchResults } from "@/modules/shopper/hooks/use-live-search-results";
+import {
+  addRecentSearch,
+  getRecentSearches,
+  removeRecentSearch,
+  clearRecentSearches,
+} from "@/lib/recent-searches";
 import { AnimatedSearchPlaceholder } from "@/components/ui/animated-search-placeholder";
 
 interface SwiggyFeatureCard {
@@ -111,6 +118,14 @@ export function HeroSection() {
   const [searchQuery, setSearchQuery] = useState("");
   const [isFocused, setIsFocused] = useState(false);
   const [activeSlide, setActiveSlide] = useState(0);
+  const [recentSearches, setRecentSearches] = useState<string[]>(() => getRecentSearches());
+
+  useEffect(() => {
+    const handleUpdate = () => setRecentSearches(getRecentSearches());
+    window.addEventListener("localshore_recent_searches_updated", handleUpdate);
+    return () => window.removeEventListener("localshore_recent_searches_updated", handleUpdate);
+  }, []);
+
   const handleSearchSubmit = (e?: React.FormEvent, customQuery?: string) => {
     if (e) e.preventDefault();
     const queryToUse = customQuery ?? searchQuery;
@@ -119,9 +134,11 @@ export function HeroSection() {
       return;
     }
 
+    const trimmed = queryToUse.trim();
+    addRecentSearch(trimmed);
     navigate({
       to: "/search",
-      search: { q: queryToUse.trim() },
+      search: { q: trimmed },
       resetScroll: false,
     });
     setIsFocused(false);
@@ -327,6 +344,51 @@ export function HeroSection() {
                 >
                   {!searchQuery.trim() ? (
                     <div>
+                      {recentSearches.length > 0 && (
+                        <div className="mb-3 pb-3 border-b border-slate-100">
+                          <div className="flex items-center justify-between pb-1.5">
+                            <span className="flex items-center gap-1.5 text-xs font-bold text-slate-800 uppercase tracking-wider">
+                              <History className="h-3.5 w-3.5 text-[#981495]" />
+                              Recent Searches
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => clearRecentSearches()}
+                              className="text-[10px] font-bold text-slate-400 hover:text-rose-600 transition-colors cursor-pointer"
+                            >
+                              Clear all
+                            </button>
+                          </div>
+                          <div className="mt-1.5 flex flex-wrap gap-1.5">
+                            {recentSearches.map((term) => (
+                              <div
+                                key={term}
+                                className="group/chip inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-800 hover:bg-[#f0abfc]/30 transition-colors"
+                              >
+                                <button
+                                  type="button"
+                                  onClick={() => handleTagClick(term)}
+                                  className="cursor-pointer font-semibold text-slate-700 hover:text-[#981495]"
+                                >
+                                  {term}
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    removeRecentSearch(term);
+                                  }}
+                                  className="text-slate-400 hover:text-slate-700 ml-0.5 cursor-pointer"
+                                  title="Remove"
+                                >
+                                  <X className="h-3 w-3" />
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
                       <div className="flex items-center justify-between pb-2 border-b border-slate-100">
                         <span className="flex items-center gap-1 text-xs font-bold text-slate-800 uppercase tracking-wider">
                           <Flame className="h-3.5 w-3.5 text-amber-500 fill-amber-500" />
@@ -398,9 +460,19 @@ export function HeroSection() {
                                     }}
                                     onClick={() => {
                                       setIsFocused(false);
-                                      if (item.metadata?.imported === true) {
-                                        if (item.url && item.url !== "#") window.open(item.url, "_blank", "noopener,noreferrer");
-                                      } else navigate({ to: item.url as any });
+                                      if (item.title) addRecentSearch(item.title);
+                                      if (item.metadata?.imported === true && item.metadata?.shopId) {
+                                        navigate({
+                                          to: "/store/$storeId",
+                                          params: { storeId: String(item.metadata.shopId) },
+                                          search: {
+                                            shopLat: typeof item.metadata?.shopLat === "number" ? item.metadata.shopLat : undefined,
+                                            shopLng: typeof item.metadata?.shopLng === "number" ? item.metadata.shopLng : undefined,
+                                          },
+                                        });
+                                      } else if (item.url) {
+                                        navigate({ to: item.url as any });
+                                      }
                                     }}
                                     className="w-full flex items-center gap-3 p-2 rounded-xl hover:bg-[var(--sand)]/80 transition-colors text-left group"
                                   >
@@ -450,7 +522,19 @@ export function HeroSection() {
                                     }}
                                     onClick={() => {
                                       setIsFocused(false);
-                                      navigate({ to: item.url as any });
+                                      if (item.title) addRecentSearch(item.title);
+                                      if (item.metadata?.imported === true && item.metadata?.shopId) {
+                                        navigate({
+                                          to: "/store/$storeId",
+                                          params: { storeId: String(item.metadata.shopId) },
+                                          search: {
+                                            shopLat: typeof item.metadata?.shopLat === "number" ? item.metadata.shopLat : undefined,
+                                            shopLng: typeof item.metadata?.shopLng === "number" ? item.metadata.shopLng : undefined,
+                                          },
+                                        });
+                                      } else if (item.url) {
+                                        navigate({ to: item.url as any });
+                                      }
                                     }}
                                     className="w-full flex items-center gap-3 p-2 rounded-xl hover:bg-[var(--sand)]/80 transition-colors text-left group"
                                   >

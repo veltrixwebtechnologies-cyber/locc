@@ -8,13 +8,21 @@ import {
   Sparkles,
   Store as StoreIcon,
   ChevronRight,
+  Star,
+  MapPin,
+  Clock,
+  Compass,
 } from "lucide-react";
 import { AppShell, requestLocationModal } from "@/components/app-shell";
 import { Button } from "@/components/ui/button";
 import { useMLTracker } from "@/hooks/use-ml-tracker";
 import { parseQueryIntent } from "@/lib/ml-shop-ranker";
 import { LottieLoading } from "@/components/ui/lottie-loading";
-import { parseFilterParams, serializeFilterParams } from "@/lib/filter-utils";
+import {
+  parseFilterParams,
+  serializeFilterParams,
+  reconcileFilterStateOnCategoryChange,
+} from "@/lib/filter-utils";
 import { useFilterDefinitions } from "@/hooks/use-filter-definitions";
 import { useProductFilters } from "@/hooks/use-product-filters";
 import { useShopDiscovery } from "@/modules/shopper/hooks/use-shop-discovery";
@@ -23,12 +31,15 @@ import { DynamicFilterPanel } from "@/components/filters/dynamic-filter-panel";
 import { FilterBottomSheet } from "@/components/filters/filter-bottom-sheet";
 import { FilterChips } from "@/components/filters/filter-chips";
 import { SortDropdown } from "@/components/filters/sort-dropdown";
+import { getCategoryByIdOrSlug } from "@/lib/shop-categories";
+import { LiquidGlassCategorySelector } from "@/components/liquid-glass-category-selector";
 import { ProductCard } from "@/components/merchandising-sections";
 import { useDeliveryLocation } from "@/lib/location-store";
 import type { MerchandisingProduct } from "@/lib/merchandising";
 import { RelatedProductsSection } from "@/components/related-products-section";
 import { productsByStore, stores } from "@/lib/mock-data";
 import { DEFAULT_SHOP_DISCOVERY_RADIUS_KM, hasConfirmedCoordinates } from "@/lib/location-visibility";
+import { addRecentSearch } from "@/lib/recent-searches";
 
 export const Route = createFileRoute("/search")({
   component: SwiggySearchPage,
@@ -64,7 +75,9 @@ function SwiggySearchPage() {
 
   const { data: filterDefs = [] } = useFilterDefinitions(
     filterState.category,
+    filterState.subcategory,
     filterState.productType,
+    filterState.query,
   );
 
   // Shop Discovery Engine (Local Shops matching search/filters)
@@ -162,7 +175,18 @@ function SwiggySearchPage() {
   }, [query]);
 
   const updateFilterState = (patch: Partial<typeof filterState>) => {
-    const nextState = { ...filterState, ...patch };
+    let nextState = { ...filterState, ...patch };
+    if (patch.category !== undefined && patch.category !== filterState.category) {
+      nextState = reconcileFilterStateOnCategoryChange(
+        filterState,
+        patch.category,
+        patch.subcategory,
+      );
+      if (patch.brands) nextState.brands = patch.brands;
+      if (patch.minPrice !== undefined) nextState.minPrice = patch.minPrice;
+      if (patch.maxPrice !== undefined) nextState.maxPrice = patch.maxPrice;
+      if (patch.minRating !== undefined) nextState.minRating = patch.minRating;
+    }
     const serialized = serializeFilterParams(nextState);
 
     startTransition(() => {
@@ -214,11 +238,22 @@ function SwiggySearchPage() {
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    updateFilterState({ query: query.trim(), page: 1 });
+    const trimmed = query.trim();
+    if (trimmed) {
+      addRecentSearch(trimmed);
+    }
+    updateFilterState({ query: trimmed, page: 1 });
   };
 
+  const activeCategoryConfig = useMemo(() => {
+    if (!filterState.category) return null;
+    return getCategoryByIdOrSlug(filterState.category);
+  }, [filterState.category]);
+
   const shopHeading = hasConfirmedLocation
-    ? getCategoryShopHeading(filterState.category)
+    ? activeCategoryConfig
+      ? `🏪 ${activeCategoryConfig.heading}`
+      : getCategoryShopHeading(filterState.category)
     : "Recommended Shops";
 
   return (
@@ -269,6 +304,114 @@ function SwiggySearchPage() {
             </button>
           </div>
         </form>
+
+        {/* Dedicated Category Hero Banner (Swiggy-inspired visual header for shop discovery) */}
+        {activeCategoryConfig && (
+          <div className="relative mb-4 overflow-hidden rounded-2xl border border-primary/20 bg-gradient-to-r from-primary/10 via-background to-primary/5 p-4 sm:p-5 shadow-xs">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div className="flex items-center gap-3.5">
+                <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-primary/15 text-primary border border-primary/25 shadow-xs">
+                  {(() => {
+                    const CatIcon = activeCategoryConfig.icon || StoreIcon;
+                    return <CatIcon className="h-6 w-6" />;
+                  })()}
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-black uppercase tracking-[0.16em] text-primary">
+                      Shop Type Discovery
+                    </span>
+                    <span className="inline-flex items-center rounded-full bg-primary/15 px-2 py-0.5 text-[10px] font-extrabold text-primary">
+                      {shops.length} verified {shops.length === 1 ? "shop" : "shops"}
+                    </span>
+                  </div>
+                  <h1 className="text-lg font-black text-foreground sm:text-xl">
+                    {activeCategoryConfig.heading}
+                  </h1>
+                  <p className="text-xs font-medium text-muted-foreground line-clamp-1 mt-0.5">
+                    {activeCategoryConfig.subheading}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 self-start sm:self-center">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => updateFilterState({ category: undefined, page: 1 })}
+                  className="h-8 rounded-full border-border bg-background/80 px-3 text-xs font-bold hover:bg-muted text-muted-foreground hover:text-foreground"
+                >
+                  <X className="mr-1 h-3.5 w-3.5" />
+                  Clear Category
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Horizontal Category Switcher Ribbon (Fast shop-type switching) */}
+        <div className="mb-4">
+          <LiquidGlassCategorySelector
+            variant="pill"
+            hasConfirmedLocation={hasConfirmedLocation}
+          />
+        </div>
+
+        {/* Swiggy-Style Quick Filter Chips (Open Now, Rating 4.0+, Within 3 km) */}
+        <div className="mb-4 flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => updateFilterState({ openNow: !filterState.openNow, page: 1 })}
+            className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-bold transition-all border ${
+              filterState.openNow
+                ? "border-emerald-600 bg-emerald-50 text-emerald-700 shadow-xs"
+                : "border-border bg-white text-muted-foreground hover:border-foreground/30 hover:text-foreground"
+            }`}
+          >
+            <Clock className="h-3.5 w-3.5" />
+            <span>Open Now</span>
+            {filterState.openNow && <X className="ml-1 h-3 w-3 stroke-[2.5]" />}
+          </button>
+
+          <button
+            type="button"
+            onClick={() =>
+              updateFilterState({
+                minRating: filterState.minRating === 4 ? undefined : 4,
+                page: 1,
+              })
+            }
+            className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-bold transition-all border ${
+              filterState.minRating === 4
+                ? "border-amber-600 bg-amber-50 text-amber-800 shadow-xs"
+                : "border-border bg-white text-muted-foreground hover:border-foreground/30 hover:text-foreground"
+            }`}
+          >
+            <Star className="h-3.5 w-3.5 fill-current text-amber-500" />
+            <span>Ratings 4.0+</span>
+            {filterState.minRating === 4 && <X className="ml-1 h-3 w-3 stroke-[2.5]" />}
+          </button>
+
+          <button
+            type="button"
+            onClick={() =>
+              updateFilterState({
+                maxDistanceKm: filterState.maxDistanceKm === 3 ? undefined : 3,
+                page: 1,
+              })
+            }
+            className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-bold transition-all border ${
+              filterState.maxDistanceKm === 3
+                ? "border-primary bg-primary/10 text-primary shadow-xs"
+                : "border-border bg-white text-muted-foreground hover:border-foreground/30 hover:text-foreground"
+            }`}
+          >
+            <Compass className="h-3.5 w-3.5" />
+            <span>Under 3 km</span>
+            {filterState.maxDistanceKm === 3 && <X className="ml-1 h-3 w-3 stroke-[2.5]" />}
+          </button>
+        </div>
 
         {/* Intent Detection Banner */}
         {intent.category_intent && (
@@ -420,14 +563,42 @@ function SwiggySearchPage() {
                   <button className="mt-2 rounded-lg px-3 py-2 font-semibold underline focus-visible:outline focus-visible:outline-2" onClick={() => void retryShops()}>Retry shops</button>
                 </div>
               ) : shops.length === 0 ? (
-                <div className="bg-card border hairline rounded-2xl p-6 text-center">
-                  <StoreIcon className="w-10 h-10 mx-auto text-muted-foreground/50 mb-2 stroke-1" />
-                  <h4 className="text-sm font-bold text-foreground">
-                    No matching local shops found
+                <div className="bg-card border hairline rounded-2xl p-6 sm:p-8 text-center">
+                  <div className="mx-auto mb-3 grid h-14 w-14 place-items-center rounded-2xl bg-muted text-muted-foreground/60">
+                    <StoreIcon className="w-8 h-8 stroke-1" />
+                  </div>
+                  <h4 className="text-base font-bold text-foreground">
+                    {activeCategoryConfig
+                      ? `No ${activeCategoryConfig.name} shops found nearby`
+                      : "No matching local shops found"}
                   </h4>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Try expanding distance radius or clearing active shop filters.
+                  <p className="text-xs text-muted-foreground mt-1.5 max-w-md mx-auto">
+                    {activeCategoryConfig
+                      ? `We couldn't find verified ${activeCategoryConfig.name} stores within ${shopRadiusKm} km of your confirmed location. You can view all nearby shops or choose another category.`
+                      : "Try expanding your distance radius, adjusting filters, or searching for another term."}
                   </p>
+                  <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
+                    {activeCategoryConfig && (
+                      <Button
+                        type="button"
+                        variant="default"
+                        size="sm"
+                        onClick={() => updateFilterState({ category: undefined, page: 1 })}
+                        className="rounded-full text-xs font-bold"
+                      >
+                        View All Nearby Shops
+                      </Button>
+                    )}
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={requestLocationModal}
+                      className="rounded-full text-xs font-bold"
+                    >
+                      Change Location
+                    </Button>
+                  </div>
                 </div>
               ) : (
                 <div className="grid min-w-0 grid-cols-1 gap-3 md:grid-cols-2 md:gap-4 lg:grid-cols-3">
@@ -437,6 +608,7 @@ function SwiggySearchPage() {
                         shop={shop}
                         priority={index === 0}
                         searchQuery={query}
+                        activeCategory={filterState.category}
                         variant="compact"
                         className="w-full max-w-none md:w-full"
                       />
@@ -479,6 +651,25 @@ function SwiggySearchPage() {
                 <div role="alert" className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-amber-950">
                   <p>We couldn’t load products. Your filters have been kept.</p>
                   <button className="mt-2 rounded-lg px-3 py-2 font-semibold underline" onClick={() => void retryProducts()}>Retry products</button>
+                </div>
+              ) : !hasConfirmedLocation ? (
+                <div className="rounded-2xl border border-primary/20 bg-primary/5 p-6 text-center" role="status">
+                  <div className="grid h-12 w-12 place-items-center rounded-2xl bg-primary/10 text-primary mx-auto mb-3">
+                    <SearchIcon className="h-6 w-6" />
+                  </div>
+                  <h3 className="text-base font-bold text-foreground">
+                    Confirm your delivery location to view available products
+                  </h3>
+                  <p className="text-xs text-muted-foreground mt-1 max-w-md mx-auto">
+                    Product availability, prices, and stock depend on which local shops serve your confirmed delivery area.
+                  </p>
+                  <Button
+                    type="button"
+                    onClick={requestLocationModal}
+                    className="mt-4 rounded-xl bg-primary px-5 py-2.5 text-xs font-bold text-primary-foreground shadow-sm hover:bg-primary/90 transition cursor-pointer"
+                  >
+                    Select Delivery Location
+                  </Button>
                 </div>
               ) : products.length === 0 ? (
                 <div className="text-center py-12 bg-card border hairline rounded-2xl p-8">

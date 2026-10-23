@@ -13,6 +13,7 @@ import { motion } from "motion/react";
 import { getNearbyStoreRecommendations } from "@/lib/nearby-recommendation-engine";
 import { useDeliveryLocation } from "@/lib/location-store";
 import { cartStore } from "@/modules/shopper/services/cart-store";
+import { cartConflictManager } from "@/modules/shopper/services/cart-conflict";
 import { flyProductToCart } from "@/lib/fly-to-cart";
 import { toast } from "sonner";
 
@@ -148,13 +149,14 @@ export const NearbySimilarShopsWidget: React.FC<NearbySimilarShopsWidgetProps> =
                             type="button"
                             data-product-id={prod.id}
                             onClick={() => {
-                              flyProductToCart(prod.id);
-                              cartStore.add(shop.id, shop.name, {
+                              const added = cartConflictManager.addWithConflictCheck(shop.id, shop.name, {
                                 id: prod.id,
                                 name: prod.name,
                                 unit: prod.unit,
                                 price: prod.price,
                               });
+                              if (!added) return;
+                              flyProductToCart(prod.id);
                               toast.success(`Added ${prod.name} to cart`);
                             }}
                             className="rounded-md bg-[#981495] hover:bg-[#981495] text-white px-2 py-0.5 text-[10px] font-bold transition-all cursor-pointer shadow-2xs"

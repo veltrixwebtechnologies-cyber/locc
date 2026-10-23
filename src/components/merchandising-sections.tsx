@@ -22,6 +22,7 @@ import { WishlistButton } from "@/components/wishlist-button";
 import { m } from "motion/react";
 import { Reveal, SkeletonCard, cardMotion, spring } from "@/components/motion/presets";
 import { cartStore, useCart } from "@/modules/shopper/services/cart-store";
+import { cartConflictManager } from "@/modules/shopper/services/cart-conflict";
 import { QtyStepper } from "@/components/qty-stepper";
 import { flyProductToCart } from "@/lib/fly-to-cart";
 import { SafeProductImage } from "@/lib/image-utils";
@@ -44,28 +45,28 @@ export function ProductCard({
   const quantity = cart.lines.find((line) => line.productId === product.id)?.qty ?? 0;
 
   useEffect(() => {
-    let mounted = true;
+    let isMounted = true;
     if (product.image_url && !/^(https?:|data:)/i.test(product.image_url)) {
       void resolveProductImageUrl(product.image_url).then((url) => {
-        if (mounted && url) setImageUrl(url);
+        if (isMounted && url) setImageUrl(url);
       });
     }
     return () => {
-      mounted = false;
+      isMounted = false;
     };
   }, [product.image_url]);
 
+
   const sellingPrice = Number(product.discount_price ?? product.selling_price ?? 0);
-  const mrp = Number(product.mrp ?? (sellingPrice ? Math.round(sellingPrice * 1.25) : 0));
-  const discountPercent = mrp > sellingPrice ? Math.round(((mrp - sellingPrice) / mrp) * 100) : 0;
+  const mrp = (product.mrp != null && Number(product.mrp) > sellingPrice) ? Number(product.mrp) : null;
+  const discountPercent = mrp ? Math.round(((mrp - sellingPrice) / mrp) * 100) : 0;
   const unit = (product as any).unit || (product as any).weight || "1 unit";
 
   return (
     <div
       data-product-id={product.id}
-      className={`group relative flex min-w-0 flex-col justify-between overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-xs hover:border-[#f0abfc] hover:shadow-md transition-all duration-200 ${
-        compact ? "p-2.5" : "p-3"
-      }`}
+      className={`group relative flex min-w-0 flex-col justify-between overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-xs hover:border-[#f0abfc] hover:shadow-md transition-all duration-200 ${compact ? "p-2.5" : "p-3"
+        }`}
     >
       <div>
         {/* Top Image Frame with floating badges */}
@@ -119,15 +120,16 @@ export function ProductCard({
               <button
                 type="button"
                 onClick={() => {
-                  void recordProductEvent(product.id, "add_to_cart");
-                  flyProductToCart(product.id);
-                  cartStore.add(product.seller_id, product.shop_name, {
+                  const added = cartConflictManager.addWithConflictCheck(product.seller_id, product.shop_name, {
                     id: product.id,
                     name: product.name,
                     unit: unit,
                     price: sellingPrice,
                     stock: product.stock,
                   });
+                  if (!added) return;
+                  void recordProductEvent(product.id, "add_to_cart");
+                  flyProductToCart(product.id);
                 }}
                 className="rounded-lg bg-white border border-emerald-600 text-emerald-700 hover:bg-emerald-600 hover:text-white px-3.5 py-1 text-xs font-black uppercase tracking-wider shadow-sm transition-all active:scale-95 cursor-pointer flex items-center gap-1"
               >
@@ -138,15 +140,16 @@ export function ProductCard({
                 qty={quantity}
                 max={product.stock}
                 onAdd={() => {
-                  void recordProductEvent(product.id, "add_to_cart");
-                  flyProductToCart(product.id);
-                  cartStore.add(product.seller_id, product.shop_name, {
+                  const added = cartConflictManager.addWithConflictCheck(product.seller_id, product.shop_name, {
                     id: product.id,
                     name: product.name,
                     unit: unit,
                     price: sellingPrice,
                     stock: product.stock,
                   });
+                  if (!added) return;
+                  void recordProductEvent(product.id, "add_to_cart");
+                  flyProductToCart(product.id);
                 }}
                 onChange={(nextQuantity) => cartStore.setQty(product.id, nextQuantity)}
                 addClassName="rounded-lg bg-emerald-700 text-white px-2 py-0.5 text-xs font-bold shadow-sm"
@@ -168,7 +171,7 @@ export function ProductCard({
           {/* Price line with strikethrough MRP */}
           <div className="flex items-baseline gap-2">
             <span className="text-base font-black text-slate-900">₹{sellingPrice}</span>
-            {mrp > sellingPrice && (
+            {mrp && mrp > sellingPrice && (
               <span className="text-xs font-semibold text-slate-400 line-through">₹{mrp}</span>
             )}
           </div>
@@ -187,14 +190,22 @@ export function ProductCard({
           <p className="truncate text-[10px] font-semibold text-[#981495]">{product.shop_name}</p>
 
           {/* Rating & ETA */}
-          <div className="flex items-center gap-2 pt-0.5 text-[11px] font-bold text-slate-600">
-            <span className="flex items-center gap-0.5 text-amber-600">
-              <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
-              {(product.average_rating ?? 4.8).toFixed(1)}
-            </span>
-            <span className="text-slate-300">•</span>
-            <span className="text-slate-500">⏱ 15 mins</span>
-          </div>
+          {((product.average_rating != null && Number(product.average_rating) > 0) || Boolean((product as any).delivery_time)) && (
+            <div className="flex items-center gap-2 pt-0.5 text-[11px] font-bold text-slate-600">
+              {product.average_rating != null && Number(product.average_rating) > 0 && (
+                <span className="flex items-center gap-0.5 text-amber-600">
+                  <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
+                  {Number(product.average_rating).toFixed(1)}
+                </span>
+              )}
+              {Boolean((product as any).delivery_time) && (
+                <>
+                  {product.average_rating != null && Number(product.average_rating) > 0 && <span className="text-slate-300">•</span>}
+                  <span className="text-slate-500">⏱ {(product as any).delivery_time}</span>
+                </>
+              )}
+            </div>
+          )}
 
           {/* Category pill with arrow */}
           <div className="pt-1">

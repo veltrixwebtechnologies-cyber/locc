@@ -27,6 +27,7 @@ import {
 } from "@/lib/merchandising";
 import { useAuth } from "@/lib/auth-store";
 import { cartStore, useCart } from "@/modules/shopper/services/cart-store";
+import { cartConflictManager } from "@/modules/shopper/services/cart-conflict";
 import { QtyStepper } from "@/components/qty-stepper";
 import { flyProductToCart } from "@/lib/fly-to-cart";
 import { toast } from "sonner";
@@ -110,7 +111,7 @@ function ProductPage() {
           brand_name: shop?.name ?? "LocalShore Partner",
           category: mockProduct.category,
           selling_price: mockProduct.price,
-          mrp: Math.round(mockProduct.price * 1.1),
+          mrp: mockProduct.price,
           discount_price: null,
           discount_starts_at: null,
           discount_ends_at: null,
@@ -118,7 +119,7 @@ function ProductPage() {
           stock: mockProduct.stock ?? 20,
           image_url: mockProduct.imageUrl ?? null,
           created_at: "",
-          average_rating: shop?.rating ?? 4.7,
+          average_rating: shop?.rating && shop.rating > 0 ? shop.rating : 0,
           review_count: 0,
           shop_name: shop?.name ?? "LocalShore Partner",
           description: `${mockProduct.name} from ${shop?.name ?? "a verified LocalShore shop"}. Freshly listed for convenient neighborhood shopping.`,
@@ -372,9 +373,9 @@ function ProductPage() {
 
   const item = product.data;
   const currentPrice = Number(item.discount_price ?? item.selling_price);
-  const originalMrp = Number(item.mrp || currentPrice * 1.1);
+  const originalMrp = (item.mrp != null && Number(item.mrp) > currentPrice) ? Number(item.mrp) : null;
   const discountPercent =
-    originalMrp > currentPrice ? Math.round(((originalMrp - currentPrice) / originalMrp) * 100) : 0;
+    originalMrp ? Math.round(((originalMrp - currentPrice) / originalMrp) * 100) : 0;
 
   const itemQtyInCart = cart.lines.find((line) => line.productId === item.id)?.qty ?? 0;
   const localCatalogCandidates = Object.values(productsByStore)
@@ -572,7 +573,7 @@ function ProductPage() {
                   <span className="font-mono text-3xl font-bold text-foreground">
                     ₹{currentPrice}
                   </span>
-                  {originalMrp > currentPrice && (
+                  {originalMrp && originalMrp > currentPrice && (
                     <span className="text-sm text-muted-foreground line-through">
                       MRP ₹{originalMrp}
                     </span>
@@ -592,15 +593,16 @@ function ProductPage() {
                       type="button"
                       data-product-id={item.id}
                       onClick={() => {
-                        void recordProductEvent(item.id, "add_to_cart");
-                        flyProductToCart(item.id);
-                        cartStore.add(item.seller_id, item.shop_name, {
+                        const added = cartConflictManager.addWithConflictCheck(item.seller_id, item.shop_name, {
                           id: item.id,
                           name: item.name,
                           unit: item.category ?? "750 ml",
                           price: currentPrice,
                           stock: item.stock,
                         });
+                        if (!added) return;
+                        void recordProductEvent(item.id, "add_to_cart");
+                        flyProductToCart(item.id);
                         toast.success(`Added ${item.name} to cart`);
                       }}
                       className="w-full rounded-xl bg-emerald-700 hover:bg-emerald-800 active:scale-[0.99] py-3.5 text-sm font-bold text-white shadow-md transition-all flex items-center justify-center gap-2"
@@ -616,14 +618,15 @@ function ProductPage() {
                         qty={itemQtyInCart}
                         max={item.stock}
                         onAdd={() => {
-                          flyProductToCart(item.id);
-                          cartStore.add(item.seller_id, item.shop_name, {
+                          const added = cartConflictManager.addWithConflictCheck(item.seller_id, item.shop_name, {
                             id: item.id,
                             name: item.name,
                             unit: item.category ?? "750 ml",
                             price: currentPrice,
                             stock: item.stock,
                           });
+                          if (!added) return;
+                          flyProductToCart(item.id);
                         }}
                         onChange={(nextQuantity) => cartStore.setQty(item.id, nextQuantity)}
                       />
@@ -998,8 +1001,8 @@ function BlinkitProductCard({ product }: { product: MerchandisingProduct }) {
   const cart = useCart();
   const quantity = cart.lines.find((line) => line.productId === product.id)?.qty ?? 0;
   const currentPrice = Number(product.discount_price ?? product.selling_price);
-  const mrp = Number(product.mrp || currentPrice * 1.1);
-  const discount = mrp > currentPrice ? Math.round(((mrp - currentPrice) / mrp) * 100) : 0;
+  const mrp = (product.mrp != null && Number(product.mrp) > currentPrice) ? Number(product.mrp) : null;
+  const discount = mrp ? Math.round(((mrp - currentPrice) / mrp) * 100) : 0;
 
   return (
     <div
@@ -1017,9 +1020,11 @@ function BlinkitProductCard({ product }: { product: MerchandisingProduct }) {
         className="relative block aspect-square w-full overflow-hidden rounded-xl bg-[#f8f8f8] p-2"
       >
         {/* Delivery Time Badge */}
-        <span className="absolute left-2 top-2 z-10 rounded bg-background/95 px-1.5 py-0.5 text-[9px] font-bold text-foreground shadow-xs">
-          ⚡ 8 MINS
-        </span>
+        {Boolean((product as any).delivery_time) && (
+          <span className="absolute left-2 top-2 z-10 rounded bg-background/95 px-1.5 py-0.5 text-[9px] font-bold text-foreground shadow-xs">
+            ⏱ {(product as any).delivery_time}
+          </span>
+        )}
 
         {/* Discount Badge */}
         {discount > 0 && (
@@ -1054,7 +1059,7 @@ function BlinkitProductCard({ product }: { product: MerchandisingProduct }) {
         <div className="mt-3 flex items-center justify-between gap-1">
           <div>
             <span className="font-mono text-sm font-bold text-foreground">₹{currentPrice}</span>
-            {mrp > currentPrice && (
+            {mrp && mrp > currentPrice && (
               <span className="block text-[10px] text-muted-foreground line-through">₹{mrp}</span>
             )}
           </div>
@@ -1063,15 +1068,16 @@ function BlinkitProductCard({ product }: { product: MerchandisingProduct }) {
             qty={quantity}
             max={product.stock ?? 20}
             onAdd={() => {
-              void recordProductEvent(product.id, "add_to_cart");
-              flyProductToCart(product.id);
-              cartStore.add(product.seller_id, product.shop_name, {
+              const added = cartConflictManager.addWithConflictCheck(product.seller_id, product.shop_name, {
                 id: product.id,
                 name: product.name,
                 unit: product.category ?? "750 ml",
                 price: currentPrice,
                 stock: product.stock ?? 20,
               });
+              if (!added) return;
+              void recordProductEvent(product.id, "add_to_cart");
+              flyProductToCart(product.id);
             }}
             onChange={(nextQty) => cartStore.setQty(product.id, nextQty)}
             addClassName="rounded-lg border border-emerald-600 bg-emerald-50 dark:bg-emerald-950/60 px-3 py-1.5 text-xs font-bold text-emerald-700 dark:text-emerald-300 hover:bg-emerald-700 hover:text-white transition-colors"

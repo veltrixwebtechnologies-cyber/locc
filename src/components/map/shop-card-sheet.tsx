@@ -57,8 +57,7 @@ export function ShopCardSheet({ marker, userLocation, onClose, onDirectionsCalcu
   const catBg = categoryColor[marker.category] || "#111827";
   const catLabelStr = categoryLabel[marker.category] || marker.category;
 
-  // Strikethrough estimate price for showcase
-  const originalPrice = Math.round(marker.minPrice * 1.15);
+
 
   if (marker.isImported) {
     return (
@@ -170,13 +169,17 @@ export function ShopCardSheet({ marker, userLocation, onClose, onDirectionsCalcu
               {marker.productName} · {marker.distanceKm.toFixed(1)} km away
             </p>
           </div>
-          <div className="flex items-center gap-1 rounded-lg bg-amber-500/10 px-2 py-1 text-xs font-extrabold text-foreground shrink-0 border border-amber-500/20">
-            <Star className="h-3.5 w-3.5 fill-[#F59E0B] text-[#F59E0B]" />
-            <span>{marker.rating.toFixed(2)}</span>
-            <span className="font-normal text-muted-foreground">
-              ({Math.floor(marker.rating * 15)})
-            </span>
-          </div>
+          {marker.rating > 0 && (
+            <div className="flex items-center gap-1 rounded-lg bg-amber-500/10 px-2 py-1 text-xs font-extrabold text-foreground shrink-0 border border-amber-500/20">
+              <Star className="h-3.5 w-3.5 fill-[#F59E0B] text-[#F59E0B]" />
+              <span>{marker.rating.toFixed(1)}</span>
+              {marker.reviewCount != null && marker.reviewCount > 0 && (
+                <span className="font-normal text-muted-foreground">
+                  ({marker.reviewCount})
+                </span>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Instant delivery indicator */}
@@ -187,9 +190,11 @@ export function ShopCardSheet({ marker, userLocation, onClose, onDirectionsCalcu
 
         {/* Pricing Line */}
         <div className="flex items-baseline gap-2 pt-1 border-t border-border/50">
-          <span className="text-xs text-muted-foreground line-through font-medium">
-            ₹{originalPrice}
-          </span>
+          {(marker as any).mrp != null && Number((marker as any).mrp) > marker.minPrice && (
+            <span className="text-xs text-muted-foreground line-through font-medium">
+              ₹{(marker as any).mrp}
+            </span>
+          )}
           <span className="font-display text-xl font-black text-foreground">
             {marker.priceDisplay}
           </span>

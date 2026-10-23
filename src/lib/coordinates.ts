@@ -25,6 +25,9 @@ export const MAX_NAVIGATION_ACCURACY_M = 100;
 // Customer location is accepted when the device reports a 100 m radius
 // or better. A map pin remains available when the device cannot provide this.
 export const MAX_CUSTOMER_DELIVERY_ACCURACY_M = 100;
+// Coarse Wi-Fi/IP geolocation can be tens or hundreds of kilometres off.
+// Such a result is not useful as a map starting point or delivery preview.
+export const MAX_APPROXIMATE_GPS_PREVIEW_ACCURACY_M = 5_000;
 export const MAX_LOCATION_AGE_MS = 30_000;
 
 export function freshPartnerCoordinates(partner: any): [number, number] | null {

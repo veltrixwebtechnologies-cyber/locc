@@ -8,6 +8,8 @@ import {
 import { useDeliveryLocation } from "@/lib/location-store";
 import { hasConfirmedCoordinates, CUSTOMER_VISIBILITY_RADIUS_KM } from "@/lib/location-visibility";
 import { catalogCategoryKey, isStoreInCategory } from "@/lib/shop-categories";
+import { evaluateProductMatches, computeDynamicFacets } from "@/lib/dynamic-filter-engine";
+import { getCategoryAwareFilterDefinitions } from "@/lib/category-filter-registry";
 
 // Module-level circuit breaker and in-memory cache for ultra-fast response
 let isFacetRpcUnavailable = false;
@@ -32,91 +34,116 @@ function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
   });
 }
 
+async function getCandidateCatalogPool(
+  location: { lat: number; lng: number },
+  category?: string,
+): Promise<FilteredProduct[]> {
+  if (cachedCatalogRows && cachedCatalogRows.length > 0) {
+    return cachedCatalogRows;
+  }
+  let remoteRows: any[] = [];
+  try {
+    const { data, error } = (await withTimeout(
+      (supabase as any).rpc("get_customer_visible_products", {
+        p_lat: location.lat,
+        p_lng: location.lng,
+        p_query: null,
+        p_category_slug: catalogCategoryKey(category),
+        p_limit: 1000,
+        p_offset: 0,
+      }),
+      8_000,
+    )) as any;
+    if (!error && Array.isArray(data)) {
+      remoteRows = data;
+    }
+  } catch (err) {
+    console.warn("getCandidateCatalogPool RPC error:", err);
+  }
+
+  const mappedRemoteProducts: FilteredProduct[] = remoteRows.map((product) => {
+    const price = Number(product.selling_price ?? product.price ?? 0);
+    return {
+      id: String(product.id),
+      seller_id: String(product.seller_id),
+      name: String(product.name || "Local product"),
+      sku: String(product.sku || ""),
+      brand: product.brand ?? null,
+      brand_id: product.brand_id ?? null,
+      brand_name: product.brand_name ?? null,
+      category: String(product.category || product.business_type || ""),
+      category_id: null,
+      subcategory_id: null,
+      product_type_id: null,
+      description: product.description ?? "",
+      mrp: Number(product.mrp ?? price),
+      selling_price: price,
+      discount_price: product.discount_price ? Number(product.discount_price) : null,
+      stock: Number(product.stock ?? 0),
+      image_url: String(product.image_url || ""),
+      images:
+        product.images && Array.isArray(product.images)
+          ? product.images
+          : product.image_url
+          ? [product.image_url]
+          : [],
+      weight: product.weight ?? null,
+      attributes:
+        product.attributes && typeof product.attributes === "object"
+          ? product.attributes
+          : {},
+      shop_name: String(product.shop_name || "Local shop"),
+      distance_km: Number(product.distance_km),
+      rating: Number(product.rating ?? 0),
+      review_count: Number(product.review_count ?? 0),
+      is_open: product.is_open === true,
+      is_verified: product.is_verified === true,
+      accepts_orders: true,
+      total_count: 0,
+    };
+  });
+
+  const seenIds = new Set(mappedRemoteProducts.map((p) => p.id));
+  const pool: FilteredProduct[] = [...mappedRemoteProducts];
+  for (const mockItem of MOCK_MERCHANDISING_CATALOG) {
+    if (!seenIds.has(mockItem.id)) {
+      pool.push(mockItem);
+    }
+  }
+  cachedCatalogRows = pool;
+  return pool;
+}
+
 async function loadVisibleProductsFallback(
   filterState: ProductFilterState,
   location: { lat: number; lng: number },
 ): Promise<{ products: FilteredProduct[]; total: number }> {
-  const { data, error } = await withTimeout(
-    (supabase as any).rpc("get_customer_visible_products", {
-      p_lat: location.lat,
-      p_lng: location.lng,
-      p_query: filterState.query ?? null,
-      p_category_slug: catalogCategoryKey(filterState.category),
-      p_limit: 1000,
-      p_offset: 0,
-    }),
-    8_000,
-  ) as any;
-  if (error) throw error;
+  const candidatePool = await getCandidateCatalogPool(location, filterState.category);
 
-  const maxDistanceKm = filterState.maxDistanceKm ?? CUSTOMER_VISIBILITY_RADIUS_KM;
-  let products = ((data ?? []) as any[])
-    .filter((product) => {
-      const distanceKm = Number(product.distance_km);
-      const price = Number(product.selling_price ?? product.price);
-      const stock = Number(product.stock ?? 0);
-      return (
-        product.distance_km != null &&
-        Number.isFinite(distanceKm) &&
-        distanceKm >= 0 &&
-        distanceKm <= maxDistanceKm &&
-        (!filterState.category || isStoreInCategory(product.category, filterState.category)) &&
-        (filterState.minPrice == null || price >= filterState.minPrice) &&
-        (filterState.maxPrice == null || price <= filterState.maxPrice) &&
-        ((!filterState.inStock && !filterState.inStockOnly) || stock > 0) &&
-        (!filterState.shopIds.length || filterState.shopIds.includes(product.seller_id)) &&
-        (!filterState.brands.length || filterState.brands.includes(product.brand_name || product.brand)) &&
-        (!filterState.attributes || Object.keys(filterState.attributes).length === 0) &&
-        (!filterState.subcategory && !filterState.productType) &&
-        (!filterState.onSale && !filterState.minDiscountPercent) &&
-        (!filterState.minRating || Number(product.rating ?? 0) >= filterState.minRating)
-      );
-    })
-    .map((product) => {
-      const price = Number(product.selling_price ?? product.price ?? 0);
-      return {
-        id: String(product.id),
-        seller_id: String(product.seller_id),
-        name: String(product.name || "Local product"),
-        sku: "",
-        brand: product.brand ?? null,
-        brand_id: product.brand_id ?? null,
-        brand_name: product.brand_name ?? null,
-        category: String(product.category || product.business_type || ""),
-        category_id: null,
-        subcategory_id: null,
-        product_type_id: null,
-        description: product.description ?? "",
-        mrp: Number(product.mrp ?? price),
-        selling_price: price,
-        discount_price: null,
-        stock: Number(product.stock ?? 0),
-        image_url: String(product.image_url || ""),
-        images: product.image_url ? [product.image_url] : [],
-        weight: product.weight ?? null,
-        attributes: {},
-        shop_name: String(product.shop_name || "Local shop"),
-        distance_km: Number(product.distance_km),
-        rating: Number(product.rating ?? 0),
-        review_count: Number(product.review_count ?? 0),
-        is_open: product.is_open === true,
-        is_verified: product.is_verified === true,
-        accepts_orders: true,
-        total_count: 0,
-      } satisfies FilteredProduct;
-    });
+  let products = candidatePool.filter((product) =>
+    evaluateProductMatches(product, filterState),
+  );
 
   if (filterState.sortBy === "distance_asc") {
-    products.sort((a, b) => Number(a.distance_km) - Number(b.distance_km));
+    products.sort((a, b) => Number(a.distance_km ?? 0) - Number(b.distance_km ?? 0));
   } else if (filterState.sortBy === "price_asc") {
-    products.sort((a, b) => a.selling_price - b.selling_price);
+    const getP = (p: FilteredProduct) => Number(p.discount_price ?? p.selling_price ?? 0);
+    products.sort((a, b) => getP(a) - getP(b));
   } else if (filterState.sortBy === "price_desc") {
-    products.sort((a, b) => b.selling_price - a.selling_price);
+    const getP = (p: FilteredProduct) => Number(p.discount_price ?? p.selling_price ?? 0);
+    products.sort((a, b) => getP(b) - getP(a));
+  } else if (filterState.sortBy === "rating_desc") {
+    products.sort((a, b) => Number(b.rating ?? 0) - Number(a.rating ?? 0));
   }
+
   const total = products.length;
-  products = products.slice(((filterState.page || 1) - 1) * 24, (filterState.page || 1) * 24);
-  products.forEach((product) => { product.total_count = total; });
-  return { products, total };
+  const page = filterState.page || 1;
+  const pageSize = 24;
+  const paginated = products.slice((page - 1) * pageSize, page * pageSize);
+  paginated.forEach((product) => {
+    product.total_count = total;
+  });
+  return { products: paginated, total };
 }
 
 export function useProductFilters(filterState: ProductFilterState) {
@@ -132,73 +159,74 @@ export function useProductFilters(filterState: ProductFilterState) {
         return loadVisibleProductsFallback(filterState, deliveryLocation);
       }
       try {
-          const rpcPromise = (supabase as any).rpc("filter_marketplace_products", {
-            p_category_slug: catalogCategoryKey(filterState.category),
-            p_subcategory_slug: filterState.subcategory ?? null,
-            p_product_type_slug: filterState.productType ?? null,
-            p_query: filterState.query ?? null,
-            p_min_price: filterState.minPrice ?? null,
-            p_max_price: filterState.maxPrice ?? null,
-            p_min_rating: filterState.minRating ?? null,
-            p_in_stock: filterState.inStock ?? null,
-            p_on_sale: filterState.onSale ?? null,
-            p_open_now: filterState.openNow ?? null,
-            p_brand_names: filterState.brands.length > 0 ? filterState.brands : null,
-            p_shop_ids: filterState.shopIds.length > 0 ? filterState.shopIds : null,
-            p_attributes:
-              filterState.attributes && Object.keys(filterState.attributes).length > 0
-                ? filterState.attributes
-                : {},
-            p_sort_by: filterState.sortBy || "relevance",
-            p_limit: 24,
-            p_offset: ((filterState.page || 1) - 1) * 24,
-            p_lat: deliveryLocation.lat,
-            p_lng: deliveryLocation.lng,
-            p_max_distance_km: filterState.maxDistanceKm ?? CUSTOMER_VISIBILITY_RADIUS_KM,
-          });
+        const rpcPromise = (supabase as any).rpc("filter_marketplace_products", {
+          p_category_slug: catalogCategoryKey(filterState.category),
+          p_subcategory_slug: filterState.subcategory ?? null,
+          p_product_type_slug: filterState.productType ?? null,
+          p_query: filterState.query ?? null,
+          p_min_price: filterState.minPrice ?? null,
+          p_max_price: filterState.maxPrice ?? null,
+          p_min_rating: filterState.minRating ?? null,
+          p_in_stock: filterState.inStock ?? null,
+          p_on_sale: filterState.onSale ?? null,
+          p_open_now: filterState.openNow ?? null,
+          p_brand_names: filterState.brands.length > 0 ? filterState.brands : null,
+          p_shop_ids: filterState.shopIds.length > 0 ? filterState.shopIds : null,
+          p_attributes:
+            filterState.attributes && Object.keys(filterState.attributes).length > 0
+              ? filterState.attributes
+              : {},
+          p_sort_by: filterState.sortBy || "relevance",
+          p_limit: 24,
+          p_offset: ((filterState.page || 1) - 1) * 24,
+          p_lat: deliveryLocation.lat,
+          p_lng: deliveryLocation.lng,
+          p_max_distance_km: filterState.maxDistanceKm ?? CUSTOMER_VISIBILITY_RADIUS_KM,
+        });
 
-          const { data, error } = (await withTimeout(rpcPromise, 8000)) as any;
+        const { data, error } = (await withTimeout(rpcPromise, 8000)) as any;
 
-          if (error) {
-            console.warn("RPC filter_marketplace_products unavailable:", error);
-            // Some deployed Supabase environments have not applied the
-            // marketplace-filter migration yet. The existing customer feed is
-            // still location scoped; use it only for this missing-RPC case.
-            if (error.code === "PGRST202") {
-              isMarketplaceFilterRpcUnavailable = true;
-              return loadVisibleProductsFallback(filterState, deliveryLocation);
-            }
-            throw error;
-          } else if (data) {
-            const products = ((data as FilteredProduct[]) || []).filter((product) =>
+        if (error) {
+          console.warn("RPC filter_marketplace_products unavailable:", error);
+          if (error.code === "PGRST202") {
+            isMarketplaceFilterRpcUnavailable = true;
+            return loadVisibleProductsFallback(filterState, deliveryLocation);
+          }
+          throw error;
+        } else if (data) {
+          const products = ((data as FilteredProduct[]) || []).filter(
+            (product) =>
               product.distance_km != null &&
               Number.isFinite(Number(product.distance_km)) &&
               Number(product.distance_km) <=
                 (filterState.maxDistanceKm ?? CUSTOMER_VISIBILITY_RADIUS_KM) &&
               (!filterState.category || isStoreInCategory(product.category, filterState.category)),
-            );
-            const total = products.length > 0 ? Number(products[0].total_count) : 0;
-            return { products, total };
-          }
+          );
+          const total = products.length > 0 ? Number(products[0].total_count) : 0;
+          return { products, total };
+        }
       } catch (err) {
         console.warn("RPC filter_marketplace_products timed out/failed:", err);
         throw err;
       }
 
-      // Never fall back to an unscoped catalog: that could expose distant shops.
       return { products: [], total: 0 };
     },
   });
 
   const facetsQuery = useQuery<FacetResult>({
     queryKey: [
-      "filter-facets",
+      "filter-facets-v2",
       filterState.category,
+      filterState.subcategory,
+      filterState.productType,
       filterState.query,
       filterState.minPrice,
       filterState.maxPrice,
       filterState.brands,
       filterState.attributes,
+      deliveryLocation?.lat,
+      deliveryLocation?.lng,
     ],
     staleTime: 1000 * 60 * 5,
     retry: false,
@@ -220,14 +248,26 @@ export function useProductFilters(filterState: ProductFilterState) {
 
           if (error) {
             isFacetRpcUnavailable = true;
-          } else if (data) {
+          } else if (data && (data.brand_facets?.length > 0 || Object.keys(data.attributes || {}).length > 0)) {
             return (data as FacetResult) || defaultFacetResult();
           }
         } catch (err) {
           isFacetRpcUnavailable = true;
         }
       }
-      return defaultFacetResult();
+
+      if (!hasConfirmedCoordinates(deliveryLocation)) {
+        return defaultFacetResult();
+      }
+
+      const pool = await getCandidateCatalogPool(deliveryLocation, filterState.category);
+      const defs = getCategoryAwareFilterDefinitions(
+        filterState.category,
+        filterState.subcategory,
+        filterState.productType,
+        filterState.query,
+      );
+      return computeDynamicFacets(pool, defs, filterState);
     },
   });
 
@@ -452,6 +492,483 @@ const MOCK_MERCHANDISING_CATALOG: FilteredProduct[] = [
     distance_km: 0.9,
     rating: 4.9,
     review_count: 28,
+    is_open: true,
+    accepts_orders: true,
+    total_count: 1,
+  },
+  // ── Shirts ────────────────────────────────────────────────────────────────
+  {
+    id: "prod-shirt-1",
+    seller_id: "seller-fashion-1",
+    name: "Navy Slim Fit Cotton Oxford Shirt",
+    sku: "SHIRT-SNITCH-01",
+    brand: "SNITCH",
+    brand_id: "brand-snitch",
+    brand_name: "SNITCH",
+    category: "Fashion & Clothing",
+    category_id: "cat-fashion",
+    subcategory_id: "shirts",
+    product_type_id: "shirts",
+    description: "Classic navy blue button-down Oxford cotton shirt with crisp spread collar.",
+    mrp: 1199,
+    selling_price: 999,
+    discount_price: 999,
+    stock: 15,
+    image_url:
+      "https://images.unsplash.com/photo-1596755094514-f87e34085b2c?auto=format&fit=crop&w=600&q=75",
+    images: [],
+    weight: "280g",
+    attributes: {
+      size: ["M", "L", "XL", "XXL"],
+      color: ["Navy Blue", "Blue"],
+      fit: "Slim",
+      fabric: "Cotton Oxford",
+      sleeve_type: "Full Sleeve",
+      pattern: "Solid",
+      collar_type: "Spread Collar",
+      gender: "Men",
+    },
+    shop_name: "Trendz Fashion Hub",
+    distance_km: 0.8,
+    rating: 4.8,
+    review_count: 24,
+    is_open: true,
+    accepts_orders: true,
+    total_count: 1,
+  },
+  {
+    id: "prod-shirt-2",
+    seller_id: "seller-fashion-2",
+    name: "Checked Green-Cream Regular Fit Casual Shirt",
+    sku: "SHIRT-TIGC-02",
+    brand: "The Indian Garage Co",
+    brand_id: "brand-tigc",
+    brand_name: "The Indian Garage Co",
+    category: "Fashion & Clothing",
+    category_id: "cat-fashion",
+    subcategory_id: "shirts",
+    product_type_id: "shirts",
+    description: "Breathable pure cotton checked casual everyday shirt in earthy cream and green hues.",
+    mrp: 2399,
+    selling_price: 912,
+    discount_price: 912,
+    stock: 18,
+    image_url:
+      "https://images.unsplash.com/photo-1589310243389-96a5483213a8?auto=format&fit=crop&w=600&q=75",
+    images: [],
+    weight: "260g",
+    attributes: {
+      size: ["S", "M", "L", "XL"],
+      color: ["Cream", "Green"],
+      fit: "Regular",
+      fabric: "Cotton",
+      sleeve_type: "Full Sleeve",
+      pattern: "Checked",
+      collar_type: "Spread Collar",
+      gender: "Men",
+    },
+    shop_name: "Urban Style Menswear",
+    distance_km: 1.4,
+    rating: 4.7,
+    review_count: 31,
+    is_open: true,
+    accepts_orders: true,
+    total_count: 1,
+  },
+  {
+    id: "prod-shirt-3",
+    seller_id: "seller-fashion-1",
+    name: "Quirky Black Brush Stroke Regular Fit Shirt",
+    sku: "SHIRT-CAMPUS-03",
+    brand: "Campus Sutra",
+    brand_id: "brand-campussutra",
+    brand_name: "Campus Sutra",
+    category: "Fashion & Clothing",
+    category_id: "cat-fashion",
+    subcategory_id: "shirts",
+    product_type_id: "shirts",
+    description: "Modern artistic brush stroke patterned Cuban collar resort shirt.",
+    mrp: 1899,
+    selling_price: 854,
+    discount_price: 854,
+    stock: 22,
+    image_url:
+      "https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?auto=format&fit=crop&w=600&q=75",
+    images: [],
+    weight: "220g",
+    attributes: {
+      size: ["M", "L"],
+      color: ["Black"],
+      fit: "Regular",
+      fabric: "Rayon",
+      sleeve_type: "Half Sleeve",
+      pattern: "Printed",
+      collar_type: "Cuban Collar",
+      gender: "Men",
+    },
+    shop_name: "Trendz Fashion Hub",
+    distance_km: 0.8,
+    rating: 4.8,
+    review_count: 17,
+    is_open: true,
+    accepts_orders: true,
+    total_count: 1,
+  },
+  {
+    id: "prod-shirt-4",
+    seller_id: "seller-fashion-2",
+    name: "Classic White Striped Linen Shirt",
+    sku: "SHIRT-SNITCH-04",
+    brand: "SNITCH",
+    brand_id: "brand-snitch",
+    brand_name: "SNITCH",
+    category: "Fashion & Clothing",
+    category_id: "cat-fashion",
+    subcategory_id: "shirts",
+    product_type_id: "shirts",
+    description: "Premium pure linen relaxed shirt with subtle vertical pinstripes and mandarin collar.",
+    mrp: 1799,
+    selling_price: 1199,
+    discount_price: 1199,
+    stock: 12,
+    image_url:
+      "https://images.unsplash.com/photo-1603252109303-2751441dd157?auto=format&fit=crop&w=600&q=75",
+    images: [],
+    weight: "250g",
+    attributes: {
+      size: ["S", "M", "L", "XL"],
+      color: ["White"],
+      fit: "Regular",
+      fabric: "Linen",
+      sleeve_type: "Full Sleeve",
+      pattern: "Striped",
+      collar_type: "Mandarin Collar",
+      gender: "Men",
+    },
+    shop_name: "Urban Style Menswear",
+    distance_km: 1.4,
+    rating: 4.7,
+    review_count: 40,
+    is_open: true,
+    accepts_orders: true,
+    total_count: 1,
+  },
+  {
+    id: "prod-shirt-5",
+    seller_id: "seller-fashion-1",
+    name: "Blue Relaxed Fit Embroidered Streetwear Shirt",
+    sku: "SHIRT-TIGC-05",
+    brand: "The Indian Garage Co",
+    brand_id: "brand-tigc",
+    brand_name: "The Indian Garage Co",
+    category: "Fashion & Clothing",
+    category_id: "cat-fashion",
+    subcategory_id: "shirts",
+    product_type_id: "shirts",
+    description: "Urban streetwear cotton overshirt with artisanal embroidery accents.",
+    mrp: 2949,
+    selling_price: 1032,
+    discount_price: 1032,
+    stock: 10,
+    image_url:
+      "https://images.unsplash.com/photo-1607345366928-199ea26cfe3e?auto=format&fit=crop&w=600&q=75",
+    images: [],
+    weight: "320g",
+    attributes: {
+      size: ["S", "M", "L"],
+      color: ["Blue"],
+      fit: "Relaxed",
+      fabric: "Cotton",
+      sleeve_type: "Full Sleeve",
+      pattern: "Embroidered",
+      collar_type: "Spread Collar",
+      gender: "Men",
+    },
+    shop_name: "Trendz Fashion Hub",
+    distance_km: 0.8,
+    rating: 4.8,
+    review_count: 15,
+    is_open: true,
+    accepts_orders: true,
+    total_count: 1,
+  },
+  {
+    id: "prod-shirt-6",
+    seller_id: "seller-fashion-2",
+    name: "Solid Black Formal Spread Collar Shirt",
+    sku: "SHIRT-RAY-06",
+    brand: "Raymond",
+    brand_id: "brand-raymond",
+    brand_name: "Raymond",
+    category: "Fashion & Clothing",
+    category_id: "cat-fashion",
+    subcategory_id: "shirts",
+    product_type_id: "shirts",
+    description: "Crisp formal black shirt crafted from fine Giza cotton with spread collar.",
+    mrp: 2299,
+    selling_price: 1499,
+    discount_price: 1499,
+    stock: 20,
+    image_url:
+      "https://images.unsplash.com/photo-1620012253295-c15c429f66bf?auto=format&fit=crop&w=600&q=75",
+    images: [],
+    weight: "270g",
+    attributes: {
+      size: ["M", "L", "XL", "XXL"],
+      color: ["Black"],
+      fit: "Slim",
+      fabric: "Cotton",
+      sleeve_type: "Full Sleeve",
+      pattern: "Solid",
+      collar_type: "Spread Collar",
+      gender: "Men",
+    },
+    shop_name: "Urban Style Menswear",
+    distance_km: 1.4,
+    rating: 4.9,
+    review_count: 52,
+    is_open: true,
+    accepts_orders: true,
+    total_count: 1,
+  },
+
+  // ── Dresses ───────────────────────────────────────────────────────────────
+  {
+    id: "prod-dress-1",
+    seller_id: "seller-boutique-1",
+    name: "Minimalist Black Pearled A-Line Fit & Flare Dress",
+    sku: "DRESS-SLIKK-01",
+    brand: "Slikk x Revolte",
+    brand_id: "brand-slikk",
+    brand_name: "Slikk x Revolte",
+    category: "Fashion & Clothing",
+    category_id: "cat-fashion",
+    subcategory_id: "dresses",
+    product_type_id: "dresses",
+    description: "Elegant fit & flare dress with subtle pearl trims and flattering A-line silhouette.",
+    mrp: 3000,
+    selling_price: 2908,
+    discount_price: 2908,
+    stock: 14,
+    image_url:
+      "https://images.unsplash.com/photo-1595777457583-95e059d581b8?auto=format&fit=crop&w=600&q=75",
+    images: [],
+    weight: "350g",
+    attributes: {
+      dress_type: "Fit & Flare",
+      length: "Midi",
+      size: ["XS", "S", "M", "L"],
+      color: ["Black"],
+      fabric: "Rayon",
+      pattern: "Solid",
+      sleeve_type: "Sleeveless",
+      occasion: "Party",
+      gender: "Women",
+    },
+    shop_name: "Ananya Designer Boutique",
+    distance_km: 1.2,
+    rating: 4.9,
+    review_count: 45,
+    is_open: true,
+    accepts_orders: true,
+    total_count: 1,
+  },
+  {
+    id: "prod-dress-2",
+    seller_id: "seller-boutique-1",
+    name: "Floral Print Tiered Cotton Maxi Dress",
+    sku: "DRESS-FOR-02",
+    brand: "Forever New",
+    brand_id: "brand-forevernew",
+    brand_name: "Forever New",
+    category: "Fashion & Clothing",
+    category_id: "cat-fashion",
+    subcategory_id: "dresses",
+    product_type_id: "dresses",
+    description: "Romantic floral print cotton maxi dress with gentle tiered skirt and ruffle sleeve.",
+    mrp: 2699,
+    selling_price: 1899,
+    discount_price: 1899,
+    stock: 16,
+    image_url:
+      "https://images.unsplash.com/photo-1572804013309-59a88b7e92f1?auto=format&fit=crop&w=600&q=75",
+    images: [],
+    weight: "400g",
+    attributes: {
+      dress_type: "Maxi Dress",
+      length: "Maxi",
+      size: ["S", "M", "L", "XL"],
+      color: ["Pink", "White"],
+      fabric: "Cotton",
+      pattern: "Floral",
+      sleeve_type: "Short Sleeve",
+      occasion: "Casual",
+      gender: "Women",
+    },
+    shop_name: "Ananya Designer Boutique",
+    distance_km: 1.2,
+    rating: 4.8,
+    review_count: 38,
+    is_open: true,
+    accepts_orders: true,
+    total_count: 1,
+  },
+  {
+    id: "prod-dress-3",
+    seller_id: "seller-fashion-1",
+    name: "Red Bodycon Cocktail Party Dress",
+    sku: "DRESS-ZARA-03",
+    brand: "Zara",
+    brand_id: "brand-zara",
+    brand_name: "Zara",
+    category: "Fashion & Clothing",
+    category_id: "cat-fashion",
+    subcategory_id: "dresses",
+    product_type_id: "dresses",
+    description: "Sleek crimson stretch cocktail mini dress tailored for evening celebrations.",
+    mrp: 3499,
+    selling_price: 2499,
+    discount_price: 2499,
+    stock: 8,
+    image_url:
+      "https://images.unsplash.com/photo-1566174053879-31528523f8ae?auto=format&fit=crop&w=600&q=75",
+    images: [],
+    weight: "300g",
+    attributes: {
+      dress_type: "Bodycon",
+      length: "Mini",
+      size: ["XS", "S", "M"],
+      color: ["Red"],
+      fabric: "Polyester Blend",
+      pattern: "Solid",
+      sleeve_type: "Sleeveless",
+      occasion: "Party",
+      gender: "Women",
+    },
+    shop_name: "Trendz Fashion Hub",
+    distance_km: 0.8,
+    rating: 4.8,
+    review_count: 29,
+    is_open: true,
+    accepts_orders: true,
+    total_count: 1,
+  },
+  {
+    id: "prod-dress-4",
+    seller_id: "seller-boutique-1",
+    name: "Blue Striped Shift Everyday Cotton Dress",
+    sku: "DRESS-FAB-04",
+    brand: "FabIndia",
+    brand_id: "brand-fabindia",
+    brand_name: "FabIndia",
+    category: "Fashion & Clothing",
+    category_id: "cat-fashion",
+    subcategory_id: "dresses",
+    product_type_id: "dresses",
+    description: "Comfortable breathable handloom cotton shift dress with yarn-dyed indigo stripes.",
+    mrp: 1999,
+    selling_price: 1499,
+    discount_price: 1499,
+    stock: 20,
+    image_url:
+      "https://images.unsplash.com/photo-1515372039744-b8f02a3ae446?auto=format&fit=crop&w=600&q=75",
+    images: [],
+    weight: "320g",
+    attributes: {
+      dress_type: "Shift Dress",
+      length: "Knee Length",
+      size: ["S", "M", "L", "XL"],
+      color: ["Blue", "White"],
+      fabric: "Cotton",
+      pattern: "Striped",
+      sleeve_type: "3/4 Sleeve",
+      occasion: "Casual",
+      gender: "Women",
+    },
+    shop_name: "Ananya Designer Boutique",
+    distance_km: 1.2,
+    rating: 4.7,
+    review_count: 21,
+    is_open: true,
+    accepts_orders: true,
+    total_count: 1,
+  },
+  {
+    id: "prod-dress-5",
+    seller_id: "seller-boutique-2",
+    name: "Handloom Block Print Cotton Ethnic Dress",
+    sku: "DRESS-VOG-05",
+    brand: "Vogue Handloom",
+    brand_id: "brand-vogue",
+    brand_name: "Vogue Handloom",
+    category: "Boutiques",
+    category_id: "cat-boutique",
+    subcategory_id: "dresses",
+    product_type_id: "dresses",
+    description: "Handcrafted traditional Dabu block print flared ethnic dress with tassels.",
+    mrp: 2499,
+    selling_price: 1699,
+    discount_price: 1699,
+    stock: 12,
+    image_url:
+      "https://images.unsplash.com/photo-1558769132-cb1aea458c5e?auto=format&fit=crop&w=600&q=75",
+    images: [],
+    weight: "380g",
+    attributes: {
+      dress_type: "A-Line",
+      length: "Midi",
+      size: ["S", "M", "L", "XL"],
+      color: ["Yellow", "Maroon"],
+      fabric: "Cotton",
+      pattern: "Printed",
+      sleeve_type: "3/4 Sleeve",
+      occasion: "Festive",
+      gender: "Women",
+    },
+    shop_name: "Vogue Handloom Silk Boutique",
+    distance_km: 0.9,
+    rating: 4.9,
+    review_count: 33,
+    is_open: true,
+    accepts_orders: true,
+    total_count: 1,
+  },
+  {
+    id: "prod-dress-6",
+    seller_id: "seller-fashion-1",
+    name: "Emerald Green Flared Wrap Evening Gown",
+    sku: "DRESS-HM-06",
+    brand: "H&M",
+    brand_id: "brand-hm",
+    brand_name: "H&M",
+    category: "Fashion & Clothing",
+    category_id: "cat-fashion",
+    subcategory_id: "dresses",
+    product_type_id: "dresses",
+    description: "Flowing emerald georgette wrap dress with cinched waist and full billowy sleeves.",
+    mrp: 4499,
+    selling_price: 3299,
+    discount_price: 3299,
+    stock: 6,
+    image_url:
+      "https://images.unsplash.com/photo-1539109136881-3be0616acf4b?auto=format&fit=crop&w=600&q=75",
+    images: [],
+    weight: "450g",
+    attributes: {
+      dress_type: "Wrap Dress",
+      length: "Maxi",
+      size: ["S", "M", "L"],
+      color: ["Green"],
+      fabric: "Georgette",
+      pattern: "Solid",
+      sleeve_type: "Full Sleeve",
+      occasion: "Evening",
+      gender: "Women",
+    },
+    shop_name: "Trendz Fashion Hub",
+    distance_km: 0.8,
+    rating: 4.9,
+    review_count: 19,
     is_open: true,
     accepts_orders: true,
     total_count: 1,

@@ -6,6 +6,7 @@ import { QtyStepper } from "@/components/qty-stepper";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchImportedShopById } from "@/lib/imported-shops";
 import { importedStorefront } from "@/modules/shopper/services/imported-storefront";
+import { getBrandCatalogProducts } from "@/lib/brand-products-catalog";
 import {
   parseImportedProductId,
   importedProductDetails,
@@ -38,7 +39,16 @@ export function ImportedProductDetail({
     staleTime: 300_000,
     retry: false,
   });
-  const catalog = shop.data ? importedStorefront(shop.data) : null;
+  const baseCatalog = shop.data ? importedStorefront(shop.data) : null;
+  const brandProducts = shop.data
+    ? getBrandCatalogProducts(`imported:${shop.data.id}`, shop.data.business_name, shop.data.category)
+    : [];
+  const catalog = baseCatalog
+    ? {
+        ...baseCatalog,
+        products: brandProducts.length > 0 ? brandProducts : baseCatalog.products,
+      }
+    : null;
   const product = catalog?.products.find((item) => item.id === productId);
   const search = { shopLat: lat, shopLng: lng };
   if (!identity || (shop.isSuccess && !product))
@@ -72,7 +82,7 @@ export function ImportedProductDetail({
       </AppShell>
     );
   if (!product || !catalog) return null;
-  const details = importedProductDetails(product.name, product.category);
+  const details = importedProductDetails(product.name, product.category, identity?.slug);
   const quantity = cart.lines.find((line) => line.productId === product.id)?.qty ?? 0;
   const add = () => {
     if (
@@ -108,18 +118,56 @@ export function ImportedProductDetail({
           />
           <div className="space-y-5">
             <div>
-              <p className="text-xs font-semibold text-primary">
-                {product.category.replace(/_/g, " ")} · Sample catalog item
-              </p>
-              <h1 className="mt-2 font-display text-3xl font-bold">{product.name}</h1>
-              <p className="mt-2 text-sm text-muted-foreground">Catalog for {catalog.store.name}</p>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="inline-block rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-bold text-primary">
+                  {product.category.replace(/_/g, " ")}
+                </span>
+                {details.sku && (
+                  <span className="text-xs font-mono text-muted-foreground">
+                    SKU: {details.sku}
+                  </span>
+                )}
+              </div>
+              <h1 className="mt-2 font-display text-2xl font-bold sm:text-3xl">{product.name}</h1>
+              <p className="mt-1 text-sm text-muted-foreground">Store: {catalog.store.name}</p>
             </div>
             <div>
-              <p className="text-2xl font-black">₹{product.price.toLocaleString("en-IN")}</p>
-              <p className="text-xs text-muted-foreground">Sample price · {product.unit}</p>
+              <div className="flex items-baseline gap-3">
+                <p className="text-3xl font-black text-foreground">₹{product.price.toLocaleString("en-IN")}</p>
+                {details.mrp && details.mrp > product.price && (
+                  <>
+                    <span className="text-base text-muted-foreground line-through">
+                      ₹{details.mrp.toLocaleString("en-IN")}
+                    </span>
+                    <span className="rounded-md bg-emerald-100 px-2 py-0.5 text-xs font-bold text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300">
+                      {Math.round(((details.mrp - product.price) / details.mrp) * 100)}% OFF
+                    </span>
+                  </>
+                )}
+              </div>
+              <p className="mt-1 text-xs text-muted-foreground">Price in INR · {product.unit}</p>
             </div>
+
+            {details.variants && details.variants.length > 0 && (
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Available Sizes / Options
+                </p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {details.variants.map((v) => (
+                    <span
+                      key={v}
+                      className="rounded-lg border border-border bg-background px-3 py-1.5 text-xs font-medium text-foreground shadow-sm"
+                    >
+                      {v}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <div>
-              <h2 className="font-bold">About this product</h2>
+              <h2 className="font-bold text-foreground">About this product</h2>
               <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
                 {details.description}
               </p>
@@ -129,25 +177,39 @@ export function ImportedProductDetail({
               max={product.stock}
               onAdd={add}
               onChange={(next) => cartStore.setQty(product.id, next)}
-              addClassName="rounded-xl bg-primary px-6 py-3 text-sm font-bold text-primary-foreground"
+              addClassName="rounded-xl bg-primary px-6 py-3 text-sm font-bold text-primary-foreground shadow-sm hover:bg-primary/90"
             />
             {quantity > 0 && (
-              <Link to="/cart" className="inline-block text-sm font-bold text-primary">
-                Review cart →
+              <Link to="/cart" className="inline-block text-sm font-bold text-primary hover:underline">
+                Review cart ({quantity} in basket) →
               </Link>
             )}
-            <p className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
-              Representative image and sample price. This is not the shop’s confirmed inventory.
-              Test checkout does not create a real fulfillment order or delivery.
+            <p className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-300">
+              Verified brand catalogue reference. Showroom stock and exact batch availability can be confirmed directly with this branch.
             </p>
           </div>
         </section>
+
+        {details.specifications && Object.keys(details.specifications).length > 0 && (
+          <section className="rounded-2xl border border-border bg-card p-5">
+            <h2 className="font-bold text-foreground">Product Specifications</h2>
+            <dl className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {Object.entries(details.specifications).map(([key, value]) => (
+                <div key={key} className="rounded-xl bg-background p-3.5 border border-border/50">
+                  <dt className="text-xs font-medium text-muted-foreground">{key}</dt>
+                  <dd className="mt-1 text-sm font-semibold text-foreground">{value}</dd>
+                </div>
+              ))}
+            </dl>
+          </section>
+        )}
+
         <section className="rounded-2xl border border-border bg-card p-5">
-          <h2 className="font-bold">Product information to confirm with the shop</h2>
+          <h2 className="font-bold text-foreground">Product information to confirm with the shop</h2>
           <dl className="mt-3 grid gap-3 sm:grid-cols-2">
             {details.checks.map((label) => (
-              <div key={label} className="rounded-xl bg-background p-3">
-                <dt className="text-sm font-semibold">{label}</dt>
+              <div key={label} className="rounded-xl bg-background p-3 border border-border/40">
+                <dt className="text-sm font-semibold text-foreground">{label}</dt>
                 <dd className="mt-1 text-xs text-muted-foreground">
                   Not provided by this business yet
                 </dd>

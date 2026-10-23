@@ -7,6 +7,7 @@ import type { ShopCardData } from "@/modules/shopper/components/shop-card";
 import { isValidCoordinate } from "@/lib/geo";
 import { runCatalogRpcWithTimeout } from "@/lib/catalog-rpc";
 import { getImportedCatalogItems } from "@/modules/shopper/services/imported-demo-cart";
+import { getBrandStoreById } from "@/lib/brand-stores-registry";
 
 type Rpc = (name: string, args: Record<string, unknown>) => Parameters<typeof runCatalogRpcWithTimeout>[0];
 
@@ -19,10 +20,16 @@ export async function fetchImportedShopById(rpc: Rpc, id: string, lat?: number, 
   if (lat == null || lng == null || !isValidCoordinate(lat, lng)) {
     throw new Error("Open this shop from its nearby listing or map pin to view its details.");
   }
-  const shops = await fetchNearbyImportedShops(rpc, { lat, lng, radiusKm: 0.1 });
-  const selected = shops.find((shop) => `imported:${shop.id}` === id);
-  if (!selected) throw new Error("This shop listing could not be found. Return to the map and try again.");
-  return selected;
+  try {
+    const shops = await fetchNearbyImportedShops(rpc, { lat, lng, radiusKm: 0.1 });
+    const selected = shops.find((shop) => `imported:${shop.id}` === id || shop.id === id);
+    if (selected) return selected;
+  } catch (err) {
+    console.warn("[fetchImportedShopById notice]", err);
+  }
+  const fallback = getBrandStoreById(id);
+  if (fallback) return fallback;
+  throw new Error("This shop listing could not be found. Return to the map and try again.");
 }
 
 export async function fetchNearbyImportedShops(rpc: Rpc, input: {

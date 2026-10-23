@@ -3,6 +3,7 @@ import { Link } from "@tanstack/react-router";
 import { Star, ChevronRight, ChevronLeft, CheckCircle2, Plus } from "lucide-react";
 import type { MerchandisingProduct } from "@/lib/merchandising";
 import { cartStore } from "@/modules/shopper/services/cart-store";
+import { cartConflictManager } from "@/modules/shopper/services/cart-conflict";
 import { flyProductToCart } from "@/lib/fly-to-cart";
 import { resolveImageUrl } from "@/lib/image-utils";
 
@@ -406,11 +407,11 @@ export function Swiggy99StoreSection({ products = [] }: { products?: Merchandisi
         seller_id: p.seller_id ?? "s1",
         name: p.name,
         selling_price: Number(p.price ?? p.selling_price ?? 99),
-        mrp: Number(p.mrp ?? Math.round(Number(p.price ?? p.selling_price ?? 99) * 1.25)),
+        mrp: (p.mrp != null && Number(p.mrp) > Number(p.price ?? p.selling_price ?? 99)) ? Number(p.mrp) : null,
         category: p.category ?? "Local Item",
         image_url: p.imageUrl ?? p.image_url,
         shop_name: p.shop_name ?? "Verified Shop",
-        average_rating: p.average_rating ?? 4.8,
+        average_rating: (p.average_rating != null && Number(p.average_rating) > 0) ? Number(p.average_rating) : null,
       }));
     }
     return localBudgetItems;
@@ -482,7 +483,7 @@ export function Swiggy99StoreSection({ products = [] }: { products?: Merchandisi
         >
           {itemsToDisplay.map((item: any) => {
             const sellingPrice = Number(item.selling_price);
-            const mrp = Number(item.mrp);
+            const mrp = item.mrp != null ? Number(item.mrp) : null;
 
             return (
               <div
@@ -506,14 +507,15 @@ export function Swiggy99StoreSection({ products = [] }: { products?: Merchandisi
                   <button
                     type="button"
                     onClick={() => {
-                      flyProductToCart(item.id);
-                      cartStore.add(item.seller_id, item.shop_name ?? "Local Store", {
+                      const added = cartConflictManager.addWithConflictCheck(item.seller_id, item.shop_name ?? "Local Store", {
                         id: item.id,
                         name: item.name,
                         unit: item.category ?? "Item",
                         price: sellingPrice,
                         stock: 20,
                       });
+                      if (!added) return;
+                      flyProductToCart(item.id);
                     }}
                     className="absolute right-1.5 bottom-1.5 flex h-7 w-7 items-center justify-center rounded-lg bg-white shadow-md text-[#981495] hover:bg-[#981495] hover:text-white transition-colors active:scale-95"
                     title="Add item"
@@ -530,7 +532,7 @@ export function Swiggy99StoreSection({ products = [] }: { products?: Merchandisi
 
                   {/* Price row */}
                   <div className="flex items-center gap-1.5">
-                    {mrp > sellingPrice && (
+                    {mrp && mrp > sellingPrice && (
                       <span className="text-[10px] text-slate-400 line-through">₹{mrp}</span>
                     )}
                     <span className="rounded-md bg-[#ffc200] px-1.5 py-0.5 text-[11px] font-black text-slate-900">
@@ -540,10 +542,12 @@ export function Swiggy99StoreSection({ products = [] }: { products?: Merchandisi
 
                   {/* Rating + Merchant line */}
                   <div className="flex items-center justify-between text-[10px] text-slate-500 pt-0.5">
-                    <span className="flex items-center gap-0.5 font-bold text-emerald-700 bg-emerald-50 px-1 py-0.5 rounded-xs">
-                      <Star className="h-2.5 w-2.5 fill-emerald-700 text-emerald-700" />
-                      {(item.average_rating ?? 4.7).toFixed(1)}
-                    </span>
+                    {item.average_rating != null && Number(item.average_rating) > 0 ? (
+                      <span className="flex items-center gap-0.5 font-bold text-emerald-700 bg-emerald-50 px-1 py-0.5 rounded-xs">
+                        <Star className="h-2.5 w-2.5 fill-emerald-700 text-emerald-700" />
+                        {Number(item.average_rating).toFixed(1)}
+                      </span>
+                    ) : <span />}
                     <span className="truncate max-w-[70px] text-[10px] text-slate-400">
                       {item.shop_name}
                     </span>

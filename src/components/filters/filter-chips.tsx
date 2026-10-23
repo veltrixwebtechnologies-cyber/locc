@@ -159,44 +159,30 @@ export function FilterChips({
         </Badge>
       )}
 
-      {/* Distance Radius Chip */}
-      {filterState.maxDistanceKm !== undefined && (
-        <Badge
-          variant="secondary"
-          className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium bg-emerald-500/10 text-emerald-800 dark:text-emerald-300 border border-emerald-500/20"
-        >
-          <span>Within {filterState.maxDistanceKm} km</span>
-          <button
-            type="button"
-            onClick={() => onRemoveBoolean("maxDistanceKm" as any)}
-            className="hover:text-destructive transition-colors"
-          >
-            <X className="h-3 w-3 stroke-[2.5]" />
-          </button>
-        </Badge>
-      )}
-
       {/* Attribute Chips */}
       {Object.entries(filterState.attributes).map(([attrKey, values]) =>
-        values.map((v) => (
-          <Badge
-            key={`attr-${attrKey}-${v}`}
-            variant="secondary"
-            className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium bg-slate-100 dark:bg-slate-800 text-foreground border border-border"
-          >
-            <span className="capitalize">
-              {attrKey}: {v}
-            </span>
-            <button
-              type="button"
-              onClick={() => onRemoveAttribute(attrKey, v)}
-              className="hover:text-destructive transition-colors"
-              title={`Remove ${attrKey} filter ${v}`}
+        values.map((v) => {
+          const readableKey = attrKey.replace(/_/g, " ");
+          return (
+            <Badge
+              key={`attr-${attrKey}-${v}`}
+              variant="secondary"
+              className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium bg-slate-100 dark:bg-slate-800 text-foreground border border-border"
             >
-              <X className="h-3 w-3 stroke-[2.5]" />
-            </button>
-          </Badge>
-        )),
+              <span className="capitalize">
+                {readableKey}: {v}
+              </span>
+              <button
+                type="button"
+                onClick={() => onRemoveAttribute(attrKey, v)}
+                className="hover:text-destructive transition-colors"
+                title={`Remove ${readableKey} filter ${v}`}
+              >
+                <X className="h-3 w-3 stroke-[2.5]" />
+              </button>
+            </Badge>
+          );
+        }),
       )}
 
       {/* Clear All Button */}

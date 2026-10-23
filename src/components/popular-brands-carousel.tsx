@@ -1,107 +1,24 @@
 import { Link } from "@tanstack/react-router";
-import { ChevronLeft, ChevronRight } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
-
-const EXTRA_BRANDS = [
-  {
-    id: "peter-england",
-    name: "Peter England",
-    logo: "PETER ENGLAND",
-    logoSrc: "/assets/brand-peter-england.png",
-    className: "text-[11px] font-extrabold tracking-tight",
-  },
-  {
-    id: "raymond",
-    name: "Raymond",
-    logo: "raymond",
-    logoSrc: "/assets/brand-raymond.png",
-    className: "font-serif text-xl italic text-[#e21d2f]",
-  },
-  {
-    id: "max",
-    name: "max",
-    logo: "max",
-    logoSrc: "/assets/brand-max.png",
-    className: "text-3xl font-black lowercase text-[#2452a4]",
-  },
-  {
-    id: "trends",
-    name: "TRENDS",
-    logo: "TRENDS",
-    logoSrc: "/assets/brand-trends.png",
-    className: "text-lg font-semibold tracking-tight text-[#58616b]",
-  },
-  {
-    id: "allen-solly",
-    name: "Allen Solly",
-    logo: "Allen Solly",
-    logoSrc: "/assets/brand-allen-solly.png",
-    className: "font-serif text-sm font-semibold text-[#18243a]",
-  },
-  {
-    id: "louis-philippe",
-    name: "LOUIS PHILIPPE",
-    logo: "LOUIS PHILIPPE",
-    logoSrc: "/assets/brand-louis-philippe.png",
-    className: "text-[9px] font-black tracking-[0.08em] text-[#18243a]",
-  },
-  {
-    id: "indian-terrain",
-    name: "INDIAN TERRAIN",
-    logo: "INDIAN\nTERRAIN",
-    logoSrc: "/assets/brand-indian-terrain.png",
-    className: "whitespace-pre-line text-xs font-serif font-bold leading-none text-[#3b465c]",
-  },
-  {
-    id: "jockey",
-    name: "JOCKEY",
-    logo: "JOCKEY",
-    logoSrc: "/assets/brand-jockey.png",
-    className: "text-lg font-black tracking-tight text-[#172033]",
-  },
-  {
-    id: "bata",
-    name: "Bata",
-    logo: "Bata",
-    logoSrc: "/assets/brand-bata.png",
-    className: "font-serif text-2xl italic text-[#df1d2d]",
-  },
-  {
-    id: "woodland",
-    name: "WOODLAND",
-    logo: "WOODLAND",
-    logoSrc: "/assets/brand-woodland.png",
-    className: "text-xs font-black tracking-tight text-[#27804d]",
-  },
-  {
-    id: "kalyan-jewellers",
-    name: "KALYAN JEWELLERS",
-    logo: "KALYAN\nJEWELLERS",
-    logoSrc: "/assets/brand-kalyan.png",
-    className: "whitespace-pre-line text-[10px] font-black leading-none text-[#d59b00]",
-  },
-  {
-    id: "jos-alukkas",
-    name: "JOS ALUKKAS",
-    logo: "JOS ALUKKAS",
-    logoSrc: "/assets/brand-jos-alukkas.png",
-    className: "text-[10px] font-bold tracking-tight text-[#18243a]",
-  },
-  {
-    id: "joyalukkas",
-    name: "Joyalukkas",
-    logo: "Joyalukkas",
-    logoSrc: "/assets/brand-joyalukkas.png",
-    className: "font-serif text-lg font-semibold text-[#d9252a]",
-  },
-];
-
-const BRAND_ITEMS = EXTRA_BRANDS;
+import { ChevronLeft, ChevronRight, MapPin } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useDeliveryLocation } from "@/lib/location-store";
+import { POPULAR_BRANDS, getNearestStoreForBrand } from "@/lib/brand-stores-registry";
 
 export function PopularBrandsCarousel() {
   const railRef = useRef<HTMLDivElement>(null);
   const autoplayPausedRef = useRef(false);
   const [activePage, setActivePage] = useState(0);
+  const [deliveryLoc] = useDeliveryLocation();
+
+  const brandItemsWithNearest = useMemo(() => {
+    return POPULAR_BRANDS.map((brand) => {
+      const nearest = getNearestStoreForBrand(brand.id, deliveryLoc?.lat, deliveryLoc?.lng);
+      return {
+        ...brand,
+        nearest,
+      };
+    });
+  }, [deliveryLoc?.lat, deliveryLoc?.lng]);
 
   const updatePage = () => {
     const rail = railRef.current;
@@ -142,7 +59,11 @@ export function PopularBrandsCarousel() {
           <h2 className="font-display text-lg font-black text-[#211735] sm:text-2xl">
             Popular Brands
           </h2>
-          <p className="text-[10px] text-[#453b67] sm:text-xs">Top Brands Now on LocalShore</p>
+          <p className="text-[10px] text-[#453b67] sm:text-xs">
+            {deliveryLoc?.lat != null && deliveryLoc?.lng != null
+              ? "Top Brands Now on LocalShore · Tap any brand to open nearest branch"
+              : "Top Brands Now on LocalShore · Select location to see nearest branch distance"}
+          </p>
         </div>
         <Link
           to="/brands"
@@ -157,7 +78,7 @@ export function PopularBrandsCarousel() {
           type="button"
           onClick={() => move(-(railRef.current?.clientWidth ?? 420) * 0.82)}
           aria-label="Previous brands"
-          className="absolute left-0 top-[38%] z-10 grid h-7 w-7 -translate-y-1/2 place-items-center rounded-full bg-white text-[#211735] shadow-[0_3px_12px_rgba(33,23,53,0.16)] transition hover:scale-105 focus:outline-none focus:ring-2 focus:ring-[#981495]/30 sm:top-1/2 sm:h-10 sm:w-10"
+          className="absolute left-0 top-[38%] z-10 grid h-7 w-7 -translate-y-1/2 place-items-center rounded-full bg-white text-[#211735] shadow-[0_3px_12px_rgba(33,23,53,0.16)] transition hover:scale-105 focus:outline-none focus:ring-2 focus:ring-[#981495]/30 sm:top-1/2 sm:h-10 sm:w-10 cursor-pointer"
         >
           <ChevronLeft className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
         </button>
@@ -178,40 +99,66 @@ export function PopularBrandsCarousel() {
               autoplayPausedRef.current = false;
             }, 1200);
           }}
-          className="flex gap-2 overflow-x-auto px-9 py-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:gap-4 sm:px-14 lg:gap-4"
+          className="flex gap-2.5 overflow-x-auto px-9 py-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:gap-4 sm:px-14 lg:gap-4"
         >
-          {BRAND_ITEMS.map((brand) => (
-            <div
-              key={brand.id}
-              className="flex min-w-[calc((100vw-5.5rem)/3)] snap-start shrink-0 flex-col items-center gap-1 sm:min-w-[164px] lg:min-w-[180px]"
-            >
-              <Link
-                to="/brands"
-                className="flex h-[60px] w-full items-center justify-center rounded-lg border border-white/80 bg-white px-2 text-center shadow-[0_2px_8px_rgba(33,23,53,0.06)] transition hover:-translate-y-0.5 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-[#981495]/30 sm:h-[86px] sm:rounded-xl sm:px-4 lg:h-[96px]"
+          {brandItemsWithNearest.map((brand) => {
+            const nearestStore = brand.nearest.store;
+            const hasDistance = brand.nearest.hasUserLocation && brand.nearest.distanceKm != null;
+            const distanceDisplay = hasDistance
+              ? brand.nearest.distanceKm! < 1
+                ? `${Math.round(brand.nearest.distanceKm! * 1000)}m`
+                : `${brand.nearest.distanceKm!.toFixed(1)} km`
+              : null;
+            const areaName = nearestStore.name.includes(" - ")
+              ? nearestStore.name.split(" - ")[1].split(",")[0].trim()
+              : nearestStore.city;
+
+            return (
+              <div
+                key={brand.id}
+                className="flex min-w-[calc((100vw-5.5rem)/3)] snap-start shrink-0 flex-col items-center gap-1.5 sm:min-w-[164px] lg:min-w-[180px]"
               >
-                <img
-                  src={brand.logoSrc}
-                  alt={`${brand.name} logo`}
-                  className="max-h-10 max-w-full object-contain sm:max-h-14"
-                />
-              </Link>
-              <span className="truncate text-center text-[8px] font-semibold uppercase text-[#453b67] sm:hidden">
-                {brand.name}
-              </span>
-            </div>
-          ))}
+                <Link
+                  to={brand.nearest.href}
+                  title={
+                    hasDistance
+                      ? `Open nearest ${brand.name}: ${nearestStore.name} (${distanceDisplay})`
+                      : `Open ${brand.name}: ${nearestStore.name}`
+                  }
+                  className="group relative flex h-[60px] w-full flex-col items-center justify-center rounded-lg border border-white/80 bg-white px-2 text-center shadow-[0_2px_8px_rgba(33,23,53,0.06)] transition hover:-translate-y-0.5 hover:shadow-md hover:border-[#981495]/40 focus:outline-none focus:ring-2 focus:ring-[#981495]/30 sm:h-[86px] sm:rounded-xl sm:px-4 lg:h-[96px]"
+                >
+                  <img
+                    src={brand.logoSrc}
+                    alt={`${brand.name} logo`}
+                    className="max-h-10 max-w-full object-contain transition-transform group-hover:scale-105 sm:max-h-14"
+                  />
+                </Link>
+                <div className="flex w-full items-center justify-center gap-1 text-center">
+                  <span className="truncate text-[9px] font-semibold text-[#3b2a59] sm:text-[11px] sm:font-bold">
+                    {brand.name}
+                  </span>
+                </div>
+                <div className="flex items-center gap-0.5 text-[8px] font-medium text-[#7a649b] sm:text-[10px]">
+                  <MapPin className="h-2.5 w-2.5 text-[#981495] shrink-0 sm:h-3 sm:w-3" />
+                  <span className="truncate max-w-[120px] sm:max-w-[140px]">
+                    {hasDistance ? `${areaName} · ${distanceDisplay}` : areaName}
+                  </span>
+                </div>
+              </div>
+            );
+          })}
         </div>
         <button
           type="button"
           onClick={() => move((railRef.current?.clientWidth ?? 420) * 0.82)}
           aria-label="Next brands"
-          className="absolute right-0 top-[38%] z-10 grid h-7 w-7 -translate-y-1/2 place-items-center rounded-full bg-white text-[#211735] shadow-[0_3px_12px_rgba(33,23,53,0.16)] transition hover:scale-105 focus:outline-none focus:ring-2 focus:ring-[#981495]/30 sm:top-1/2 sm:h-10 sm:w-10"
+          className="absolute right-0 top-[38%] z-10 grid h-7 w-7 -translate-y-1/2 place-items-center rounded-full bg-white text-[#211735] shadow-[0_3px_12px_rgba(33,23,53,0.16)] transition hover:scale-105 focus:outline-none focus:ring-2 focus:ring-[#981495]/30 sm:top-1/2 sm:h-10 sm:w-10 cursor-pointer"
         >
           <ChevronRight className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
         </button>
       </div>
       <div
-        className="mt-2 flex justify-center gap-1.5 sm:hidden"
+        className="mt-2.5 flex justify-center gap-1.5 sm:hidden"
         aria-label="Brand carousel position"
       >
         {Array.from({ length: 5 }).map((_, index) => (
@@ -224,3 +171,4 @@ export function PopularBrandsCarousel() {
     </section>
   );
 }
+

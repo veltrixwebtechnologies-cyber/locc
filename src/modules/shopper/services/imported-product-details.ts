@@ -113,7 +113,37 @@ const descriptions: Record<string, string> = {
     "Artistic cardstock greeting card with gold foil embossing, thoughtful message inside, and matching luxury envelope.",
 };
 
-export function importedProductDetails(name: string, category: string) {
+import { BRAND_PRODUCTS_CATALOG } from "@/lib/brand-products-catalog";
+
+export interface ImportedProductDetailsResult {
+  description: string;
+  checks: string[];
+  mrp?: number;
+  sku?: string;
+  variants?: string[];
+  specifications?: Record<string, string>;
+}
+
+export function importedProductDetails(name: string, category: string, slug?: string): ImportedProductDetailsResult {
+  const cleanName = name.toLowerCase().trim();
+  const brandProduct = BRAND_PRODUCTS_CATALOG.find(
+    (p) =>
+      (slug && p.slug === slug) ||
+      p.name.toLowerCase() === cleanName ||
+      p.slug.toLowerCase() === cleanName,
+  );
+
+  if (brandProduct) {
+    return {
+      description: brandProduct.description,
+      checks: brandProduct.checks,
+      mrp: brandProduct.mrp,
+      sku: brandProduct.sku,
+      variants: brandProduct.variants,
+      specifications: brandProduct.specifications,
+    };
+  }
+
   const bakery = /bakery|baker/i.test(category);
   const furniture = /furniture/i.test(category);
   const electronics = /electro/i.test(category);
@@ -121,7 +151,7 @@ export function importedProductDetails(name: string, category: string) {
   const gifts = /gift/i.test(category);
   return {
     description:
-      descriptions[name.toLowerCase()] ??
+      descriptions[cleanName] ??
       `${name} is a representative ${category.replace(/_/g, " ")} catalog item. Ask the shop about the available variants and the exact product specifications.`,
     checks: bakery
       ? [

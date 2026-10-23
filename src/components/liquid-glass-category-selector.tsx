@@ -489,7 +489,7 @@ export function LiquidGlassCategorySelector({
               const targetLink = cat.to
                 ? { to: cat.to, search: {} }
                 : {
-                    to: currentPath.startsWith("/search") ? "/search" : "/",
+                    to: "/search",
                     search:
                       cat.searchCategory || cat.id !== "all"
                         ? { category: cat.searchCategory || cat.id }

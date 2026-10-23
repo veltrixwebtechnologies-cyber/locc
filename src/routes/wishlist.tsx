@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { AppShell } from "@/components/app-shell";
 import { useAuth } from "@/lib/auth-store";
 import { cartStore } from "@/modules/shopper/services/cart-store";
+import { cartConflictManager } from "@/modules/shopper/services/cart-conflict";
 import {
   resolveProductImageUrl,
   useToggleWishlist,
@@ -143,7 +144,7 @@ function WishlistRow({ product }: { product: MerchandisingProduct }) {
           title="Move to cart"
           aria-label={`Move ${product.name} to cart`}
           onClick={async () => {
-            cartStore.add(
+            const added = cartConflictManager.addWithConflictCheck(
               product.seller_id || APPROVED_STORE.id,
               product.shop_name || APPROVED_STORE.name,
               {
@@ -154,6 +155,7 @@ function WishlistRow({ product }: { product: MerchandisingProduct }) {
                 stock: product.stock,
               },
             );
+            if (!added) return;
             try {
               await remove();
               toast.success("Moved to cart");

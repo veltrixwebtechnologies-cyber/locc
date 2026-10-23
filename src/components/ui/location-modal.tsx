@@ -109,19 +109,22 @@ export function LocationModal({ isOpen, onClose }: LocationModalProps) {
     setIsLocating(true);
     setSearchError("");
     try {
-      // silent=false forces a fresh request on every user retry; commit=false
-      // keeps the result as a preview until the user confirms it.
-      // Keep the live result as a preview. Desktop browsers often return a
-      // coarse Wi-Fi fix; showing it lets the customer adjust the entrance on
-      // the map instead of receiving a misleading timeout/fetch failure.
+      // Must require low accuracy (precise device fix <= MAX_CUSTOMER_DELIVERY_ACCURACY_M)
       const detected = await detectCurrentGPSLocation({
         silent: false,
         commit: false,
-        allowApproximate: true,
+        allowApproximate: false,
       });
+      const accuracy = detected.accuracy ?? 0;
+      if (accuracy > MAX_CUSTOMER_DELIVERY_ACCURACY_M) {
+        setPendingGPSLocation(detected);
+        setMapOrigin("gps");
+        toast.error("GPS reading is approximate. Please adjust and confirm your pin on the map.");
+        openMap("gps");
+        return;
+      }
       setPendingGPSLocation(detected);
       setMapOrigin("gps");
-      const accuracy = detected.accuracy ?? 0;
       toast.success("Current location detected", {
         description: `${detected.area || detected.label} (±${Math.round(accuracy)}m). Click 'Confirm current location' below to save.`,
       });
@@ -140,6 +143,18 @@ export function LocationModal({ isOpen, onClose }: LocationModalProps) {
     const candidate = pendingGPSLocation ?? activeLocation;
     if (!candidate) {
       onClose();
+      return;
+    }
+    // High accuracy (low uncertainty radius <= 100m) is required for delivery destination
+    if (
+      candidate.isGPS &&
+      typeof candidate.accuracy === "number" &&
+      candidate.accuracy > MAX_CUSTOMER_DELIVERY_ACCURACY_M
+    ) {
+      toast.error(
+        `GPS accuracy is ±${Math.round(candidate.accuracy)}m. Low accuracy radius (within ${MAX_CUSTOMER_DELIVERY_ACCURACY_M}m) is required. Please adjust your pin on the map.`
+      );
+      openMap("gps");
       return;
     }
     commitDetectedLocation(candidate);
@@ -363,11 +378,17 @@ export function LocationModal({ isOpen, onClose }: LocationModalProps) {
                         {selectedLocation.label}
                       </p>
                       {typeof selectedLocation.accuracy === "number" && (
-                        <p className="text-[11px] font-medium text-slate-500 mt-1">
+                        <p
+                          className={`text-[11px] font-medium mt-1 ${
+                            selectedLocation.accuracy <= MAX_CUSTOMER_DELIVERY_ACCURACY_M
+                              ? "text-slate-500"
+                              : "text-amber-700 font-bold"
+                          }`}
+                        >
                           GPS Accuracy: ±{Math.round(selectedLocation.accuracy)}m
                           {selectedLocation.accuracy <= MAX_CUSTOMER_DELIVERY_ACCURACY_M
                             ? " · High accuracy"
-                            : " · Approximate area"}
+                            : " · Approximate area (pin adjustment required)"}
                         </p>
                       )}
                     </div>
@@ -396,14 +417,27 @@ export function LocationModal({ isOpen, onClose }: LocationModalProps) {
               )}
 
               {selectedLocation && !isLocating && (
-                <button
-                  type="button"
-                  onClick={handleConfirmSelectedLocation}
-                  className="min-h-12 w-full flex items-center justify-center gap-2 rounded-xl bg-[#981495] px-4 py-3 text-sm font-black text-white shadow-[0_10px_24px_rgba(152,20,149,0.22)] transition hover:bg-[#7d1079] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#981495] focus-visible:ring-offset-2 active:translate-y-px"
-                >
-                  <Check className="h-4 w-4 stroke-[3]" />
-                  {pendingGPSLocation ? "Confirm current location" : "Confirm selected address"}
-                </button>
+                selectedLocation.isGPS &&
+                typeof selectedLocation.accuracy === "number" &&
+                selectedLocation.accuracy > MAX_CUSTOMER_DELIVERY_ACCURACY_M ? (
+                  <button
+                    type="button"
+                    onClick={() => openMap("gps")}
+                    className="min-h-12 w-full flex items-center justify-center gap-2 rounded-xl bg-amber-600 px-4 py-3 text-sm font-black text-white shadow-md transition hover:bg-amber-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 active:translate-y-px"
+                  >
+                    <Map className="h-4 w-4 stroke-[2.5]" />
+                    Adjust pin on map (Accuracy ±{Math.round(selectedLocation.accuracy)}m is too broad)
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleConfirmSelectedLocation}
+                    className="min-h-12 w-full flex items-center justify-center gap-2 rounded-xl bg-[#981495] px-4 py-3 text-sm font-black text-white shadow-[0_10px_24px_rgba(152,20,149,0.22)] transition hover:bg-[#7d1079] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#981495] focus-visible:ring-offset-2 active:translate-y-px"
+                  >
+                    <Check className="h-4 w-4 stroke-[3]" />
+                    {pendingGPSLocation ? "Confirm current location" : "Confirm selected address"}
+                  </button>
+                )
               )}
 
               {/* DETECTING LOCATION LOADING STATE */}
