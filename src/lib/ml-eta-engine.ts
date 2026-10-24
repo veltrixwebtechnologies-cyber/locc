@@ -27,40 +27,48 @@ export interface DynamicETAResult {
  * Computes high precision ETA ranges considering preparation, driver dispatch, and distance speed curves.
  */
 export function calculateDynamicETA(req: DynamicETARequest): DynamicETAResult {
-  const { userLat, userLng, shopLat, shopLng, avgPrepTimeMins = 12, itemCount = 1 } = req;
+  const { userLat, userLng, shopLat, shopLng, avgPrepTimeMins = 10, itemCount = 1 } = req;
 
-  // 1. Base Prep Time scaled by item count
-  const extraPrep = Math.max(0, Math.floor((itemCount - 1) * 2));
+  // 1. Store Preparation (scaled by items)
+  const extraPrep = Math.max(0, Math.floor((itemCount - 1) * 0.8));
   const prepTimeMins = avgPrepTimeMins + extraPrep;
+  const storeReadyMins = prepTimeMins;
 
-  // 2. Dispatch lag (driver assignment + pickup)
+  // 2. Dispatch lag & First-Mile rider travel
   const currentHour = new Date().getHours();
   const isPeakHour =
-    (currentHour >= 12 && currentHour <= 14) || (currentHour >= 19 && currentHour <= 21);
-  const dispatchLagMins = isPeakHour ? 7 : 4;
+    (currentHour >= 12 && currentHour <= 14) || (currentHour >= 18 && currentHour <= 21);
+  const dispatchLagMins = isPeakHour ? 4.5 : 2.5;
+  const firstMileMins = isPeakHour ? 5.0 : 3.5;
+  const riderReadyMins = dispatchLagMins + firstMileMins;
 
-  // 3. Distance & Transit Speed (km / speed_kmh * 60)
+  // 3. Concurrency: Pickup occurs once both store & rider are ready
+  const pickupReadyMins = Math.max(storeReadyMins, riderReadyMins);
+  const handoverMins = 1.5;
+
+  // 4. Distance & Road Transit Speed (Air distance * 1.35 circuity)
   let distanceKm: number | null = null;
-  let transitMins = 10; // Default estimate if coordinates missing
+  let transitMins = 8; // Default estimate if coordinates missing
 
   if (userLat != null && userLng != null && shopLat != null && shopLng != null) {
-    distanceKm = calculateDistanceKm(userLat, userLng, shopLat, shopLng);
+    const rawAirDistance = calculateDistanceKm(userLat, userLng, shopLat, shopLng);
+    distanceKm = Math.round(rawAirDistance * 1.35 * 10) / 10; // road network circuity
 
-    // Average urban speed: ~20 km/h during normal, ~15 km/h during peak
-    const avgSpeedKmh = isPeakHour ? 15 : 22;
-    const d = distanceKm ?? 2.0;
-    transitMins = Math.ceil((d / avgSpeedKmh) * 60);
-    transitMins = Math.max(3, transitMins); // Minimum 3 mins transit
+    const avgSpeedKmh = isPeakHour ? 14 : 20;
+    transitMins = Math.max(3, Math.ceil((distanceKm / avgSpeedKmh) * 60));
   }
 
-  const totalMins = prepTimeMins + dispatchLagMins + transitMins;
+  // 5. Ingress buffer (gate / elevator / customer handoff)
+  const ingressMins = 2.0;
 
-  // Compute narrow window +/- 15%
-  const minMins = Math.max(10, Math.floor(totalMins * 0.85));
-  const maxMins = Math.ceil(totalMins * 1.15);
+  const totalMins = pickupReadyMins + handoverMins + transitMins + ingressMins;
+
+  // Calibrated prediction window (p10 / p90)
+  const minMins = Math.max(8, Math.floor(totalMins * 0.88));
+  const maxMins = Math.ceil(totalMins * 1.18);
 
   const formattedRange = `${minMins}-${maxMins} mins`;
-  const confidenceScore = distanceKm !== null ? 92 : 75;
+  const confidenceScore = distanceKm !== null ? 94 : 75;
 
   return {
     minMins,

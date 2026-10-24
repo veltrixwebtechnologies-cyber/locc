@@ -168,13 +168,65 @@ function StoreRoutePage() {
     : <StorePage />;
 }
 
+function StoreLoadingAnimation({ storeName }: { storeName?: string }) {
+  return (
+    <div className="min-h-[80vh] bg-[#f8f6fa] py-8 px-4 sm:px-6 flex flex-col justify-center items-center">
+      <div className="w-full max-w-4xl">
+        <div className="rounded-3xl border border-primary/10 bg-white p-8 sm:p-12 text-center shadow-lg shadow-primary/5">
+          <LottieLoading
+            size="xl"
+            message={storeName ? `Opening ${storeName}...` : "Opening Neighborhood Shop..."}
+            subtext="Connecting to live inventory, local pricing & fresh delivery slots"
+          />
+        </div>
+
+        {/* Shimmer skeleton storefront preview */}
+        <div className="mt-8 space-y-6 animate-pulse opacity-60">
+          <div className="h-40 w-full rounded-3xl bg-slate-200 dark:bg-slate-800" />
+          <div className="flex items-center gap-4">
+            <div className="h-16 w-16 rounded-2xl bg-slate-200 dark:bg-slate-800" />
+            <div className="space-y-2 flex-1">
+              <div className="h-5 w-48 rounded-lg bg-slate-200 dark:bg-slate-800" />
+              <div className="h-3 w-32 rounded bg-slate-200/70 dark:bg-slate-800/70" />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-2">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="h-52 rounded-2xl bg-white border border-slate-200/80 p-3 space-y-3">
+                <div className="h-28 rounded-xl bg-slate-200 dark:bg-slate-800" />
+                <div className="h-4 w-3/4 rounded bg-slate-200 dark:bg-slate-800" />
+                <div className="h-4 w-1/3 rounded bg-slate-200/70 dark:bg-slate-800/70" />
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function ImportedStorePage({ shopId, lat, lng }: { shopId: string; lat?: number; lng?: number }) {
   const shop = useQuery({
     queryKey: ["imported-shop-detail", shopId, lat, lng],
     queryFn: () => fetchImportedShopById((name, args) => (supabase as any).rpc(name, args), shopId, lat, lng),
     staleTime: 300_000, retry: false,
   });
-  return <AppShell hideFloatingCart>{shop.isPending ? <div className="grid min-h-64 place-items-center" role="status">Loading shop…</div> : shop.isError ? <div className="p-8 text-center" role="alert"><p>{shop.error.message}</p><button onClick={() => void shop.refetch()} className="mt-4 rounded-xl bg-primary px-5 py-3 text-primary-foreground">Try again</button></div> : <StorePage catalog={importedStorefront(shop.data)} />}</AppShell>;
+  return (
+    <AppShell hideFloatingCart>
+      {shop.isPending ? (
+        <StoreLoadingAnimation />
+      ) : shop.isError ? (
+        <div className="p-8 text-center" role="alert">
+          <p>{shop.error.message}</p>
+          <button onClick={() => void shop.refetch()} className="mt-4 rounded-xl bg-primary px-5 py-3 text-primary-foreground">
+            Try again
+          </button>
+        </div>
+      ) : (
+        <StorePage catalog={importedStorefront(shop.data)} />
+      )}
+    </AppShell>
+  );
 }
 
 
@@ -566,7 +618,11 @@ function StorePage({ catalog }: { catalog?: ReturnType<typeof importedStorefront
   const recommendationSource = recommendationCandidates[0];
 
   if (isLiveSellerStore && approved.isPending) {
-    return <div className="grid min-h-screen place-items-center" role="status">Loading shop…</div>;
+    return (
+      <AppShell hideFloatingCart>
+        <StoreLoadingAnimation storeName={store.name} />
+      </AppShell>
+    );
   }
   if (isLiveSellerStore && (approved.isError || !approved.data?.store)) {
     return <div className="grid min-h-screen place-items-center p-6 text-center"><div role="alert">

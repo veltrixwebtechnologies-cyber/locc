@@ -51,6 +51,40 @@ export function addPlacedOrderToCache(order: Order) {
   updateOrdersCache(updated);
 }
 
+export function getCachedOrder(orderId: string): Order | undefined {
+  const all = getInitialCachedOrders();
+  const found = all.find(
+    (o) =>
+      o.id === orderId ||
+      o.code === orderId ||
+      (o.code && o.code.toLowerCase() === orderId.toLowerCase()),
+  );
+  if (found) return found;
+  if (typeof window !== "undefined") {
+    try {
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith("localshore.demo-orders.")) {
+          const raw = localStorage.getItem(key);
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            if (Array.isArray(parsed)) {
+              const demoMatch = parsed.find(
+                (o: any) =>
+                  o.id === orderId ||
+                  o.code === orderId ||
+                  (o.code && String(o.code).toLowerCase() === orderId.toLowerCase()),
+              );
+              if (demoMatch) return demoMatch;
+            }
+          }
+        }
+      }
+    } catch {}
+  }
+  return undefined;
+}
+
 export const orderStatusFlow: OrderStatus[] = [
   "new",
   "vendor_accepted",

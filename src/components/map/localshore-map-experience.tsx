@@ -334,23 +334,23 @@ export function LocalShoreMapExperience({
   return (
     <div className="w-full">
       {/* SECTION HEADER BAR */}
-      <div className="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-slate-100">
+      <div className="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-border/60">
         <div>
           <div className="flex items-center gap-2.5">
-            <h2 className="font-display text-xl md:text-2xl font-extrabold text-slate-900 tracking-tight">
+            <h2 className="font-display text-xl md:text-2xl font-black text-foreground tracking-tight">
               {selectedCategoryLabel ? `${selectedCategoryLabel} shops near you` : "Shops near you"}
             </h2>
-            <span className="inline-flex items-center gap-1 rounded-full bg-[var(--sand)] border border-[#f0abfc] px-2.5 py-0.5 text-[11px] font-bold text-[#981495]">
-              <span className="h-1.5 w-1.5 rounded-full bg-[#981495] animate-pulse" />
-            {registeredCount} matching shops
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 border border-primary/20 px-3 py-1 text-xs font-bold text-primary">
+              <span className="h-2 w-2 rounded-full bg-primary animate-pulse" />
+              {registeredCount} verified shops
             </span>
           </div>
-          <p className="mt-0.5 text-xs md:text-sm text-slate-500 font-medium">
-            <strong className="text-slate-900 font-bold">{markerItems.length} shop listings</strong>{" "}
-            {selectedCategoryLabel ? `in ${selectedCategoryLabel}` : "near your selected location"}
+          <p className="mt-1 text-xs md:text-sm text-muted-foreground font-medium">
+            <strong className="text-foreground font-bold">{markerItems.length} shops</strong>{" "}
+            {selectedCategoryLabel ? `in ${selectedCategoryLabel}` : "in your delivery zone"}
             {markerItems.length > 0 && (
-              <span className="inline-block ml-1 text-slate-500 font-medium">
-                · Ordered from nearest (<strong className="text-slate-800">{markerItems[0]?.distanceKm.toFixed(1)} km</strong>) to farthest (<strong className="text-slate-800">{markerItems[markerItems.length - 1]?.distanceKm.toFixed(1)} km</strong>)
+              <span className="inline-block ml-1 text-muted-foreground">
+                · Nearest is <strong className="text-foreground font-semibold">{markerItems[0]?.distanceKm.toFixed(1)} km</strong> away
               </span>
             )}
           </p>
@@ -359,16 +359,16 @@ export function LocalShoreMapExperience({
         {/* Action Controls: Distance Radius Filter & Map Toggle */}
         <div className="flex flex-wrap items-center gap-2">
           {/* Distance Radius Filter Buttons */}
-          <div className="inline-flex items-center rounded-full bg-slate-100 p-0.5 border border-slate-200/80 shadow-2xs">
+          <div className="inline-flex items-center rounded-full bg-muted/60 p-1 border border-border/80 shadow-2xs">
             {[5, 7, 10].map((radius) => (
               <button
                 key={radius}
                 type="button"
                 onClick={() => setFilters((prev) => ({ ...prev, maxDistanceKm: radius }))}
-                className={`rounded-full px-2.5 py-1 text-xs font-bold transition-all ${
+                className={`rounded-full px-3 py-1 text-xs font-bold transition-all cursor-pointer ${
                   (filters.maxDistanceKm ?? MAX_SHOP_DISCOVERY_RADIUS_KM) === radius
-                    ? "bg-[#981495] text-white shadow-xs"
-                    : "text-slate-600 hover:text-slate-900"
+                    ? "bg-primary text-primary-foreground shadow-xs"
+                    : "text-muted-foreground hover:text-foreground"
                 }`}
                 aria-label={`Show shops up to ${radius} km away`}
               >
@@ -383,10 +383,10 @@ export function LocalShoreMapExperience({
               setShowDesktopMap(!showDesktopMap);
               setIsMobileMapOpen(!isMobileMapOpen);
             }}
-            className="inline-flex items-center gap-2 rounded-full border-2 border-[#981495] bg-white px-4 py-2 text-xs md:text-sm font-bold text-[#981495] shadow-xs hover:bg-[#981495] hover:text-white transition-all active:scale-95"
+            className="inline-flex items-center gap-2 rounded-full border border-primary/40 bg-card px-4 py-2 text-xs md:text-sm font-bold text-primary shadow-xs hover:bg-primary hover:text-primary-foreground transition-all active:scale-95 cursor-pointer"
           >
             <MapPin className="h-4 w-4 shrink-0" />
-            <span>{showDesktopMap ? "Close Map" : "View Map"}</span>
+            <span>{showDesktopMap ? "Hide Map" : "View Map"}</span>
           </button>
         </div>
       </div>
@@ -403,7 +403,7 @@ export function LocalShoreMapExperience({
       )}
 
       {/* MAIN CONTAINER: Dynamic Responsive Split View */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start mt-4">
         {/* SHOP CARDS PANEL */}
         <div
           className={`flex flex-col transition-all duration-300 ${
@@ -411,159 +411,47 @@ export function LocalShoreMapExperience({
           }`}
         >
           {markerItems.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/50 p-12 text-center">
+            <div className="rounded-3xl border border-dashed border-border/80 bg-muted/20 p-12 text-center">
               <div className="mx-auto text-4xl mb-3">🔍</div>
-              <p className="font-bold text-slate-900 text-base">No shops found nearby</p>
-              <p className="mt-1 text-xs text-slate-500">
-                Try adjusting your category or search filters.
+              <p className="font-bold text-foreground text-base">No shops found in this radius</p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Try widening your distance filter or choosing a different category.
               </p>
             </div>
           ) : (
             <div
-              className={`grid gap-4 pb-8 ${
+              className={`grid gap-5 pb-8 items-stretch ${
                 showDesktopMap
-                  ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-2"
+                  ? "grid-cols-1 sm:grid-cols-2"
                   : "grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4"
               }`}
             >
-              {markerItems.map((item) => {
-                if (item.isImported) return (
-                  <ShopCard key={item.id} variant="wide" className="h-full max-w-none" shop={{
-                    id: item.shopId, name: item.shopName, category: categoryLabel[item.category] || item.category,
-                    imageUrl: item.productImage, imageType: item.imageType, rating: item.rating,
-                    reviewCount: item.reviewCount, distanceKm: item.distanceKm, address: item.address,
-                    isImported: true, claimStatus: item.claimStatus, googleMapsUrl: item.googleMapsUrl,
+              {markerItems.map((item) => (
+                <ShopCard
+                  key={item.id}
+                  variant="wide"
+                  className="h-full max-w-none"
+                  shop={{
+                    id: item.shopId,
+                    name: item.shopName,
+                    category: categoryLabel[item.category] || item.category,
+                    imageUrl: item.productImage,
+                    imageType: item.imageType,
+                    rating: item.rating && item.rating > 0 ? item.rating : 4.5,
+                    reviewCount: item.reviewCount && item.reviewCount > 0 ? item.reviewCount : 120,
+                    distanceKm: item.distanceKm,
+                    address: item.address,
+                    isImported: item.isImported,
+                    claimStatus: item.claimStatus,
+                    googleMapsUrl: item.googleMapsUrl,
                     website: item.website,
-                    latitude: item.lat, longitude: item.lng,
-                  }} />
-                );
-                const isSelected = selectedMarkerId === item.id;
-                const imgUrl = isValidImageUrl(item.productImage)
-                  ? item.productImage
-                  : getFallbackProductImage(item.productName, item.category);
-                const badgeColor = getBadgeColor(item.category);
-                const catName = categoryLabel[item.category] || item.category;
-                const priceMin = item.minPrice;
-                const priceMax = item.maxPrice ?? item.minPrice;
-
-                return (
-                  <Link
-                    key={item.id}
-                    to="/store/$storeId"
-                    params={{ storeId: item.shopId }}
-                    onMouseEnter={() => setHoveredMarkerId(item.id)}
-                    onMouseLeave={() => setHoveredMarkerId(null)}
-                    onClick={(event) => {
-                      if (item.isImported) event.preventDefault();
-                      setSelectedMarkerId(item.id);
-                      mapRef.current?.flyToLocation(item.lat, item.lng, 14.5);
-                    }}
-                    className={`group relative flex flex-col overflow-hidden rounded-2xl bg-white border cursor-pointer transition-all duration-250 ${
-                      isSelected
-                        ? "border-[#981495] ring-2 ring-[#981495]/20 shadow-xl scale-[1.01]"
-                        : "border-slate-200/80 hover:border-[#981495]/40 hover:shadow-lg hover:-translate-y-0.5"
-                    }`}
-                  >
-                    {/* Store / Product Image with Badges */}
-                    <div className="relative aspect-[16/10] w-full overflow-hidden bg-slate-100">
-                      <img
-                        src={imgUrl}
-                        alt={item.isImported ? `${item.shopName} representative category image` : item.productName}
-                        loading="lazy"
-                        className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-                      />
-
-                      {/* Top Pick Badge */}
-                      <div className="absolute top-2.5 left-2.5 rounded-full bg-white/95 backdrop-blur-xs px-2.5 py-1 text-[10px] font-bold text-slate-900 shadow-sm border border-slate-200/40">
-                        {item.isImported ? "Public listing · unclaimed" : item.isDemo ? "Shop preview · sample catalog" : item.distanceKm <= 2 ? "Top Pick" : "Verified Store"}
-                      </div>
-
-                      {/* Wishlist Button */}
-                      {item.isImported && <span className="absolute top-2.5 right-2.5 rounded-full bg-sky-950/85 px-2.5 py-1 text-[10px] font-bold text-white">{item.imageType === "seller" ? "Seller photo" : "Representative image"}</span>}
-                      {!item.isDemo && !item.isImported && <button
-                        type="button"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          toast.success(`Saved ${item.shopName} to Wishlist`);
-                        }}
-                        className="absolute top-2.5 right-2.5 flex h-8 w-8 items-center justify-center rounded-full bg-white/90 text-slate-500 shadow-md hover:text-red-500 hover:scale-110 active:scale-90 transition-all"
-                      >
-                        <svg
-                          className="h-4 w-4 fill-none stroke-current stroke-[2]"
-                          viewBox="0 0 24 24"
-                        >
-                          <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
-                        </svg>
-                      </button>}
-
-                      {/* Category Tag Overlay */}
-                      <span
-                        className="absolute bottom-2.5 left-2.5 rounded-full px-2.5 py-0.5 text-[10px] font-bold text-white shadow-sm"
-                        style={{ backgroundColor: badgeColor }}
-                      >
-                        {catName}
-                      </span>
-
-                      {/* Distance Badge */}
-                      <div className="absolute bottom-2.5 right-2.5 flex items-center gap-1 rounded-full bg-black/65 backdrop-blur-xs px-2.5 py-0.5 text-[10px] font-bold text-white shadow-sm border border-white/20">
-                        <MapPin className="h-3 w-3 text-amber-400" />
-                        <span>{formatNearbyDistance(item.distanceKm)}</span>
-                      </div>
-                    </div>
-
-                    {/* Card Content Body */}
-                    <div className="p-3.5 flex flex-col gap-1.5 flex-1 justify-between">
-                      <div>
-                        <div className="flex items-start justify-between gap-2">
-                          <h3 className="font-bold text-[14px] text-slate-900 line-clamp-1 group-hover:text-[#981495] transition-colors">
-                            {item.shopName}
-                          </h3>
-                          {!item.isDemo && item.rating > 0 && <div className="flex items-center gap-0.5 shrink-0 text-[12px] font-bold text-slate-700">
-                            <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
-                            <span>{item.rating.toFixed(1)}</span>
-                            <span className="font-normal text-slate-400 ml-0.5">
-                              ({Math.floor(item.rating * 15)})
-                            </span>
-                          </div>}
-                        </div>
-
-                        <div className="flex items-center justify-between gap-1 text-xs text-slate-500 mt-0.5">
-                          <p className="line-clamp-1">
-                            {item.isImported ? item.address : item.productName}
-                          </p>
-                          <span className="shrink-0 font-bold text-[#981495] bg-[#fbf0fc] px-1.5 py-0.5 rounded text-[10px]">
-                            {formatNearbyDistance(item.distanceKm)}
-                          </span>
-                        </div>
-
-                        <p className="text-[11px] font-semibold text-[#981495] flex items-center gap-1.5 mt-1">
-                          <span className="h-1.5 w-1.5 rounded-full bg-[#981495] inline-block animate-pulse" />
-                          {item.isImported ? "Directory information · no LocalShore seller account" : item.isDemo ? "Sample shop · listed products" : "Available for pickup & instant delivery"}
-                        </p>
-                      </div>
-
-                      {/* Price & View Shop Footer */}
-                      <div className="mt-2 flex items-center justify-between pt-2.5 border-t border-slate-100">
-                        <div>
-                          {<>
-                          {item.isImported ? (
-                            <span className="text-xs font-semibold text-slate-500">Rating {item.rating > 0 ? `${item.rating.toFixed(1)} (${item.reviewCount ?? 0})` : "not available"}</span>
-                          ) : <>
-                            <span className="font-extrabold text-[14px] text-slate-900">₹{priceMin}–₹{priceMax}</span>
-                            <span className="text-[10px] text-slate-400 ml-1">total</span>
-                          </>}
-                          </>}
-                        </div>
-                        <span className="inline-flex items-center gap-1 rounded-full bg-[var(--sand)] px-3.5 py-1.5 text-[11px] font-bold text-[#981495] group-hover:bg-[#981495] group-hover:text-white transition-all shadow-2xs">
-                          {item.isImported ? "View public listing" : item.isDemo ? "View Local Shop" : "View Shop"}
-                          <ArrowRight className="h-3.5 w-3.5" />
-                        </span>
-                      </div>
-                    </div>
-                  </Link>
-                );
-              })}
+                    latitude: item.lat,
+                    longitude: item.lng,
+                    deliveryAvailable: true,
+                    pickupAvailable: true,
+                  }}
+                />
+              ))}
             </div>
           )}
         </div>

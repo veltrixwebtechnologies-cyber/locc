@@ -10,6 +10,7 @@ import { detectCurrentGPSLocation, type DeliveryLocation } from "@/lib/location-
 import { isValidCoordinate } from "@/lib/geo";
 import { MAX_CUSTOMER_DELIVERY_ACCURACY_M, parseCoordinates } from "@/lib/coordinates";
 import { resolveNominatimAddress } from "@/lib/location-address";
+import { reverseGeocode } from "@/lib/geocoding.functions";
 import { geocodeSearch } from "@/lib/map-service/providers";
 import { toast } from "sonner";
 import { loadGoogleMaps } from "@/lib/google-maps-loader";
@@ -247,17 +248,35 @@ export function LocationMapPicker({
     return () => { cancelled = true; clearTimeout(timer); };
   }, [coords?.lat, coords?.lng, shopsReload]);
 
-  // Reverse geocode lat/lng to human address via Nominatim
+  // Reverse geocode lat/lng to human address via proxied server function (Nominatim)
   const performReverseGeocode = useCallback(async (lat: number, lng: number) => {
     const request = ++addressRequestRef.current;
     setIsGeocoding(true);
+    try {
+      // 1. Try proxied server function with 11m precision & rate-limiting
+      const result = await reverseGeocode({ data: { lat, lng } });
+      if (request !== addressRequestRef.current) return;
+      if (result && result.address && !result.address.startsWith("Near ")) {
+        setAddressDetails({
+          area: result.area || "",
+          city: result.city || "",
+          label: result.address,
+          pincode: result.pincode,
+        });
+        setIsGeocoding(false);
+        return;
+      }
+    } catch {
+      /* Fall back to direct fetch if server function unreachable */
+    }
+
     try {
       const params = new URLSearchParams({
         lat: String(lat),
         lon: String(lng),
         format: "json",
         addressdetails: "1",
-        zoom: "17",
+        zoom: "18",
       });
       const res = await fetch(`https://nominatim.openstreetmap.org/reverse?${params.toString()}`, {
         headers: { "Accept-Language": "en" },

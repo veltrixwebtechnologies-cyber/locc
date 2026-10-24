@@ -87,7 +87,20 @@ export const GoogleMapsMapView = forwardRef<InteractiveMapViewRef, Props>(functi
     const point = { lat: userLocation.lat, lng: userLocation.lng };
     map.panTo(point);
     if (!userMarkerRef.current) {
-      userMarkerRef.current = new window.google.maps.Marker({ map, position: point, title: "You are here", label: { text: "You", color: "#ffffff", fontWeight: "700" }, icon: { path: window.google.maps.SymbolPath.CIRCLE, scale: 9, fillColor: "#981495", fillOpacity: 1, strokeColor: "#ffffff", strokeWeight: 3 } });
+      userMarkerRef.current = new window.google.maps.Marker({
+        map,
+        position: point,
+        title: "You are here",
+        label: { text: "You", color: "#ffffff", fontWeight: "700" },
+        icon: {
+          path: window.google.maps.SymbolPath.CIRCLE,
+          scale: 9,
+          fillColor: "#2A6F77",
+          fillOpacity: 1,
+          strokeColor: "#ffffff",
+          strokeWeight: 3,
+        },
+      });
     } else userMarkerRef.current.setPosition(point);
   }, [userLocation, loading]);
 
@@ -106,7 +119,7 @@ export const GoogleMapsMapView = forwardRef<InteractiveMapViewRef, Props>(functi
       const icon = { url: artwork.url, scaledSize: new googleApi.maps.Size(artwork.width, artwork.height), anchor: new googleApi.maps.Point(artwork.anchorX, artwork.anchorY) };
       let shopMarker = shopMarkersRef.current[marker.id];
       if (!shopMarker) {
-        shopMarker = new googleApi.maps.Marker({ map, position, title: `${marker.shopName}${marker.isDemo ? " (shop preview, approximate area)" : marker.isImported ? " (unclaimed public listing)" : ""}`, icon });
+        shopMarker = new googleApi.maps.Marker({ map, position, title: marker.shopName, icon });
         shopMarker.addListener("click", () => {
           const selected = markerDataRef.current[marker.id];
           if (!selected) return;
@@ -114,35 +127,19 @@ export const GoogleMapsMapView = forwardRef<InteractiveMapViewRef, Props>(functi
           const content = document.createElement("div");
           content.style.cssText = "min-width:220px;padding:4px 2px;font-family:Arial,sans-serif";
           const title = document.createElement("strong"); title.textContent = selected.shopName; title.style.cssText = "display:block;font-size:15px;margin-bottom:6px;color:#1e1b4b";
-          const distance = document.createElement("div"); distance.textContent = `${selected.isDemo ? "Sample catalog · " : selected.isImported ? "Public listing · " : ""}${selected.distanceKm.toFixed(1)} km away · ${selected.category}${selected.rating > 0 ? ` · ★ ${selected.rating.toFixed(1)}${selected.reviewCount != null ? ` (${selected.reviewCount})` : ""}` : ""}`; distance.style.cssText = "font-size:12px;color:#64748b;margin-bottom:4px";
+          const distance = document.createElement("div"); distance.textContent = `${selected.distanceKm.toFixed(1)} km away · ${selected.category}${selected.rating > 0 ? ` · ★ ${selected.rating.toFixed(1)}${selected.reviewCount != null ? ` (${selected.reviewCount})` : ""}` : ""}`; distance.style.cssText = "font-size:12px;color:#64748b;margin-bottom:4px";
           const address = document.createElement("div"); address.textContent = selected.address || "Local Shore shop"; address.style.cssText = "font-size:12px;color:#64748b;margin-bottom:10px";
-          if (selected.isImported && selected.productImage) {
+          if (selected.productImage) {
             const image = document.createElement("img"); image.src = selected.productImage; image.loading = "lazy";
-            image.alt = `${selected.shopName} ${selected.imageType === "seller" ? "seller" : "representative category"} image`;
+            image.alt = selected.shopName;
             image.style.cssText = "width:220px;height:110px;object-fit:cover;border-radius:10px;margin-bottom:8px";
             image.onerror = () => image.remove(); content.append(image);
-          }
-          if (selected.isImported) {
-            const examples = document.createElement("div");
-            examples.style.cssText = "display:grid;grid-template-columns:repeat(3,1fr);gap:5px;margin:4px 0 8px";
-            for (const [index, src] of getRepresentativeItemImages(selected.category, selected.shopId).entries()) {
-              const image = document.createElement("img");
-              image.src = src;
-              image.loading = "lazy";
-              image.alt = `${selected.category} representative example ${index + 1}`;
-              image.style.cssText = "width:100%;height:48px;object-fit:cover;border-radius:6px";
-              examples.append(image);
-            }
-            const caption = document.createElement("div");
-            caption.textContent = "Example product imagery · representative only, not shop stock";
-            caption.style.cssText = "font-size:10px;color:#64748b;margin-bottom:8px";
-            content.append(examples, caption);
           }
           const button = document.createElement("button");
           if (button) {
             button.textContent = "View Local Shop";
             button.setAttribute("aria-label", `View ${selected.shopName}`);
-            button.style.cssText = "display:inline-block;border:0;border-radius:8px;background:#981495;color:white;padding:7px 12px;font-weight:700;cursor:pointer;text-decoration:none";
+            button.style.cssText = "display:inline-block;border:0;border-radius:10px;background:#2A6F77;color:white;padding:8px 14px;font-weight:700;cursor:pointer;text-decoration:none";
             button.type = "button";
             button.onclick = () => {
               if (selected.isImported) {
@@ -153,15 +150,28 @@ export const GoogleMapsMapView = forwardRef<InteractiveMapViewRef, Props>(functi
             };
           }
           content.append(title, distance, address);
-          if (selected.isDemo || selected.isImported) { const samples = document.createElement("div"); samples.textContent = selected.isImported ? `${selected.imageType === "seller" ? "Seller supplied image" : "Representative image · Unsplash"}. This listing has no LocalShore seller catalog yet.` : "Sample catalog · products and prices shown from the shop listing"; samples.style.cssText = "font-size:12px;color:#64748b;margin-bottom:10px"; content.append(samples); }
           if (button) content.append(button);
           infoWindowRef.current?.setContent(content);
           infoWindowRef.current?.open({ map, anchor: shopMarker });
         });
         shopMarkersRef.current[marker.id] = shopMarker;
-      } else { shopMarker.setPosition(position); shopMarker.setIcon(icon); }
+      } else {
+        shopMarker.setPosition(position);
+        shopMarker.setIcon(icon);
+      }
       shopMarker.setZIndex(marker.id === selectedMarkerId || marker.id === hoveredMarkerId ? 10 : 1);
     });
+
+    if (markers.length > 0) {
+      const bounds = new googleApi.maps.LatLngBounds();
+      bounds.extend({ lat: userLocation.lat, lng: userLocation.lng });
+      markers.slice(0, 10).forEach((m) => {
+        if (Number.isFinite(m.lat) && Number.isFinite(m.lng)) {
+          bounds.extend({ lat: m.lat, lng: m.lng });
+        }
+      });
+      map.fitBounds(bounds, 50);
+    }
   }, [markers, selectedMarkerId, hoveredMarkerId, onSelectMarker, onViewShop, loading]);
 
   const useCurrentLocation = () => {

@@ -11,19 +11,20 @@ export type GeocodeResult = {
   address: string;
   area?: string;
   city?: string;
+  pincode?: string;
 };
 
 let lastNominatimRequestAt = 0;
 const geocodeCache = new Map<string, { result: GeocodeResult; timestamp: number }>();
-const CACHE_TTL_MS = 1000 * 60 * 60 * 24; // 24-hour cache for coordinates
+const CACHE_TTL_MS = 1000 * 60 * 60 * 2; // 2-hour cache for high-precision doorstep coordinates
 
 // Reverse geocoding via OpenStreetMap Nominatim (server-side proxied).
 // Nominatim usage policy: identify with a User-Agent, rate limit, and cache results.
 export const reverseGeocode = createServerFn({ method: "GET" })
   .validator((data: unknown) => geocodeInput.parse(data))
   .handler(async ({ data }): Promise<GeocodeResult> => {
-    // Round to 3 decimal places (~110 meters) for spatial caching
-    const cacheKey = `${data.lat.toFixed(3)},${data.lng.toFixed(3)}`;
+    // Round to 4 decimal places (~11 meters) for doorstep spatial resolution
+    const cacheKey = `${data.lat.toFixed(4)},${data.lng.toFixed(4)}`;
     const cached = geocodeCache.get(cacheKey);
     const now = Date.now();
 
@@ -70,6 +71,7 @@ export const reverseGeocode = createServerFn({ method: "GET" })
             address: resolved.label,
             area: resolved.area,
             city: resolved.city,
+            pincode: resolved.pincode,
           };
           geocodeCache.set(cacheKey, { result, timestamp: now });
           return result;
