@@ -12,6 +12,7 @@ import {
 import { motion } from "framer-motion";
 import type { InteractiveMapViewRef } from "./interactive-map-view";
 import { GoogleMapsMapView } from "./google-maps-map-view";
+import { isGoogleMapsAuthFailed } from "@/lib/google-maps-loader";
 
 const InteractiveMapView = lazy(() =>
   import("./interactive-map-view").then((module) => ({ default: module.InteractiveMapView })),
@@ -70,6 +71,26 @@ export function LocalShoreMapExperience({
   const selectedCategoryLabel = mapCategory ? getCategoryByIdOrSlug(mapCategory).name : null;
   const [deliveryLoc] = useDeliveryLocation();
   const [view, setView] = useState<"map" | "list">("map");
+  const [useLeafletFallback, setUseLeafletFallback] = useState(() => isGoogleMapsAuthFailed());
+  const isGoogleMode = MAP_PROVIDER === "google" && !useLeafletFallback;
+
+  useEffect(() => {
+    const handleAuthFailure = () => {
+      console.warn("[LocalShoreMapExperience] Google Maps auth failure detected (gm_authFailure). Switching directly to InteractiveMapView fallback.");
+      setUseLeafletFallback(true);
+    };
+    window.addEventListener("localshore:maps-auth-failure", handleAuthFailure);
+    return () => window.removeEventListener("localshore:maps-auth-failure", handleAuthFailure);
+  }, []);
+
+  useEffect(() => {
+    const handleKeyChange = () => {
+      setUseLeafletFallback(false);
+    };
+    window.addEventListener("localshore:map-key-changed", handleKeyChange);
+    return () => window.removeEventListener("localshore:map-key-changed", handleKeyChange);
+  }, []);
+
   const [userLocation, setUserLocation] = useState<MapLocation | null>(() =>
     deliveryLoc && isValidCoordinate(deliveryLoc.lat, deliveryLoc.lng)
       ? { lat: deliveryLoc.lat, lng: deliveryLoc.lng, label: deliveryLoc.area || deliveryLoc.label }
@@ -465,7 +486,7 @@ export function LocalShoreMapExperience({
                   <div className="h-[calc(100vh-210px)] min-h-[560px] max-h-[760px] animate-pulse bg-slate-100" />
                 }
               >
-                {MAP_PROVIDER === "google" ? <GoogleMapsMapView
+                {isGoogleMode ? <GoogleMapsMapView
                   ref={mapRef}
                   markers={markerItems}
                   userLocation={userLocation}
@@ -527,7 +548,7 @@ export function LocalShoreMapExperience({
           {/* Map Container */}
           <div className="flex-1 relative">
             <Suspense fallback={<div className="h-full w-full animate-pulse bg-slate-100" />}>
-              {MAP_PROVIDER === "google" ? <GoogleMapsMapView
+              {isGoogleMode ? <GoogleMapsMapView
                 ref={mapRef}
                 markers={markerItems}
                 userLocation={userLocation}

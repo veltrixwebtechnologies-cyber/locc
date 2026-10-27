@@ -320,7 +320,7 @@ export function setActiveDeliveryLocation(
   loc: DeliveryLocation,
   options: { confirmed?: boolean } = {},
 ) {
-  // If location has not changed, avoid spurious re-renders
+  // If location has not changed, avoid spurious re-renders but keep timestamp/accuracy up to date
   if (
     activeLocation &&
     activeLocation.lat === loc.lat &&
@@ -328,6 +328,12 @@ export function setActiveDeliveryLocation(
     activeLocation.label === loc.label &&
     activeLocation.area === loc.area
   ) {
+    if (loc.capturedAt && loc.capturedAt > (activeLocation.capturedAt || 0)) {
+      activeLocation.capturedAt = loc.capturedAt;
+      if (typeof loc.accuracy === "number") {
+        activeLocation.accuracy = loc.accuracy;
+      }
+    }
     return;
   }
 
@@ -358,11 +364,11 @@ export function setActiveDeliveryLocation(
 
 /** Commit a delivery location after the customer explicitly confirms it. */
 export function commitDetectedLocation(loc: DeliveryLocation) {
-  // Stop continuous background GPS watcher: once an address/entrance is confirmed,
-  // it must stay locked and stable rather than oscillating on hardware GPS noise.
-  stopLiveCustomerLocationUpdates();
   setActiveDeliveryLocation(loc, { confirmed: true });
   setGPSStatus("ok");
+  if (loc.isGPS) {
+    startLiveCustomerLocationUpdates();
+  }
 }
 
 /**

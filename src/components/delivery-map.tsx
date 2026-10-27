@@ -18,7 +18,7 @@ export interface LatLng {
 }
 
 import { getMapTileConfig } from "@/lib/map-provider";
-import { loadGoogleMaps } from "@/lib/google-maps-loader";
+import { loadGoogleMaps, isGoogleMapsAuthFailed } from "@/lib/google-maps-loader";
 import { getGoogleMapOptions } from "@/lib/map-settings";
 
 const MAP_PROVIDER = import.meta.env.VITE_MAP_PROVIDER === "google" ? "google" : "osm";
@@ -87,10 +87,26 @@ export function DeliveryMap({
   const [secAgo, setSecAgo] = useState<number>(0);
   const [loading, setLoading] = useState(true);
   const [mapKeyRevision, setMapKeyRevision] = useState(0);
+  const [useLeafletFallback, setUseLeafletFallback] = useState(() => isGoogleMapsAuthFailed());
+
+  const isGoogleMode = MAP_PROVIDER === "google" && !useLeafletFallback;
+
+  // Seamlessly fall back to Leaflet if Google Maps encounters runtime auth failure (e.g. unactivated API or invalid key)
+  useEffect(() => {
+    const handleAuthFailure = () => {
+      console.warn("[DeliveryMap] Google Maps auth failure detected (gm_authFailure). Switching directly to Leaflet fallback.");
+      setUseLeafletFallback(true);
+    };
+    window.addEventListener("localshore:maps-auth-failure", handleAuthFailure);
+    return () => window.removeEventListener("localshore:maps-auth-failure", handleAuthFailure);
+  }, []);
 
   // Re-initialize map if Google Maps API key is updated dynamically
   useEffect(() => {
-    const handleKeyChange = () => setMapKeyRevision((r) => r + 1);
+    const handleKeyChange = () => {
+      setUseLeafletFallback(false);
+      setMapKeyRevision((r) => r + 1);
+    };
     window.addEventListener("localshore:map-key-changed", handleKeyChange);
     return () => window.removeEventListener("localshore:map-key-changed", handleKeyChange);
   }, []);
@@ -228,7 +244,7 @@ export function DeliveryMap({
           return;
         }
 
-        if (MAP_PROVIDER === "google") {
+        if (isGoogleMode) {
           try {
             const googleApi = await loadGoogleMaps();
             if (cancelled || !mapContainerRef.current) return;
@@ -256,10 +272,15 @@ export function DeliveryMap({
               "[DeliveryMap] Google Maps failed to load, seamlessly falling back to Leaflet with identical settings:",
               googleErr,
             );
+            if (cancelled) return;
+            setUseLeafletFallback(true);
             // Fall through to Leaflet below!
           }
         }
 
+        if (mapContainerRef.current) {
+          mapContainerRef.current.innerHTML = "";
+        }
 
         const L = (await import("leaflet")).default;
         await import("leaflet/dist/leaflet.css");
@@ -304,8 +325,22 @@ export function DeliveryMap({
 
     return () => {
       cancelled = true;
+      if (mapRef.current) {
+        if (googleModeRef.current) {
+          Object.values(markersRef.current).forEach((marker: any) => marker.setMap?.(null));
+          polylineRef.current?.setMap?.(null);
+          markersRef.current = {};
+          mapRef.current = null;
+        } else {
+          mapRef.current.remove();
+          mapRef.current = null;
+        }
+      }
+      if (mapContainerRef.current) {
+        mapContainerRef.current.innerHTML = "";
+      }
     };
-  }, [hasMapPoint, mapKeyRevision]);
+  }, [hasMapPoint, mapKeyRevision, isGoogleMode]);
 
 
   useEffect(() => {
@@ -391,7 +426,7 @@ export function DeliveryMap({
     const L = LRef.current;
     if (!map) return;
 
-    if (MAP_PROVIDER === "google") {
+    if (isGoogleMode) {
       const googleApi = window.google;
       if (!googleApi?.maps) return;
       googleModeRef.current = true;

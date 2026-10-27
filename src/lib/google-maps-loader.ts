@@ -15,10 +15,16 @@ declare global {
 
 let promise: Promise<typeof google> | null = null;
 let loadedKey: string | null = null;
+let authFailed = false;
+
+export function isGoogleMapsAuthFailed(): boolean {
+  return authFailed;
+}
 
 export function resetGoogleMapsLoader(): void {
   promise = null;
   loadedKey = null;
+  authFailed = false;
   if (typeof document !== "undefined") {
     const scripts = document.querySelectorAll<HTMLScriptElement>('script[src*="maps.googleapis.com"]');
     scripts.forEach((s) => s.remove());
@@ -27,6 +33,18 @@ export function resetGoogleMapsLoader(): void {
 
 // Automatically reset loader when user or app updates the API key
 if (typeof window !== "undefined") {
+  const priorAuthFailure = window.gm_authFailure;
+  window.gm_authFailure = () => {
+    authFailed = true;
+    promise = null;
+    try {
+      window.dispatchEvent(new CustomEvent("localshore:maps-auth-failure"));
+    } catch {
+      // Safe dispatch
+    }
+    priorAuthFailure?.();
+  };
+
   window.addEventListener("localshore:map-key-changed", () => {
     resetGoogleMapsLoader();
   });
@@ -38,6 +56,15 @@ export function loadGoogleMaps(overrideKey?: string): Promise<typeof google> {
   }
 
   const key = (overrideKey || getGoogleMapsApiKey()).trim();
+
+  // If auth previously failed for this key, reject immediately so consumers fall back without delay
+  if (authFailed) {
+    return Promise.reject(
+      new Error(
+        "Google Maps authentication failed on this domain (gm_authFailure).",
+      ),
+    );
+  }
 
   // If already loaded with the same key, resolve immediately
   if (window.google?.maps && loadedKey === key) {
@@ -62,11 +89,18 @@ export function loadGoogleMaps(overrideKey?: string): Promise<typeof google> {
   promise = new Promise((resolve, reject) => {
     let settled = false;
 
+    const priorHandler = window.gm_authFailure;
     window.gm_authFailure = () => {
+      authFailed = true;
+      promise = null; // Clear so subsequent attempts after fixing the key can retry
+      try {
+        window.dispatchEvent(new CustomEvent("localshore:maps-auth-failure"));
+      } catch {
+        // Safe dispatch
+      }
+      priorHandler?.();
       if (settled) return;
       settled = true;
-      promise = null; // Clear so subsequent attempts after fixing the key can retry
-      window.dispatchEvent(new CustomEvent("localshore:maps-auth-failure"));
       reject(
         new Error(
           "Map preview unavailable — the Google Maps key is not allowed on this domain (gm_authFailure).",

@@ -403,8 +403,9 @@ function CheckoutPage() {
     locationEdited.current = true;
     lastFixAt.current = position.timestamp;
     const coords = { lat: position.coords.latitude, lng: position.coords.longitude };
-    const movedMeters = pinCoords
-      ? haversineDistanceKm(pinCoords.lat, pinCoords.lng, coords.lat, coords.lng) * 1000
+    const currentPin = typeof pinCoords !== "undefined" ? pinCoords : null;
+    const movedMeters = (currentPin && typeof haversineDistanceKm === "function")
+      ? haversineDistanceKm(currentPin.lat, currentPin.lng, coords.lat, coords.lng) * 1000
       : 999;
 
     // Only update pin coordinates and reset confirmation if there is meaningful movement (> 30 meters)

@@ -13,7 +13,7 @@ import { resolveNominatimAddress } from "@/lib/location-address";
 import { reverseGeocode } from "@/lib/geocoding.functions";
 import { geocodeSearch } from "@/lib/map-service/providers";
 import { toast } from "sonner";
-import { loadGoogleMaps } from "@/lib/google-maps-loader";
+import { loadGoogleMaps, isGoogleMapsAuthFailed } from "@/lib/google-maps-loader";
 import { supabase } from "@/integrations/supabase/client";
 import { isTestEntity } from "@/lib/map-service/store-engine";
 import { isGeneratedDemoShopName } from "@/lib/demo-neighborhood-shops";
@@ -117,10 +117,26 @@ export function LocationMapPicker({
   const [shopsError, setShopsError] = useState<string | null>(null);
   const [shopsReload, setShopsReload] = useState(0);
   const [mapKeyRevision, setMapKeyRevision] = useState(0);
+  const [useLeafletFallback, setUseLeafletFallback] = useState(() => isGoogleMapsAuthFailed());
+
+  const isGoogleMode = MAP_PROVIDER === "google" && !useLeafletFallback;
+
+  // Seamlessly fall back to Leaflet if Google Maps encounters runtime auth failure (e.g. unactivated API or invalid key)
+  useEffect(() => {
+    const handleAuthFailure = () => {
+      console.warn("[LocationMapPicker] Google Maps auth failure detected (gm_authFailure). Switching directly to Leaflet fallback.");
+      setUseLeafletFallback(true);
+    };
+    window.addEventListener("localshore:maps-auth-failure", handleAuthFailure);
+    return () => window.removeEventListener("localshore:maps-auth-failure", handleAuthFailure);
+  }, []);
 
   // Re-initialize map if Google Maps API key changes dynamically
   useEffect(() => {
-    const handleKeyChange = () => setMapKeyRevision((r) => r + 1);
+    const handleKeyChange = () => {
+      setUseLeafletFallback(false);
+      setMapKeyRevision((r) => r + 1);
+    };
     window.addEventListener("localshore:map-key-changed", handleKeyChange);
     return () => window.removeEventListener("localshore:map-key-changed", handleKeyChange);
   }, []);
@@ -348,7 +364,7 @@ export function LocationMapPicker({
 
     (async () => {
       try {
-        if (MAP_PROVIDER === "google") {
+        if (isGoogleMode) {
           if (cancelled || !mapContainerRef.current || !mapStart) return;
           try {
             const googleApi = await loadGoogleMaps();
@@ -411,8 +427,14 @@ export function LocationMapPicker({
               "[LocationMapPicker] Google Maps failed to load, seamlessly falling back to Leaflet with identical settings:",
               googleError,
             );
+            if (cancelled) return;
+            setUseLeafletFallback(true);
             // Fall through to Leaflet below!
           }
+        }
+
+        if (mapContainerRef.current) {
+          mapContainerRef.current.innerHTML = "";
         }
 
 
@@ -525,8 +547,11 @@ export function LocationMapPicker({
           mapRef.current = null;
         }
       }
+      if (mapContainerRef.current) {
+        mapContainerRef.current.innerHTML = "";
+      }
     };
-  }, [mapStart, handlePositionChange, performReverseGeocode, mapKeyRevision]);
+  }, [mapStart, handlePositionChange, performReverseGeocode, mapKeyRevision, isGoogleMode]);
 
 
   // Keep map container responsive on window or modal resize
@@ -552,11 +577,11 @@ export function LocationMapPicker({
       });
       localShopMarkersRef.current = {};
     };
-    if (MAP_PROVIDER === "google" && (!isGoogleMapReady || !mapRef.current || !window.google?.maps)) return;
-    if (MAP_PROVIDER === "osm" && (!isLeafletMapReady || !mapRef.current || !LRef.current)) return;
+    if (isGoogleMode && (!isGoogleMapReady || !mapRef.current || !window.google?.maps)) return;
+    if (!isGoogleMode && (!isLeafletMapReady || !mapRef.current || !LRef.current)) return;
     const map = mapRef.current;
     removeShopMarkers();
-    if (MAP_PROVIDER === "google") {
+    if (isGoogleMode) {
       const googleApi = window.google;
       const clusterPixels = mapZoom < 18 ? 64 : 0;
       const projection = map.getProjection();
@@ -612,7 +637,7 @@ export function LocationMapPicker({
       });
     }
     return removeShopMarkers;
-  }, [isGoogleMapReady, isLeafletMapReady, displayShops, mapStart, mapZoom, selectedShop?.id]);
+  }, [isGoogleMode, isGoogleMapReady, isLeafletMapReady, displayShops, mapStart, mapZoom, selectedShop?.id]);
 
   // Handle live GPS detection
   const handleGPSLocate = async () => {
@@ -740,7 +765,7 @@ export function LocationMapPicker({
             />
             {isSearching && <Loader2 className="h-4 w-4 text-[#981495] animate-spin shrink-0" />}
           </div>
-          {MAP_PROVIDER === "google" && (
+          {isGoogleMode && (
             <button
               type="button"
               onClick={handleGPSLocate}
@@ -773,8 +798,8 @@ export function LocationMapPicker({
 
       {/* LocalShore map canvas. Google mode uses a quiet branded style and
           LocalShore seller markers; OSM mode keeps the existing Leaflet map. */}
-      <div className={`relative isolate w-full flex-1 min-h-[220px] overflow-hidden rounded-2xl border border-[#E9DDF0] bg-[#FAF7FC] shadow-sm ${MAP_PROVIDER === "google" ? "lg:flex" : ""}`}>
-        {MAP_PROVIDER === "google" && (
+      <div className={`relative isolate w-full flex-1 min-h-[220px] overflow-hidden rounded-2xl border border-[#E9DDF0] bg-[#FAF7FC] shadow-sm ${isGoogleMode ? "lg:flex" : ""}`}>
+        {isGoogleMode && (
           <aside className="hidden min-w-0 overflow-hidden border-r border-[#EEE7F3] bg-white lg:flex lg:w-[230px] lg:shrink-0 lg:flex-col">
             <div className="flex items-center justify-between border-b border-[#EEE7F3] px-3.5 py-3">
               <div>
@@ -861,13 +886,13 @@ export function LocationMapPicker({
           </div>
         )}
 
-        {MAP_PROVIDER === "google" && displayShops.length > 0 && (
+        {isGoogleMode && displayShops.length > 0 && (
           <div className="absolute left-3 bottom-3 z-[1000] rounded-full bg-white/95 px-3 py-1.5 text-[10px] font-black text-[#981495] shadow-md ring-1 ring-[#EBD9F0]">
             {localShops.length} nearby shops · blue pins are public listings
           </div>
         )}
 
-        {MAP_PROVIDER === "google" && coords && displayShops.length === 0 && !mapError && (
+        {isGoogleMode && coords && displayShops.length === 0 && !mapError && (
           <div className="absolute inset-x-3 bottom-3 z-[1000] rounded-xl bg-white/95 px-3 py-2 text-xs text-[#7D7485] shadow-md lg:hidden" role={shopsError ? "alert" : "status"}>
             {shopsLoading ? "Finding nearby shops…" : shopsError || "No nearby LocalShore shops or public listings. Try another delivery area."}
             {shopsError && <button type="button" onClick={() => setShopsReload((value) => value + 1)} className="ml-2 font-bold text-[#981495]">Try again</button>}
@@ -925,7 +950,7 @@ export function LocationMapPicker({
           onClick={handleGPSLocate}
           disabled={isLocating}
           title="Center on current GPS position"
-          className={`absolute bottom-3 z-[1000] grid h-10 w-10 place-items-center rounded-xl bg-white text-[#981495] shadow-lg border border-slate-200 hover:bg-slate-50 transition-colors cursor-pointer ${MAP_PROVIDER === "google" ? "right-3" : "left-3"}`}
+          className={`absolute bottom-3 z-[1000] grid h-10 w-10 place-items-center rounded-xl bg-white text-[#981495] shadow-lg border border-slate-200 hover:bg-slate-50 transition-colors cursor-pointer ${isGoogleMode ? "right-3" : "left-3"}`}
         >
           {isLocating ? (
             <Loader2 className="h-5 w-5 animate-spin" />

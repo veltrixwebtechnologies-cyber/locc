@@ -91,7 +91,13 @@ export const GoogleMapsMapView = forwardRef<InteractiveMapViewRef, Props>(functi
         setError(loadError instanceof Error ? loadError.message : "Google Maps could not load");
       }
     });
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+      if (containerRef.current) {
+        containerRef.current.innerHTML = "";
+      }
+      mapRef.current = null;
+    };
   }, [userLocation.lat, userLocation.lng, reloadKey]);
 
 
