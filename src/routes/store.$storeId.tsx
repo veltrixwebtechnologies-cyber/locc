@@ -696,53 +696,54 @@ function StorePage({ catalog }: { catalog?: ReturnType<typeof importedStorefront
           <div className="absolute inset-0 bg-gradient-to-r from-[#f3edf5] via-[#f3edf5]/95 via-80% to-transparent w-full md:w-[62%] z-10" />
           <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-black/30 z-10 md:hidden" />
 
-          {/* Verified Store Top-Right Badge & Wishlist Button */}
-          <div className="absolute top-4 right-4 z-20 flex items-center gap-2">
-            <div className="inline-flex items-center gap-1.5 rounded-full bg-[#fffafd]/95 backdrop-blur-md px-3.5 py-1.5 text-xs font-black text-slate-900 shadow-xl border border-[#f0abfc]/80">
-              <ShieldCheck className="h-4 w-4 text-[#981495] fill-[#981495]/20" />
-              <span>{isImported ? "Public shop" : isDemoShop ? "Shop preview" : "Local shop"}</span>
-            </div>
-            <WishlistButton
-              productId={`shop-${store.id}`}
-              productName={store.name}
-              entityType="shop"
-              className="bg-[#fffafd]/95 shadow-xl border-[#f0abfc]/80"
-              item={{
-                productId: `shop-${store.id}`,
-                name: store.name,
-                shopName: store.name,
-                category: store.category,
-                price: 0,
-                imageUrl: store.imageUrl,
-                sellerId: store.id,
-                itemType: "shop",
-              }}
-            />
-          </div>
+          {/* Top Bar with Back Button on Left and Badge + Wishlist on Right (Unified Row to prevent mobile overlap) */}
+          <div className="absolute top-3.5 inset-x-3 sm:top-4 sm:inset-x-4 z-30 flex items-center justify-between gap-2 pointer-events-none">
+            {categoryContext ? (
+              <Link
+                to="/search"
+                search={{ category: searchParams.category }}
+                className="pointer-events-auto inline-flex items-center gap-1.5 rounded-full bg-[#fffafd]/95 hover:bg-[#fffafd] text-slate-900 backdrop-blur-md px-3 py-1.5 sm:px-3.5 sm:py-1.5 text-[11px] sm:text-xs font-bold transition-all shadow-md border border-[#f0abfc]/80 cursor-pointer shrink min-w-0 max-w-[58%] sm:max-w-none"
+              >
+                <ArrowLeft className="h-3.5 w-3.5 shrink-0" />
+                <span className="truncate">Back to {categoryContext.name}</span>
+              </Link>
+            ) : (
+              <Link
+                to="/"
+                search={{ category: "all-shops", q: undefined }}
+                onClick={() => {
+                  scrollToShops();
+                }}
+                className="pointer-events-auto inline-flex items-center gap-1.5 rounded-full bg-[#fffafd]/95 hover:bg-[#fffafd] text-slate-900 backdrop-blur-md px-3 py-1.5 sm:px-3.5 sm:py-1.5 text-[11px] sm:text-xs font-bold transition-all shadow-md border border-[#f0abfc]/80 cursor-pointer shrink min-w-0 max-w-[58%] sm:max-w-none"
+              >
+                <ArrowLeft className="h-3.5 w-3.5 shrink-0" />
+                <span className="truncate">All shops</span>
+              </Link>
+            )}
 
-          {/* Category-Aware Top-Left Pill */}
-          {categoryContext ? (
-            <Link
-              to="/search"
-              search={{ category: searchParams.category }}
-              className="absolute top-4 left-4 z-40 pointer-events-auto inline-flex items-center gap-1.5 rounded-full bg-[#fffafd]/95 hover:bg-[#fffafd] text-slate-900 backdrop-blur-md px-3.5 py-1.5 text-xs font-bold transition-all shadow-md border border-[#f0abfc]/80 cursor-pointer"
-            >
-              <ArrowLeft className="h-3.5 w-3.5" />
-              <span>Back to {categoryContext.name}</span>
-            </Link>
-          ) : (
-            <Link
-              to="/"
-              search={{ category: "all-shops", q: undefined }}
-              onClick={() => {
-                scrollToShops();
-              }}
-              className="absolute top-4 left-4 z-40 pointer-events-auto inline-flex items-center gap-1.5 rounded-full bg-[#fffafd]/95 hover:bg-[#fffafd] text-slate-900 backdrop-blur-md px-3.5 py-1.5 text-xs font-bold transition-all shadow-md border border-[#f0abfc]/80 cursor-pointer"
-            >
-              <ArrowLeft className="h-3.5 w-3.5" />
-              <span>All shops</span>
-            </Link>
-          )}
+            <div className="pointer-events-auto flex items-center gap-1.5 sm:gap-2 shrink-0">
+              <div className="inline-flex items-center gap-1 sm:gap-1.5 rounded-full bg-[#fffafd]/95 backdrop-blur-md px-2.5 py-1 sm:px-3.5 sm:py-1.5 text-[10px] sm:text-xs font-black text-slate-900 shadow-md border border-[#f0abfc]/80 whitespace-nowrap">
+                <ShieldCheck className="h-3.5 w-3.5 text-[#981495] fill-[#981495]/20 shrink-0" />
+                <span>{isImported ? "Public shop" : isDemoShop ? "Shop preview" : "Local shop"}</span>
+              </div>
+              <WishlistButton
+                productId={`shop-${store.id}`}
+                productName={store.name}
+                entityType="shop"
+                className="bg-[#fffafd]/95 shadow-md border-[#f0abfc]/80"
+                item={{
+                  productId: `shop-${store.id}`,
+                  name: store.name,
+                  shopName: store.name,
+                  category: store.category,
+                  price: 0,
+                  imageUrl: store.imageUrl,
+                  sellerId: store.id,
+                  itemType: "shop",
+                }}
+              />
+            </div>
+          </div>
 
           {/* Bottom Right Handwritten Watermark (Traditional Elegance Modern Living) */}
           <div className="absolute bottom-4 right-6 z-20 text-right hidden sm:block">
@@ -755,7 +756,7 @@ function StorePage({ catalog }: { catalog?: ReturnType<typeof importedStorefront
           </div>
 
           {/* Left Content Area (Logo Box + Store Details) */}
-          <div className="relative z-20 p-5 sm:p-7 md:p-8 max-w-3xl flex flex-col sm:flex-row items-start sm:items-center gap-4.5 pt-12 sm:pt-7">
+          <div className="relative z-20 p-5 sm:p-7 md:p-8 max-w-3xl flex flex-col sm:flex-row items-start sm:items-center gap-4.5 pt-14 sm:pt-8">
             {/* Store Brand Emblem Logo Box */}
             <div className="h-20 w-20 sm:h-24 sm:w-24 rounded-2xl bg-[#310938] text-[#f5d061] flex flex-col items-center justify-center border-2 border-[#981495]/70 shadow-[0_0_18px_rgba(152,20,149,0.16)] shrink-0">
               <Sparkles className="h-7 w-7 text-amber-400 fill-amber-400/30 mb-0.5" />
@@ -782,20 +783,20 @@ function StorePage({ catalog }: { catalog?: ReturnType<typeof importedStorefront
               </p>
 
               {/* Info Badges Row */}
-              <div className="mt-3 flex flex-wrap items-center gap-2 text-xs font-bold text-slate-700">
-                <div className="flex items-center gap-1 text-slate-600 bg-[#fffafd]/80 backdrop-blur-xs px-2.5 py-1 rounded-full border border-slate-200/80 shadow-2xs">
+              <div className="mt-3 flex flex-wrap items-center gap-1.5 sm:gap-2 text-[11px] sm:text-xs font-bold text-slate-700">
+                <div className="flex items-center gap-1 text-slate-600 bg-[#fffafd]/80 backdrop-blur-xs px-2.5 py-1 rounded-full border border-slate-200/80 shadow-2xs max-w-full">
                   <MapPin className="h-3.5 w-3.5 text-[#981495] shrink-0" />
                   <span className="truncate max-w-[200px] sm:max-w-[280px]">{store.address}</span>
                 </div>
 
                 <div className="flex items-center gap-1 rounded-full bg-emerald-50/90 px-2.5 py-1 text-emerald-800 border border-emerald-200/70 shadow-2xs">
-                  <Clock className="h-3.5 w-3.5 text-emerald-600" />
-                  <span>{isImported || isLiveSellerStore ? "Check opening hours with shop" : store.isOpen ? "Open now" : "Closed"}</span>
+                  <Clock className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
+                  <span className="truncate max-w-[220px] sm:max-w-none">{isImported || isLiveSellerStore ? "Check opening hours with shop" : store.isOpen ? "Open now" : "Closed"}</span>
                 </div>
 
                 {!isLiveSellerStore && typeof store.rating === "number" && store.rating > 0 && (
                   <div className="flex items-center gap-1 rounded-full bg-[var(--sand)]/90 px-2.5 py-1 text-[#700b6e] border border-[#f0abfc]/70 shadow-2xs">
-                    <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
+                    <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400 shrink-0" />
                     <span>{store.rating.toFixed(1)}</span>
                     {Boolean(isImported ? catalog?.reviewCount : (store as any).reviewCount ?? (store as any).review_count) && (
                       <span className="text-[#981495]/80 font-normal">
@@ -806,7 +807,7 @@ function StorePage({ catalog }: { catalog?: ReturnType<typeof importedStorefront
                 )}
 
                 {deliveryLoc && computedDistanceKm !== undefined && (
-                  <div className="flex items-center gap-1 rounded-full bg-[var(--sand)]/90 px-2.5 py-1 text-[#981495] border border-[#f0abfc]/80 shadow-2xs">
+                  <div className="flex items-center gap-1 rounded-full bg-[var(--sand)]/90 px-2.5 py-1 text-[#981495] border border-[#f0abfc]/80 shadow-2xs shrink-0">
                     <span>
                       {computedDistanceKm} km · {computedEtaMin} mins
                     </span>

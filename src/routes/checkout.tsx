@@ -245,8 +245,7 @@ function CheckoutPage() {
   const lastGeocodeAt = useRef(0);
   const [accuracyMeters, setAccuracyMeters] = useState<number | null>(null);
   const isImportedCart = Boolean(cart.storeId?.startsWith("imported:"));
-  const [pay, setPay] = useState<"gpay" | "online" | "upi" | "card" | "cod" | "demo">(isImportedCart ? "demo" : "gpay");
-  useEffect(() => { if (isImportedCart) setPay("demo"); }, [isImportedCart]);
+  const [pay, setPay] = useState<"gpay" | "online" | "upi" | "card" | "cod" | "demo">(isImportedCart ? "online" : "gpay");
   const [showAdd, setShowAdd] = useState(false);
   const [showMap, setShowMap] = useState(false);
   const [newLabel, setNewLabel] = useState("");
@@ -917,6 +916,14 @@ function CheckoutPage() {
       return;
     }
     if (isImportedCart || pay === "demo") {
+      if (isImportedCart) {
+        if (pay === "demo") {
+          void placeDemoOrTestOrder();
+          return;
+        }
+        await initiateRazorpayCheckout();
+        return;
+      }
       void placeDemoOrTestOrder();
       return;
     }
@@ -1162,7 +1169,11 @@ function CheckoutPage() {
 
   const placeOrder = async () => {
     if (isImportedCart || pay === "demo") {
-      void placeDemoOrTestOrder();
+      if (pay === "demo") {
+        void placeDemoOrTestOrder();
+        return;
+      }
+      await initiateRazorpayCheckout();
       return;
     }
     const destinationCoords = parseCoordinates(pinCoords?.lat, pinCoords?.lng);
@@ -1750,52 +1761,89 @@ function CheckoutPage() {
 
                 <div className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
                   <ShieldCheck className="h-3.5 w-3.5" />
-                  <span>{isImportedCart ? "Test Mode" : "Razorpay Verified"}</span>
+                  <span>{isImportedCart ? "Razorpay Test Mode" : "Razorpay Verified"}</span>
                 </div>
               </div>
 
               {/* Payment Methods Grid */}
               <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {[
-                  {
-                    id: "gpay" as const,
-                    label: "Google Pay & UPI",
-                    description: "Instant UPI intent with GPay, PhonePe, Paytm",
-                    icon: Smartphone,
-                    badge: "Fastest",
-                  },
-                  {
-                    id: "online" as const,
-                    label: "Netbanking & Wallets",
-                    description: "All major banks, Mobikwik, Amazon Pay",
-                    icon: Landmark,
-                  },
-                  {
-                    id: "upi" as const,
-                    label: "UPI ID or QR Code",
-                    description: "Enter any VPA (@okhdfcbank, @paytm) or scan QR",
-                    icon: QrCode,
-                  },
-                  {
-                    id: "card" as const,
-                    label: "Credit / Debit Card",
-                    description: "Visa, Mastercard, RuPay, Amex cards",
-                    icon: CreditCard,
-                  },
-                  {
-                    id: "cod" as const,
-                    label: "Cash on Delivery",
-                    description: "Pay with cash or UPI at your doorstep",
-                    icon: Banknote,
-                  },
-                  {
-                    id: "demo" as const,
-                    label: isImportedCart ? "Razorpay test mode" : "Test checkout",
-                    description: isImportedCart ? "Simulated payment test - no charges" : "Test payment without real charge",
-                    icon: CreditCard,
-                  },
-                ]
-                  .filter(p => !isImportedCart && p.id !== "demo")
+                {(() => {
+                  const paymentOptions = [
+                    {
+                      id: "gpay" as const,
+                      label: "Google Pay & UPI",
+                      description: "Instant UPI intent with GPay, PhonePe, Paytm",
+                      icon: Smartphone,
+                      badge: "Fastest",
+                    },
+                    {
+                      id: "online" as const,
+                      label: isImportedCart ? "Razorpay Test Gateway" : "Netbanking & Wallets",
+                      description: isImportedCart ? "Official Razorpay test checkout (Cards, UPI, Netbanking)" : "All major banks, Mobikwik, Amazon Pay",
+                      icon: Landmark,
+                      badge: isImportedCart ? "Razorpay" : undefined,
+                    },
+                    {
+                      id: "upi" as const,
+                      label: "UPI ID or QR Code",
+                      description: "Enter any VPA (@okhdfcbank, @paytm) or scan QR",
+                      icon: QrCode,
+                    },
+                    {
+                      id: "card" as const,
+                      label: "Credit / Debit Card",
+                      description: "Visa, Mastercard, RuPay, Amex cards",
+                      icon: CreditCard,
+                    },
+                    {
+                      id: "cod" as const,
+                      label: "Cash on Delivery",
+                      description: "Pay with cash or UPI at your doorstep",
+                      icon: Banknote,
+                    },
+                    {
+                      id: "demo" as const,
+                      label: isImportedCart ? "Instant Simulated Test" : "Test checkout",
+                      description: isImportedCart ? "Test checkout without opening payment gateway" : "Test payment without real charge",
+                      icon: Sparkles,
+                      badge: "Quick",
+                    },
+                  ];
+
+                  const availableOptions = isImportedCart
+                    ? [
+                        {
+                          id: "online" as const,
+                          label: "Razorpay Test Gateway",
+                          description: "Official Razorpay test checkout (Cards, UPI, Netbanking)",
+                          icon: Landmark,
+                          badge: "Razorpay",
+                        },
+                        {
+                          id: "gpay" as const,
+                          label: "Google Pay & UPI",
+                          description: "Instant UPI test checkout via Razorpay",
+                          icon: Smartphone,
+                          badge: "Fastest",
+                        },
+                        {
+                          id: "card" as const,
+                          label: "Credit / Debit Card",
+                          description: "Visa, Mastercard, RuPay test cards",
+                          icon: CreditCard,
+                        },
+                        {
+                          id: "demo" as const,
+                          label: "Instant Simulated Test",
+                          description: "Simulate test payment instantly without popup",
+                          icon: Sparkles,
+                          badge: "Quick",
+                        },
+                      ]
+                    : paymentOptions.filter(p => !isImportedCart && p.id !== "demo");
+
+                  return availableOptions;
+                })()
                   .map((p) => {
                     const isSelected = pay === p.id;
                     return (
@@ -2114,7 +2162,7 @@ function CheckoutPage() {
                   ) : canPlace ? (
                     <>
                       <span>
-                        {pay === "demo" || isImportedCart
+                        {pay === "demo"
                           ? "Simulate Payment"
                           : pay === "cod"
                             ? "Place Order (COD)"
@@ -2192,11 +2240,11 @@ function CheckoutPage() {
             ) : canPlace ? (
               <>
                 <span>
-                  {pay === "demo" || isImportedCart
+                  {pay === "demo"
                     ? "Simulate"
                     : pay === "cod"
                       ? "Place Order"
-                      : "Pay"}
+                      : "Pay with Razorpay"}
                 </span>
                 <ArrowRight className="h-4 w-4" />
               </>
