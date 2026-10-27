@@ -320,6 +320,17 @@ export function setActiveDeliveryLocation(
   loc: DeliveryLocation,
   options: { confirmed?: boolean } = {},
 ) {
+  // If location has not changed, avoid spurious re-renders
+  if (
+    activeLocation &&
+    activeLocation.lat === loc.lat &&
+    activeLocation.lng === loc.lng &&
+    activeLocation.label === loc.label &&
+    activeLocation.area === loc.area
+  ) {
+    return;
+  }
+
   if (!loc.isGPS) {
     stopLiveCustomerLocationUpdates();
     bestGPSFix = null;
@@ -345,11 +356,13 @@ export function setActiveDeliveryLocation(
   }
 }
 
-/** Commit a GPS preview after the customer explicitly confirms it. */
+/** Commit a delivery location after the customer explicitly confirms it. */
 export function commitDetectedLocation(loc: DeliveryLocation) {
+  // Stop continuous background GPS watcher: once an address/entrance is confirmed,
+  // it must stay locked and stable rather than oscillating on hardware GPS noise.
+  stopLiveCustomerLocationUpdates();
   setActiveDeliveryLocation(loc, { confirmed: true });
   setGPSStatus("ok");
-  startLiveCustomerLocationUpdates();
 }
 
 /**
@@ -385,14 +398,8 @@ export function useDeliveryLocation(): [DeliveryLocation | null, (loc: DeliveryL
       setLoc(activeLocation ? { ...activeLocation } : null);
     };
     LISTENERS.add(handleChange);
-    if (typeof window !== "undefined") {
-      window.addEventListener("localshore_location_change", handleChange);
-    }
     return () => {
       LISTENERS.delete(handleChange);
-      if (typeof window !== "undefined") {
-        window.removeEventListener("localshore_location_change", handleChange);
-      }
     };
   }, []);
 

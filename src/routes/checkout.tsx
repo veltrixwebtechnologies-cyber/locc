@@ -403,14 +403,21 @@ function CheckoutPage() {
     locationEdited.current = true;
     lastFixAt.current = position.timestamp;
     const coords = { lat: position.coords.latitude, lng: position.coords.longitude };
-    setPinCoords(coords);
-    setConfirmedLocation("");
+    const movedMeters = pinCoords
+      ? haversineDistanceKm(pinCoords.lat, pinCoords.lng, coords.lat, coords.lng) * 1000
+      : 999;
+
+    // Only update pin coordinates and reset confirmation if there is meaningful movement (> 30 meters)
+    if (movedMeters > 30) {
+      setPinCoords(coords);
+      setConfirmedLocation("");
+      setCurrentAddress(coords.lat.toFixed(5) + ", " + coords.lng.toFixed(5));
+      setManualAddress("");
+    }
     setAccuracyMeters(position.coords.accuracy);
     setAddr(CURRENT_LOCATION_ID);
     setLocStatus("ok");
     setLocError("");
-    setCurrentAddress(coords.lat.toFixed(5) + ", " + coords.lng.toFixed(5));
-    setManualAddress("");
     const request = ++geocodeRevision.current;
     // Throttle requests without postponing them indefinitely during continuous GPS updates.
     if (Date.now() - lastGeocodeAt.current < 5000) return;

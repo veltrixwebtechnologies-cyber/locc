@@ -12,7 +12,7 @@ import {
   type StoreCategory,
   categoryLabel,
 } from "@/lib/mock-data";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { MerchandisingSections, ProductCard } from "@/components/merchandising-sections";
 import { PromoCarousel } from "@/components/promo-carousel";
@@ -131,12 +131,18 @@ function Home() {
   const locLng = deliveryLoc?.lng;
   const hasConfirmedLocation =
     typeof locLat === "number" && typeof locLng === "number" && isValidCoordinate(locLat, locLng);
+
+  // Quantize coordinates to a ~100m grid for query cache keys so sub-millimeter GPS sensor noise never churns queries
+  const queryLat = hasConfirmedLocation ? Number(locLat.toFixed(3)) : undefined;
+  const queryLng = hasConfirmedLocation ? Number(locLng.toFixed(3)) : undefined;
+
   const [query, setQuery] = useState(search.q ?? "");
   const [cat, setCat] = useState<string>(search.category ?? "all");
   const approvedProducts = useQuery({
-    queryKey: ["homepage-visible-products", locLat, locLng],
+    queryKey: ["homepage-visible-products", queryLat, queryLng],
     staleTime: 1000 * 60 * 5,
     gcTime: 1000 * 60 * 10,
+    placeholderData: keepPreviousData,
     retry: shouldRetryCatalogQuery,
     retryDelay: (attempt) => Math.min(750 * 2 ** attempt, 3_000),
     refetchOnWindowFocus: false,
@@ -152,9 +158,10 @@ function Home() {
   });
 
   const approvedVendors = useQuery({
-    queryKey: ["homepage-visible-shops-v4", locLat, locLng, search.category, query],
+    queryKey: ["homepage-visible-shops-v4", queryLat, queryLng, search.category, query],
     staleTime: 1000 * 60 * 5,
     gcTime: 1000 * 60 * 10,
+    placeholderData: keepPreviousData,
     retry: shouldRetryCatalogQuery,
     retryDelay: (attempt) => Math.min(750 * 2 ** attempt, 3_000),
     refetchOnWindowFocus: false,
@@ -200,8 +207,9 @@ function Home() {
   const [visibleProductLimit, setVisibleProductLimit] = useState(15);
 
   const publicShops = useQuery({
-    queryKey: ["homepage-public-shops", locLat, locLng, search.category, query],
+    queryKey: ["homepage-public-shops", queryLat, queryLng, search.category, query],
     staleTime: 1000 * 60 * 5,
+    placeholderData: keepPreviousData,
     retry: shouldRetryCatalogQuery,
     retryDelay: (attempt) => Math.min(750 * 2 ** attempt, 3_000),
     enabled: hasConfirmedCoordinates(deliveryLoc),

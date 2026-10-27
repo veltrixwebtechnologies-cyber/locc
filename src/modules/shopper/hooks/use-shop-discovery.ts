@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useDeliveryLocation } from "@/lib/location-store";
 import { type ProductFilterState } from "@/lib/filter-types";
@@ -20,6 +20,9 @@ export function useShopDiscovery(filterState: ProductFilterState) {
   const [deliveryLoc] = useDeliveryLocation();
   const radiusKm = filterState.maxDistanceKm ?? DEFAULT_SHOP_DISCOVERY_RADIUS_KM;
 
+  const latQ = deliveryLoc && typeof deliveryLoc.lat === "number" ? Number(deliveryLoc.lat.toFixed(3)) : undefined;
+  const lngQ = deliveryLoc && typeof deliveryLoc.lng === "number" ? Number(deliveryLoc.lng.toFixed(3)) : undefined;
+
   const queryKey = [
     "shops-discovery-v4",
     filterState.query,
@@ -32,8 +35,8 @@ export function useShopDiscovery(filterState: ProductFilterState) {
     filterState.deliveryAvailableOnly,
     filterState.pickupAvailableOnly,
     radiusKm,
-    deliveryLoc?.lat,
-    deliveryLoc?.lng,
+    latQ,
+    lngQ,
   ];
 
   return useQuery<{
@@ -48,6 +51,7 @@ export function useShopDiscovery(filterState: ProductFilterState) {
     queryKey,
     staleTime: 1000 * 60 * 5,
     gcTime: 1000 * 60 * 15,
+    placeholderData: keepPreviousData,
     retry: shouldRetryCatalogQuery,
     retryDelay: (attempt) => Math.min(750 * 2 ** attempt, 3_000),
     queryFn: async () => {
