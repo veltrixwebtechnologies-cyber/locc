@@ -81,8 +81,16 @@ export const Route = createFileRoute("/")({
     links: [
       {
         rel: "preload",
+        href: "/assets/localshore-home-banner-mobile.jpg",
+        as: "image",
+        media: "(max-width: 639px)",
+        fetchPriority: "high",
+      },
+      {
+        rel: "preload",
         href: "/assets/localshore-home-banner.png",
         as: "image",
+        media: "(min-width: 640px)",
         fetchPriority: "high",
       },
     ],
