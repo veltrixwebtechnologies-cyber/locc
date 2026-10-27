@@ -25,6 +25,7 @@ export type MerchandisingProduct = {
   review_count: number;
   shop_name: string;
   description?: string | null;
+  item_type?: "product" | "shop";
 };
 
 export type WishlistCatalogItem = {
@@ -35,7 +36,38 @@ export type WishlistCatalogItem = {
   price: number;
   imageUrl?: string;
   sellerId?: string;
+  itemType?: "product" | "shop";
 };
+
+export function isWishlistShop(item: {
+  id?: string;
+  seller_id?: string | null;
+  name?: string;
+  shop_name?: string;
+  category?: string | null;
+  item_type?: string;
+}): boolean {
+  if (!item) return false;
+  if (item.item_type === "shop") return true;
+  const id = item.id || "";
+  if (id.startsWith("shop-") || id.startsWith("store-")) return true;
+  if (
+    item.name &&
+    item.shop_name &&
+    item.name.trim().toLowerCase() === item.shop_name.trim().toLowerCase() &&
+    !id.includes("-p")
+  ) {
+    return true;
+  }
+  return false;
+}
+
+export function getCleanShopId(item: { id: string; seller_id?: string | null }): string {
+  if (item.seller_id && !item.seller_id.startsWith("shop-") && !item.seller_id.startsWith("store-")) {
+    return item.seller_id;
+  }
+  return item.id.replace(/^shop-/, "").replace(/^store-/, "");
+}
 
 const productSelect =
   "id,seller_id,name,brand,brand_id,brand_name,category,selling_price,mrp,discount_price,discount_starts_at,discount_ends_at,clearance,stock,image_url,average_rating,review_count,shop_name,created_at";
@@ -513,32 +545,69 @@ export function useWishlistProducts() {
       for (const product of liveProducts.data ?? [])
         byId.set(product.id, product as MerchandisingProduct);
       for (const entry of catalogEntries.data ?? []) {
+        const isShop =
+          entry.item_key.startsWith("shop-") ||
+          entry.item_key.startsWith("store-") ||
+          (entry.product_name &&
+            entry.shop_name &&
+            entry.product_name.trim().toLowerCase() === entry.shop_name.trim().toLowerCase() &&
+            !entry.item_key.includes("-p"));
         byId.set(entry.item_key, {
           id: entry.item_key,
-          seller_id: entry.seller_id ?? entry.item_key.split("-p")[0],
+          seller_id: entry.seller_id ?? entry.item_key.replace(/^(shop|store)-/, "").split("-p")[0],
           name: entry.product_name,
           brand: null,
           brand_id: null,
           brand_name: null,
           category: entry.category,
-          selling_price: Number(entry.price),
-          mrp: Number(entry.price),
+          selling_price: isShop ? 0 : Number(entry.price),
+          mrp: isShop ? 0 : Number(entry.price),
           discount_price: null,
           discount_starts_at: null,
           discount_ends_at: null,
           clearance: false,
-          stock: 1,
+          stock: isShop ? 0 : 1,
           image_url: entry.image_url,
           created_at: entry.created_at,
-          average_rating: 0,
-          review_count: 0,
+          average_rating: isShop ? 4.8 : 0,
+          review_count: isShop ? 120 : 0,
           shop_name: entry.shop_name,
+          item_type: isShop ? "shop" : "product",
         });
       }
 
       const allLocalProducts = Object.values(productsByStore).flat();
       for (const id of ids) {
         if (!byId.has(id)) {
+          if (id.startsWith("shop-") || id.startsWith("store-")) {
+            const cleanId = id.replace(/^(shop|store)-/, "");
+            const store = stores.find((s) => s.id === cleanId);
+            if (store) {
+              byId.set(id, {
+                id,
+                seller_id: store.id,
+                name: store.name,
+                brand: null,
+                brand_id: null,
+                brand_name: null,
+                category: store.category,
+                selling_price: 0,
+                mrp: 0,
+                discount_price: null,
+                discount_starts_at: null,
+                discount_ends_at: null,
+                clearance: false,
+                stock: 0,
+                image_url: store.imageUrl ?? null,
+                created_at: new Date().toISOString(),
+                average_rating: store.rating ?? 4.5,
+                review_count: 50,
+                shop_name: store.name,
+                item_type: "shop",
+              });
+              continue;
+            }
+          }
           const mockMatch = allLocalProducts.find((p) => p.id === id);
           if (mockMatch) {
             const store = stores.find((s) => s.id === mockMatch.storeId);
@@ -562,6 +631,7 @@ export function useWishlistProducts() {
               average_rating: store?.rating ?? 4.5,
               review_count: 12,
               shop_name: store?.name ?? "Local Shop",
+              item_type: "product",
             });
           }
         }

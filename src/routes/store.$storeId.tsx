@@ -301,7 +301,7 @@ function StorePage({ catalog }: { catalog?: ReturnType<typeof importedStorefront
   const approved = useQuery({
     // Bump the key so a previously cached cross-seller result cannot survive the
     // seller-ID scoping fix in this query.
-    queryKey: ["approved-store-v5", loaded.store.id, requestedCategory],
+    queryKey: ["approved-store-v6", loaded.store.id],
     enabled: loaded.store.id === APPROVED_STORE.id || isUuid(loaded.store.id),
     queryFn: async () => {
       let productQuery = (supabase as any)
@@ -419,13 +419,11 @@ function StorePage({ catalog }: { catalog?: ReturnType<typeof importedStorefront
       const expectedDemoCategory = toStoreCategory(storeCategory);
       // A category URL is a product filter, never a new shop identity.
       const contextualCategory = expectedDemoCategory;
-      const storeProducts = requestedCategory
-        ? products.filter(
-            (product) => catalogCategoryKey(product.category) === requestedCategory,
-          )
-        : isLocalShoreZoneDemo
-          ? products.filter((product) => product.category.toLowerCase() === expectedDemoCategory)
-          : products;
+      // Do NOT pre-filter by category here — all products for the seller are returned.
+      // The UI filteredProducts memo is the single source of truth for category filtering.
+      const storeProducts = isLocalShoreZoneDemo
+        ? products.filter((product) => product.category.toLowerCase() === expectedDemoCategory)
+        : products;
 
       return {
         products: storeProducts,
@@ -546,8 +544,11 @@ function StorePage({ catalog }: { catalog?: ReturnType<typeof importedStorefront
     let list = [...products];
 
     if (selectedCategory && selectedCategory !== "all") {
+      // Use catalogCategoryKey() for normalization so chip values (which are raw
+      // category strings like "Furniture & Decor") match consistently regardless
+      // of case or whitespace differences.
       list = list.filter(
-        (p) => (p.category || "Other").toLowerCase() === selectedCategory.toLowerCase(),
+        (p) => catalogCategoryKey(p.category || "Other") === catalogCategoryKey(selectedCategory),
       );
     }
 
@@ -695,12 +696,28 @@ function StorePage({ catalog }: { catalog?: ReturnType<typeof importedStorefront
           <div className="absolute inset-0 bg-gradient-to-r from-[#f3edf5] via-[#f3edf5]/95 via-80% to-transparent w-full md:w-[62%] z-10" />
           <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-black/30 z-10 md:hidden" />
 
-          {/* Verified Store Top-Right Badge */}
-          <div className="absolute top-4 right-4 z-20">
+          {/* Verified Store Top-Right Badge & Wishlist Button */}
+          <div className="absolute top-4 right-4 z-20 flex items-center gap-2">
             <div className="inline-flex items-center gap-1.5 rounded-full bg-[#fffafd]/95 backdrop-blur-md px-3.5 py-1.5 text-xs font-black text-slate-900 shadow-xl border border-[#f0abfc]/80">
               <ShieldCheck className="h-4 w-4 text-[#981495] fill-[#981495]/20" />
               <span>{isImported ? "Public shop" : isDemoShop ? "Shop preview" : "Local shop"}</span>
             </div>
+            <WishlistButton
+              productId={`shop-${store.id}`}
+              productName={store.name}
+              entityType="shop"
+              className="bg-[#fffafd]/95 shadow-xl border-[#f0abfc]/80"
+              item={{
+                productId: `shop-${store.id}`,
+                name: store.name,
+                shopName: store.name,
+                category: store.category,
+                price: 0,
+                imageUrl: store.imageUrl,
+                sellerId: store.id,
+                itemType: "shop",
+              }}
+            />
           </div>
 
           {/* Category-Aware Top-Left Pill */}

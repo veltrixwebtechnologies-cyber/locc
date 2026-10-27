@@ -23,27 +23,16 @@ import { getFallbackShopImage } from "@/lib/image-utils";
 import { localShoreShopMarker } from "@/lib/localshore-shop-marker";
 import { fetchNearbyImportedShops, getImportedShopHref } from "@/lib/imported-shops";
 
-const MAP_PROVIDER = import.meta.env.VITE_MAP_PROVIDER === "google" ? "google" : "osm";
+import {
+  getGoogleMapOptions,
+  LOCALSHORE_MAP_STYLES,
+  deliveryPinSvg,
+  compactShopIcon,
+  shopClusterIcon,
+} from "@/lib/map-settings";
 
-const GOOGLE_PICKER_STYLES: google.maps.MapTypeStyle[] = [
-  { featureType: "poi", stylers: [{ visibility: "off" }] },
-  { featureType: "poi.business", stylers: [{ visibility: "off" }] },
-  { featureType: "poi.school", stylers: [{ visibility: "off" }] },
-  { featureType: "poi.medical", stylers: [{ visibility: "off" }] },
-  { featureType: "poi.park", stylers: [{ visibility: "off" }] },
-  { featureType: "transit", stylers: [{ visibility: "off" }] },
-  { featureType: "landscape.man_made", elementType: "geometry", stylers: [{ color: "#F4EFF7" }] },
-  { featureType: "landscape.natural", elementType: "geometry", stylers: [{ color: "#FAF7FC" }] },
-  { featureType: "water", elementType: "geometry", stylers: [{ color: "#E9F3FA" }] },
-  { featureType: "road", elementType: "geometry", stylers: [{ color: "#FFFFFF" }] },
-  { featureType: "road", elementType: "geometry.stroke", stylers: [{ color: "#EEE7F3" }] },
-  { featureType: "road", elementType: "labels.text.fill", stylers: [{ color: "#7D7485" }] },
-  { featureType: "road", elementType: "labels.text.stroke", stylers: [{ color: "#FAF7FC" }, { weight: 1 }] },
-  { featureType: "road.local", elementType: "labels.text.fill", stylers: [{ color: "#887D92" }] },
-  { featureType: "road.arterial", elementType: "labels.text.fill", stylers: [{ color: "#6D6179" }] },
-  { featureType: "administrative", elementType: "labels.text.stroke", stylers: [{ color: "#FAF7FC" }, { weight: 1 }] },
-  { featureType: "administrative.locality", elementType: "labels.text.fill", stylers: [{ color: "#5F5568" }] },
-];
+const MAP_PROVIDER = import.meta.env.VITE_MAP_PROVIDER === "google" ? "google" : "osm";
+const GOOGLE_PICKER_STYLES = LOCALSHORE_MAP_STYLES;
 
 type LocalShop = {
   id: string;
@@ -62,42 +51,6 @@ type LocalShop = {
   reviewCount?: number;
 };
 
-function shopClusterIcon(count: number) {
-  const size = 58;
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
-    <circle cx="29" cy="29" r="27" fill="#981495" fill-opacity=".14"/>
-    <circle cx="29" cy="29" r="20" fill="#981495" fill-opacity=".24"/>
-    <circle cx="29" cy="29" r="14" fill="#981495" stroke="#fff" stroke-width="3"/>
-    <text x="29" y="34" text-anchor="middle" font-family="Arial,sans-serif" font-size="14" font-weight="700" fill="#fff">${count}</text>
-  </svg>`;
-  return {
-    url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`,
-    scaledSize: new google.maps.Size(size, size),
-    anchor: new google.maps.Point(size / 2, size / 2),
-  };
-}
-
-function compactShopIcon(isDemo = false, isSelected = false, isImported = false) {
-  const fill = isSelected ? "#6E0D70" : isImported ? "#2878A5" : isDemo ? "#A437A0" : "#981495";
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="42" height="50" viewBox="0 0 42 50">
-    <circle cx="21" cy="20" r="19" fill="${fill}" fill-opacity=".15"/>
-    <path d="M21 46C18 39 7 30 7 19a14 14 0 1 1 28 0c0 11-11 20-14 27Z" fill="${fill}" stroke="#fff" stroke-width="3"/>
-    <path d="M14 19h14l-1.5 2.5v7h-11v-7L14 19Zm2-1 1.5-3h7l1.5 3m-6 5v4m3-4v4" fill="none" stroke="#fff" stroke-width="1.7" stroke-linejoin="round" stroke-linecap="round"/>
-  </svg>`;
-  return {
-    url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`,
-    scaledSize: new google.maps.Size(42, 50),
-    anchor: new google.maps.Point(21, 48),
-  };
-}
-
-function deliveryPinSvg() {
-  const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='48' height='58' viewBox='0 0 48 58'>
-    <path d='M24 56C20 47 7 37 7 23a17 17 0 1 1 34 0c0 14-13 24-17 33Z' fill='#981495' stroke='#FFFFFF' stroke-width='3'/>
-    <circle cx='24' cy='22' r='7' fill='#FFFFFF'/><circle cx='24' cy='22' r='3' fill='#981495'/>
-  </svg>`;
-  return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
-}
 
 interface LocationMapPickerProps {
   initialLat?: number;
@@ -163,8 +116,18 @@ export function LocationMapPicker({
   const [shopsLoading, setShopsLoading] = useState(false);
   const [shopsError, setShopsError] = useState<string | null>(null);
   const [shopsReload, setShopsReload] = useState(0);
+  const [mapKeyRevision, setMapKeyRevision] = useState(0);
+
+  // Re-initialize map if Google Maps API key changes dynamically
+  useEffect(() => {
+    const handleKeyChange = () => setMapKeyRevision((r) => r + 1);
+    window.addEventListener("localshore:map-key-changed", handleKeyChange);
+    return () => window.removeEventListener("localshore:map-key-changed", handleKeyChange);
+  }, []);
+
   const displayShops = localShops;
   const geocodeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
 
   // Show LocalShore sellers plus imported public directory listings around the
   // selected delivery point. Imported records remain informational until claimed.
@@ -387,68 +350,71 @@ export function LocationMapPicker({
       try {
         if (MAP_PROVIDER === "google") {
           if (cancelled || !mapContainerRef.current || !mapStart) return;
-          const googleApi = await loadGoogleMaps();
-          if (cancelled || !mapContainerRef.current) return;
+          try {
+            const googleApi = await loadGoogleMaps();
+            if (cancelled || !mapContainerRef.current) return;
 
-          googleModeRef.current = true;
-          const map = new googleApi.maps.Map(mapContainerRef.current, {
-            center: { lat: mapStart.lat, lng: mapStart.lng },
-            zoom: 18,
-            maxZoom: 21,
-            styles: GOOGLE_PICKER_STYLES,
-            backgroundColor: "#FAF7FC",
-            disableDefaultUI: true,
-            zoomControl: true,
-            zoomControlOptions: { position: googleApi.maps.ControlPosition.RIGHT_BOTTOM },
-            mapTypeControl: false,
-            streetViewControl: false,
-            fullscreenControl: false,
-            clickableIcons: false,
-            gestureHandling: "greedy",
-          });
-          const marker = new googleApi.maps.Marker({
-            map,
-            position: { lat: mapStart.lat, lng: mapStart.lng },
-            draggable: true,
-            title: "Delivery location",
-            icon: {
-              url: deliveryPinSvg(),
-              scaledSize: new googleApi.maps.Size(48, 58),
-              anchor: new googleApi.maps.Point(24, 58),
-            },
-          });
-          mapRef.current = map;
-          markerRef.current = marker;
-          setMapZoom(map.getZoom() ?? 18);
-          map.addListener("zoom_changed", () => setMapZoom(map.getZoom() ?? 18));
-          setIsGoogleMapReady(true);
-          const accuracy = initialAccuracyRef.current;
-          if (typeof accuracy === "number" && Number.isFinite(accuracy) && accuracy > 10) {
-            uncertaintyRef.current = new googleApi.maps.Circle({
+            googleModeRef.current = true;
+            const map = new googleApi.maps.Map(
+              mapContainerRef.current,
+              getGoogleMapOptions({
+                center: { lat: mapStart.lat, lng: mapStart.lng },
+                zoom: 18,
+                maxZoom: 21,
+                zoomControlOptions: { position: googleApi.maps.ControlPosition.RIGHT_BOTTOM },
+              }),
+            );
+            const marker = new googleApi.maps.Marker({
               map,
-              center: { lat: mapStart.lat, lng: mapStart.lng },
-              radius: accuracy,
-              strokeColor: "#981495",
-              strokeOpacity: 0.22,
-              strokeWeight: 1,
-              fillColor: "#981495",
-              fillOpacity: 0.08,
-              clickable: false,
+              position: { lat: mapStart.lat, lng: mapStart.lng },
+              draggable: true,
+              title: "Delivery location",
+              icon: {
+                url: deliveryPinSvg(),
+                scaledSize: new googleApi.maps.Size(48, 58),
+                anchor: new googleApi.maps.Point(24, 58),
+              },
             });
+            mapRef.current = map;
+            markerRef.current = marker;
+            setMapZoom(map.getZoom() ?? 18);
+            map.addListener("zoom_changed", () => setMapZoom(map.getZoom() ?? 18));
+            setIsGoogleMapReady(true);
+            const accuracy = initialAccuracyRef.current;
+            if (typeof accuracy === "number" && Number.isFinite(accuracy) && accuracy > 10) {
+              uncertaintyRef.current = new googleApi.maps.Circle({
+                map,
+                center: { lat: mapStart.lat, lng: mapStart.lng },
+                radius: accuracy,
+                strokeColor: "#981495",
+                strokeOpacity: 0.22,
+                strokeWeight: 1,
+                fillColor: "#981495",
+                fillOpacity: 0.08,
+                clickable: false,
+              });
+            }
+            map.addListener("click", (event: google.maps.MapMouseEvent) => {
+              if (event.latLng) handlePositionChange(event.latLng.lat(), event.latLng.lng(), true);
+            });
+            marker.addListener("dragend", () => {
+              const position = marker.getPosition();
+              if (position) handlePositionChange(position.lat(), position.lng(), false);
+            });
+            void performReverseGeocode(mapStart.lat, mapStart.lng);
+            setTimeout(() => {
+              if (!cancelled) googleApi.maps.event.trigger(map, "resize");
+            }, 150);
+            return;
+          } catch (googleError) {
+            console.warn(
+              "[LocationMapPicker] Google Maps failed to load, seamlessly falling back to Leaflet with identical settings:",
+              googleError,
+            );
+            // Fall through to Leaflet below!
           }
-          map.addListener("click", (event: google.maps.MapMouseEvent) => {
-            if (event.latLng) handlePositionChange(event.latLng.lat(), event.latLng.lng(), true);
-          });
-          marker.addListener("dragend", () => {
-            const position = marker.getPosition();
-            if (position) handlePositionChange(position.lat(), position.lng(), false);
-          });
-          void performReverseGeocode(mapStart.lat, mapStart.lng);
-          setTimeout(() => {
-            if (!cancelled) googleApi.maps.event.trigger(map, "resize");
-          }, 150);
-          return;
         }
+
 
         const L = (await import("leaflet")).default;
         await import("leaflet/dist/leaflet.css");
@@ -560,7 +526,8 @@ export function LocationMapPicker({
         }
       }
     };
-  }, [mapStart, handlePositionChange, performReverseGeocode]);
+  }, [mapStart, handlePositionChange, performReverseGeocode, mapKeyRevision]);
+
 
   // Keep map container responsive on window or modal resize
   useEffect(() => {

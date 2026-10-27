@@ -131,14 +131,16 @@ export function ShopCard({
           <WishlistButton
             productId={`shop-${shop.id}`}
             productName={shop.name}
+            entityType="shop"
             item={{
               productId: `shop-${shop.id}`,
               name: shop.name,
               shopName: shop.name,
               category: shop.category,
-              price: shop.startingPrice || 0,
+              price: 0,
               imageUrl: shop.imageUrl || "",
               sellerId: shop.id,
+              itemType: "shop",
             }}
           />
         </div>

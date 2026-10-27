@@ -7,6 +7,8 @@ import { localShoreShopMarker } from "@/lib/localshore-shop-marker";
 import { getImportedShopHref } from "@/lib/imported-shops";
 import { getRepresentativeItemImages } from "@/lib/image-utils";
 import type { InteractiveMapViewRef } from "./interactive-map-view";
+import { InteractiveMapView } from "./interactive-map-view";
+import { getGoogleMapOptions } from "@/lib/map-settings";
 
 interface Props {
   markers: MapMarkerItem[];
@@ -33,8 +35,22 @@ export const GoogleMapsMapView = forwardRef<InteractiveMapViewRef, Props>(functi
   const onBoundsChangeRef = useRef(onBoundsChange);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => { onBoundsChangeRef.current = onBoundsChange; }, [onBoundsChange]);
+
+  // Listen for dynamic API key updates to reload the map with the new key while maintaining settings
+  useEffect(() => {
+    const handleKeyChange = () => {
+      mapRef.current = null;
+      userMarkerRef.current = null;
+      shopMarkersRef.current = {};
+      setError(null);
+      setReloadKey((prev) => prev + 1);
+    };
+    window.addEventListener("localshore:map-key-changed", handleKeyChange);
+    return () => window.removeEventListener("localshore:map-key-changed", handleKeyChange);
+  }, []);
 
   useImperativeHandle(ref, () => ({
     flyToLocation: (lat, lng, zoom = 14) => {
@@ -51,20 +67,14 @@ export const GoogleMapsMapView = forwardRef<InteractiveMapViewRef, Props>(functi
     setLoading(true);
     void loadGoogleMaps().then((googleApi) => {
       if (cancelled || !containerRef.current) return;
-      const map = new googleApi.maps.Map(containerRef.current, {
-        center: { lat: userLocation.lat, lng: userLocation.lng },
-        zoom: 14,
-        mapTypeControl: false,
-        streetViewControl: false,
-        fullscreenControl: false,
-        clickableIcons: false,
-        // Keep the operational map focused on LocalShore's filtered shop
-        // markers rather than unrelated Google POI/business icons.
-        styles: [
-          { featureType: "poi", stylers: [{ visibility: "off" }] },
-          { featureType: "transit", stylers: [{ visibility: "off" }] },
-        ],
-      });
+      // Initialize map using centralized LocalShore settings & custom style theme
+      const map = new googleApi.maps.Map(
+        containerRef.current,
+        getGoogleMapOptions({
+          center: { lat: userLocation.lat, lng: userLocation.lng },
+          zoom: 14,
+        }),
+      );
       mapRef.current = map;
       infoWindowRef.current = new googleApi.maps.InfoWindow();
       map.addListener("idle", () => {
@@ -76,10 +86,14 @@ export const GoogleMapsMapView = forwardRef<InteractiveMapViewRef, Props>(functi
       });
       setLoading(false);
     }).catch((loadError: unknown) => {
-      if (!cancelled) { setLoading(false); setError(loadError instanceof Error ? loadError.message : "Google Maps could not load"); }
+      if (!cancelled) {
+        setLoading(false);
+        setError(loadError instanceof Error ? loadError.message : "Google Maps could not load");
+      }
     });
     return () => { cancelled = true; };
-  }, [userLocation.lat, userLocation.lng]);
+  }, [userLocation.lat, userLocation.lng, reloadKey]);
+
 
   useEffect(() => {
     const map = mapRef.current;
@@ -183,8 +197,29 @@ export const GoogleMapsMapView = forwardRef<InteractiveMapViewRef, Props>(functi
     }, () => setError("Location permission was unavailable. Choose a delivery location to continue."), { enableHighAccuracy: true, timeout: 12000, maximumAge: 30000 });
   };
 
-  if (error) return <div className={`${className} grid place-items-center bg-slate-50 p-6 text-center`}><div><MapPin className="mx-auto h-8 w-8 text-[#981495]"/><p className="mt-3 font-semibold text-slate-900">Google Maps unavailable</p><p className="mt-1 max-w-sm text-xs text-slate-500">{error}</p><p className="mt-3 text-xs text-slate-500">Set <code>VITE_GOOGLE_MAPS_API_KEY</code> and use <code>VITE_MAP_PROVIDER=google</code>.</p></div></div>;
+  if (error) {
+    return (
+      <div className={`relative ${className}`}>
+        <InteractiveMapView
+          ref={ref}
+          markers={markers}
+          userLocation={userLocation}
+          selectedMarkerId={selectedMarkerId}
+          hoveredMarkerId={hoveredMarkerId}
+          onSelectMarker={onSelectMarker}
+          onBoundsChange={onBoundsChange}
+          onUserLocationChange={onUserLocationChange}
+          className="h-full w-full"
+        />
+        <div className="absolute top-3 right-3 z-10 rounded-full bg-white/95 border border-amber-300 px-3 py-1 text-[11px] font-semibold text-amber-900 shadow-md flex items-center gap-1.5 backdrop-blur-xs">
+          <span className="h-2 w-2 rounded-full bg-amber-500 animate-pulse" />
+          Vector Map View (Google Maps key fallback)
+        </div>
+      </div>
+    );
+  }
   return <div className={`relative overflow-hidden ${className}`}><div ref={containerRef} className="h-full w-full" aria-label="Google map showing LocalShore shops" />{loading&&<div className="absolute inset-0 grid place-items-center bg-white/75 text-sm font-semibold text-slate-700"><RefreshCw className="mr-2 inline h-4 w-4 animate-spin"/>Loading Google Maps…</div>}<button type="button" onClick={useCurrentLocation} className="absolute left-3 top-3 z-10 inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-2 text-xs font-bold text-[#981495] shadow-md" aria-label="Use current location"><Locate className="h-4 w-4"/>You are here</button><div className="absolute bottom-2 left-2 rounded bg-white/90 px-2 py-1 text-[10px] text-slate-500 shadow">Google Maps · LocalShore shops</div></div>;
+
 });
 
 GoogleMapsMapView.displayName = "GoogleMapsMapView";

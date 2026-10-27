@@ -110,6 +110,7 @@ function SwiggyShopCard({
           <WishlistButton
             productId={`store-${store.id}`}
             productName={store.name}
+            entityType="shop"
             item={{
               productId: `store-${store.id}`,
               name: store.name,
@@ -118,6 +119,7 @@ function SwiggyShopCard({
               price: 0,
               imageUrl: store.imageUrl,
               sellerId: store.id,
+              itemType: "shop",
             }}
           />
         </div>

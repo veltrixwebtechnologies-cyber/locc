@@ -676,8 +676,7 @@ function CheckoutPage() {
     return () => clearInterval(timer);
   }, [showOrderSuccess, placedOrder, navigate]);
 
-  const rawDeliveryFee =
-    totals.subtotal > 0 ? (Number.isFinite(computedDistanceKm) ? Math.round(20 + computedDistanceKm * 6) : 25) : 0;
+  const rawDeliveryFee = totals.subtotal > 0 ? 25 : 0;
 
   const billBreakdown = calculateBillBreakdown({
     subtotal: totals.subtotal,
@@ -696,7 +695,10 @@ function CheckoutPage() {
   const displayDeliveryFee = billBreakdown.deliveryFee;
   const discountAmount = billBreakdown.discountAmount;
   const displayTotal = billBreakdown.total;
-  const finalPayable = displayTotal + tipAmount;
+  const finalPayable = displayTotal;
+
+  const MAX_DELIVERY_RADIUS_KM = 12;
+  const isDistanceTooFar = Number.isFinite(computedDistanceKm) && computedDistanceKm > MAX_DELIVERY_RADIUS_KM;
 
   if ((!store || cart.lines.length === 0) && !showOrderSuccess) {
     return (
@@ -741,7 +743,15 @@ function CheckoutPage() {
     !!pinCoords,
     confirmedLocation,
   );
-  const canPlace = pinConfirmed && Number.isFinite(computedDistanceKm);
+  const canPlace = pinConfirmed && Number.isFinite(computedDistanceKm) && !isDistanceTooFar;
+
+  const fullAddressWithNotes = (() => {
+    const notes: string[] = [];
+    if (deliveryNotes.trim()) notes.push(`Note: ${deliveryNotes.trim()}`);
+    if (deliveryInstructions.length > 0) notes.push(`Instructions: ${deliveryInstructions.join(", ")}`);
+    if (tipAmount > 0) notes.push(`Rider Tip: ₹${tipAmount} (Cash at delivery)`);
+    return notes.length > 0 ? `${selectedAddressLine} [${notes.join(" | ")}]` : selectedAddressLine;
+  })();
 
   const applyCoupon = async (codeToApply?: string) => {
     const code = (codeToApply || couponCode).trim().toUpperCase();
@@ -824,9 +834,7 @@ function CheckoutPage() {
         subtotal: totals.subtotal,
         deliveryFee: displayDeliveryFee,
         total: finalPayable,
-        address: deliveryNotes.trim()
-          ? `${selectedAddressLine} [Note: ${deliveryNotes.trim()}]`
-          : selectedAddressLine,
+        address: fullAddressWithNotes,
         destination: destinationCoords,
         paymentMethod:
           pay === "cod"
@@ -892,6 +900,10 @@ function CheckoutPage() {
       return;
     }
     if (!selectedAddressLine || isPlacing || isCheckingStock || stockCheckError) return;
+    if (isDistanceTooFar) {
+      toast.error(`This store only delivers within ${MAX_DELIVERY_RADIUS_KM} km. Your address is ${computedDistanceKm.toFixed(1)} km away.`);
+      return;
+    }
     if (!canPlace) {
       toast.error("Confirm the delivery location before continuing.");
       return;
@@ -921,7 +933,7 @@ function CheckoutPage() {
       subtotal: totals.subtotal,
       deliveryFee: displayDeliveryFee,
       total: verifyRes.order.total,
-      address: selectedAddressLine,
+      address: fullAddressWithNotes,
       destination: pinCoords,
       paymentMethod: pay === "gpay" ? "Google Pay (UPI)" : "Razorpay Online",
       createdAt: Date.now(),
@@ -983,6 +995,10 @@ function CheckoutPage() {
 
   const initiateRazorpayCheckout = async () => {
     const destinationCoords = parseCoordinates(pinCoords?.lat, pinCoords?.lng);
+    if (isDistanceTooFar) {
+      toast.error(`Selected address is outside the delivery radius (${computedDistanceKm.toFixed(1)} km away; max ${MAX_DELIVERY_RADIUS_KM} km).`);
+      return;
+    }
     if (!canPlace || !destinationCoords) {
       toast.error("Confirm the delivery address and entrance pin first.");
       return;
@@ -997,11 +1013,11 @@ function CheckoutPage() {
       // Step 1: Create Razorpay Order on server side (authoritative amount calculation)
       const rzpOrder = isImportedCart ? await createImportedTestOrder({ data: {
         shopId: store.id, items: cart.lines.map(line => ({ product_id: line.productId, qty: line.qty })),
-        address: selectedAddressLine, latitude: destinationCoords.lat, longitude: destinationCoords.lng, couponCode: couponQuote?.code,
+        address: fullAddressWithNotes, latitude: destinationCoords.lat, longitude: destinationCoords.lng, couponCode: couponQuote?.code,
       } }) : await createRazorpayOrder({
         data: {
           items: cart.lines.map((line) => ({ product_id: line.productId, qty: line.qty })),
-          address: selectedAddressLine,
+          address: fullAddressWithNotes,
           coupon_code: couponQuote?.code,
           customer_latitude: destinationCoords.lat,
           customer_longitude: destinationCoords.lng,
@@ -1142,6 +1158,10 @@ function CheckoutPage() {
       return;
     }
     const destinationCoords = parseCoordinates(pinCoords?.lat, pinCoords?.lng);
+    if (isDistanceTooFar) {
+      toast.error(`Selected address is outside the delivery radius (${computedDistanceKm.toFixed(1)} km away; max ${MAX_DELIVERY_RADIUS_KM} km).`);
+      return;
+    }
     if (!canPlace || !destinationCoords) {
       toast.error("Confirm the delivery address and entrance pin first.");
       return;
@@ -1167,7 +1187,7 @@ function CheckoutPage() {
         subtotal: totals.subtotal,
         deliveryFee: displayDeliveryFee,
         total: finalPayable,
-        address: deliveryNotes.trim() ? `${selectedAddressLine} [Note: ${deliveryNotes.trim()}]` : selectedAddressLine,
+        address: fullAddressWithNotes,
         destination: destinationCoords,
         paymentMethod: "Cash on delivery",
         couponCode: couponQuote?.code,
@@ -1614,6 +1634,17 @@ function CheckoutPage() {
                 </label>
               </div>
 
+              {/* Delivery Distance Alert */}
+              {isDistanceTooFar && (
+                <div className="mt-4 rounded-2xl border border-destructive/40 bg-destructive/10 p-3.5 flex items-start gap-3 text-destructive">
+                  <AlertCircle className="h-5 w-5 shrink-0 mt-0.5" />
+                  <div className="text-xs leading-relaxed">
+                    <span className="font-bold">Address outside delivery zone ({computedDistanceKm.toFixed(1)} km): </span>
+                    <span>This store only delivers within {MAX_DELIVERY_RADIUS_KM} km. Please select a nearby address or discover shops in your local neighborhood.</span>
+                  </div>
+                </div>
+              )}
+
               {/* Delivery Instructions Chips */}
               <div className="mt-4 pt-4 border-t border-border/60">
                 <span className="text-[11px] font-bold text-foreground uppercase tracking-wider block mb-2">
@@ -1668,7 +1699,7 @@ function CheckoutPage() {
                         Tip your delivery partner
                       </span>
                     </div>
-                    <span className="text-[10px] text-muted-foreground font-medium">100% goes directly to partner</span>
+                    <span className="text-[10px] text-muted-foreground font-medium">100% goes directly to partner (paid in cash upon delivery)</span>
                   </div>
                   <div className="grid grid-cols-5 gap-1.5">
                     {[0, 10, 20, 30, 50].map((amt) => {
@@ -2026,7 +2057,7 @@ function CheckoutPage() {
               />
 
               {tipAmount > 0 && (
-                <Row label="Rider Tip (100% to partner)" value={`₹${tipAmount}`} />
+                <Row label="Rider Tip (Cash on delivery)" value={`₹${tipAmount}`} />
               )}
 
               {couponQuote && discountAmount > 0 && (
@@ -2040,8 +2071,10 @@ function CheckoutPage() {
 
               <div className="flex items-center justify-between pt-1">
                 <div className="font-sans">
-                  <span className="font-display text-sm font-bold text-foreground block">Total Payable</span>
-                  <span className="text-[10px] text-muted-foreground">Inclusive of all taxes</span>
+                  <span className="font-display text-sm font-bold text-foreground block">Total Payable Now</span>
+                  <span className="text-[10px] text-muted-foreground">
+                    {tipAmount > 0 ? `+ ₹${tipAmount} cash tip to partner at delivery` : "Inclusive of all taxes"}
+                  </span>
                 </div>
                 <span className="font-mono text-xl sm:text-2xl font-black text-primary">
                   ₹{finalPayable}
@@ -2068,6 +2101,8 @@ function CheckoutPage() {
                     </>
                   ) : stockCheckError ? (
                     "Retry product availability"
+                  ) : isDistanceTooFar ? (
+                    `Outside Delivery Area (${computedDistanceKm.toFixed(1)} km)`
                   ) : canPlace ? (
                     <>
                       <span>
@@ -2144,6 +2179,8 @@ function CheckoutPage() {
               </>
             ) : stockCheckError ? (
               "Retry Availability"
+            ) : isDistanceTooFar ? (
+              `Too Far (${computedDistanceKm.toFixed(1)} km)`
             ) : canPlace ? (
               <>
                 <span>

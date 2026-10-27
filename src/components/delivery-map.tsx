@@ -19,8 +19,10 @@ export interface LatLng {
 
 import { getMapTileConfig } from "@/lib/map-provider";
 import { loadGoogleMaps } from "@/lib/google-maps-loader";
+import { getGoogleMapOptions } from "@/lib/map-settings";
 
 const MAP_PROVIDER = import.meta.env.VITE_MAP_PROVIDER === "google" ? "google" : "osm";
+
 
 interface Props {
   orderId?: string;
@@ -84,8 +86,17 @@ export function DeliveryMap({
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date(0));
   const [secAgo, setSecAgo] = useState<number>(0);
   const [loading, setLoading] = useState(true);
+  const [mapKeyRevision, setMapKeyRevision] = useState(0);
+
+  // Re-initialize map if Google Maps API key is updated dynamically
+  useEffect(() => {
+    const handleKeyChange = () => setMapKeyRevision((r) => r + 1);
+    window.addEventListener("localshore:map-key-changed", handleKeyChange);
+    return () => window.removeEventListener("localshore:map-key-changed", handleKeyChange);
+  }, []);
 
   const lastRouteCalculatedAt = useRef<number>(0);
+
   const lastRoutePos = useRef<LatLng | null>(null);
   const requests = useRef(new RouteRequest());
   const routeEndpoint = useRef("");
@@ -218,28 +229,37 @@ export function DeliveryMap({
         }
 
         if (MAP_PROVIDER === "google") {
-          const googleApi = await loadGoogleMaps();
-          if (cancelled || !mapContainerRef.current) return;
-          googleModeRef.current = true;
-          const map = new googleApi.maps.Map(mapContainerRef.current, {
-            center: { lat: initialPoint.lat, lng: initialPoint.lng },
-            zoom: 15,
-            mapTypeControl: false,
-            streetViewControl: false,
-            fullscreenControl: false,
-            clickableIcons: false,
-          });
-          mapRef.current = map;
-          setLoading(false);
-          if (interactive) {
-            map.addListener("click", (event: google.maps.MapMouseEvent) => {
-              if (event.latLng) {
-                destinationCallback.current?.({ lat: event.latLng.lat(), lng: event.latLng.lng() });
-              }
-            });
+          try {
+            const googleApi = await loadGoogleMaps();
+            if (cancelled || !mapContainerRef.current) return;
+            googleModeRef.current = true;
+            const map = new googleApi.maps.Map(
+              mapContainerRef.current,
+              getGoogleMapOptions({
+                center: { lat: initialPoint.lat, lng: initialPoint.lng },
+                zoom: 15,
+                zoomControl: interactive,
+              }),
+            );
+            mapRef.current = map;
+            setLoading(false);
+            if (interactive) {
+              map.addListener("click", (event: google.maps.MapMouseEvent) => {
+                if (event.latLng) {
+                  destinationCallback.current?.({ lat: event.latLng.lat(), lng: event.latLng.lng() });
+                }
+              });
+            }
+            return;
+          } catch (googleErr) {
+            console.warn(
+              "[DeliveryMap] Google Maps failed to load, seamlessly falling back to Leaflet with identical settings:",
+              googleErr,
+            );
+            // Fall through to Leaflet below!
           }
-          return;
         }
+
 
         const L = (await import("leaflet")).default;
         await import("leaflet/dist/leaflet.css");
@@ -285,7 +305,8 @@ export function DeliveryMap({
     return () => {
       cancelled = true;
     };
-  }, [hasMapPoint]);
+  }, [hasMapPoint, mapKeyRevision]);
+
 
   useEffect(() => {
     return () => {

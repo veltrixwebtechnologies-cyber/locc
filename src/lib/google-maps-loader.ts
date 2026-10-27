@@ -1,7 +1,9 @@
 /// <reference types="google.maps" />
 // Singleton loader for the Google Maps JS API (browser-only).
-// Uses the explicitly configured public browser key. Never put a Supabase
-// service-role key or another private credential in this client-side value.
+// Uses the explicitly configured public browser key or runtime key.
+// Preserves unified LocalShore settings regardless of which key is active.
+
+import { getGoogleMapsApiKey } from "./map-settings";
 
 declare global {
   interface Window {
@@ -12,28 +14,79 @@ declare global {
 }
 
 let promise: Promise<typeof google> | null = null;
+let loadedKey: string | null = null;
 
-export function loadGoogleMaps(): Promise<typeof google> {
+export function resetGoogleMapsLoader(): void {
+  promise = null;
+  loadedKey = null;
+  if (typeof document !== "undefined") {
+    const scripts = document.querySelectorAll<HTMLScriptElement>('script[src*="maps.googleapis.com"]');
+    scripts.forEach((s) => s.remove());
+  }
+}
+
+// Automatically reset loader when user or app updates the API key
+if (typeof window !== "undefined") {
+  window.addEventListener("localshore:map-key-changed", () => {
+    resetGoogleMapsLoader();
+  });
+}
+
+export function loadGoogleMaps(overrideKey?: string): Promise<typeof google> {
   if (typeof window === "undefined") {
     return Promise.reject(new Error("Google Maps can only load in the browser"));
   }
-  if (window.google?.maps) return Promise.resolve(window.google);
+
+  const key = (overrideKey || getGoogleMapsApiKey()).trim();
+
+  // If already loaded with the same key, resolve immediately
+  if (window.google?.maps && loadedKey === key) {
+    return Promise.resolve(window.google);
+  }
+
+  // If the key has changed, reset the previous loader cache
+  if (loadedKey && loadedKey !== key) {
+    resetGoogleMapsLoader();
+  }
+
   if (promise) return promise;
 
-  const key = import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string | undefined;
-  if (!key) return Promise.reject(new Error("Google Maps browser key missing"));
+  if (!key) {
+    return Promise.reject(
+      new Error(
+        "Google Maps browser key missing. Please configure VITE_GOOGLE_MAPS_API_KEY in .env.local.",
+      ),
+    );
+  }
 
   promise = new Promise((resolve, reject) => {
+    let settled = false;
+
     window.gm_authFailure = () => {
+      if (settled) return;
+      settled = true;
+      promise = null; // Clear so subsequent attempts after fixing the key can retry
       window.dispatchEvent(new CustomEvent("localshore:maps-auth-failure"));
       reject(
-        new Error("Map preview unavailable — the Google Maps key is not allowed on this domain."),
+        new Error(
+          "Map preview unavailable — the Google Maps key is not allowed on this domain (gm_authFailure).",
+        ),
       );
     };
+
     window.__localshoreMapsInit = () => {
-      if (window.google?.maps) resolve(window.google);
-      else reject(new Error("Google Maps failed to initialize"));
+      if (settled) return;
+      if (window.google?.maps) {
+        settled = true;
+        loadedKey = key;
+        resolve(window.google);
+      } else {
+        settled = true;
+        promise = null;
+        reject(new Error("Google Maps failed to initialize"));
+      }
     };
+
     const s = document.createElement("script");
     const params = new URLSearchParams({
       key,
@@ -43,9 +96,16 @@ export function loadGoogleMaps(): Promise<typeof google> {
     });
     s.src = `https://maps.googleapis.com/maps/api/js?${params.toString()}`;
     s.async = true;
-    s.onerror = () => reject(new Error("Failed to load Google Maps script"));
+    s.onerror = () => {
+      if (settled) return;
+      settled = true;
+      promise = null; // Allow retry on key correction
+      reject(new Error("Failed to load Google Maps script"));
+    };
+
     document.head.appendChild(s);
   });
 
   return promise;
 }
+

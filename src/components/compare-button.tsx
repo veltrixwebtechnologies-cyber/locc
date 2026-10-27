@@ -12,9 +12,13 @@ export function CompareButton({ productId }: { productId: string }) {
     queryKey: key,
     enabled: Boolean(auth.email || auth.phone),
     queryFn: async () => {
+      const { data: session } = await supabase.auth.getSession();
+      const userId = session.session?.user?.id;
+      if (!userId) return [];
       const { data, error } = await (supabase as any)
         .from("product_comparisons")
         .select("product_id")
+        .eq("user_id", userId)
         .order("created_at", { ascending: true });
       if (error) throw error;
       return (data ?? []).map((row: { product_id: string }) => row.product_id);

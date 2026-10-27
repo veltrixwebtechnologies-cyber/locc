@@ -12,9 +12,13 @@ function ComparePage() {
     queryKey: ["compare-page", auth.email || auth.phone],
     enabled: Boolean(auth.email || auth.phone),
     queryFn: async () => {
+      const { data: session } = await supabase.auth.getSession();
+      const userId = session.session?.user?.id;
+      if (!userId) return [];
       const { data: rows, error } = await (supabase as any)
         .from("product_comparisons")
         .select("product_id")
+        .eq("user_id", userId)
         .order("created_at", { ascending: true });
       if (error) throw error;
       const ids = (rows ?? []).map((row: any) => row.product_id);
