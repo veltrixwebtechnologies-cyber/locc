@@ -438,7 +438,7 @@ export function LiquidGlassCategorySelector({
 
   return (
     <div
-      className={`${isPillLayout ? "sticky top-[53px] md:top-[74px] my-2 z-40" : "relative z-30 my-9"} px-3 transform-gpu sm:px-6 lg:px-8`}
+      className={`${isPillLayout ? "sticky top-[53px] md:top-[74px] my-2 z-40" : "relative z-30 my-4 sm:my-8"} px-3 transform-gpu sm:px-6 lg:px-8`}
     >
       <div
         className={`relative mx-auto w-full ${isPillLayout ? "max-w-[calc(100vw-1rem)] rounded-full border border-[#f0abfc]/60 bg-white/75 p-1 shadow-[0_8px_32px_rgba(60,20,70,0.10)] backdrop-blur-xl sm:p-1.5" : "max-w-[1710px]"}`}

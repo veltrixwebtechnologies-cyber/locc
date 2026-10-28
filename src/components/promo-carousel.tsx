@@ -18,6 +18,8 @@ type Campaign = {
   background: string;
   accent: string;
   imagePosition?: string;
+  isGraphicOnly?: boolean;
+  linkUrl?: string | null;
 };
 
 const campaigns: Campaign[] = [
@@ -177,6 +179,50 @@ function categoryFromLink(link: string | null) {
   }
 }
 
+function BannerLink({
+  campaign,
+  children,
+  className,
+  style,
+}: {
+  campaign: Campaign;
+  children: React.ReactNode;
+  className?: string;
+  style?: React.CSSProperties;
+}) {
+  const link = campaign.linkUrl;
+  if (link && /^https?:\/\//i.test(link)) {
+    return (
+      <a
+        href={link}
+        target="_blank"
+        rel="noopener noreferrer"
+        className={className}
+        style={style}
+      >
+        {children}
+      </a>
+    );
+  }
+  if (link && link.startsWith("/")) {
+    return (
+      <Link to={link as any} className={className} style={style}>
+        {children}
+      </Link>
+    );
+  }
+  return (
+    <Link
+      to="/"
+      search={{ category: campaign.category, q: campaign.query }}
+      className={className}
+      style={style}
+    >
+      {children}
+    </Link>
+  );
+}
+
 export function PromoCarousel() {
   const reduceMotion = useReducedMotion();
   const [activeIndex, setActiveIndex] = useState(0);
@@ -223,17 +269,29 @@ export function PromoCarousel() {
   });
   const adminCampaigns: Campaign[] = (bannerQuery.data ?? []).map((banner, index) => {
     const palette = campaignPalette[index % campaignPalette.length];
+    const rawTitle = (banner.title || "").trim();
+    const rawSubtitle = (banner.subtitle || "").trim();
+    const isGraphicOnly =
+      rawTitle.length <= 3 ||
+      rawTitle.toLowerCase() === "test" ||
+      rawTitle.toLowerCase() === "banner" ||
+      (rawTitle.length <= 4 && rawSubtitle.length <= 4 && rawTitle === rawSubtitle);
+
     return {
       id: banner.id,
-      eyebrow: "Featured on Local Shore",
-      title: banner.title,
-      description: banner.subtitle || "Discover this featured offer from Local Shore.",
+      eyebrow: isGraphicOnly ? "" : "Featured on Local Shore",
+      title: isGraphicOnly ? "" : rawTitle,
+      description: isGraphicOnly
+        ? ""
+        : rawSubtitle || "Discover this featured offer from Local Shore.",
       action: "Explore offer",
       offer: "Featured offer",
       category: categoryFromLink(banner.link_url),
       imageUrl: resolveBannerImage(banner.image_url),
       background: palette.background,
       accent: palette.accent,
+      isGraphicOnly,
+      linkUrl: banner.link_url,
     };
   });
   const visibleCampaigns = adminCampaigns.length ? adminCampaigns : campaigns;
@@ -269,7 +327,7 @@ export function PromoCarousel() {
     <section
       aria-roledescription="carousel"
       aria-label="Featured offers"
-      className="px-5 pb-3 md:px-8 md:pb-5"
+      className="px-3 pb-3 sm:px-5 md:px-8 md:pb-5"
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
       onFocus={() => setPaused(true)}
@@ -282,7 +340,7 @@ export function PromoCarousel() {
       }}
     >
       <div
-        className="group relative h-[250px] sm:h-[280px] md:h-[320px] lg:h-[350px] overflow-hidden rounded-2xl bg-card shadow-lg ring-1 ring-black/[0.06] touch-pan-y"
+        className="group relative h-[185px] xs:h-[210px] sm:h-[260px] md:h-[300px] lg:h-[340px] overflow-hidden rounded-2xl bg-card shadow-md ring-1 ring-black/[0.06] touch-pan-y"
         onPointerDown={(event) => {
           touchStart.current =
             event.pointerType === "touch" ? { x: event.clientX, y: event.clientY } : null;
@@ -321,63 +379,86 @@ export function PromoCarousel() {
               exit: (slideDirection: number) => ({ opacity: 0, x: slideDirection * -28 }),
             }}
             transition={{ duration: 0.38, ease: [0.22, 1, 0.36, 1] }}
-            className="absolute inset-0 grid h-full grid-cols-[1.1fr_0.9fr] sm:grid-cols-[1.15fr_0.85fr] md:grid-cols-[1.2fr_0.8fr]"
+            className={`absolute inset-0 h-full ${
+              campaign.isGraphicOnly
+                ? "w-full"
+                : "grid grid-cols-[1.25fr_0.75fr] sm:grid-cols-[1.15fr_0.85fr] md:grid-cols-[1.2fr_0.8fr]"
+            }`}
             style={{ backgroundColor: campaign.background }}
           >
-            <div className="relative z-[2] flex min-w-0 flex-col items-start justify-center px-6 py-6 sm:px-10 sm:py-8 md:px-14">
-              <span
-                className="mb-2 inline-flex items-center rounded-full bg-white/90 backdrop-blur-xs px-3 py-1 text-[10px] font-black uppercase tracking-wider shadow-xs border border-black/[0.04]"
-                style={{ color: campaign.accent }}
+            {campaign.isGraphicOnly ? (
+              <BannerLink
+                campaign={campaign}
+                className="relative block h-full w-full overflow-hidden"
               >
-                {campaign.offer}
-              </span>
-              <p
-                className="text-[10px] sm:text-xs font-extrabold uppercase tracking-widest"
-                style={{ color: campaign.accent }}
-              >
-                {campaign.eyebrow}
-              </p>
-              <h2 className="mt-1.5 font-display text-xl sm:text-2xl md:text-3xl lg:text-4xl font-black leading-tight text-slate-900 tracking-tight max-w-xl">
-                {campaign.title}
-              </h2>
-              <p className="mt-1.5 text-xs sm:text-sm md:text-base leading-relaxed text-slate-600 font-medium line-clamp-2 max-w-lg">
-                {campaign.description}
-              </p>
-              <Link
-                to="/"
-                search={{ category: campaign.category, q: campaign.query }}
-                className="mt-3.5 sm:mt-5 inline-flex items-center gap-1.5 rounded-xl px-4 py-2 sm:px-5 sm:py-2.5 text-xs sm:text-sm font-bold text-white shadow-md hover:brightness-110 active:scale-95 transition-all cursor-pointer"
-                style={{ backgroundColor: campaign.accent }}
-              >
-                <span>{campaign.action}</span>
-                <ChevronRight className="h-3.5 w-3.5 sm:h-4 w-4" />
-              </Link>
-            </div>
-            <div className="relative min-w-0 overflow-hidden h-full">
-              <m.img
-                src={campaign.imageUrl}
-                alt={campaign.title}
-                initial={reduceMotion ? false : { scale: 1.04 }}
-                animate={{ scale: 1 }}
-                transition={{ duration: 1.1, ease: [0.22, 1, 0.36, 1] }}
-                className="absolute inset-0 h-full w-full object-cover"
-                style={{ objectPosition: campaign.imagePosition ?? "center" }}
-                fetchPriority={activeIndex === 0 ? "high" : undefined}
-                suppressHydrationWarning
-              />
-              {/* Soft luxurious gradient blend between image and background */}
-              <div
-                className="absolute inset-y-0 left-0 w-20 sm:w-32 md:w-44 pointer-events-none z-10"
-                style={{
-                  background: `linear-gradient(to right, ${campaign.background} 0%, ${campaign.background}30 60%, transparent 100%)`,
-                }}
-                aria-hidden
-              />
-            </div>
+                <m.img
+                  src={campaign.imageUrl}
+                  alt={campaign.title || "Featured promotion"}
+                  initial={reduceMotion ? false : { scale: 1.02 }}
+                  animate={{ scale: 1 }}
+                  transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+                  className="h-full w-full object-cover object-center"
+                  fetchPriority={activeIndex === 0 ? "high" : undefined}
+                  suppressHydrationWarning
+                />
+              </BannerLink>
+            ) : (
+              <>
+                <div className="relative z-[2] flex min-w-0 flex-col items-start justify-center px-4 py-3.5 sm:px-8 sm:py-6 md:px-12">
+                  <span
+                    className="mb-1 sm:mb-2 inline-flex items-center rounded-full bg-white/90 backdrop-blur-xs px-2.5 py-0.5 sm:px-3 sm:py-1 text-[9px] sm:text-[10px] font-black uppercase tracking-wider shadow-xs border border-black/[0.04]"
+                    style={{ color: campaign.accent }}
+                  >
+                    {campaign.offer}
+                  </span>
+                  <p
+                    className="text-[9px] sm:text-xs font-extrabold uppercase tracking-widest"
+                    style={{ color: campaign.accent }}
+                  >
+                    {campaign.eyebrow}
+                  </p>
+                  <h2 className="mt-1 font-display text-sm xs:text-base sm:text-2xl md:text-3xl lg:text-4xl font-black leading-snug sm:leading-tight text-slate-900 tracking-tight max-w-xl">
+                    {campaign.title}
+                  </h2>
+                  <p className="mt-1 text-[11px] sm:text-sm md:text-base leading-snug sm:leading-relaxed text-slate-600 font-medium line-clamp-2 max-w-lg">
+                    {campaign.description}
+                  </p>
+                  <BannerLink
+                    campaign={campaign}
+                    className="mt-2.5 sm:mt-4 inline-flex items-center gap-1.5 rounded-xl px-3.5 py-1.5 sm:px-5 sm:py-2.5 text-xs sm:text-sm font-bold text-white shadow-md hover:brightness-110 active:scale-95 transition-all cursor-pointer"
+                    style={{ backgroundColor: campaign.accent }}
+                  >
+                    <span>{campaign.action}</span>
+                    <ChevronRight className="h-3.5 w-3.5 sm:h-4 w-4" />
+                  </BannerLink>
+                </div>
+                <div className="relative min-w-0 overflow-hidden h-full">
+                  <m.img
+                    src={campaign.imageUrl}
+                    alt={campaign.title}
+                    initial={reduceMotion ? false : { scale: 1.04 }}
+                    animate={{ scale: 1 }}
+                    transition={{ duration: 1.1, ease: [0.22, 1, 0.36, 1] }}
+                    className="absolute inset-0 h-full w-full object-cover"
+                    style={{ objectPosition: campaign.imagePosition ?? "center" }}
+                    fetchPriority={activeIndex === 0 ? "high" : undefined}
+                    suppressHydrationWarning
+                  />
+                  {/* Soft luxurious gradient blend between image and background */}
+                  <div
+                    className="absolute inset-y-0 left-0 w-10 sm:w-28 md:w-44 pointer-events-none z-10"
+                    style={{
+                      background: `linear-gradient(to right, ${campaign.background} 0%, ${campaign.background}30 60%, transparent 100%)`,
+                    }}
+                    aria-hidden
+                  />
+                </div>
+              </>
+            )}
           </m.article>
         </AnimatePresence>
 
-        <span className="absolute right-3.5 top-3.5 z-30 rounded-full bg-black/60 px-2.5 py-1 font-mono text-[10px] font-bold text-white backdrop-blur-md border border-white/10 shadow-sm">
+        <span className="absolute right-3 top-3 z-30 rounded-full bg-black/60 px-2 py-0.5 sm:px-2.5 sm:py-1 font-mono text-[9px] sm:text-[10px] font-bold text-white backdrop-blur-md border border-white/10 shadow-sm">
           {String(activeIndex + 1).padStart(2, "0")} /{" "}
           {String(visibleCampaigns.length).padStart(2, "0")}
         </span>
@@ -393,7 +474,7 @@ export function PromoCarousel() {
           whileHover={reduceMotion ? undefined : { scale: 1.05 }}
           whileTap={reduceMotion ? undefined : { scale: 0.95 }}
           transition={{ type: "spring", stiffness: 420, damping: 28 }}
-          className="absolute left-2.5 top-1/2 z-30 grid h-8 w-8 sm:h-9 sm:w-9 -translate-y-1/2 place-items-center rounded-full bg-white/90 text-slate-800 shadow-md backdrop-blur-xs transition-opacity hover:bg-white md:opacity-0 md:group-hover:opacity-100 md:focus:opacity-100"
+          className="absolute left-2.5 top-1/2 z-30 hidden sm:grid h-8 w-8 sm:h-9 sm:w-9 -translate-y-1/2 place-items-center rounded-full bg-white/90 text-slate-800 shadow-md backdrop-blur-xs transition-opacity hover:bg-white md:opacity-0 md:group-hover:opacity-100 md:focus:opacity-100"
         >
           <ChevronLeft className="h-4 w-4" />
         </m.button>
@@ -408,12 +489,12 @@ export function PromoCarousel() {
           whileHover={reduceMotion ? undefined : { scale: 1.05 }}
           whileTap={reduceMotion ? undefined : { scale: 0.95 }}
           transition={{ type: "spring", stiffness: 420, damping: 28 }}
-          className="absolute right-2.5 top-1/2 z-30 grid h-8 w-8 sm:h-9 sm:w-9 -translate-y-1/2 place-items-center rounded-full bg-white/90 text-slate-800 shadow-md backdrop-blur-xs transition-opacity hover:bg-white md:opacity-0 md:group-hover:opacity-100 md:focus:opacity-100"
+          className="absolute right-2.5 top-1/2 z-30 hidden sm:grid h-8 w-8 sm:h-9 sm:w-9 -translate-y-1/2 place-items-center rounded-full bg-white/90 text-slate-800 shadow-md backdrop-blur-xs transition-opacity hover:bg-white md:opacity-0 md:group-hover:opacity-100 md:focus:opacity-100"
         >
           <ChevronRight className="h-4 w-4" />
         </m.button>
 
-        <div className="absolute bottom-3.5 left-1/2 -translate-x-1/2 z-30 flex items-center gap-1.5 rounded-full bg-slate-900/60 px-3 py-1.5 shadow-lg backdrop-blur-md border border-white/10">
+        <div className="absolute bottom-2.5 sm:bottom-3.5 left-1/2 -translate-x-1/2 z-30 flex items-center gap-1.5 rounded-full bg-slate-900/60 px-2.5 py-1 sm:px-3 sm:py-1.5 shadow-lg backdrop-blur-md border border-white/10">
           {visibleCampaigns.map((item, index) => (
             <button
               key={item.id}
@@ -422,7 +503,7 @@ export function PromoCarousel() {
               aria-current={index === activeIndex}
               onClick={() => show(index)}
               className={`h-1.5 rounded-full transition-all cursor-pointer ${
-                index === activeIndex ? "w-6 bg-white shadow-xs" : "w-1.5 bg-white/40 hover:bg-white/80"
+                index === activeIndex ? "w-5 sm:w-6 bg-white shadow-xs" : "w-1.5 bg-white/40 hover:bg-white/80"
               }`}
             />
           ))}
