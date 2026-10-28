@@ -81,11 +81,15 @@ export function LocationMapPicker({
   const localShopMarkersRef = useRef<Record<string, any>>({});
   const initialAccuracyRef = useRef(initialAccuracy);
   const addressRequestRef = useRef(0);
+  const DEFAULT_MAP_CENTER = { lat: 11.0168, lng: 76.9558 };
 
-  const initialCoords = parseCoordinates(initialLat, initialLng);
+  const parsedInitial = parseCoordinates(initialLat, initialLng);
+  const initialCoords = parsedInitial ?? DEFAULT_MAP_CENTER;
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(initialCoords);
   const [mapStart, setMapStart] = useState<{ lat: number; lng: number } | null>(initialCoords);
-  const [hasPositionedPin, setHasPositionedPin] = useState(!requiresManualConfirmation);
+  const [hasPositionedPin, setHasPositionedPin] = useState(
+    Boolean(parsedInitial) && !requiresManualConfirmation,
+  );
   const [mapError, setMapError] = useState("");
 
   const [addressDetails, setAddressDetails] = useState<{
@@ -156,7 +160,7 @@ export function LocationMapPicker({
         const importedRows = importedResult.status === "fulfilled" ? importedResult.value : [];
         if (cancelled) return;
         const registeredShops = await Promise.all(shops
-          .filter((shop) => !isTestEntity(shop.shop_name))
+          .filter((shop) => !isTestEntity(shop.shop_name) && isValidCoordinate(shop.lat, shop.lng))
           .map(async (shop): Promise<LocalShop> => {
             let imageUrl = getFallbackShopImage(shop.category || shop.business_type, shop.shop_name);
             const imagePath = shop.shop_banner_path || shop.shop_logo_path;
@@ -167,6 +171,7 @@ export function LocationMapPicker({
                 imageUrl = data?.signedUrl ?? imageUrl;
               }
             }
+            const dist = Number(shop.distance_km);
             return {
               id: shop.id,
               shopName: shop.shop_name,
@@ -175,25 +180,30 @@ export function LocationMapPicker({
               imageUrl,
               lat: Number(shop.lat),
               lng: Number(shop.lng),
-              distanceKm: shop.distance_km,
+              distanceKm: Number.isFinite(dist) && dist >= 0 ? dist : 1.5,
               isDemo: isGeneratedDemoShopName(shop.shop_name),
               isOpen: shop.is_open,
             };
           }));
-        const importedListings: LocalShop[] = importedRows.map((shop) => ({
-          id: `imported:${shop.id}`,
-          shopName: shop.business_name,
-          category: shop.category || "Local shop",
-          address: shop.formatted_address || [shop.city, shop.state].filter(Boolean).join(", "),
-          imageUrl: shop.cover_image_url || getFallbackShopImage(shop.category, shop.id),
-          lat: Number(shop.latitude),
-          lng: Number(shop.longitude),
-          distanceKm: Number(shop.distance_km),
-          isImported: true,
-          claimStatus: shop.claim_status,
-          rating: Number(shop.rating ?? 0),
-          reviewCount: shop.review_count ?? undefined,
-        }));
+        const importedListings: LocalShop[] = importedRows
+          .filter((shop) => isValidCoordinate(shop.latitude, shop.longitude))
+          .map((shop) => {
+            const dist = Number(shop.distance_km);
+            return {
+              id: `imported:${shop.id}`,
+              shopName: shop.business_name,
+              category: shop.category || "Local shop",
+              address: shop.formatted_address || [shop.city, shop.state].filter(Boolean).join(", "),
+              imageUrl: shop.cover_image_url || getFallbackShopImage(shop.category, shop.id),
+              lat: Number(shop.latitude),
+              lng: Number(shop.longitude),
+              distanceKm: Number.isFinite(dist) && dist >= 0 ? dist : 1.5,
+              isImported: true,
+              claimStatus: shop.claim_status,
+              rating: Number(shop.rating ?? 0),
+              reviewCount: shop.review_count ?? undefined,
+            };
+          });
         const combined = [...registeredShops, ...importedListings].sort((a, b) => {
           const distA = a.distanceKm ?? Infinity;
           const distB = b.distanceKm ?? Infinity;
@@ -493,7 +503,9 @@ export function LocationMapPicker({
       const worldScale = 2 ** mapZoom;
       const fallbackCell = mapZoom < 12 ? 0.02 : mapZoom < 14 ? 0.01 : mapZoom < 16 ? 0.003 : 0.0008;
       const groups = new Map<string, LocalShop[]>();
-      displayShops.forEach((shop) => {
+      displayShops
+        .filter((shop) => isValidCoordinate(shop.lat, shop.lng))
+        .forEach((shop) => {
         const worldPoint = projection?.fromLatLngToPoint(new googleApi.maps.LatLng(shop.lat, shop.lng));
         const key = clusterPixels && worldPoint
           ? `${Math.floor((worldPoint.x * worldScale) / clusterPixels)}:${Math.floor((worldPoint.y * worldScale) / clusterPixels)}`
@@ -732,7 +744,7 @@ export function LocationMapPicker({
                     {shop.isImported && <span className="block text-[9px] font-bold text-sky-700">Public shop · prototype catalog</span>}
                     <span className="mt-0.5 flex items-center gap-1.5 text-[10px] font-bold text-[#981495]">
                       {shop.isOpen !== undefined && <span className={shop.isOpen ? "text-emerald-700" : "text-slate-500"}>{shop.isOpen ? "Open now" : "Closed"} ·</span>}
-                      {shop.distanceKm.toFixed(1)} km away
+                      {(Number.isFinite(Number(shop.distanceKm)) ? Number(shop.distanceKm) : 1.5).toFixed(1)} km away
                     </span>
                   </span>
                   <span className="text-lg text-[#981495]">›</span>
@@ -832,7 +844,7 @@ export function LocationMapPicker({
                     <span className="block truncate text-[10px] font-semibold text-[#7D7485]">{shop.category}</span>
                     <span className="mt-0.5 flex items-center gap-1.5 text-[10px] font-bold text-[#981495]">
                       {shop.isOpen !== undefined && <span className={shop.isOpen ? "text-emerald-700" : "text-slate-500"}>{shop.isOpen ? "Open" : "Closed"} ·</span>}
-                      {shop.distanceKm.toFixed(1)} km away
+                      {(Number.isFinite(Number(shop.distanceKm)) ? Number(shop.distanceKm) : 1.5).toFixed(1)} km away
                     </span>
                   </span>
                   <span className="text-lg text-[#981495]">›</span>
@@ -870,10 +882,10 @@ export function LocationMapPicker({
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-black text-[#21162B]">{selectedShop.shopName}</p>
                 <p className="truncate text-[11px] font-semibold text-[#7D7485]">
-                {selectedShop.category} · {selectedShop.distanceKm.toFixed(1)} km away{selectedShop.isDemo ? " · sample catalog" : selectedShop.isImported ? " · public listing" : ""}
+                {selectedShop.category} · {(Number.isFinite(Number(selectedShop.distanceKm)) ? Number(selectedShop.distanceKm) : 1.5).toFixed(1)} km away{selectedShop.isDemo ? " · sample catalog" : selectedShop.isImported ? " · public listing" : ""}
                 </p>
                 <p className="truncate text-[10px] text-[#7D7485]">{selectedShop.address || "LocalShore shop"}</p>
-                {selectedShop.isImported && <p className="truncate text-[10px] font-semibold text-sky-700">{selectedShop.rating ? `★ ${selectedShop.rating.toFixed(1)}${selectedShop.reviewCount ? ` (${selectedShop.reviewCount} reviews)` : ""} · ` : ""}Prototype catalog · test checkout only</p>}
+                {selectedShop.isImported && <p className="truncate text-[10px] font-semibold text-sky-700">{selectedShop.rating && Number.isFinite(Number(selectedShop.rating)) ? `★ ${Number(selectedShop.rating).toFixed(1)}${selectedShop.reviewCount ? ` (${selectedShop.reviewCount} reviews)` : ""} · ` : ""}Prototype catalog · test checkout only</p>}
               </div>
               <button type="button" onClick={() => setSelectedShop(null)} className="self-start text-lg leading-none text-slate-400" aria-label="Close shop card">×</button>
             </div>
