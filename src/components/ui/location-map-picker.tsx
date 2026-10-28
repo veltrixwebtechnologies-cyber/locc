@@ -5,7 +5,6 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import { MapPin, LocateFixed, Search, Loader2, Navigation, Check, ArrowLeft, Store } from "lucide-react";
-import { getMapTileConfig } from "@/lib/map-provider";
 import { detectCurrentGPSLocation, type DeliveryLocation } from "@/lib/location-store";
 import { isValidCoordinate } from "@/lib/geo";
 import { MAX_CUSTOMER_DELIVERY_ACCURACY_M, parseCoordinates } from "@/lib/coordinates";
@@ -13,7 +12,7 @@ import { resolveNominatimAddress } from "@/lib/location-address";
 import { reverseGeocode } from "@/lib/geocoding.functions";
 import { geocodeSearch } from "@/lib/map-service/providers";
 import { toast } from "sonner";
-import { loadGoogleMaps, isGoogleMapsAuthFailed, triggerGoogleMapsAuthFailure } from "@/lib/google-maps-loader";
+import { loadGoogleMaps } from "@/lib/google-maps-loader";
 import { supabase } from "@/integrations/supabase/client";
 import { isTestEntity } from "@/lib/map-service/store-engine";
 import { isGeneratedDemoShopName } from "@/lib/demo-neighborhood-shops";
@@ -31,7 +30,6 @@ import {
   shopClusterIcon,
 } from "@/lib/map-settings";
 
-const MAP_PROVIDER = import.meta.env.VITE_MAP_PROVIDER === "osm" ? "osm" : "google";
 const GOOGLE_PICKER_STYLES = LOCALSHORE_MAP_STYLES;
 
 type LocalShop = {
@@ -78,8 +76,7 @@ export function LocationMapPicker({
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<any>(null);
   const markerRef = useRef<any>(null);
-  const LRef = useRef<any>(null);
-  const googleModeRef = useRef(MAP_PROVIDER === "google");
+  const googleModeRef = useRef(true);
   const uncertaintyRef = useRef<any>(null);
   const localShopMarkersRef = useRef<Record<string, any>>({});
   const initialAccuracyRef = useRef(initialAccuracy);
@@ -108,7 +105,6 @@ export function LocationMapPicker({
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [isGoogleMapReady, setIsGoogleMapReady] = useState(false);
-  const [isLeafletMapReady, setIsLeafletMapReady] = useState(false);
   const [mapZoom, setMapZoom] = useState(18);
   const [localShops, setLocalShops] = useState<LocalShop[]>([]);
   const [selectedShop, setSelectedShop] = useState<LocalShop | null>(null);
@@ -117,64 +113,10 @@ export function LocationMapPicker({
   const [shopsError, setShopsError] = useState<string | null>(null);
   const [shopsReload, setShopsReload] = useState(0);
   const [mapKeyRevision, setMapKeyRevision] = useState(0);
-  const [useLeafletFallback, setUseLeafletFallback] = useState(() => isGoogleMapsAuthFailed());
-
-  const isGoogleMode = MAP_PROVIDER === "google" && !useLeafletFallback;
-
-  // Seamlessly fall back to Leaflet if Google Maps encounters runtime auth failure (e.g. unactivated API or invalid key)
-  useEffect(() => {
-    const handleAuthFailure = () => {
-      console.warn("[LocationMapPicker] Google Maps auth failure detected (gm_authFailure). Switching directly to Leaflet fallback.");
-      setUseLeafletFallback(true);
-    };
-    window.addEventListener("localshore:maps-auth-failure", handleAuthFailure);
-    return () => window.removeEventListener("localshore:maps-auth-failure", handleAuthFailure);
-  }, []);
-
-  // Proactively detect Google Maps DOM error overlays (e.g. "This page can't load Google Maps correctly" / BillingNotEnabledMapError)
-  useEffect(() => {
-    if (!isGoogleMode || !mapContainerRef.current) return;
-    const container = mapContainerRef.current;
-    const checkAndFallback = () => {
-      const hasErrorOverlay =
-        Boolean(container.querySelector(".gm-err-container")) ||
-        Boolean(container.querySelector(".gm-err-message")) ||
-        Boolean(container.querySelector(".gm-style-pbt")) ||
-        Boolean(container.innerText?.includes("This page can't load Google Maps correctly")) ||
-        Boolean(container.innerText?.includes("Do you own this website?"));
-
-      if (hasErrorOverlay) {
-        console.warn("[LocationMapPicker] Detected Google Maps error overlay in DOM. Switching directly to Leaflet fallback.");
-        triggerGoogleMapsAuthFailure();
-        setUseLeafletFallback(true);
-        return true;
-      }
-      return false;
-    };
-
-    if (checkAndFallback()) return;
-
-    const observer = new MutationObserver(() => {
-      if (checkAndFallback()) {
-        observer.disconnect();
-      }
-    });
-
-    observer.observe(container, { childList: true, subtree: true, characterData: true });
-    const timer1 = setTimeout(checkAndFallback, 600);
-    const timer2 = setTimeout(checkAndFallback, 1600);
-
-    return () => {
-      observer.disconnect();
-      clearTimeout(timer1);
-      clearTimeout(timer2);
-    };
-  }, [isGoogleMode, mapKeyRevision]);
 
   // Re-initialize map if Google Maps API key changes dynamically
   useEffect(() => {
     const handleKeyChange = () => {
-      setUseLeafletFallback(false);
       setMapKeyRevision((r) => r + 1);
     };
     window.addEventListener("localshore:map-key-changed", handleKeyChange);
@@ -271,8 +213,43 @@ export function LocationMapPicker({
   const performReverseGeocode = useCallback(async (lat: number, lng: number) => {
     const request = ++addressRequestRef.current;
     setIsGeocoding(true);
+
+    // 1. First priority: Google Maps Geocoder if Google Maps API is loaded
+    if (window.google?.maps?.Geocoder) {
+      try {
+        const geocoder = new window.google.maps.Geocoder();
+        const response = await geocoder.geocode({ location: { lat, lng } });
+        if (request !== addressRequestRef.current) return;
+        if (response.results && response.results[0]) {
+          const first = response.results[0];
+          let area = "";
+          let city = "";
+          let pincode = "";
+          for (const comp of first.address_components) {
+            if (comp.types.includes("sublocality") || comp.types.includes("neighborhood")) {
+              area = comp.long_name;
+            } else if (comp.types.includes("locality")) {
+              city = comp.long_name;
+            } else if (comp.types.includes("postal_code")) {
+              pincode = comp.long_name;
+            }
+          }
+          setAddressDetails({
+            area: area || city || "Selected area",
+            city,
+            label: first.formatted_address,
+            pincode,
+          });
+          setIsGeocoding(false);
+          return;
+        }
+      } catch (gErr) {
+        console.warn("Google Maps geocoder fallback", gErr);
+      }
+    }
+
     try {
-      // 1. Try proxied server function with 11m precision & rate-limiting
+      // 2. Try proxied server function with 11m precision & rate-limiting
       const result = await reverseGeocode({ data: { lat, lng } });
       if (request !== addressRequestRef.current) return;
       if (result && result.address && !result.address.startsWith("Near ")) {
@@ -398,172 +375,69 @@ export function LocationMapPicker({
     };
   }, [mapStart]);
 
-  // Initialize the selected map provider. OSM/Leaflet remains the fallback.
+  // Initialize Google Maps exclusively
   useEffect(() => {
     let cancelled = false;
 
     (async () => {
       try {
-        if (isGoogleMode) {
-          if (cancelled || !mapContainerRef.current || !mapStart) return;
-          try {
-            const googleApi = await loadGoogleMaps();
-            if (cancelled || !mapContainerRef.current) return;
-
-            googleModeRef.current = true;
-            const map = new googleApi.maps.Map(
-              mapContainerRef.current,
-              getGoogleMapOptions({
-                center: { lat: mapStart.lat, lng: mapStart.lng },
-                zoom: 18,
-                maxZoom: 21,
-                zoomControlOptions: { position: googleApi.maps.ControlPosition.RIGHT_BOTTOM },
-              }),
-            );
-            const marker = new googleApi.maps.Marker({
-              map,
-              position: { lat: mapStart.lat, lng: mapStart.lng },
-              draggable: true,
-              title: "Delivery location",
-              icon: {
-                url: deliveryPinSvg(),
-                scaledSize: new googleApi.maps.Size(48, 58),
-                anchor: new googleApi.maps.Point(24, 58),
-              },
-            });
-            mapRef.current = map;
-            markerRef.current = marker;
-            setMapZoom(map.getZoom() ?? 18);
-            map.addListener("zoom_changed", () => setMapZoom(map.getZoom() ?? 18));
-            setIsGoogleMapReady(true);
-            const accuracy = initialAccuracyRef.current;
-            if (typeof accuracy === "number" && Number.isFinite(accuracy) && accuracy > 10) {
-              uncertaintyRef.current = new googleApi.maps.Circle({
-                map,
-                center: { lat: mapStart.lat, lng: mapStart.lng },
-                radius: accuracy,
-                strokeColor: "#981495",
-                strokeOpacity: 0.22,
-                strokeWeight: 1,
-                fillColor: "#981495",
-                fillOpacity: 0.08,
-                clickable: false,
-              });
-            }
-            map.addListener("click", (event: google.maps.MapMouseEvent) => {
-              if (event.latLng) handlePositionChange(event.latLng.lat(), event.latLng.lng(), true);
-            });
-            marker.addListener("dragend", () => {
-              const position = marker.getPosition();
-              if (position) handlePositionChange(position.lat(), position.lng(), false);
-            });
-            void performReverseGeocode(mapStart.lat, mapStart.lng);
-            setTimeout(() => {
-              if (!cancelled) googleApi.maps.event.trigger(map, "resize");
-            }, 150);
-            return;
-          } catch (googleError) {
-            console.warn(
-              "[LocationMapPicker] Google Maps failed to load, seamlessly falling back to Leaflet with identical settings:",
-              googleError,
-            );
-            if (cancelled) return;
-            setUseLeafletFallback(true);
-            // Fall through to Leaflet below!
-          }
-        }
-
-        if (mapContainerRef.current) {
-          mapContainerRef.current.innerHTML = "";
-        }
-
-
-        const L = (await import("leaflet")).default;
-        await import("leaflet/dist/leaflet.css");
         if (cancelled || !mapContainerRef.current || !mapStart) return;
+        const googleApi = await loadGoogleMaps();
+        if (cancelled || !mapContainerRef.current) return;
 
-        googleModeRef.current = false;
-        LRef.current = L;
-
-        // Custom map marker pin SVG icon
-        const pinHtml = `<svg width="36" height="44" viewBox="0 0 36 44" xmlns="http://www.w3.org/2000/svg">
-          <path d="M18 43C15 37 2 26 2 18a16 16 0 1 1 32 0c0 8-13 19-16 25Z" fill="#981495" stroke="white" stroke-width="2"/>
-          <circle cx="18" cy="18" r="6" fill="white"/>
-        </svg>`;
-
-        const customIcon = L.divIcon({
-          html: pinHtml,
-          className: "custom-map-pin",
-          iconSize: [36, 44],
-          iconAnchor: [18, 44],
-        });
-
-        const map = L.map(mapContainerRef.current, {
-          center: [mapStart.lat, mapStart.lng],
-          zoom: 18,
-          maxZoom: 19,
-          zoomControl: false,
-        });
-
-        L.control.zoom({ position: "bottomright" }).addTo(map);
-
-        const tileConfig = getMapTileConfig();
-        map.setMaxZoom(tileConfig.maxZoom);
-        L.tileLayer(tileConfig.url, {
-          maxZoom: tileConfig.maxZoom,
-          subdomains: tileConfig.subdomains,
-          attribution: tileConfig.attribution,
-        }).addTo(map);
-
-        const marker = L.marker([mapStart.lat, mapStart.lng], {
-          icon: customIcon,
+        googleModeRef.current = true;
+        const map = new googleApi.maps.Map(
+          mapContainerRef.current,
+          getGoogleMapOptions({
+            center: { lat: mapStart.lat, lng: mapStart.lng },
+            zoom: 18,
+            maxZoom: 21,
+            zoomControlOptions: { position: googleApi.maps.ControlPosition.RIGHT_BOTTOM },
+          }),
+        );
+        const marker = new googleApi.maps.Marker({
+          map,
+          position: { lat: mapStart.lat, lng: mapStart.lng },
           draggable: true,
-        }).addTo(map);
-
-        markerRef.current = marker;
+          title: "Delivery location",
+          icon: {
+            url: deliveryPinSvg(),
+            scaledSize: new googleApi.maps.Size(48, 58),
+            anchor: new googleApi.maps.Point(24, 58),
+          },
+        });
         mapRef.current = map;
-        setIsLeafletMapReady(true);
+        markerRef.current = marker;
+        setMapZoom(map.getZoom() ?? 18);
+        map.addListener("zoom_changed", () => setMapZoom(map.getZoom() ?? 18));
+        setIsGoogleMapReady(true);
         const accuracy = initialAccuracyRef.current;
         if (typeof accuracy === "number" && Number.isFinite(accuracy) && accuracy > 10) {
-          const circle = L.circle([mapStart.lat, mapStart.lng], {
-            radius: accuracy, color: "#b45309", fillOpacity: 0.08, interactive: false,
-          }).addTo(map);
-          uncertaintyRef.current = circle;
-          map.fitBounds(circle.getBounds(), { padding: [16, 16], maxZoom: 16 });
+          uncertaintyRef.current = new googleApi.maps.Circle({
+            map,
+            center: { lat: mapStart.lat, lng: mapStart.lng },
+            radius: accuracy,
+            strokeColor: "#981495",
+            strokeOpacity: 0.22,
+            strokeWeight: 1,
+            fillColor: "#981495",
+            fillOpacity: 0.08,
+            clickable: false,
+          });
         }
-
-        // Click anywhere on map to reposition pin
-        map.on("click", (e: any) => {
-          handlePositionChange(e.latlng.lat, e.latlng.lng, true);
+        map.addListener("click", (event: google.maps.MapMouseEvent) => {
+          if (event.latLng) handlePositionChange(event.latLng.lat(), event.latLng.lng(), true);
         });
-
-        // On touch devices, dragging the map is easier than dragging a small
-        // marker. Use the map center as the selected point after every pan.
-        map.on("move", () => {
-          const center = map.getCenter();
-          // Keep the pin visually attached to the map center throughout the
-          // drag, rather than waiting for the gesture to finish.
-          marker.setLatLng(center);
+        marker.addListener("dragend", () => {
+          const position = marker.getPosition();
+          if (position) handlePositionChange(position.lat(), position.lng(), false);
         });
-        map.on("moveend", () => {
-          const center = map.getCenter();
-          handlePositionChange(center.lat, center.lng, false);
-        });
-
-        // Drag marker end event
-        marker.on("dragend", () => {
-          const position = marker.getLatLng();
-          handlePositionChange(position.lat, position.lng, false);
-        });
-
-        // Trigger initial reverse geocode
         void performReverseGeocode(mapStart.lat, mapStart.lng);
-
         setTimeout(() => {
-          if (!cancelled) map.invalidateSize();
+          if (!cancelled) googleApi.maps.event.trigger(map, "resize");
         }, 150);
       } catch (err) {
-        console.error("LocationMapPicker map init error:", err);
+        console.error("LocationMapPicker Google Maps init error:", err);
         if (!cancelled) setMapError(err instanceof Error ? err.message : "Map could not load.");
       }
     })();
@@ -572,57 +446,47 @@ export function LocationMapPicker({
       cancelled = true;
       addressRequestRef.current++;
       if (geocodeTimeoutRef.current) clearTimeout(geocodeTimeoutRef.current);
+      if (geocodeTimeoutRef.current) clearTimeout(geocodeTimeoutRef.current);
       if (mapRef.current) {
-        if (googleModeRef.current) {
-          markerRef.current?.setMap?.(null);
-          Object.values(localShopMarkersRef.current).forEach((shopMarker: any) => shopMarker.setMap?.(null));
-          localShopMarkersRef.current = {};
-          uncertaintyRef.current?.setMap?.(null);
-          setIsGoogleMapReady(false);
-          mapRef.current = null;
-          markerRef.current = null;
-        } else {
-          setIsLeafletMapReady(false);
-          mapRef.current.remove();
-          mapRef.current = null;
-        }
+        markerRef.current?.setMap?.(null);
+        Object.values(localShopMarkersRef.current).forEach((shopMarker: any) => shopMarker.setMap?.(null));
+        localShopMarkersRef.current = {};
+        uncertaintyRef.current?.setMap?.(null);
+        setIsGoogleMapReady(false);
+        mapRef.current = null;
+        markerRef.current = null;
       }
       if (mapContainerRef.current) {
         mapContainerRef.current.innerHTML = "";
       }
     };
-  }, [mapStart, handlePositionChange, performReverseGeocode, mapKeyRevision, isGoogleMode]);
+  }, [mapStart, handlePositionChange, performReverseGeocode, mapKeyRevision]);
 
 
   // Keep map container responsive on window or modal resize
   useEffect(() => {
     if (!mapContainerRef.current) return;
     const observer = new ResizeObserver(() => {
-      if (googleModeRef.current && mapRef.current && (window as any).google?.maps) {
+      if (mapRef.current && (window as any).google?.maps) {
         (window as any).google.maps.event.trigger(mapRef.current, "resize");
-      } else if (mapRef.current?.invalidateSize) {
-        mapRef.current.invalidateSize();
       }
     });
     observer.observe(mapContainerRef.current);
     return () => observer.disconnect();
-  }, [isGoogleMapReady, isLeafletMapReady]);
+  }, [isGoogleMapReady]);
 
-  // Render registered stores and imported public listings on either map provider.
+  // Render registered stores and imported public listings on Google Maps.
   useEffect(() => {
     const removeShopMarkers = () => {
       Object.values(localShopMarkersRef.current).forEach((marker: any) => {
         marker.setMap?.(null);
-        marker.remove?.();
       });
       localShopMarkersRef.current = {};
     };
-    if (isGoogleMode && (!isGoogleMapReady || !mapRef.current || !window.google?.maps)) return;
-    if (!isGoogleMode && (!isLeafletMapReady || !mapRef.current || !LRef.current)) return;
+    if (!isGoogleMapReady || !mapRef.current || !window.google?.maps) return;
     const map = mapRef.current;
     removeShopMarkers();
-    if (isGoogleMode) {
-      const googleApi = window.google;
+    const googleApi = window.google;
       const clusterPixels = mapZoom < 18 ? 64 : 0;
       const projection = map.getProjection();
       const worldScale = 2 ** mapZoom;
@@ -661,23 +525,8 @@ export function LocationMapPicker({
         marker.addListener("click", () => setSelectedShop(shop));
         localShopMarkersRef.current[shop.id] = marker;
       });
-    } else {
-      const L = LRef.current;
-      displayShops.forEach((shop) => {
-        const color = shop.isImported ? "#2878A5" : shop.isDemo ? "#A437A0" : "#981495";
-        const icon = L.divIcon({
-          className: "location-picker-shop-marker",
-          html: `<span style="display:grid;place-items:center;width:30px;height:30px;border:2px solid white;border-radius:50%;background:${color};color:white;box-shadow:0 2px 8px #291b3466;font:700 14px Arial">⌂</span>`,
-          iconSize: [30, 30],
-          iconAnchor: [15, 15],
-        });
-        const marker = L.marker([shop.lat, shop.lng], { icon, title: `${shop.shopName}${shop.isImported ? " · public listing" : ""}` }).addTo(map);
-        marker.on("click", () => setSelectedShop(shop));
-        localShopMarkersRef.current[shop.id] = marker;
-      });
-    }
     return removeShopMarkers;
-  }, [isGoogleMode, isGoogleMapReady, isLeafletMapReady, displayShops, mapStart, mapZoom, selectedShop?.id]);
+  }, [isGoogleMapReady, displayShops, mapStart, mapZoom, selectedShop?.id]);
 
   // Handle live GPS detection
   const handleGPSLocate = async () => {
@@ -805,17 +654,15 @@ export function LocationMapPicker({
             />
             {isSearching && <Loader2 className="h-4 w-4 text-[#981495] animate-spin shrink-0" />}
           </div>
-          {isGoogleMode && (
-            <button
-              type="button"
-              onClick={handleGPSLocate}
-              disabled={isLocating}
-              className="hidden shrink-0 items-center gap-2 rounded-xl bg-[#981495] px-3.5 py-2.5 text-xs font-black text-white shadow-md shadow-[#981495]/15 transition hover:bg-[#7d1079] disabled:opacity-60 sm:flex"
-            >
-              {isLocating ? <Loader2 className="h-4 w-4 animate-spin" /> : <LocateFixed className="h-4 w-4" />}
-              Use my location
-            </button>
-          )}
+          <button
+            type="button"
+            onClick={handleGPSLocate}
+            disabled={isLocating}
+            className="hidden shrink-0 items-center gap-2 rounded-xl bg-[#981495] px-3.5 py-2.5 text-xs font-black text-white shadow-md shadow-[#981495]/15 transition hover:bg-[#7d1079] disabled:opacity-60 sm:flex"
+          >
+            {isLocating ? <Loader2 className="h-4 w-4 animate-spin" /> : <LocateFixed className="h-4 w-4" />}
+            Use my location
+          </button>
         </div>
 
         {/* Search Results Dropdown */}
@@ -836,11 +683,9 @@ export function LocationMapPicker({
         )}
       </div>
 
-      {/* LocalShore map canvas. Google mode uses a quiet branded style and
-          LocalShore seller markers; OSM mode keeps the existing Leaflet map. */}
-      <div className={`relative isolate w-full flex-1 min-h-[220px] overflow-hidden rounded-2xl border border-[#E9DDF0] bg-[#FAF7FC] shadow-sm ${isGoogleMode ? "lg:flex" : ""}`}>
-        {isGoogleMode && (
-          <aside className="hidden min-w-0 overflow-hidden border-r border-[#EEE7F3] bg-white lg:flex lg:w-[230px] lg:shrink-0 lg:flex-col">
+      {/* LocalShore Google Maps canvas */}
+      <div className="relative isolate w-full flex-1 min-h-[220px] overflow-hidden rounded-2xl border border-[#E9DDF0] bg-[#FAF7FC] shadow-sm lg:flex">
+        <aside className="hidden min-w-0 overflow-hidden border-r border-[#EEE7F3] bg-white lg:flex lg:w-[230px] lg:shrink-0 lg:flex-col">
             <div className="flex items-center justify-between border-b border-[#EEE7F3] px-3.5 py-3">
               <div>
                 <p className="text-sm font-black text-[#21162B]">Nearby shops</p>
@@ -903,7 +748,6 @@ export function LocationMapPicker({
               </button>
             )}
           </aside>
-        )}
         <div className="relative h-full min-h-[220px] min-w-0 flex-1">
         {mapStart ? (
           <div ref={mapContainerRef} className="w-full h-full" />
@@ -919,19 +763,6 @@ export function LocationMapPicker({
           </div>
         )}
 
-        {/* Map Provider Badge & Switcher */}
-        <div className="absolute top-3 right-3 z-[1000] flex items-center gap-1.5">
-          <button
-            type="button"
-            onClick={() => setUseLeafletFallback((prev) => !prev)}
-            title="Switch map provider (Google Maps / OpenStreetMap)"
-            className="rounded-full bg-white/95 px-2.5 py-1 text-[10px] font-black text-slate-800 shadow-md ring-1 ring-slate-200/90 backdrop-blur hover:bg-slate-50 transition-all flex items-center gap-1.5 cursor-pointer"
-          >
-            <span>{isGoogleMode ? "🌐 Google Maps" : "🗺️ OpenStreetMap"}</span>
-            <span className="text-[9px] text-[#981495] font-bold underline">Switch</span>
-          </button>
-        </div>
-
         {/* Floating Locate Me GPS button */}
         {mapError && (
           <div className="absolute inset-x-3 bottom-3 z-[1000] rounded-xl bg-white/95 px-3 py-2 text-xs font-semibold text-amber-800 shadow-lg ring-1 ring-amber-200">
@@ -939,13 +770,13 @@ export function LocationMapPicker({
           </div>
         )}
 
-        {isGoogleMode && displayShops.length > 0 && (
+        {displayShops.length > 0 && (
           <div className="absolute left-3 bottom-3 z-[1000] rounded-full bg-white/95 px-3 py-1.5 text-[10px] font-black text-[#981495] shadow-md ring-1 ring-[#EBD9F0]">
             {localShops.length} nearby shops · blue pins are public listings
           </div>
         )}
 
-        {isGoogleMode && coords && displayShops.length === 0 && !mapError && (
+        {coords && displayShops.length === 0 && !mapError && (
           <div className="absolute inset-x-3 bottom-3 z-[1000] rounded-xl bg-white/95 px-3 py-2 text-xs text-[#7D7485] shadow-md lg:hidden" role={shopsError ? "alert" : "status"}>
             {shopsLoading ? "Finding nearby shops…" : shopsError || "No nearby LocalShore shops or public listings. Try another delivery area."}
             {shopsError && <button type="button" onClick={() => setShopsReload((value) => value + 1)} className="ml-2 font-bold text-[#981495]">Try again</button>}
@@ -1003,7 +834,7 @@ export function LocationMapPicker({
           onClick={handleGPSLocate}
           disabled={isLocating}
           title="Center on current GPS position"
-          className={`absolute bottom-3 z-[1000] grid h-10 w-10 place-items-center rounded-xl bg-white text-[#981495] shadow-lg border border-slate-200 hover:bg-slate-50 transition-colors cursor-pointer ${isGoogleMode ? "right-3" : "left-3"}`}
+          className="absolute bottom-3 right-3 z-[1000] grid h-10 w-10 place-items-center rounded-xl bg-white text-[#981495] shadow-lg border border-slate-200 hover:bg-slate-50 transition-colors cursor-pointer"
         >
           {isLocating ? (
             <Loader2 className="h-5 w-5 animate-spin" />

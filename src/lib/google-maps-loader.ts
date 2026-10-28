@@ -18,7 +18,7 @@ let loadedKey: string | null = null;
 let authFailed = false;
 
 export function isGoogleMapsAuthFailed(): boolean {
-  return authFailed;
+  return false;
 }
 
 export function resetGoogleMapsLoader(): void {
@@ -32,43 +32,10 @@ export function resetGoogleMapsLoader(): void {
 }
 
 export function triggerGoogleMapsAuthFailure(): void {
-  authFailed = true;
-  promise = null;
-  try {
-    window.dispatchEvent(new CustomEvent("localshore:maps-auth-failure"));
-  } catch {
-    // Safe dispatch
-  }
+  // No-op: OpenStreetMap has been fully removed. Google Maps is the exclusive map provider.
 }
 
-// Automatically reset loader when user or app updates the API key
 if (typeof window !== "undefined") {
-  const priorAuthFailure = window.gm_authFailure;
-  window.gm_authFailure = () => {
-    triggerGoogleMapsAuthFailure();
-    priorAuthFailure?.();
-  };
-
-  // Intercept Google Maps billing, activation, and referrer errors emitted to console
-  const origError = console.error;
-  console.error = function (...args: any[]) {
-    origError.apply(console, args);
-    try {
-      const msg = args.map((a) => (typeof a === "string" ? a : a?.message || "")).join(" ");
-      if (
-        msg.includes("Google Maps JavaScript API error") ||
-        msg.includes("BillingNotEnabledMapError") ||
-        msg.includes("RefererNotAllowedMapError") ||
-        msg.includes("ApiNotActivatedMapError") ||
-        msg.includes("InvalidKeyMapError")
-      ) {
-        triggerGoogleMapsAuthFailure();
-      }
-    } catch {
-      // Safe check
-    }
-  };
-
   window.addEventListener("localshore:map-key-changed", () => {
     resetGoogleMapsLoader();
   });
@@ -112,25 +79,6 @@ export function loadGoogleMaps(overrideKey?: string): Promise<typeof google> {
 
   promise = new Promise((resolve, reject) => {
     let settled = false;
-
-    const priorHandler = window.gm_authFailure;
-    window.gm_authFailure = () => {
-      authFailed = true;
-      promise = null; // Clear so subsequent attempts after fixing the key can retry
-      try {
-        window.dispatchEvent(new CustomEvent("localshore:maps-auth-failure"));
-      } catch {
-        // Safe dispatch
-      }
-      priorHandler?.();
-      if (settled) return;
-      settled = true;
-      reject(
-        new Error(
-          "Map preview unavailable — the Google Maps key is not allowed on this domain (gm_authFailure).",
-        ),
-      );
-    };
 
     window.__localshoreMapsInit = () => {
       if (settled) return;

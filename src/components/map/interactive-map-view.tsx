@@ -75,7 +75,7 @@ export const InteractiveMapView = forwardRef<InteractiveMapViewRef, Props>(
         const map = mapRef.current;
         if (!map) return;
 
-        const routeGeoJSON: GeoJSON.Feature<GeoJSON.LineString> = {
+        const routeGeoJSON: any = {
           type: "Feature",
           properties: {},
           geometry: {
@@ -556,7 +556,7 @@ export const InteractiveMapView = forwardRef<InteractiveMapViewRef, Props>(
                       setRouteInfo({ distanceKm: d, durationMins: t });
                       const m = mapRef.current;
                       if (!m) return;
-                      const geojson: GeoJSON.Feature<GeoJSON.LineString> = {
+                      const geojson: any = {
                         type: "Feature",
                         properties: {},
                         geometry: { type: "LineString", coordinates: g },

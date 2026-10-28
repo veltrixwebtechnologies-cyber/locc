@@ -12,11 +12,7 @@ import {
 import { motion } from "framer-motion";
 import type { InteractiveMapViewRef } from "./interactive-map-view";
 import { GoogleMapsMapView } from "./google-maps-map-view";
-import { isGoogleMapsAuthFailed, triggerGoogleMapsAuthFailure } from "@/lib/google-maps-loader";
 
-const InteractiveMapView = lazy(() =>
-  import("./interactive-map-view").then((module) => ({ default: module.InteractiveMapView })),
-);
 
 // OSM/MapLibre remains the safe default. Enable Google Maps only in this
 // isolated GMap worktree with VITE_MAP_PROVIDER=google.
@@ -71,65 +67,8 @@ export function LocalShoreMapExperience({
   const selectedCategoryLabel = mapCategory ? getCategoryByIdOrSlug(mapCategory).name : null;
   const [deliveryLoc] = useDeliveryLocation();
   const [view, setView] = useState<"map" | "list">("map");
-  const [useLeafletFallback, setUseLeafletFallback] = useState(() => isGoogleMapsAuthFailed());
-  const isGoogleMode = MAP_PROVIDER === "google" && !useLeafletFallback;
 
-  useEffect(() => {
-    const handleAuthFailure = () => {
-      console.warn("[LocalShoreMapExperience] Google Maps auth failure detected (gm_authFailure). Switching directly to InteractiveMapView fallback.");
-      setUseLeafletFallback(true);
-    };
-    window.addEventListener("localshore:maps-auth-failure", handleAuthFailure);
-    return () => window.removeEventListener("localshore:maps-auth-failure", handleAuthFailure);
-  }, []);
 
-  // Proactively detect Google Maps DOM error overlays (e.g. "This page can't load Google Maps correctly" / BillingNotEnabledMapError)
-  useEffect(() => {
-    if (!isGoogleMode) return;
-    const checkAndFallback = () => {
-      const errorEl =
-        document.querySelector(".gm-err-container") ||
-        document.querySelector(".gm-err-message") ||
-        document.querySelector(".gm-style-pbt");
-      const hasErrorText =
-        Boolean(document.body.innerText?.includes("This page can't load Google Maps correctly")) ||
-        Boolean(document.body.innerText?.includes("Do you own this website?"));
-
-      if (errorEl || hasErrorText) {
-        console.warn("[LocalShoreMapExperience] Detected Google Maps error overlay in DOM. Switching directly to InteractiveMapView fallback.");
-        triggerGoogleMapsAuthFailure();
-        setUseLeafletFallback(true);
-        return true;
-      }
-      return false;
-    };
-
-    if (checkAndFallback()) return;
-
-    const observer = new MutationObserver(() => {
-      if (checkAndFallback()) {
-        observer.disconnect();
-      }
-    });
-
-    observer.observe(document.body, { childList: true, subtree: true });
-    const timer1 = setTimeout(checkAndFallback, 600);
-    const timer2 = setTimeout(checkAndFallback, 1600);
-
-    return () => {
-      observer.disconnect();
-      clearTimeout(timer1);
-      clearTimeout(timer2);
-    };
-  }, [isGoogleMode]);
-
-  useEffect(() => {
-    const handleKeyChange = () => {
-      setUseLeafletFallback(false);
-    };
-    window.addEventListener("localshore:map-key-changed", handleKeyChange);
-    return () => window.removeEventListener("localshore:map-key-changed", handleKeyChange);
-  }, []);
 
   const [userLocation, setUserLocation] = useState<MapLocation | null>(() =>
     deliveryLoc && isValidCoordinate(deliveryLoc.lat, deliveryLoc.lng)
@@ -526,28 +465,18 @@ export function LocalShoreMapExperience({
                   <div className="h-[calc(100vh-210px)] min-h-[560px] max-h-[760px] animate-pulse bg-slate-100" />
                 }
               >
-                {isGoogleMode ? <GoogleMapsMapView
+                <GoogleMapsMapView
                   ref={mapRef}
                   markers={markerItems}
                   userLocation={userLocation}
                   selectedMarkerId={selectedMarkerId}
                   hoveredMarkerId={hoveredMarkerId}
-                  onSelectMarker={(m) => setSelectedMarkerId(m ? m.id : null)}
-                  onBoundsChange={(bounds) => setFilters((prev) => ({ ...prev, bounds }))}
+                  onSelectMarker={(m: any) => setSelectedMarkerId(m ? m.id : null)}
+                  onBoundsChange={(bounds: any) => setFilters((prev) => ({ ...prev, bounds }))}
                   onUserLocationChange={setUserLocation}
-                  onViewShop={(shopId) => { window.location.href = `/store/${shopId}`; }}
+                  onViewShop={(shopId: string) => { window.location.href = `/store/${shopId}`; }}
                   className="h-[calc(100vh-210px)] min-h-[560px] max-h-[760px] w-full"
-                /> : <InteractiveMapView
-                  ref={mapRef}
-                  markers={markerItems}
-                  userLocation={userLocation}
-                  selectedMarkerId={selectedMarkerId}
-                  hoveredMarkerId={hoveredMarkerId}
-                  onSelectMarker={(m) => setSelectedMarkerId(m ? m.id : null)}
-                  onBoundsChange={(bounds) => setFilters((prev) => ({ ...prev, bounds }))}
-                  onUserLocationChange={setUserLocation}
-                  className="h-[calc(100vh-210px)] min-h-[560px] max-h-[760px] w-full"
-                />}
+                />
               </Suspense>
             </div>
           </div>
@@ -588,28 +517,18 @@ export function LocalShoreMapExperience({
           {/* Map Container */}
           <div className="flex-1 relative">
             <Suspense fallback={<div className="h-full w-full animate-pulse bg-slate-100" />}>
-              {isGoogleMode ? <GoogleMapsMapView
+              <GoogleMapsMapView
                 ref={mapRef}
                 markers={markerItems}
                 userLocation={userLocation}
                 selectedMarkerId={selectedMarkerId}
                 hoveredMarkerId={hoveredMarkerId}
-                onSelectMarker={(m) => setSelectedMarkerId(m ? m.id : null)}
-                onBoundsChange={(bounds) => setFilters((prev) => ({ ...prev, bounds }))}
+                onSelectMarker={(m: any) => setSelectedMarkerId(m ? m.id : null)}
+                onBoundsChange={(bounds: any) => setFilters((prev) => ({ ...prev, bounds }))}
                 onUserLocationChange={setUserLocation}
-                onViewShop={(shopId) => { window.location.href = `/store/${shopId}`; }}
+                onViewShop={(shopId: string) => { window.location.href = `/store/${shopId}`; }}
                 className="h-full w-full rounded-none border-0"
-              /> : <InteractiveMapView
-                ref={mapRef}
-                markers={markerItems}
-                userLocation={userLocation}
-                selectedMarkerId={selectedMarkerId}
-                hoveredMarkerId={hoveredMarkerId}
-                onSelectMarker={(m) => setSelectedMarkerId(m ? m.id : null)}
-                onBoundsChange={(bounds) => setFilters((prev) => ({ ...prev, bounds }))}
-                onUserLocationChange={setUserLocation}
-                className="h-full w-full rounded-none border-0"
-              />}
+              />
             </Suspense>
           </div>
         </div>

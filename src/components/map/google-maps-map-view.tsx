@@ -7,12 +7,11 @@ import { localShoreShopMarker } from "@/lib/localshore-shop-marker";
 import { getImportedShopHref } from "@/lib/imported-shops";
 import { getRepresentativeItemImages } from "@/lib/image-utils";
 import type { InteractiveMapViewRef } from "./interactive-map-view";
-import { InteractiveMapView } from "./interactive-map-view";
 import { getGoogleMapOptions } from "@/lib/map-settings";
 
 interface Props {
   markers: MapMarkerItem[];
-  userLocation: MapLocation;
+  userLocation: MapLocation | null;
   selectedMarkerId?: string | null;
   hoveredMarkerId?: string | null;
   onSelectMarker?: (marker: MapMarkerItem | null) => void;
@@ -71,7 +70,7 @@ export const GoogleMapsMapView = forwardRef<InteractiveMapViewRef, Props>(functi
       const map = new googleApi.maps.Map(
         containerRef.current,
         getGoogleMapOptions({
-          center: { lat: userLocation.lat, lng: userLocation.lng },
+          center: { lat: userLocation?.lat ?? 11.0168, lng: userLocation?.lng ?? 76.9558 },
           zoom: 14,
         }),
       );
@@ -98,12 +97,12 @@ export const GoogleMapsMapView = forwardRef<InteractiveMapViewRef, Props>(functi
       }
       mapRef.current = null;
     };
-  }, [userLocation.lat, userLocation.lng, reloadKey]);
+  }, [userLocation?.lat, userLocation?.lng, reloadKey]);
 
 
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || !window.google?.maps) return;
+    if (!map || !window.google?.maps || !userLocation) return;
     const point = { lat: userLocation.lat, lng: userLocation.lng };
     map.panTo(point);
     if (!userMarkerRef.current) {
@@ -184,7 +183,9 @@ export const GoogleMapsMapView = forwardRef<InteractiveMapViewRef, Props>(functi
 
     if (markers.length > 0) {
       const bounds = new googleApi.maps.LatLngBounds();
-      bounds.extend({ lat: userLocation.lat, lng: userLocation.lng });
+      if (userLocation) {
+        bounds.extend({ lat: userLocation.lat, lng: userLocation.lng });
+      }
       markers.slice(0, 10).forEach((m) => {
         if (Number.isFinite(m.lat) && Number.isFinite(m.lng)) {
           bounds.extend({ lat: m.lat, lng: m.lng });
@@ -205,22 +206,21 @@ export const GoogleMapsMapView = forwardRef<InteractiveMapViewRef, Props>(functi
 
   if (error) {
     return (
-      <div className={`relative ${className}`}>
-        <InteractiveMapView
-          ref={ref}
-          markers={markers}
-          userLocation={userLocation}
-          selectedMarkerId={selectedMarkerId}
-          hoveredMarkerId={hoveredMarkerId}
-          onSelectMarker={onSelectMarker}
-          onBoundsChange={onBoundsChange}
-          onUserLocationChange={onUserLocationChange}
-          className="h-full w-full"
-        />
-        <div className="absolute top-3 right-3 z-10 rounded-full bg-white/95 border border-amber-300 px-3 py-1 text-[11px] font-semibold text-amber-900 shadow-md flex items-center gap-1.5 backdrop-blur-xs">
-          <span className="h-2 w-2 rounded-full bg-amber-500 animate-pulse" />
-          Vector Map View (Google Maps key fallback)
-        </div>
+      <div className={`relative flex flex-col items-center justify-center p-6 bg-slate-50 border border-slate-200 rounded-xl text-center ${className}`}>
+        <MapPin className="h-10 w-10 text-[#981495] mb-2 opacity-80" />
+        <h4 className="text-sm font-bold text-slate-800">Map loading error</h4>
+        <p className="text-xs text-slate-500 max-w-sm mt-1 mb-4">{error}</p>
+        <button
+          type="button"
+          onClick={() => {
+            setError(null);
+            setLoading(true);
+            setReloadKey((prev) => prev + 1);
+          }}
+          className="inline-flex items-center gap-2 rounded-full bg-[#981495] px-4 py-2 text-xs font-bold text-white shadow hover:opacity-95 cursor-pointer"
+        >
+          <RefreshCw className="h-3.5 w-3.5" /> Retry Google Maps
+        </button>
       </div>
     );
   }

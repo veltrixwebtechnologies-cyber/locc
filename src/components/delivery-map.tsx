@@ -2,13 +2,14 @@ import { RouteRequest } from "@/lib/route-request";
 import { parseCoordinates } from "@/lib/coordinates";
 import { assignmentLocation } from "@/lib/tracking-location";
 import { useEffect, useRef, useState } from "react";
-import { Clock, Navigation, MapPin, Store, RotateCw } from "lucide-react";
 import {
   fetchDeliveryRoute,
   shouldRecalculateRoute,
   type AdvancedRouteResult,
 } from "@/lib/map-service/delivery-routing";
 import { supabase } from "@/integrations/supabase/client";
+import { loadGoogleMaps } from "@/lib/google-maps-loader";
+import { getGoogleMapOptions } from "@/lib/map-settings";
 
 export interface LatLng {
   lat: number;
@@ -16,13 +17,6 @@ export interface LatLng {
   label?: string;
   heading?: number;
 }
-
-import { getMapTileConfig } from "@/lib/map-provider";
-import { loadGoogleMaps, isGoogleMapsAuthFailed, triggerGoogleMapsAuthFailure } from "@/lib/google-maps-loader";
-import { getGoogleMapOptions } from "@/lib/map-settings";
-
-const MAP_PROVIDER = import.meta.env.VITE_MAP_PROVIDER === "osm" ? "osm" : "google";
-
 
 interface Props {
   orderId?: string;
@@ -73,11 +67,9 @@ export function DeliveryMap({
   height = 240,
 }: Props) {
   const mapContainerRef = useRef<HTMLDivElement>(null);
-  const mapRef = useRef<any>(null);
-  const LRef = useRef<any>(null);
-  const markersRef = useRef<Record<string, any>>({});
-  const polylineRef = useRef<any>(null);
-  const googleModeRef = useRef(MAP_PROVIDER === "google");
+  const mapRef = useRef<google.maps.Map | null>(null);
+  const markersRef = useRef<Record<string, google.maps.Marker>>({});
+  const polylineRef = useRef<google.maps.Polyline | null>(null);
   const mountedRef = useRef(true);
   const cameraTarget = useRef("");
 
@@ -87,64 +79,10 @@ export function DeliveryMap({
   const [secAgo, setSecAgo] = useState<number>(0);
   const [loading, setLoading] = useState(true);
   const [mapKeyRevision, setMapKeyRevision] = useState(0);
-  const [useLeafletFallback, setUseLeafletFallback] = useState(() => isGoogleMapsAuthFailed());
-
-  const isGoogleMode = MAP_PROVIDER === "google" && !useLeafletFallback;
-
-  // Seamlessly fall back to Leaflet if Google Maps encounters runtime auth failure (e.g. unactivated API or invalid key)
-  useEffect(() => {
-    const handleAuthFailure = () => {
-      console.warn("[DeliveryMap] Google Maps auth failure detected (gm_authFailure). Switching directly to Leaflet fallback.");
-      setUseLeafletFallback(true);
-    };
-    window.addEventListener("localshore:maps-auth-failure", handleAuthFailure);
-    return () => window.removeEventListener("localshore:maps-auth-failure", handleAuthFailure);
-  }, []);
-
-  // Proactively detect Google Maps DOM error overlays (e.g. "This page can't load Google Maps correctly" / BillingNotEnabledMapError)
-  useEffect(() => {
-    if (!isGoogleMode || !mapContainerRef.current) return;
-    const container = mapContainerRef.current;
-    const checkAndFallback = () => {
-      const hasErrorOverlay =
-        Boolean(container.querySelector(".gm-err-container")) ||
-        Boolean(container.querySelector(".gm-err-message")) ||
-        Boolean(container.querySelector(".gm-style-pbt")) ||
-        Boolean(container.innerText?.includes("This page can't load Google Maps correctly")) ||
-        Boolean(container.innerText?.includes("Do you own this website?"));
-
-      if (hasErrorOverlay) {
-        console.warn("[DeliveryMap] Detected Google Maps error overlay in DOM. Switching directly to Leaflet fallback.");
-        triggerGoogleMapsAuthFailure();
-        setUseLeafletFallback(true);
-        return true;
-      }
-      return false;
-    };
-
-    if (checkAndFallback()) return;
-
-    const observer = new MutationObserver(() => {
-      if (checkAndFallback()) {
-        observer.disconnect();
-      }
-    });
-
-    observer.observe(container, { childList: true, subtree: true, characterData: true });
-    const timer1 = setTimeout(checkAndFallback, 600);
-    const timer2 = setTimeout(checkAndFallback, 1600);
-
-    return () => {
-      observer.disconnect();
-      clearTimeout(timer1);
-      clearTimeout(timer2);
-    };
-  }, [isGoogleMode, mapKeyRevision]);
 
   // Re-initialize map if Google Maps API key is updated dynamically
   useEffect(() => {
     const handleKeyChange = () => {
-      setUseLeafletFallback(false);
       setMapKeyRevision((r) => r + 1);
     };
     window.addEventListener("localshore:map-key-changed", handleKeyChange);
@@ -152,7 +90,6 @@ export function DeliveryMap({
   }, []);
 
   const lastRouteCalculatedAt = useRef<number>(0);
-
   const lastRoutePos = useRef<LatLng | null>(null);
   const requests = useRef(new RouteRequest());
   const routeEndpoint = useRef("");
@@ -270,8 +207,7 @@ export function DeliveryMap({
     return () => clearInterval(timer);
   }, [lastUpdated]);
 
-  // Initialize the selected map provider when the first valid point becomes available. This is
-  // important for checkout, where the customer may choose a pin after mount.
+  // Initialize Google Maps exclusively when the first valid point becomes available
   const hasMapPoint = Boolean(courier || destination || store);
   useEffect(() => {
     mountedRef.current = true;
@@ -284,77 +220,23 @@ export function DeliveryMap({
           return;
         }
 
-        if (isGoogleMode) {
-          try {
-            const googleApi = await loadGoogleMaps();
-            if (cancelled || !mapContainerRef.current) return;
-            googleModeRef.current = true;
-            const map = new googleApi.maps.Map(
-              mapContainerRef.current,
-              getGoogleMapOptions({
-                center: { lat: initialPoint.lat, lng: initialPoint.lng },
-                zoom: 15,
-                zoomControl: interactive,
-              }),
-            );
-            mapRef.current = map;
-            setLoading(false);
-            if (interactive) {
-              map.addListener("click", (event: google.maps.MapMouseEvent) => {
-                if (event.latLng) {
-                  destinationCallback.current?.({ lat: event.latLng.lat(), lng: event.latLng.lng() });
-                }
-              });
-            }
-            return;
-          } catch (googleErr) {
-            console.warn(
-              "[DeliveryMap] Google Maps failed to load, seamlessly falling back to Leaflet with identical settings:",
-              googleErr,
-            );
-            if (cancelled) return;
-            setUseLeafletFallback(true);
-            // Fall through to Leaflet below!
-          }
-        }
-
-        if (mapContainerRef.current) {
-          mapContainerRef.current.innerHTML = "";
-        }
-
-        const L = (await import("leaflet")).default;
-        await import("leaflet/dist/leaflet.css");
+        const googleApi = await loadGoogleMaps();
         if (cancelled || !mapContainerRef.current) return;
-
-        LRef.current = L;
-        googleModeRef.current = false;
-        const initialCenter: [number, number] = [initialPoint.lat, initialPoint.lng];
-
-        const map = L.map(mapContainerRef.current, {
-          center: initialCenter,
-          zoom: 15,
-          maxZoom: 18,
-          zoomControl: true,
-          attributionControl: true,
-        });
-
-        const tileConfig = getMapTileConfig();
-        L.tileLayer(tileConfig.url, {
-          maxZoom: tileConfig.maxZoom,
-          subdomains: tileConfig.subdomains,
-          attribution: tileConfig.attribution,
-        }).addTo(map);
-
-        setTimeout(() => {
-          if (!cancelled) map.invalidateSize();
-        }, 100);
-
+        const map = new googleApi.maps.Map(
+          mapContainerRef.current,
+          getGoogleMapOptions({
+            center: { lat: initialPoint.lat, lng: initialPoint.lng },
+            zoom: 15,
+            zoomControl: interactive,
+          }),
+        );
         mapRef.current = map;
         setLoading(false);
-
         if (interactive) {
-          map.on("click", (e: any) => {
-            destinationCallback.current?.({ lat: e.latlng.lat, lng: e.latlng.lng });
+          map.addListener("click", (event: google.maps.MapMouseEvent) => {
+            if (event.latLng) {
+              destinationCallback.current?.({ lat: event.latLng.lat(), lng: event.latLng.lng() });
+            }
           });
         }
       } catch (err) {
@@ -366,35 +248,24 @@ export function DeliveryMap({
     return () => {
       cancelled = true;
       if (mapRef.current) {
-        if (googleModeRef.current) {
-          Object.values(markersRef.current).forEach((marker: any) => marker.setMap?.(null));
-          polylineRef.current?.setMap?.(null);
-          markersRef.current = {};
-          mapRef.current = null;
-        } else {
-          mapRef.current.remove();
-          mapRef.current = null;
-        }
+        Object.values(markersRef.current).forEach((marker) => marker.setMap?.(null));
+        polylineRef.current?.setMap?.(null);
+        markersRef.current = {};
+        mapRef.current = null;
       }
       if (mapContainerRef.current) {
         mapContainerRef.current.innerHTML = "";
       }
     };
-  }, [hasMapPoint, mapKeyRevision, isGoogleMode]);
-
+  }, [hasMapPoint, mapKeyRevision]);
 
   useEffect(() => {
     return () => {
       mountedRef.current = false;
       if (mapRef.current) {
-        if (googleModeRef.current) {
-          Object.values(markersRef.current).forEach((marker: any) => marker.setMap?.(null));
-          polylineRef.current?.setMap?.(null);
-          mapRef.current = null;
-        } else {
-          mapRef.current.remove();
-          mapRef.current = null;
-        }
+        Object.values(markersRef.current).forEach((marker) => marker.setMap?.(null));
+        polylineRef.current?.setMap?.(null);
+        mapRef.current = null;
       }
     };
   }, []);
@@ -460,142 +331,54 @@ export function DeliveryMap({
     secAgo,
   ]);
 
-  // Sync Leaflet markers and route polyline with animation
+  // Sync Google Maps markers and route polyline
   useEffect(() => {
     const map = mapRef.current;
-    const L = LRef.current;
-    if (!map) return;
+    if (!map || !window.google?.maps) return;
+    const googleApi = window.google;
 
-    if (isGoogleMode) {
-      const googleApi = window.google;
-      if (!googleApi?.maps) return;
-      googleModeRef.current = true;
-
-      const upsertGoogleMarker = (
-        id: string,
-        pos: LatLng | undefined,
-        iconUrl: string,
-        size: [number, number],
-      ) => {
-        if (!pos || !parseCoordinates(pos.lat, pos.lng)) {
-          markersRef.current[id]?.setMap?.(null);
-          delete markersRef.current[id];
-          return;
-        }
-        const marker = markersRef.current[id] ?? new googleApi.maps.Marker({ map });
-        marker.setPosition({ lat: pos.lat, lng: pos.lng });
-        marker.setIcon({ url: iconUrl, scaledSize: new googleApi.maps.Size(size[0], size[1]) });
-        marker.setMap(map);
-        markersRef.current[id] = marker;
-      };
-
-      upsertGoogleMarker("store", store, pinSvg("#2A6F77", "store"), [28, 38]);
-      upsertGoogleMarker("dest", destination ?? undefined, pinSvg("#E3A72E", "destination"), [28, 38]);
-      upsertGoogleMarker("courier", courier, courierScooterSvg("#D9584C", courier?.heading || 0), [36, 36]);
-
-      const dest = phase === "to_vendor" ? store : destination;
-      if (interactive && dest && parseCoordinates(dest.lat, dest.lng)) {
-        const key = dest.lat + ":" + dest.lng;
-        if (cameraTarget.current !== key) {
-          cameraTarget.current = key;
-          map.panTo({ lat: dest.lat, lng: dest.lng });
-          map.setZoom(17);
-        }
-      }
-
-      polylineRef.current?.setMap?.(null);
-      polylineRef.current = null;
-      if (routeInfo?.geometry?.length) {
-        polylineRef.current = new googleApi.maps.Polyline({
-          map,
-          path: routeInfo.geometry.map(([lng, lat]) => ({ lat, lng })),
-          strokeColor: phase === "to_vendor" ? "#2A6F77" : "#E3A72E",
-          strokeOpacity: 0.85,
-          strokeWeight: 4,
-        });
-      }
-      return;
-    }
-
-    if (!L) return;
-
-    // Helper: update or animate marker
-    const upsertMarker = (
+    const upsertGoogleMarker = (
       id: string,
       pos: LatLng | undefined,
       iconUrl: string,
       size: [number, number],
     ) => {
       if (!pos || !parseCoordinates(pos.lat, pos.lng)) {
-        if (markersRef.current[id]) {
-          map.removeLayer(markersRef.current[id]);
-          delete markersRef.current[id];
-        }
+        markersRef.current[id]?.setMap?.(null);
+        delete markersRef.current[id];
         return;
       }
-
-      let m = markersRef.current[id];
-      const icon = L.icon({
-        iconUrl,
-        iconSize: size,
-        iconAnchor: [size[0] / 2, size[1]],
-      });
-
-      if (!m) {
-        m = L.marker([pos.lat, pos.lng], { icon }).addTo(map);
-        markersRef.current[id] = m;
-      } else {
-        m.setIcon(icon);
-        const startLatLng = m.getLatLng();
-        const startTime = performance.now();
-        const duration = 400; // smooth 400ms transition
-
-        const animate = (now: number) => {
-          if (!mountedRef.current || !mapRef.current) return;
-          const t = Math.min(1, (now - startTime) / duration);
-          const eased = 1 - Math.pow(1 - t, 3);
-          m.setLatLng([
-            startLatLng.lat + (pos.lat - startLatLng.lat) * eased,
-            startLatLng.lng + (pos.lng - startLatLng.lng) * eased,
-          ]);
-          if (t < 1) requestAnimationFrame(animate);
-        };
-        requestAnimationFrame(animate);
-      }
+      const marker = markersRef.current[id] ?? new googleApi.maps.Marker({ map });
+      marker.setPosition({ lat: pos.lat, lng: pos.lng });
+      marker.setIcon({ url: iconUrl, scaledSize: new googleApi.maps.Size(size[0], size[1]) });
+      marker.setMap(map);
+      markersRef.current[id] = marker;
     };
 
-    // Render markers
-    upsertMarker("store", store, pinSvg("#2A6F77", "store"), [28, 38]);
-    {
-      upsertMarker("dest", destination ?? undefined, pinSvg("#E3A72E", "destination"), [28, 38]);
-    }
-    upsertMarker("courier", courier, courierScooterSvg("#D9584C", courier?.heading || 0), [36, 36]);
+    upsertGoogleMarker("store", store, pinSvg("#2A6F77", "store"), [28, 38]);
+    upsertGoogleMarker("dest", destination ?? undefined, pinSvg("#E3A72E", "destination"), [28, 38]);
+    upsertGoogleMarker("courier", courier, courierScooterSvg("#D9584C", courier?.heading || 0), [36, 36]);
 
-    if (interactive && destination && parseCoordinates(destination.lat, destination.lng)) {
-      const key = destination.lat + ":" + destination.lng;
+    const dest = phase === "to_vendor" ? store : destination;
+    if (interactive && dest && parseCoordinates(dest.lat, dest.lng)) {
+      const key = dest.lat + ":" + dest.lng;
       if (cameraTarget.current !== key) {
         cameraTarget.current = key;
-        map.setView([destination.lat, destination.lng], 17);
+        map.panTo({ lat: dest.lat, lng: dest.lng });
+        map.setZoom(17);
       }
     }
 
-    // Render road polyline
-    if (polylineRef.current) {
-      map.removeLayer(polylineRef.current);
-      polylineRef.current = null;
-    }
-
-    if (routeInfo?.geometry && routeInfo.geometry.length > 0) {
-      const latLngs = routeInfo.geometry.map(([lng, lat]) => [lat, lng]);
-      polylineRef.current = L.polyline(latLngs, {
-        color: phase === "to_vendor" ? "#2A6F77" : "#E3A72E",
-        weight: 4,
-        opacity: 0.85,
-        lineCap: "round",
-        lineJoin: "round",
-      }).addTo(map);
-
-      map.fitBounds(polylineRef.current.getBounds(), { padding: [40, 40] });
+    polylineRef.current?.setMap?.(null);
+    polylineRef.current = null;
+    if (routeInfo?.geometry?.length) {
+      polylineRef.current = new googleApi.maps.Polyline({
+        map,
+        path: routeInfo.geometry.map(([lng, lat]) => ({ lat, lng })),
+        strokeColor: phase === "to_vendor" ? "#2A6F77" : "#E3A72E",
+        strokeOpacity: 0.85,
+        strokeWeight: 4,
+      });
     }
   }, [store, destination, courier, routeInfo, phase, loading]);
 
