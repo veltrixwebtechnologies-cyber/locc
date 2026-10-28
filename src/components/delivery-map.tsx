@@ -18,7 +18,7 @@ export interface LatLng {
 }
 
 import { getMapTileConfig } from "@/lib/map-provider";
-import { loadGoogleMaps, isGoogleMapsAuthFailed } from "@/lib/google-maps-loader";
+import { loadGoogleMaps, isGoogleMapsAuthFailed, triggerGoogleMapsAuthFailure } from "@/lib/google-maps-loader";
 import { getGoogleMapOptions } from "@/lib/map-settings";
 
 const MAP_PROVIDER = import.meta.env.VITE_MAP_PROVIDER === "google" ? "google" : "osm";
@@ -100,6 +100,46 @@ export function DeliveryMap({
     window.addEventListener("localshore:maps-auth-failure", handleAuthFailure);
     return () => window.removeEventListener("localshore:maps-auth-failure", handleAuthFailure);
   }, []);
+
+  // Proactively detect Google Maps DOM error overlays (e.g. "This page can't load Google Maps correctly" / BillingNotEnabledMapError)
+  useEffect(() => {
+    if (!isGoogleMode || !mapContainerRef.current) return;
+    const container = mapContainerRef.current;
+    const checkAndFallback = () => {
+      const hasErrorOverlay =
+        Boolean(container.querySelector(".gm-err-container")) ||
+        Boolean(container.querySelector(".gm-err-message")) ||
+        Boolean(container.querySelector(".gm-style-pbt")) ||
+        Boolean(container.innerText?.includes("This page can't load Google Maps correctly")) ||
+        Boolean(container.innerText?.includes("Do you own this website?"));
+
+      if (hasErrorOverlay) {
+        console.warn("[DeliveryMap] Detected Google Maps error overlay in DOM. Switching directly to Leaflet fallback.");
+        triggerGoogleMapsAuthFailure();
+        setUseLeafletFallback(true);
+        return true;
+      }
+      return false;
+    };
+
+    if (checkAndFallback()) return;
+
+    const observer = new MutationObserver(() => {
+      if (checkAndFallback()) {
+        observer.disconnect();
+      }
+    });
+
+    observer.observe(container, { childList: true, subtree: true, characterData: true });
+    const timer1 = setTimeout(checkAndFallback, 600);
+    const timer2 = setTimeout(checkAndFallback, 1600);
+
+    return () => {
+      observer.disconnect();
+      clearTimeout(timer1);
+      clearTimeout(timer2);
+    };
+  }, [isGoogleMode, mapKeyRevision]);
 
   // Re-initialize map if Google Maps API key is updated dynamically
   useEffect(() => {

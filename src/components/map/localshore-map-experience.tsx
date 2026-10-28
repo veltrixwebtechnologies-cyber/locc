@@ -12,7 +12,7 @@ import {
 import { motion } from "framer-motion";
 import type { InteractiveMapViewRef } from "./interactive-map-view";
 import { GoogleMapsMapView } from "./google-maps-map-view";
-import { isGoogleMapsAuthFailed } from "@/lib/google-maps-loader";
+import { isGoogleMapsAuthFailed, triggerGoogleMapsAuthFailure } from "@/lib/google-maps-loader";
 
 const InteractiveMapView = lazy(() =>
   import("./interactive-map-view").then((module) => ({ default: module.InteractiveMapView })),
@@ -82,6 +82,46 @@ export function LocalShoreMapExperience({
     window.addEventListener("localshore:maps-auth-failure", handleAuthFailure);
     return () => window.removeEventListener("localshore:maps-auth-failure", handleAuthFailure);
   }, []);
+
+  // Proactively detect Google Maps DOM error overlays (e.g. "This page can't load Google Maps correctly" / BillingNotEnabledMapError)
+  useEffect(() => {
+    if (!isGoogleMode) return;
+    const checkAndFallback = () => {
+      const errorEl =
+        document.querySelector(".gm-err-container") ||
+        document.querySelector(".gm-err-message") ||
+        document.querySelector(".gm-style-pbt");
+      const hasErrorText =
+        Boolean(document.body.innerText?.includes("This page can't load Google Maps correctly")) ||
+        Boolean(document.body.innerText?.includes("Do you own this website?"));
+
+      if (errorEl || hasErrorText) {
+        console.warn("[LocalShoreMapExperience] Detected Google Maps error overlay in DOM. Switching directly to InteractiveMapView fallback.");
+        triggerGoogleMapsAuthFailure();
+        setUseLeafletFallback(true);
+        return true;
+      }
+      return false;
+    };
+
+    if (checkAndFallback()) return;
+
+    const observer = new MutationObserver(() => {
+      if (checkAndFallback()) {
+        observer.disconnect();
+      }
+    });
+
+    observer.observe(document.body, { childList: true, subtree: true });
+    const timer1 = setTimeout(checkAndFallback, 600);
+    const timer2 = setTimeout(checkAndFallback, 1600);
+
+    return () => {
+      observer.disconnect();
+      clearTimeout(timer1);
+      clearTimeout(timer2);
+    };
+  }, [isGoogleMode]);
 
   useEffect(() => {
     const handleKeyChange = () => {

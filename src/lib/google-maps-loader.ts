@@ -31,18 +31,42 @@ export function resetGoogleMapsLoader(): void {
   }
 }
 
+export function triggerGoogleMapsAuthFailure(): void {
+  authFailed = true;
+  promise = null;
+  try {
+    window.dispatchEvent(new CustomEvent("localshore:maps-auth-failure"));
+  } catch {
+    // Safe dispatch
+  }
+}
+
 // Automatically reset loader when user or app updates the API key
 if (typeof window !== "undefined") {
   const priorAuthFailure = window.gm_authFailure;
   window.gm_authFailure = () => {
-    authFailed = true;
-    promise = null;
-    try {
-      window.dispatchEvent(new CustomEvent("localshore:maps-auth-failure"));
-    } catch {
-      // Safe dispatch
-    }
+    triggerGoogleMapsAuthFailure();
     priorAuthFailure?.();
+  };
+
+  // Intercept Google Maps billing, activation, and referrer errors emitted to console
+  const origError = console.error;
+  console.error = function (...args: any[]) {
+    origError.apply(console, args);
+    try {
+      const msg = args.map((a) => (typeof a === "string" ? a : a?.message || "")).join(" ");
+      if (
+        msg.includes("Google Maps JavaScript API error") ||
+        msg.includes("BillingNotEnabledMapError") ||
+        msg.includes("RefererNotAllowedMapError") ||
+        msg.includes("ApiNotActivatedMapError") ||
+        msg.includes("InvalidKeyMapError")
+      ) {
+        triggerGoogleMapsAuthFailure();
+      }
+    } catch {
+      // Safe check
+    }
   };
 
   window.addEventListener("localshore:map-key-changed", () => {

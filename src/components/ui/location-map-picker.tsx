@@ -13,7 +13,7 @@ import { resolveNominatimAddress } from "@/lib/location-address";
 import { reverseGeocode } from "@/lib/geocoding.functions";
 import { geocodeSearch } from "@/lib/map-service/providers";
 import { toast } from "sonner";
-import { loadGoogleMaps, isGoogleMapsAuthFailed } from "@/lib/google-maps-loader";
+import { loadGoogleMaps, isGoogleMapsAuthFailed, triggerGoogleMapsAuthFailure } from "@/lib/google-maps-loader";
 import { supabase } from "@/integrations/supabase/client";
 import { isTestEntity } from "@/lib/map-service/store-engine";
 import { isGeneratedDemoShopName } from "@/lib/demo-neighborhood-shops";
@@ -130,6 +130,46 @@ export function LocationMapPicker({
     window.addEventListener("localshore:maps-auth-failure", handleAuthFailure);
     return () => window.removeEventListener("localshore:maps-auth-failure", handleAuthFailure);
   }, []);
+
+  // Proactively detect Google Maps DOM error overlays (e.g. "This page can't load Google Maps correctly" / BillingNotEnabledMapError)
+  useEffect(() => {
+    if (!isGoogleMode || !mapContainerRef.current) return;
+    const container = mapContainerRef.current;
+    const checkAndFallback = () => {
+      const hasErrorOverlay =
+        Boolean(container.querySelector(".gm-err-container")) ||
+        Boolean(container.querySelector(".gm-err-message")) ||
+        Boolean(container.querySelector(".gm-style-pbt")) ||
+        Boolean(container.innerText?.includes("This page can't load Google Maps correctly")) ||
+        Boolean(container.innerText?.includes("Do you own this website?"));
+
+      if (hasErrorOverlay) {
+        console.warn("[LocationMapPicker] Detected Google Maps error overlay in DOM. Switching directly to Leaflet fallback.");
+        triggerGoogleMapsAuthFailure();
+        setUseLeafletFallback(true);
+        return true;
+      }
+      return false;
+    };
+
+    if (checkAndFallback()) return;
+
+    const observer = new MutationObserver(() => {
+      if (checkAndFallback()) {
+        observer.disconnect();
+      }
+    });
+
+    observer.observe(container, { childList: true, subtree: true, characterData: true });
+    const timer1 = setTimeout(checkAndFallback, 600);
+    const timer2 = setTimeout(checkAndFallback, 1600);
+
+    return () => {
+      observer.disconnect();
+      clearTimeout(timer1);
+      clearTimeout(timer2);
+    };
+  }, [isGoogleMode, mapKeyRevision]);
 
   // Re-initialize map if Google Maps API key changes dynamically
   useEffect(() => {
@@ -878,6 +918,19 @@ export function LocationMapPicker({
             </div>
           </div>
         )}
+
+        {/* Map Provider Badge & Switcher */}
+        <div className="absolute top-3 right-3 z-[1000] flex items-center gap-1.5">
+          <button
+            type="button"
+            onClick={() => setUseLeafletFallback((prev) => !prev)}
+            title="Switch map provider (Google Maps / OpenStreetMap)"
+            className="rounded-full bg-white/95 px-2.5 py-1 text-[10px] font-black text-slate-800 shadow-md ring-1 ring-slate-200/90 backdrop-blur hover:bg-slate-50 transition-all flex items-center gap-1.5 cursor-pointer"
+          >
+            <span>{isGoogleMode ? "🌐 Google Maps" : "🗺️ OpenStreetMap"}</span>
+            <span className="text-[9px] text-[#981495] font-bold underline">Switch</span>
+          </button>
+        </div>
 
         {/* Floating Locate Me GPS button */}
         {mapError && (
