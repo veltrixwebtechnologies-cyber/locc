@@ -152,12 +152,45 @@ function DeliveryTimingHero({ order }: { order: Order }) {
   const isDelivered = order.status === "delivered";
   const isCancelled = order.status === "cancelled";
 
-  const expectedTimeStr = useMemo(() => {
-    const orderTime = new Date(order.createdAt);
-    const etaMs = (order.etaMin || 25) * 60 * 1000;
-    const arrivalTime = new Date(orderTime.getTime() + etaMs);
-    return arrivalTime.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-  }, [order.createdAt, order.etaMin]);
+  // Re-evaluate periodically so remaining minutes decrement in real-time
+  const [now, setNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    if (isDelivered || isCancelled) return;
+    const interval = setInterval(() => setNow(Date.now()), 10000);
+    return () => clearInterval(interval);
+  }, [isDelivered, isCancelled]);
+
+  const timing = useMemo(() => {
+    const orderCreatedAtMs = new Date(order.createdAt).getTime();
+    const initialEtaMins = order.etaMin || 25;
+    const initialEtaMs = initialEtaMins * 60 * 1000;
+    const targetArrivalMs = orderCreatedAtMs + initialEtaMs;
+
+    // Remaining minutes until delivery
+    const remainingMs = targetArrivalMs - now;
+    const remainingMins = Math.round(remainingMs / 60000);
+
+    const arrivalDate = new Date(targetArrivalMs);
+    const expectedTimeStr = arrivalDate.toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+
+    if (remainingMins <= 0) {
+      return {
+        title: "Arriving Any Moment",
+        isDelayed: true,
+        expectedTimeStr,
+      };
+    }
+
+    return {
+      title: remainingMins === 1 ? "Arriving in ~1 Min" : `Arriving in ~${remainingMins} Mins`,
+      isDelayed: false,
+      expectedTimeStr,
+    };
+  }, [order.createdAt, order.etaMin, now]);
 
   return (
     <div className="mx-5 mt-4 overflow-hidden rounded-2xl bg-gradient-to-br from-slate-900 via-teal-950 to-emerald-950 p-5 text-white shadow-xl ring-1 ring-white/10">
@@ -182,15 +215,24 @@ function DeliveryTimingHero({ order }: { order: Order }) {
               ? "Delivered Successfully 🎉"
               : isCancelled
                 ? "Order Cancelled"
-                : `Arriving in ~${order.etaMin || 25} Mins`}
+                : timing.title}
           </h2>
 
           {!isDelivered && !isCancelled && (
             <p className="mt-1 flex items-center gap-1.5 text-xs text-slate-300">
               <Clock className="h-3.5 w-3.5 text-emerald-400" />
               <span>
-                Expected Arrival by{" "}
-                <strong className="text-white font-semibold">{expectedTimeStr}</strong>
+                {timing.isDelayed ? (
+                  <>
+                    Estimated Arrival ~<strong className="text-white font-semibold">{timing.expectedTimeStr}</strong>
+                    {" "}<span className="text-emerald-300 font-medium">(Arriving any moment)</span>
+                  </>
+                ) : (
+                  <>
+                    Expected Arrival by{" "}
+                    <strong className="text-white font-semibold">{timing.expectedTimeStr}</strong>
+                  </>
+                )}
               </span>
             </p>
           )}

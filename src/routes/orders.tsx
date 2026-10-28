@@ -187,7 +187,12 @@ function OrdersPage() {
                     <div className="mt-2 flex items-center gap-2">
                       <span className="inline-flex items-center gap-1.5 rounded-md bg-emerald-500/10 px-2.5 py-1 font-mono text-xs font-semibold text-emerald-700">
                         <Clock className="h-3.5 w-3.5" />
-                        ETA ~{o.etaMin || 25} mins
+                        {(() => {
+                          const targetMs = new Date(o.createdAt).getTime() + (o.etaMin || 25) * 60000;
+                          const rem = Math.round((targetMs - Date.now()) / 60000);
+                          if (rem <= 0) return "Arriving soon";
+                          return `~${rem} mins left`;
+                        })()}
                       </span>
                       {o.partner && (
                         <span className="inline-flex items-center gap-1 rounded-md bg-amber-400/10 px-2 py-1 font-mono text-xs text-amber-800">
