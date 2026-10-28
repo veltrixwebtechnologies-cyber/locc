@@ -282,7 +282,7 @@ export function PromoCarousel() {
       }}
     >
       <div
-        className="group relative min-h-[208px] overflow-hidden rounded-xl bg-card shadow-md ring-1 ring-black/[0.06] touch-pan-y"
+        className="group relative h-[250px] sm:h-[280px] md:h-[320px] lg:h-[350px] overflow-hidden rounded-2xl bg-card shadow-lg ring-1 ring-black/[0.06] touch-pan-y"
         onPointerDown={(event) => {
           touchStart.current =
             event.pointerType === "touch" ? { x: event.clientX, y: event.clientY } : null;
@@ -321,38 +321,39 @@ export function PromoCarousel() {
               exit: (slideDirection: number) => ({ opacity: 0, x: slideDirection * -28 }),
             }}
             transition={{ duration: 0.38, ease: [0.22, 1, 0.36, 1] }}
-            className="absolute inset-0 grid min-h-[208px] grid-cols-[1.08fr_0.92fr] md:min-h-[310px]"
+            className="absolute inset-0 grid h-full grid-cols-[1.1fr_0.9fr] sm:grid-cols-[1.15fr_0.85fr] md:grid-cols-[1.2fr_0.8fr]"
             style={{ backgroundColor: campaign.background }}
           >
-            <div className="relative z-[1] flex min-w-0 flex-col items-start justify-center px-5 py-8 md:px-12">
+            <div className="relative z-[2] flex min-w-0 flex-col items-start justify-center px-6 py-6 sm:px-10 sm:py-8 md:px-14">
               <span
-                className="mb-3 rounded-full bg-white/80 px-2.5 py-1 text-[9px] font-bold uppercase shadow-sm ring-1 ring-black/[0.04] md:text-[10px]"
+                className="mb-2 inline-flex items-center rounded-full bg-white/90 backdrop-blur-xs px-3 py-1 text-[10px] font-black uppercase tracking-wider shadow-xs border border-black/[0.04]"
                 style={{ color: campaign.accent }}
               >
                 {campaign.offer}
               </span>
               <p
-                className="text-[10px] font-extrabold uppercase tracking-widest md:text-xs"
+                className="text-[10px] sm:text-xs font-extrabold uppercase tracking-widest"
                 style={{ color: campaign.accent }}
               >
                 {campaign.eyebrow}
               </p>
-              <h2 className="mt-2 max-w-xl font-display text-xl font-extrabold leading-tight text-foreground sm:text-2xl md:text-4xl">
+              <h2 className="mt-1.5 font-display text-xl sm:text-2xl md:text-3xl lg:text-4xl font-black leading-tight text-slate-900 tracking-tight max-w-xl">
                 {campaign.title}
               </h2>
-              <p className="mt-2 hidden max-w-lg text-sm leading-5 text-muted-foreground sm:block md:text-base">
+              <p className="mt-1.5 text-xs sm:text-sm md:text-base leading-relaxed text-slate-600 font-medium line-clamp-2 max-w-lg">
                 {campaign.description}
               </p>
               <Link
                 to="/"
                 search={{ category: campaign.category, q: campaign.query }}
-                className="premium-button mt-4 rounded-lg bg-primary px-4 py-2 text-xs font-bold text-primary-foreground shadow-sm md:px-5 md:py-2.5 md:text-sm"
+                className="mt-3.5 sm:mt-5 inline-flex items-center gap-1.5 rounded-xl px-4 py-2 sm:px-5 sm:py-2.5 text-xs sm:text-sm font-bold text-white shadow-md hover:brightness-110 active:scale-95 transition-all cursor-pointer"
                 style={{ backgroundColor: campaign.accent }}
               >
-                {campaign.action}
+                <span>{campaign.action}</span>
+                <ChevronRight className="h-3.5 w-3.5 sm:h-4 w-4" />
               </Link>
             </div>
-            <div className="relative min-w-0 overflow-hidden">
+            <div className="relative min-w-0 overflow-hidden h-full">
               <m.img
                 src={campaign.imageUrl}
                 alt={campaign.title}
@@ -364,20 +365,19 @@ export function PromoCarousel() {
                 fetchPriority={activeIndex === 0 ? "high" : undefined}
                 suppressHydrationWarning
               />
+              {/* Soft luxurious gradient blend between image and background */}
               <div
-                className="absolute inset-y-0 left-0 w-12 bg-gradient-to-r from-black/10 to-transparent"
-                aria-hidden
-              />
-              <div
-                className="absolute inset-y-0 left-0 w-1.5"
-                style={{ backgroundColor: campaign.accent }}
+                className="absolute inset-y-0 left-0 w-20 sm:w-32 md:w-44 pointer-events-none z-10"
+                style={{
+                  background: `linear-gradient(to right, ${campaign.background} 0%, ${campaign.background}30 60%, transparent 100%)`,
+                }}
                 aria-hidden
               />
             </div>
           </m.article>
         </AnimatePresence>
 
-        <span className="absolute right-3 top-3 rounded-full bg-black/55 px-2.5 py-1 font-mono text-[10px] text-white backdrop-blur-sm">
+        <span className="absolute right-3.5 top-3.5 z-30 rounded-full bg-black/60 px-2.5 py-1 font-mono text-[10px] font-bold text-white backdrop-blur-md border border-white/10 shadow-sm">
           {String(activeIndex + 1).padStart(2, "0")} /{" "}
           {String(visibleCampaigns.length).padStart(2, "0")}
         </span>
@@ -393,7 +393,7 @@ export function PromoCarousel() {
           whileHover={reduceMotion ? undefined : { scale: 1.05 }}
           whileTap={reduceMotion ? undefined : { scale: 0.95 }}
           transition={{ type: "spring", stiffness: 420, damping: 28 }}
-          className="absolute left-2 top-1/2 z-30 grid h-8 w-8 -translate-y-1/2 place-items-center rounded-full bg-background/95 text-foreground opacity-100 shadow-md transition-opacity md:opacity-0 md:group-hover:opacity-100 md:focus:opacity-100"
+          className="absolute left-2.5 top-1/2 z-30 grid h-8 w-8 sm:h-9 sm:w-9 -translate-y-1/2 place-items-center rounded-full bg-white/90 text-slate-800 shadow-md backdrop-blur-xs transition-opacity hover:bg-white md:opacity-0 md:group-hover:opacity-100 md:focus:opacity-100"
         >
           <ChevronLeft className="h-4 w-4" />
         </m.button>
@@ -408,12 +408,12 @@ export function PromoCarousel() {
           whileHover={reduceMotion ? undefined : { scale: 1.05 }}
           whileTap={reduceMotion ? undefined : { scale: 0.95 }}
           transition={{ type: "spring", stiffness: 420, damping: 28 }}
-          className="absolute right-2 top-1/2 z-30 grid h-8 w-8 -translate-y-1/2 place-items-center rounded-full bg-background/95 text-foreground opacity-100 shadow-md transition-opacity md:opacity-0 md:group-hover:opacity-100 md:focus:opacity-100"
+          className="absolute right-2.5 top-1/2 z-30 grid h-8 w-8 sm:h-9 sm:w-9 -translate-y-1/2 place-items-center rounded-full bg-white/90 text-slate-800 shadow-md backdrop-blur-xs transition-opacity hover:bg-white md:opacity-0 md:group-hover:opacity-100 md:focus:opacity-100"
         >
           <ChevronRight className="h-4 w-4" />
         </m.button>
 
-        <div className="absolute bottom-3 left-1/2 flex -translate-x-1/2 gap-1.5 rounded-full bg-background/90 px-2.5 py-1.5 shadow-sm backdrop-blur-sm">
+        <div className="absolute bottom-3.5 left-1/2 -translate-x-1/2 z-30 flex items-center gap-1.5 rounded-full bg-slate-900/60 px-3 py-1.5 shadow-lg backdrop-blur-md border border-white/10">
           {visibleCampaigns.map((item, index) => (
             <button
               key={item.id}
@@ -421,8 +421,8 @@ export function PromoCarousel() {
               aria-label={`Show promotion ${index + 1}`}
               aria-current={index === activeIndex}
               onClick={() => show(index)}
-              className={`h-1.5 rounded-full transition-all ${
-                index === activeIndex ? "w-5 bg-primary" : "w-1.5 bg-foreground/25"
+              className={`h-1.5 rounded-full transition-all cursor-pointer ${
+                index === activeIndex ? "w-6 bg-white shadow-xs" : "w-1.5 bg-white/40 hover:bg-white/80"
               }`}
             />
           ))}
