@@ -465,7 +465,7 @@ function StorePage({ catalog }: { catalog?: ReturnType<typeof importedStorefront
         ? liveProds
         : loaded.products && loaded.products.length > 0
           ? loaded.products
-          : (productsByStore[store.id] ?? [])
+          : (store?.id ? (productsByStore[store.id] ?? []) : [])
   ) as Product[];
 
   const navigate = useNavigate();

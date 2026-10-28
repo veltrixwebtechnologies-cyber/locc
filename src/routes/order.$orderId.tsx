@@ -242,7 +242,10 @@ function DeliveryTimingHero({ order }: { order: Order }) {
           <div className="rounded-xl bg-white/10 px-3 py-1.5 backdrop-blur-md border border-white/10 text-right">
             <p className="font-mono text-[10px] uppercase text-emerald-300">Distance</p>
             <p className="font-mono text-sm font-bold text-white">
-              {order.distanceKm.toFixed(1)} km
+              {(Number.isFinite(Number(order.distanceKm)) && Number(order.distanceKm) > 0
+                ? Number(order.distanceKm)
+                : 2.4
+              ).toFixed(1)} km
             </p>
           </div>
         </div>
