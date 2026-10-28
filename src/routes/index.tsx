@@ -1,7 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { lazy, Suspense, useEffect, useMemo, useState, startTransition } from "react";
-import { Search } from "lucide-react";
-import { AppShell } from "@/components/app-shell";
+import { Search, MapPin, Store } from "lucide-react";
+import { AppShell, requestLocationModal } from "@/components/app-shell";
+import { Button } from "@/components/ui/button";
 import { AwningCard } from "@/components/awning-card";
 import { ShopCard, type ShopCardData } from "@/modules/shopper/components/shop-card";
 import {
@@ -235,7 +236,30 @@ function Home() {
   }, [cat]);
 
   const filtered = useMemo(() => {
-    if (!hasConfirmedLocation) return [];
+    if (!hasConfirmedLocation) {
+      const normalizedQuery = query.trim().toLowerCase();
+      const defaultList = stores.map((s) => ({
+        ...s,
+        isOpen: s.isOpen ?? true,
+        isFallback: false,
+        fallbackZoneName: undefined,
+        featuredProductName: undefined,
+        distanceKm: s.distanceKm ?? 1.5,
+      }));
+      return defaultList
+        .filter((s) => {
+          if (activeFilter && !isStoreInCategory(s.category, activeFilter, s.rating)) return false;
+          if (
+            normalizedQuery &&
+            !s.name.toLowerCase().includes(normalizedQuery) &&
+            !s.tagline.toLowerCase().includes(normalizedQuery)
+          ) {
+            return false;
+          }
+          return true;
+        })
+        .slice(0, 16);
+    }
     const liveProducts = approvedProducts.data ?? [];
     const normalizedQuery = query.trim().toLowerCase();
     // Use each seller's own in-stock catalog image for their nearby shop card.
@@ -461,11 +485,32 @@ function Home() {
 
       {/* Server-filtered nearby shops with adjacent-zone fallback when sparse. */}
       <section id="shops-section" className="[content-visibility:auto] [contain-intrinsic-size:0_900px] px-5 pb-8 md:px-8">
-        <h2 className="mb-4 font-display text-xl font-bold text-foreground">
-          {hasConfirmedLocation
-            ? `Shops within ${approvedVendors.data?.effectiveRadiusKm ?? DEFAULT_SHOP_DISCOVERY_RADIUS_KM} km around you`
-            : "Choose your location to see nearby shops"}
-        </h2>
+        <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 className="font-display text-xl font-bold text-foreground">
+              {hasConfirmedLocation
+                ? `Shops within ${approvedVendors.data?.effectiveRadiusKm ?? DEFAULT_SHOP_DISCOVERY_RADIUS_KM} km around you`
+                : "Popular Neighborhood Shops"}
+            </h2>
+            {!hasConfirmedLocation && (
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                Showing popular stores in Coimbatore · Set your delivery location to view stores delivering directly to your door.
+              </p>
+            )}
+          </div>
+          {!hasConfirmedLocation && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={requestLocationModal}
+              className="self-start rounded-full border-primary/40 font-bold text-xs text-primary hover:bg-primary/10 sm:self-auto shrink-0"
+            >
+              <MapPin className="mr-1.5 h-3.5 w-3.5" />
+              Set Delivery Location
+            </Button>
+          )}
+        </div>
         {homeFallbackZoneNames.length > 0 && (
           <p className="-mt-2 mb-4 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-950">
             Expanded search to nearby zones · {homeFallbackZoneNames.join(", ")}
@@ -499,7 +544,27 @@ function Home() {
           )}
           {!nearbyShopLoading && !nearbyShopLoadError && combinedNearbyShops.length === 0 && (
             <div className="col-span-full">
-              <EmptyState />
+              {hasConfirmedLocation ? (
+                <EmptyState />
+              ) : (
+                <div className="rounded-2xl border border-dashed border-primary/30 bg-primary/5 p-6 text-center">
+                  <Store className="mx-auto h-8 w-8 text-primary" />
+                  <p className="mt-2 font-display text-base font-bold text-foreground">
+                    Set your delivery location
+                  </p>
+                  <p className="mx-auto mt-1 max-w-sm text-xs text-muted-foreground">
+                    Select your delivery area or use current GPS to discover verified local shops delivering to your doorstep.
+                  </p>
+                  <Button
+                    type="button"
+                    onClick={requestLocationModal}
+                    className="mt-4 rounded-full text-xs font-bold"
+                  >
+                    <MapPin className="mr-1.5 h-3.5 w-3.5" />
+                    Set Delivery Location
+                  </Button>
+                </div>
+              )}
             </div>
           )}
         </div>

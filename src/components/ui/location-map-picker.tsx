@@ -4,7 +4,7 @@
  */
 
 import { useEffect, useRef, useState, useCallback } from "react";
-import { MapPin, LocateFixed, Search, Loader2, Navigation, Check, ArrowLeft, Store } from "lucide-react";
+import { MapPin, LocateFixed, Search, Loader2, Navigation, Check, ArrowLeft, Store, X } from "lucide-react";
 import { detectCurrentGPSLocation, type DeliveryLocation } from "@/lib/location-store";
 import { isValidCoordinate } from "@/lib/geo";
 import { MAX_CUSTOMER_DELIVERY_ACCURACY_M, parseCoordinates } from "@/lib/coordinates";
@@ -112,6 +112,7 @@ export function LocationMapPicker({
   const [shopsLoading, setShopsLoading] = useState(false);
   const [shopsError, setShopsError] = useState<string | null>(null);
   const [shopsReload, setShopsReload] = useState(0);
+  const [mobileShopsOpen, setMobileShopsOpen] = useState(false);
   const [mapKeyRevision, setMapKeyRevision] = useState(0);
 
   // Re-initialize map if Google Maps API key changes dynamically
@@ -771,8 +772,73 @@ export function LocationMapPicker({
         )}
 
         {displayShops.length > 0 && (
-          <div className="absolute left-3 bottom-3 z-[1000] rounded-full bg-white/95 px-3 py-1.5 text-[10px] font-black text-[#981495] shadow-md ring-1 ring-[#EBD9F0]">
-            {localShops.length} nearby shops · blue pins are public listings
+          <button
+            type="button"
+            onClick={() => setMobileShopsOpen((open) => !open)}
+            className="absolute left-3 bottom-3 z-[1000] rounded-full bg-white/95 px-3 py-1.5 text-[10px] font-black text-[#981495] shadow-md ring-1 ring-[#EBD9F0] hover:bg-slate-50 transition active:scale-95 cursor-pointer"
+          >
+            {localShops.length} nearby shops <span className="lg:hidden text-[9px] underline ml-1">· View list</span>
+          </button>
+        )}
+
+        {mobileShopsOpen && displayShops.length > 0 && (
+          <div className="absolute inset-x-2 bottom-2 top-10 z-[1200] flex flex-col overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-[#EBD9F0] lg:hidden">
+            <div className="flex items-center justify-between border-b border-[#EEE7F3] px-3.5 py-2.5">
+              <div>
+                <p className="text-xs font-black text-[#21162B]">Nearby shops ({displayShops.length})</p>
+                <p className="text-[10px] text-[#7D7485]">Tap a shop to view details or pan on map</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setMobileShopsOpen(false)}
+                className="rounded-full p-1 text-slate-400 hover:text-slate-700"
+                aria-label="Close shops list"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto px-2 py-1">
+              {displayShops.map((shop) => (
+                <button
+                  key={shop.id}
+                  type="button"
+                  onClick={() => {
+                    setSelectedShop(shop);
+                    setMobileShopsOpen(false);
+                    mapRef.current?.panTo?.({ lat: shop.lat, lng: shop.lng });
+                    mapRef.current?.setZoom?.(18);
+                  }}
+                  className={`flex w-full items-center gap-2 border-b border-[#F1EAF4] px-2 py-2.5 text-left transition hover:bg-[#FAF7FC] ${
+                    selectedShop?.id === shop.id ? "bg-[#FAF0FC]" : ""
+                  }`}
+                >
+                  <div className="h-9 w-9 shrink-0 overflow-hidden rounded-lg bg-[#F4EFF7]">
+                    {shop.imageUrl ? (
+                      <img
+                        src={shop.imageUrl}
+                        alt=""
+                        className="h-full w-full object-cover"
+                        onError={(event) => {
+                          event.currentTarget.onerror = null;
+                          event.currentTarget.src = getFallbackShopImage(shop.category, shop.shopName);
+                        }}
+                      />
+                    ) : (
+                      <div className="grid h-full place-items-center text-[#981495]"><Store className="h-4 w-4" /></div>
+                    )}
+                  </div>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-[11px] font-black text-[#21162B]">{shop.shopName}</span>
+                    <span className="block truncate text-[10px] font-semibold text-[#7D7485]">{shop.category}</span>
+                    <span className="mt-0.5 flex items-center gap-1.5 text-[10px] font-bold text-[#981495]">
+                      {shop.isOpen !== undefined && <span className={shop.isOpen ? "text-emerald-700" : "text-slate-500"}>{shop.isOpen ? "Open" : "Closed"} ·</span>}
+                      {shop.distanceKm.toFixed(1)} km away
+                    </span>
+                  </span>
+                  <span className="text-lg text-[#981495]">›</span>
+                </button>
+              ))}
+            </div>
           </div>
         )}
 

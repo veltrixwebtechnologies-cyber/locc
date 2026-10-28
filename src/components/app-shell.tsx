@@ -22,6 +22,7 @@ import { useLocalShoreRoles } from "@/lib/roles-store";
 import { CategoryMegaMenu, MobileCategoryStrip } from "@/components/category-mega-menu";
 import { AnimatedSearchPlaceholder } from "@/components/ui/animated-search-placeholder";
 import { Fragment, type ReactNode, useEffect, useState, useRef } from "react";
+import { scrollToShops } from "@/lib/scroll-utils";
 import { useWishlist, useWishlistProducts } from "@/lib/merchandising";
 import { AnimatePresence, m } from "motion/react";
 import { SwiggyInstantSearchDropdown } from "@/components/ui/swiggy-instant-search-dropdown";
@@ -199,7 +200,7 @@ export function AppShell({
           <button
             type="button"
             onClick={requestLocationModal}
-            className={`hidden items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-bold transition cursor-pointer shrink-0 max-w-[140px] sm:flex sm:max-w-[180px] ${
+            className={`flex items-center gap-1.5 rounded-full border px-2 py-1 text-[10px] font-bold transition cursor-pointer shrink-0 max-w-[125px] sm:max-w-[180px] sm:px-2.5 sm:text-[11px] ${
               gpsState.status === "detecting"
                 ? "border-amber-300/60 bg-amber-50/80 text-amber-800"
                 : gpsState.status === "denied" || gpsState.status === "unavailable"
@@ -693,6 +694,16 @@ export function AppShell({
               <Link
                 key={t.to}
                 to={t.to}
+                onClick={(e) => {
+                  if (t.to === "/") {
+                    if (pathname === "/") {
+                      e.preventDefault();
+                      scrollToShops();
+                    } else {
+                      setTimeout(() => scrollToShops(), 150);
+                    }
+                  }
+                }}
                 data-cart-target={t.to === "/cart" ? "" : undefined}
                 className={`relative flex flex-col items-center justify-center gap-0.5 py-2 text-[10px] sm:text-[11px] font-medium transition-colors ${
                   active ? "text-primary font-bold" : "text-muted-foreground"
