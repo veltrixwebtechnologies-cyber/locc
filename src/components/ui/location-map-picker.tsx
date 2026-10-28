@@ -31,7 +31,7 @@ import {
   shopClusterIcon,
 } from "@/lib/map-settings";
 
-const MAP_PROVIDER = import.meta.env.VITE_MAP_PROVIDER === "google" ? "google" : "osm";
+const MAP_PROVIDER = import.meta.env.VITE_MAP_PROVIDER === "osm" ? "osm" : "google";
 const GOOGLE_PICKER_STYLES = LOCALSHORE_MAP_STYLES;
 
 type LocalShop = {

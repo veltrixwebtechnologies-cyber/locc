@@ -20,7 +20,7 @@ const InteractiveMapView = lazy(() =>
 
 // OSM/MapLibre remains the safe default. Enable Google Maps only in this
 // isolated GMap worktree with VITE_MAP_PROVIDER=google.
-const MAP_PROVIDER = import.meta.env.VITE_MAP_PROVIDER === "google" ? "google" : "osm";
+const MAP_PROVIDER = import.meta.env.VITE_MAP_PROVIDER === "osm" ? "osm" : "google";
 
 import type { MapFilterOptions, MapLocation, MapMarkerItem } from "@/lib/map-service/types";
 import { getMapMarkerItems, isTestEntity } from "@/lib/map-service/store-engine";

@@ -21,7 +21,7 @@ import { getMapTileConfig } from "@/lib/map-provider";
 import { loadGoogleMaps, isGoogleMapsAuthFailed, triggerGoogleMapsAuthFailure } from "@/lib/google-maps-loader";
 import { getGoogleMapOptions } from "@/lib/map-settings";
 
-const MAP_PROVIDER = import.meta.env.VITE_MAP_PROVIDER === "google" ? "google" : "osm";
+const MAP_PROVIDER = import.meta.env.VITE_MAP_PROVIDER === "osm" ? "osm" : "google";
 
 
 interface Props {
