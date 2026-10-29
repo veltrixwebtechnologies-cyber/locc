@@ -197,39 +197,43 @@ export function AppShell({
         </Link>
 
         <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={requestLocationModal}
-            className={`flex items-center gap-1.5 rounded-full border px-2 py-1 text-[10px] font-bold transition cursor-pointer shrink-0 max-w-[125px] sm:max-w-[180px] sm:px-2.5 sm:text-[11px] ${
-              gpsState.status === "detecting"
-                ? "border-amber-300/60 bg-amber-50/80 text-amber-800"
-                : gpsState.status === "denied" || gpsState.status === "unavailable"
-                  ? "border-[#f0abfc]/60 bg-[var(--sand)]/80 text-[#981495] hover:bg-[var(--sand)]"
-                  : "border-[#f0abfc]/60 bg-[var(--sand)]/80 text-[#981495] hover:bg-[var(--sand)]"
-            }`}
-          >
-            {gpsState.status === "detecting" ? (
-              <span className="h-3 w-3 shrink-0 animate-spin rounded-full border-2 border-amber-500 border-t-transparent" />
-            ) : (
-              <MapPin className="h-3.5 w-3.5 shrink-0 text-[#c026d3] fill-[#c026d3]/20" />
-            )}
-            <span className="truncate text-left">
-              {gpsState.status === "detecting"
-                ? "Detecting..."
-                : hasLocation
-                  ? deliveryLocation!.area || deliveryLocation!.label.split(",")[0]
-                  : "Select location"}
-            </span>
-          </button>
+          {pathname !== "/" && (
+            <button
+              type="button"
+              onClick={requestLocationModal}
+              className={`flex items-center gap-1.5 rounded-full border px-2 py-1 text-[10px] font-bold transition cursor-pointer shrink-0 max-w-[125px] sm:max-w-[180px] sm:px-2.5 sm:text-[11px] ${
+                gpsState.status === "detecting"
+                  ? "border-amber-300/60 bg-amber-50/80 text-amber-800"
+                  : gpsState.status === "denied" || gpsState.status === "unavailable"
+                    ? "border-[#f0abfc]/60 bg-[var(--sand)]/80 text-[#981495] hover:bg-[var(--sand)]"
+                    : "border-[#f0abfc]/60 bg-[var(--sand)]/80 text-[#981495] hover:bg-[var(--sand)]"
+              }`}
+            >
+              {gpsState.status === "detecting" ? (
+                <span className="h-3 w-3 shrink-0 animate-spin rounded-full border-2 border-amber-500 border-t-transparent" />
+              ) : (
+                <MapPin className="h-3.5 w-3.5 shrink-0 text-[#c026d3] fill-[#c026d3]/20" />
+              )}
+              <span className="truncate text-left">
+                {gpsState.status === "detecting"
+                  ? "Detecting..."
+                  : hasLocation
+                    ? deliveryLocation!.area || deliveryLocation!.label.split(",")[0]
+                    : "Select location"}
+              </span>
+            </button>
+          )}
 
-          <Link
-            to="/search"
-            search={{ q: "" }}
-            className="grid h-8 w-8 place-items-center rounded-lg border hairline bg-muted/60 text-foreground hover:bg-muted"
-            aria-label="Search products"
-          >
-            <Search className="h-4 w-4" />
-          </Link>
+          {pathname !== "/" && (
+            <Link
+              to="/search"
+              search={{ q: "" }}
+              className="grid h-8 w-8 place-items-center rounded-lg border hairline bg-muted/60 text-foreground hover:bg-muted"
+              aria-label="Search products"
+            >
+              <Search className="h-4 w-4" />
+            </Link>
+          )}
 
           <Link
             to="/customer-care"
@@ -287,40 +291,40 @@ export function AppShell({
 
       {/* Delivery location and Mobile Search bar on the customer home page */}
       {pathname === "/" && (
-        <div className="sticky top-[57px] z-40 border-b hairline bg-background/95 backdrop-blur px-3 pt-1.5 pb-2.5 shadow-2xs sm:hidden md:hidden space-y-2">
+        <div className="sticky top-[57px] z-40 border-b hairline bg-background/95 backdrop-blur px-3.5 pt-2 pb-2.5 shadow-2xs sm:hidden md:hidden space-y-2">
           {/* Location row */}
           <button
             type="button"
             onClick={requestLocationModal}
-            className="flex min-h-8 w-full items-center gap-2 rounded-lg px-2 text-left transition-colors hover:bg-muted/70 active:bg-muted cursor-pointer"
+            className="flex min-h-9 w-full items-center justify-between rounded-xl bg-slate-50/90 dark:bg-slate-900/60 border border-slate-200/80 dark:border-slate-800 px-2.5 py-1.5 text-left transition-colors hover:bg-muted/70 active:bg-muted cursor-pointer shadow-2xs"
             aria-label={
               hasLocation
                 ? `Change delivery location, currently ${deliveryLocation!.area || deliveryLocation!.label}`
                 : "Select delivery location"
             }
           >
-            <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-primary/10 text-primary">
-              {gpsState.status === "detecting" ? (
-                <span className="h-3 w-3 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-              ) : (
-                <MapPin className="h-3.5 w-3.5" />
-              )}
-            </span>
-            <span className="min-w-0 flex-1">
-              <span className="flex items-center gap-1">
-                <span className="text-[9px] font-semibold uppercase tracking-wide text-muted-foreground">
-                  {gpsState.status === "detecting" ? "Finding location" : "Deliver to"}
+            <div className="flex items-center gap-2 min-w-0 flex-1">
+              <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-primary/10 text-primary">
+                {gpsState.status === "detecting" ? (
+                  <span className="h-3 w-3 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                ) : (
+                  <MapPin className="h-3.5 w-3.5 text-primary" />
+                )}
+              </span>
+              <div className="min-w-0 flex-1 flex items-center gap-1.5">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground shrink-0">
+                  {gpsState.status === "detecting" ? "Finding" : "Deliver to"}
                 </span>
-                <span className="truncate text-xs font-bold text-foreground">
+                <span className="truncate text-xs font-black text-foreground">
                   {gpsState.status === "detecting"
                     ? "Please wait…"
                     : hasLocation
                       ? deliveryLocation!.area || deliveryLocation!.label.split(",")[0]
                       : "Select your location"}
                 </span>
-                <ChevronDown className="h-3 w-3 shrink-0 text-muted-foreground" />
-              </span>
-            </span>
+              </div>
+            </div>
+            <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground ml-1" />
           </button>
 
           {/* Prominent Full-Width Mobile Search Bar */}

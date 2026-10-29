@@ -256,7 +256,7 @@ export function SwiggyFeaturedBanner() {
       {/* Horizontal Continuous Auto-Scrolling Container with scrollbars strictly hidden */}
       <div
         ref={scrollRef}
-        className="flex gap-3.5 overflow-x-auto px-5 md:px-8 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
+        className="flex gap-3.5 overflow-x-auto px-0 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
       >
         {tripleAdBanners.map((ad, index) => (
           <div
@@ -428,7 +428,7 @@ export function Swiggy99StoreSection({ products = [] }: { products?: Merchandisi
   };
 
   return (
-    <div className="relative group mx-5 my-6 md:mx-8 md:my-8">
+    <div className="relative group mx-0 my-6 md:my-8">
       {/* Light blue Tinted Container exact like Swiggy ₹99 Store */}
       <div className="relative rounded-[28px] border border-[#d2e7ff] bg-gradient-to-b from-[#eaf3ff] to-[#f4f8fe] p-4 sm:p-6 shadow-xs">
         {/* Header Row */}

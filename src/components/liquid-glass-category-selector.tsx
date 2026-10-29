@@ -438,13 +438,13 @@ export function LiquidGlassCategorySelector({
 
   return (
     <div
-      className={`${isPillLayout ? "sticky top-[53px] md:top-[74px] my-2 z-40" : "relative z-30 my-4 sm:my-8"} px-3 transform-gpu sm:px-6 lg:px-8`}
+      className={`${isPillLayout ? "sticky top-[53px] md:top-[74px] my-2 z-40 px-3 sm:px-6 lg:px-8" : "relative z-30 my-4 sm:my-8"} transform-gpu`}
     >
       <div
         className={`relative mx-auto w-full ${isPillLayout ? "max-w-[calc(100vw-1rem)] rounded-full border border-[#f0abfc]/60 bg-white/75 p-1 shadow-[0_8px_32px_rgba(60,20,70,0.10)] backdrop-blur-xl sm:p-1.5" : "max-w-[1710px]"}`}
       >
         {!isPillLayout && (
-          <div className="mb-3 flex items-center justify-between px-1">
+          <div className="mb-3 flex items-center justify-between">
             <h2 className="font-display text-2xl font-black tracking-[-0.03em] text-[#211735] sm:text-3xl">
               Shop by category
             </h2>
@@ -467,7 +467,7 @@ export function LiquidGlassCategorySelector({
             className={
               isPillLayout
                 ? "flex items-center gap-1.5 overflow-x-auto select-none px-3 py-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:gap-2 md:px-7"
-                : "grid grid-cols-2 gap-3 select-none px-1 py-1 sm:grid-cols-3 sm:gap-4 lg:grid-cols-6"
+                : "grid grid-cols-2 gap-2.5 sm:gap-4 select-none py-1 sm:grid-cols-3 lg:grid-cols-6"
             }
           >
             {visibleCategories.map((cat) => {

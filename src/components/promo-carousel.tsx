@@ -327,7 +327,7 @@ export function PromoCarousel() {
     <section
       aria-roledescription="carousel"
       aria-label="Featured offers"
-      className="px-3 pb-3 sm:px-5 md:px-8 md:pb-5"
+      className="w-full pb-3 md:pb-5"
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
       onFocus={() => setPaused(true)}

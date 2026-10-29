@@ -483,8 +483,7 @@ function Home() {
         <LocalShoreOffers />
       </div>
 
-      {/* Server-filtered nearby shops with adjacent-zone fallback when sparse. */}
-      <section id="shops-section" className="[content-visibility:auto] [contain-intrinsic-size:0_900px] px-5 pb-8 md:px-8">
+      <section id="shops-section" className="[content-visibility:auto] [contain-intrinsic-size:0_900px] pb-8">
         <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h2 className="font-display text-xl font-bold text-foreground">

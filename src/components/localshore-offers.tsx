@@ -102,7 +102,7 @@ export function LocalShoreOffers() {
   };
 
   return (
-    <section className="relative mx-3 mt-8 overflow-hidden rounded-[28px] bg-[#e9ddff] px-4 py-6 sm:mx-5 sm:px-8 md:mx-8 md:px-12 md:py-8">
+    <section className="relative mx-0 mt-8 overflow-hidden rounded-[28px] bg-[#e9ddff] px-4 py-6 sm:px-8 md:px-12 md:py-8">
       <div className="pointer-events-none absolute inset-x-0 top-0 h-2 bg-[radial-gradient(circle_at_7px_0,#fff_7px,transparent_8px)] [background-size:14px_14px] opacity-90" />
       <div className="relative z-10 mb-5 flex items-end justify-between gap-3">
         <div>
