@@ -125,7 +125,7 @@ export const verifyResendEmailOtp = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-    const { data: row } = await supabaseAdmin
+    const { data: row, error: readError } = await supabaseAdmin
       .from("email_otps")
       .select("id, code_hash, expires_at, attempts")
       .eq("email", data.email)
@@ -133,6 +133,7 @@ export const verifyResendEmailOtp = createServerFn({ method: "POST" })
       .limit(1)
       .maybeSingle();
 
+    if (readError) throw new Error("Verification is temporarily unavailable. Please try again later.");
     if (!row) throw new Error("No code found. Please request a new one.");
     if (new Date(row.expires_at as string).getTime() < Date.now()) {
       await supabaseAdmin.from("email_otps").delete().eq("id", row.id);
@@ -144,10 +145,17 @@ export const verifyResendEmailOtp = createServerFn({ method: "POST" })
     }
     const expected = hashCode(data.code, data.email);
     if (expected !== row.code_hash) {
-      await supabaseAdmin
-        .from("email_otps")
-        .update({ attempts: (row.attempts as number) + 1 })
-        .eq("id", row.id);
+      const { data: nextAttempts, error: attemptError } = await (supabaseAdmin as any).rpc(
+        "consume_email_otp_attempt",
+        { p_id: row.id, p_max_attempts: MAX_ATTEMPTS },
+      );
+      if (attemptError) {
+        throw new Error("Verification is temporarily unavailable. Please try again later.");
+      }
+      if (nextAttempts == null) {
+        await supabaseAdmin.from("email_otps").delete().eq("id", row.id);
+        throw new Error("Too many attempts. Request a new code.");
+      }
       throw new Error("That code is incorrect. Please try again.");
     }
 

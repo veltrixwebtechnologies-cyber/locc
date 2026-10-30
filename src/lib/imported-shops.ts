@@ -16,6 +16,21 @@ export function getImportedShopHref(id: string, lat: number, lng: number): strin
   return `/store/${encodeURIComponent(shopId)}?${new URLSearchParams({ shopLat: String(lat), shopLng: String(lng) })}`;
 }
 
+const importedShopCoordinateCacheKey = "localshore:imported-shop-coordinates";
+
+export function getImportedShopCoordinates(id: string): { lat: number; lng: number } | undefined {
+  if (typeof window === "undefined") return undefined;
+  try {
+    const cached = JSON.parse(window.localStorage.getItem(importedShopCoordinateCacheKey) ?? "{}");
+    const value = cached[id] ?? cached[id.replace(/^imported:/, "")];
+    return value && isValidCoordinate(Number(value.lat), Number(value.lng))
+      ? { lat: Number(value.lat), lng: Number(value.lng) }
+      : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 export async function fetchImportedShopById(rpc: Rpc, id: string, lat?: number, lng?: number): Promise<ImportedShopRow> {
   if (lat == null || lng == null || !isValidCoordinate(lat, lng)) {
     throw new Error("Open this shop from its nearby listing or map pin to view its details.");
@@ -42,7 +57,19 @@ export async function fetchNearbyImportedShops(rpc: Rpc, input: {
   }));
   if (response.error?.code === "PGRST202") return [];
   if (response.error) throw new Error(response.error.message || "Could not load public shop listings");
-  return Array.isArray(response.data) ? (response.data as ImportedShopRow[]).filter((shop) => toImportedShopCard(shop) !== null) : [];
+  const shops = Array.isArray(response.data)
+    ? (response.data as ImportedShopRow[]).filter((shop) => toImportedShopCard(shop) !== null)
+    : [];
+  if (typeof window !== "undefined") {
+    try {
+      const cached = JSON.parse(window.localStorage.getItem(importedShopCoordinateCacheKey) ?? "{}");
+      for (const shop of shops) cached[shop.id] = { lat: Number(shop.latitude), lng: Number(shop.longitude) };
+      window.localStorage.setItem(importedShopCoordinateCacheKey, JSON.stringify(cached));
+    } catch {
+      // Coordinate caching is only an enhancement; loading the listing remains primary.
+    }
+  }
+  return shops;
 }
 
 

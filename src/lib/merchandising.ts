@@ -513,7 +513,9 @@ export function useWishlistProducts() {
       "wishlist-products",
       wishlist.data?.map((item: { product_id: string }) => item.product_id).join(","),
     ],
-    enabled: Boolean(wishlist.data?.length),
+    // Keep this query active when the wishlist becomes empty so React Query
+    // replaces the previous result instead of leaving deleted cards visible.
+    enabled: true,
     queryFn: async () => {
       const ids = (wishlist.data ?? []).map((item: { product_id: string }) => item.product_id);
       if (!ids.length) return [] as MerchandisingProduct[];
@@ -666,11 +668,13 @@ export function useToggleWishlist() {
         if (userError || !userData.user)
           throw userError ?? new Error("Sign in to use your wishlist.");
         const [wRes, weRes] = await Promise.all([
-          (supabase as any)
-            .from("wishlist")
-            .delete()
-            .eq("user_id", userData.user.id)
-            .eq("product_id", productId),
+          isUuid
+            ? (supabase as any)
+                .from("wishlist")
+                .delete()
+                .eq("user_id", userData.user.id)
+                .eq("product_id", productId)
+            : Promise.resolve({ error: null }),
           (supabase as any)
             .from("wishlist_entries")
             .delete()
@@ -725,6 +729,12 @@ export function useToggleWishlist() {
             ...(previous ?? []).filter((item) => item.product_id !== productId),
           ];
       queryClient.setQueryData(["wishlist", accountKey], next);
+      if (active) {
+        queryClient.setQueriesData<MerchandisingProduct[]>(
+          { queryKey: ["wishlist-products"] },
+          (items) => (items ?? []).filter((item) => item.id !== productId),
+        );
+      }
       return { previous };
     },
     onError: (_error, _variables, context) => {

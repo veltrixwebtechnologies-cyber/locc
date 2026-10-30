@@ -231,7 +231,7 @@ export function LocationMapPicker({
         const geocoder = new window.google.maps.Geocoder();
         const response = await geocoder.geocode({ location: { lat, lng } });
         if (request !== addressRequestRef.current) return;
-        if (response.results && response.results[0]) {
+        if (response?.results && response.results[0]) {
           const first = response.results[0];
           let area = "";
           let city = "";

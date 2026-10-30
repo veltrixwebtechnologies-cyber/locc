@@ -40,6 +40,7 @@ import {
 import { APPROVED_STORE, productsByStore, stores } from "@/lib/mock-data";
 import { getFallbackShopImage, SafeProductImage } from "@/lib/image-utils";
 import { WishlistButton } from "@/components/wishlist-button";
+import { getImportedShopCoordinates } from "@/lib/imported-shops";
 import {
   Dialog,
   DialogContent,
@@ -96,6 +97,10 @@ function WishlistPage() {
   const [showClearDialog, setShowClearDialog] = useState(false);
   const [showMultiStoreDialog, setShowMultiStoreDialog] = useState(false);
   const [isClearing, setIsClearing] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<{
+    item: MerchandisingProduct;
+    kind: "product" | "shop";
+  } | null>(null);
 
   const rawProducts = useMemo(() => products.data ?? [], [products.data]);
 
@@ -328,6 +333,10 @@ function WishlistPage() {
 
   // Remove single product with Undo
   const handleRemove = async (product: MerchandisingProduct) => {
+    setDeleteTarget({ item: product, kind: "product" });
+  };
+
+  const executeRemove = async (product: MerchandisingProduct) => {
     const price = Number(product.discount_price ?? product.selling_price);
     try {
       await toggle.mutateAsync({ productId: product.id, active: true });
@@ -359,6 +368,10 @@ function WishlistPage() {
 
   // Remove single shop with Undo
   const handleRemoveShop = async (shop: MerchandisingProduct) => {
+    setDeleteTarget({ item: shop, kind: "shop" });
+  };
+
+  const executeRemoveShop = async (shop: MerchandisingProduct) => {
     try {
       await toggle.mutateAsync({ productId: shop.id, active: true });
       toast.success(`Removed "${shop.name}" from favorite shops`, {
@@ -385,6 +398,14 @@ function WishlistPage() {
     } catch (error: any) {
       toast.error(error?.message ?? "Could not remove shop");
     }
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    const target = deleteTarget;
+    setDeleteTarget(null);
+    if (target.kind === "shop") await executeRemoveShop(target.item);
+    else await executeRemove(target.item);
   };
 
   // Bulk add to cart handler (strictly for products, never shops!)
@@ -829,6 +850,39 @@ function WishlistPage() {
       </div>
 
       {/* Confirmation Dialog for Clearing Wishlist */}
+      <Dialog open={Boolean(deleteTarget)} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="font-display text-lg font-bold text-slate-900">
+              Remove {deleteTarget?.kind === "shop" ? "favorite shop" : "saved item"}?
+            </DialogTitle>
+            <DialogDescription className="text-xs leading-relaxed text-slate-500">
+              Remove <span className="font-semibold text-slate-700">{deleteTarget?.item.name}</span> from your saved collection?
+              You can add it again later.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="mt-4 flex gap-2 sm:justify-end">
+            <button
+              type="button"
+              disabled={toggle.isPending}
+              onClick={() => setDeleteTarget(null)}
+              className="rounded-xl border border-slate-200 px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              disabled={toggle.isPending}
+              onClick={() => void confirmDelete()}
+              className="inline-flex items-center gap-1.5 rounded-xl bg-destructive px-4 py-2 text-xs font-bold text-destructive-foreground hover:bg-destructive/90 disabled:opacity-50"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+              {toggle.isPending ? "Removing..." : "Remove"}
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <Dialog open={showClearDialog} onOpenChange={setShowClearDialog}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
@@ -962,6 +1016,8 @@ function WishlistShopGridCard({
 }) {
   const [imageUrl, setImageUrl] = useState(shop.image_url ?? "");
   const cleanShopId = getCleanShopId(shop);
+  const shopCoordinates = getImportedShopCoordinates(cleanShopId);
+  const shopSearch = shopCoordinates ? { shopLat: shopCoordinates.lat, shopLng: shopCoordinates.lng } : undefined;
   const matchedStore = stores.find((s) => s.id === cleanShopId);
   const categoryLabelStr = formatCategoryLabel(shop.category);
 
@@ -1045,6 +1101,7 @@ function WishlistShopGridCard({
           <Link
             to="/store/$storeId"
             params={{ storeId: cleanShopId }}
+            search={shopSearch}
             className="block group/title"
           >
             <h3 className="line-clamp-1 text-base font-extrabold text-slate-900 transition-colors group-hover/title:text-primary">
@@ -1065,6 +1122,7 @@ function WishlistShopGridCard({
         <Link
           to="/store/$storeId"
           params={{ storeId: cleanShopId }}
+          search={shopSearch}
           className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-primary hover:bg-primary/90 active:scale-98 py-2.5 px-4 text-xs font-bold text-primary-foreground shadow-xs hover:shadow-md transition-all cursor-pointer"
         >
           <Store className="h-3.5 w-3.5" />
@@ -1090,6 +1148,8 @@ function WishlistShopListRow({
 }) {
   const [imageUrl, setImageUrl] = useState(shop.image_url ?? "");
   const cleanShopId = getCleanShopId(shop);
+  const shopCoordinates = getImportedShopCoordinates(cleanShopId);
+  const shopSearch = shopCoordinates ? { shopLat: shopCoordinates.lat, shopLng: shopCoordinates.lng } : undefined;
   const matchedStore = stores.find((s) => s.id === cleanShopId);
   const categoryLabelStr = formatCategoryLabel(shop.category);
 
@@ -1113,7 +1173,7 @@ function WishlistShopListRow({
     <div className="group flex flex-col gap-3.5 rounded-2xl border border-slate-200/90 bg-white p-3.5 shadow-2xs transition-all hover:border-primary/40 hover:shadow-sm sm:flex-row sm:items-center">
       {/* Thumbnail */}
       <div className="relative h-24 w-32 shrink-0 overflow-hidden rounded-xl bg-slate-100">
-        <Link to="/store/$storeId" params={{ storeId: cleanShopId }} className="block h-full w-full">
+        <Link to="/store/$storeId" params={{ storeId: cleanShopId }} search={shopSearch} className="block h-full w-full">
           <img
             src={displayImg}
             alt={shop.name}
@@ -1146,6 +1206,7 @@ function WishlistShopListRow({
         <Link
           to="/store/$storeId"
           params={{ storeId: cleanShopId }}
+          search={shopSearch}
           className="block truncate text-sm font-bold text-slate-900 transition-colors hover:text-primary"
         >
           {shop.name}
@@ -1198,6 +1259,8 @@ function WishlistGridCard({
   isPending: boolean;
 }) {
   const [imageUrl, setImageUrl] = useState(product.image_url ?? "");
+  const shopCoordinates = getImportedShopCoordinates(product.seller_id);
+  const shopSearch = shopCoordinates ? { shopLat: shopCoordinates.lat, shopLng: shopCoordinates.lng } : undefined;
 
   useEffect(() => {
     let active = true;
@@ -1251,6 +1314,7 @@ function WishlistGridCard({
           <Link
             to="/product/$productId"
             params={{ productId: product.id }}
+            search={shopSearch}
             className="flex h-full w-full items-center justify-center"
           >
             <SafeProductImage
@@ -1270,6 +1334,7 @@ function WishlistGridCard({
             <Link
               to="/store/$storeId"
               params={{ storeId: product.seller_id || APPROVED_STORE.id }}
+              search={shopSearch}
               className="inline-flex items-center gap-1 truncate font-medium text-slate-600 hover:text-primary hover:underline"
             >
               <Store className="h-3 w-3 shrink-0 text-slate-400" />
@@ -1287,6 +1352,7 @@ function WishlistGridCard({
           <Link
             to="/product/$productId"
             params={{ productId: product.id }}
+            search={shopSearch}
             className="block line-clamp-2 text-sm font-bold text-slate-900 transition-colors hover:text-primary"
           >
             {product.name}
@@ -1328,6 +1394,7 @@ function WishlistGridCard({
         <Link
           to="/product/$productId"
           params={{ productId: product.id }}
+          search={shopSearch}
           title="View product details"
           className="grid h-8 w-8 shrink-0 place-items-center rounded-xl border border-slate-200 text-slate-500 transition-colors hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900"
         >
@@ -1353,6 +1420,8 @@ function WishlistListRow({
   isPending: boolean;
 }) {
   const [imageUrl, setImageUrl] = useState(product.image_url ?? "");
+  const shopCoordinates = getImportedShopCoordinates(product.seller_id);
+  const shopSearch = shopCoordinates ? { shopLat: shopCoordinates.lat, shopLng: shopCoordinates.lng } : undefined;
 
   useEffect(() => {
     let active = true;
@@ -1379,6 +1448,7 @@ function WishlistListRow({
         <Link
           to="/product/$productId"
           params={{ productId: product.id }}
+          search={shopSearch}
           className="flex h-full w-full items-center justify-center p-1.5"
         >
           <SafeProductImage
@@ -1402,6 +1472,7 @@ function WishlistListRow({
           <Link
             to="/store/$storeId"
             params={{ storeId: product.seller_id || APPROVED_STORE.id }}
+            search={shopSearch}
             className="inline-flex items-center gap-1 font-semibold text-slate-600 hover:text-primary hover:underline"
           >
             <Store className="h-3.5 w-3.5 text-slate-400" />
@@ -1423,6 +1494,7 @@ function WishlistListRow({
         <Link
           to="/product/$productId"
           params={{ productId: product.id }}
+          search={shopSearch}
           className="block truncate text-sm font-bold text-slate-900 transition-colors hover:text-primary"
         >
           {product.name}

@@ -30,7 +30,7 @@ function useSlowAutoScroll<T extends HTMLDivElement>(speed = 0.55) {
 
   useEffect(() => {
     const el = scrollRef.current;
-    if (!el) return;
+    if (!el || !(el instanceof Element)) return;
 
     const observer = new IntersectionObserver(
       ([entry]) => {

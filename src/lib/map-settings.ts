@@ -131,7 +131,7 @@ export function getGoogleMapsApiKey(): string {
   }
 
   const envKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string | undefined;
-  return (envKey || "AIzaSyDBVHoi4kdpRVkCcQWIIjTTOn1sz4HjXtU").trim();
+  return (envKey || "").trim();
 }
 
 /**
