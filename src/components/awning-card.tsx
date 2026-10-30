@@ -1,6 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { Star } from "lucide-react";
 import { categoryLabel, type Store } from "@/lib/mock-data";
+import { getFallbackShopImage } from "@/lib/image-utils";
 import { m } from "motion/react";
 
 export function AwningCard({ store }: { store: Store }) {
@@ -19,10 +20,14 @@ export function AwningCard({ store }: { store: Store }) {
       >
         <div className="relative aspect-[16/10] w-full overflow-hidden bg-[var(--sand)]">
           <img
-            src={store.imageUrl}
+            src={store.imageUrl || getFallbackShopImage(store.category, store.id)}
             alt={store.name}
             loading="lazy"
             className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+            onError={(event) => {
+              event.currentTarget.onerror = null;
+              event.currentTarget.src = getFallbackShopImage(store.category, store.id);
+            }}
           />
           <span className="stamp absolute left-3 top-3">Verified Local</span>
           <span className="absolute right-3 top-3 rounded-full bg-background/95 px-2 py-0.5 text-[11px] font-medium shadow-sm">
