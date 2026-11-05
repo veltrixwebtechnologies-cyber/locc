@@ -30,7 +30,7 @@ test("customer GPS waits for a fresh precise fix and preserves newer selections 
   });
   install("clearTimeout", (id) => timers.delete(id));
   const expireGPS = () => {
-    const timer = [...timers.values()].find((entry) => entry.delay === 15000);
+    const timer = [...timers.values()].find((entry) => entry.delay === 30000);
     assert.ok(timer, "GPS has a bounded acquisition deadline");
     timer.callback();
   };
@@ -44,6 +44,11 @@ test("customer GPS waits for a fresh precise fix and preserves newer selections 
   });
   install("navigator", {
     geolocation: {
+      getCurrentPosition(ok, error, options) {
+        assert.equal(options.timeout, 30000);
+        assert.equal(options.maximumAge, 0);
+        assert.equal(options.enableHighAccuracy, true);
+      },
       watchPosition(ok, error, options) {
         watches++;
         assert.equal(options.enableHighAccuracy, true);
@@ -96,7 +101,7 @@ test("customer GPS waits for a fresh precise fix and preserves newer selections 
     const liveCallback = success;
     const latestTimestamp = location.capturedAt + 1;
     liveCallback({ ...fix(8), timestamp: latestTimestamp });
-    assert.equal(store.getActiveDeliveryLocation().capturedAt, latestTimestamp);
+    assert.equal(store.getActiveDeliveryLocation().capturedAt, location.capturedAt, "confirmed destination must not track device movement");
     liveCallback({ ...fix(5), timestamp: location.capturedAt });
     assert.equal(store.getActiveDeliveryLocation().accuracy, 8, "older readings cannot replace a newer live fix");
     liveCallback({ ...fix(16000), timestamp: latestTimestamp + 1 });
@@ -131,6 +136,18 @@ test("customer GPS waits for a fresh precise fix and preserves newer selections 
       "coarse estimate is never saved as precise",
     );
     assert.equal(timers.size, 0);
+
+    const improving = store.detectCurrentGPSLocation({ commit: false });
+    success(fix(90));
+    success(fix(22));
+    success(fix(45));
+    expireGPS();
+    assert.equal((await improving).accuracy, 22, "deadline returns best reading, not the first or latest reading");
+    assert.equal(store.gpsAccuracyLabel(8), "Excellent");
+    assert.equal(store.gpsAccuracyLabel(22), "Good");
+    assert.equal(store.gpsAccuracyLabel(45), "Moderate");
+    assert.equal(store.gpsAccuracyLabel(90), "Low");
+    assert.equal(store.gpsAccuracyLabel(500000), "Inaccurate");
 
     const noFix = store.detectCurrentGPSLocation();
     const noFixRejected = assert.rejects(noFix, /did not return a current location/);

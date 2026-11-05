@@ -27,6 +27,14 @@ let isSyncing = false;
 let initialized = false;
 let activeMergePromise: Promise<void> | null = null;
 let lastSyncedSnapshot: string = "";
+// Keep the cart usable from local storage when the optional Supabase cart
+// table is not present in a preview/dev project. Avoid retrying every cart
+// update and flooding the console with identical 404s.
+let remoteCartUnavailable = false;
+
+function isMissingRemoteCart(error: any): boolean {
+  return Number(error?.status) === 404 || error?.code === "42P01" || error?.code === "PGRST205";
+}
 
 async function getSupabaseClient() {
   try {
@@ -197,6 +205,7 @@ export function mergeCarts(
 }
 
 export async function fetchRemoteCart(userId: string): Promise<CartLine[]> {
+  if (remoteCartUnavailable) return [];
   const supabase = await getSupabaseClient();
   if (!supabase) return [];
 
@@ -206,7 +215,11 @@ export async function fetchRemoteCart(userId: string): Promise<CartLine[]> {
       .select("*")
       .eq("user_id", userId);
 
-    if (error || !Array.isArray(data)) {
+    if (error) {
+      if (isMissingRemoteCart(error)) remoteCartUnavailable = true;
+      return [];
+    }
+    if (!Array.isArray(data)) {
       return [];
     }
 
@@ -234,6 +247,7 @@ export async function saveRemoteCart(
   lines: CartLine[],
   storeName?: string | null,
 ): Promise<boolean> {
+  if (remoteCartUnavailable) return false;
   const supabase = await getSupabaseClient();
   if (!supabase) return false;
 
@@ -264,7 +278,11 @@ export async function saveRemoteCart(
     });
 
     if (upsertErr) {
-      console.warn("[LocalShore cart] Error upserting remote cart", upsertErr);
+      if (isMissingRemoteCart(upsertErr)) {
+        remoteCartUnavailable = true;
+      } else {
+        console.warn("[LocalShore cart] Error upserting remote cart", upsertErr);
+      }
       return false;
     }
 

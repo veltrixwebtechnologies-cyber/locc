@@ -33,6 +33,26 @@ export interface DeliveryLocation {
   accuracy?: number | null;
   capturedAt?: number;
   pincode?: string;
+  altitude?: number | null;
+  heading?: number | null;
+  speed?: number | null;
+  latitude?: number;
+  longitude?: number;
+  entranceLatitude?: number;
+  entranceLongitude?: number;
+  buildingName?: string;
+  street?: string;
+  district?: string;
+  state?: string;
+  landmark?: string;
+  locationSource?: "gps" | "manual_pin" | "address_search";
+  verifiedByCustomer?: boolean;
+  updatedAt?: string;
+}
+
+export function gpsAccuracyLabel(accuracy: number): string {
+  if (!Number.isFinite(accuracy) || accuracy < 0) return "Unavailable";
+  return accuracy <= 10 ? "Excellent" : accuracy <= 25 ? "Good" : accuracy <= 50 ? "Moderate" : accuracy <= 100 ? "Low" : "Inaccurate";
 }
 
 export type LocationState =
@@ -366,9 +386,7 @@ export function setActiveDeliveryLocation(
 export function commitDetectedLocation(loc: DeliveryLocation) {
   setActiveDeliveryLocation(loc, { confirmed: true });
   setGPSStatus("ok");
-  if (loc.isGPS) {
-    startLiveCustomerLocationUpdates();
-  }
+  stopLiveCustomerLocationUpdates();
 }
 
 /**
@@ -452,7 +470,7 @@ export async function detectCurrentGPSLocation(options?: {
   // Background auto-detection may already be running when the picker opens.
   // Share it with other background callers, but a user-triggered request must
   // start fresh so changed browser/device sensor settings are respected.
-  if (activeGPSRequest && options?.silent !== false) return activeGPSRequest;
+  if (activeGPSRequest) return activeGPSRequest;
 
   stopLiveCustomerLocationUpdates();
   const requestRevision = ++locationRevision;
@@ -466,7 +484,7 @@ export async function detectCurrentGPSLocation(options?: {
     console.info("[LocalShore GPS] requesting location", {
       highAccuracy: true,
       maximumAge: 0,
-      timeoutMs: 15000,
+      timeoutMs: 30000,
       commit,
     });
   }
@@ -578,6 +596,13 @@ export async function detectCurrentGPSLocation(options?: {
       isGPS: true,
       accuracy: accuracy ?? null,
       capturedAt: position.timestamp,
+      altitude: position.coords.altitude,
+      heading: position.coords.heading,
+      speed: position.coords.speed,
+      latitude: lat,
+      longitude: lng,
+      locationSource: "gps",
+      verifiedByCustomer: false,
       pincode,
     };
 
@@ -610,6 +635,14 @@ export async function detectCurrentGPSLocation(options?: {
   const request = new Promise<DeliveryLocation>((resolve, reject) => {
     let watchId: number | undefined;
     let finished = false;
+    let bestPosition: GeolocationPosition | null = null;
+    const finishPosition = (position: GeolocationPosition) => {
+      cleanup();
+      processPosition(position).then(resolve, (error) => {
+        if (requestRevision === locationRevision) setGPSStatus("error", "Location could not be resolved. Select your entrance on the map.");
+        reject(error);
+      });
+    };
     const cleanup = () => {
       finished = true;
       clearTimeout(deadline);
@@ -625,18 +658,22 @@ export async function detectCurrentGPSLocation(options?: {
     // provides a coarse Wi-Fi/IP estimate. The map pin remains the precise,
     // user-confirmed fallback.
     const deadline = setTimeout(
-      () =>
+      () => {
+        if (bestPosition && (hasFreshPreciseGPSFix(bestPosition) || (allowApproximate && bestPosition.coords.accuracy <= MAX_APPROXIMATE_GPS_PREVIEW_ACCURACY_M))) {
+          finishPosition(bestPosition);
+          return;
+        }
         fail(
           bestGPSFix ? "imprecise" : "timeout",
           bestGPSFix
             ? `Your device's best reading was only accurate to about ±${Math.round(bestGPSFix.accuracy)}m. Enable precise device location and Wi-Fi, retry, or choose your entrance on the map.`
             : "Your device did not return a current location. Check browser permission and device location services, then retry or choose your entrance on the map.",
-        ),
-      15000,
+        );
+      },
+      30000,
     );
     try {
-      watchId = navigator.geolocation.watchPosition(
-        (position) => {
+      const acceptPosition = (position: GeolocationPosition) => {
           if (finished) return;
           if (requestRevision !== locationRevision) {
             fail("error", "Location selection changed while GPS was resolving.");
@@ -644,6 +681,7 @@ export async function detectCurrentGPSLocation(options?: {
           }
           if (!hasFreshGPSFix(position)) return;
           if (!bestGPSFix || position.coords.accuracy < bestGPSFix.accuracy) {
+            bestPosition = position;
             bestGPSFix = {
               lat: position.coords.latitude,
               lng: position.coords.longitude,
@@ -656,6 +694,7 @@ export async function detectCurrentGPSLocation(options?: {
           // Map preview flows allow an approximate fix, but accuracy must still
           // be bounded within MAX_APPROXIMATE_GPS_PREVIEW_ACCURACY_M (5,000m).
           // Unbounded coarse IP readings (e.g. ±100,000m) are rejected.
+          if (position.coords.accuracy > 10) return;
           if (!hasFreshPreciseGPSFix(position)) {
             if (!allowApproximate || position.coords.accuracy > MAX_APPROXIMATE_GPS_PREVIEW_ACCURACY_M) {
               return;
@@ -671,8 +710,8 @@ export async function detectCurrentGPSLocation(options?: {
             }
             reject(error);
           });
-        },
-        (error) => {
+        };
+      const rejectPosition = (error: GeolocationPositionError) => {
           if (finished) return;
           if (error.code === 1)
             fail(
@@ -683,11 +722,12 @@ export async function detectCurrentGPSLocation(options?: {
           // until our overall deadline; permission denial is terminal.
           if (error.code !== 1 && error.code !== 2 && error.code !== 3)
             fail("error", "Location detection failed. Please retry.");
-        },
+        };
         // High accuracy requests the best available provider; it cannot add
         // GPS hardware or guarantee a particular accuracy on a laptop.
-        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 },
-      );
+      const settings = { enableHighAccuracy: true, timeout: 30000, maximumAge: 0 };
+      navigator.geolocation.getCurrentPosition(acceptPosition, rejectPosition, settings);
+      watchId = navigator.geolocation.watchPosition(acceptPosition, rejectPosition, settings);
       if (finished) navigator.geolocation.clearWatch(watchId);
     } catch (error) {
       fail(
