@@ -5,7 +5,7 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import { MapPin, LocateFixed, Search, Loader2, Navigation, Check, ArrowLeft, Store, X } from "lucide-react";
-import { detectCurrentGPSLocation, type DeliveryLocation } from "@/lib/location-store";
+import { detectCurrentGPSLocation, gpsAccuracyLabel, useGPSStatus, type DeliveryLocation } from "@/lib/location-store";
 import { isValidCoordinate } from "@/lib/geo";
 import { MAX_CUSTOMER_DELIVERY_ACCURACY_M, parseCoordinates } from "@/lib/coordinates";
 import { resolveNominatimAddress } from "@/lib/location-address";
@@ -51,6 +51,7 @@ type LocalShop = {
 
 
 interface LocationMapPickerProps {
+  initialDeviceLocation?: DeliveryLocation | null;
   initialLat?: number;
   initialLng?: number;
   initialAccuracy?: number;
@@ -63,6 +64,7 @@ interface LocationMapPickerProps {
 }
 
 export function LocationMapPicker({
+  initialDeviceLocation,
   initialLat,
   initialLng,
   initialAccuracy,
@@ -81,10 +83,13 @@ export function LocationMapPicker({
   const localShopMarkersRef = useRef<Record<string, any>>({});
   const initialAccuracyRef = useRef(initialAccuracy);
   const addressRequestRef = useRef(0);
-  const DEFAULT_MAP_CENTER = { lat: 11.0168, lng: 76.9558 };
 
   const parsedInitial = parseCoordinates(initialLat, initialLng);
-  const initialCoords = parsedInitial ?? DEFAULT_MAP_CENTER;
+  const initialCoords = parsedInitial;
+  const [addressEdits, setAddressEdits] = useState({ buildingName: "", street: "", area: "", city: "", district: "", state: "", pincode: "", landmark: "" });
+  const sourceRef = useRef<"gps" | "manual_pin" | "address_search">(initialDeviceLocation ? "gps" : "manual_pin");
+  const deviceFixRef = useRef<DeliveryLocation | null>(initialDeviceLocation ?? null);
+  const pinRevisionRef = useRef(0);
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(initialCoords);
   const [mapStart, setMapStart] = useState<{ lat: number; lng: number } | null>(initialCoords);
   const [hasPositionedPin, setHasPositionedPin] = useState(
@@ -105,6 +110,7 @@ export function LocationMapPicker({
 
   const [isGeocoding, setIsGeocoding] = useState(false);
   const [isLocating, setIsLocating] = useState(false);
+  const gps = useGPSStatus();
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [isSearching, setIsSearching] = useState(false);
@@ -322,6 +328,8 @@ export function LocationMapPicker({
   // Update map pin position & reverse geocode
   const handlePositionChange = useCallback(
     (lat: number, lng: number, flyTo = false) => {
+      pinRevisionRef.current++;
+      sourceRef.current = "manual_pin";
       addressRequestRef.current++;
       setIsGeocoding(true);
       setCoords({ lat, lng });
@@ -355,36 +363,6 @@ export function LocationMapPicker({
     },
     [performReverseGeocode],
   );
-
-  useEffect(() => {
-    if (mapStart || typeof window === "undefined") return;
-    let cancelled = false;
-    setMapError("");
-    detectCurrentGPSLocation({ silent: true, commit: false, allowApproximate: true })
-      .then((location) => {
-        if (!cancelled && isValidCoordinate(location.lat, location.lng)) {
-          const next = { lat: location.lat, lng: location.lng };
-          setMapStart(next);
-          setCoords(next);
-          setHasPositionedPin(
-            typeof location.accuracy === "number" &&
-              location.accuracy <= MAX_CUSTOMER_DELIVERY_ACCURACY_M,
-          );
-        }
-      })
-      .catch((error) => {
-        if (!cancelled) {
-          setMapError(
-            error instanceof Error
-              ? error.message
-              : "Allow location access or search for an area first.",
-          );
-        }
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [mapStart]);
 
   // Initialize Google Maps exclusively
   useEffect(() => {
@@ -543,6 +521,7 @@ export function LocationMapPicker({
 
   // Handle live GPS detection
   const handleGPSLocate = async () => {
+    const revision = pinRevisionRef.current;
     setIsLocating(true);
     try {
       const gpsLoc = await detectCurrentGPSLocation({
@@ -550,7 +529,9 @@ export function LocationMapPicker({
         commit: false,
         allowApproximate: true,
       });
+      if (revision !== pinRevisionRef.current) return;
       if (gpsLoc && isValidCoordinate(gpsLoc.lat, gpsLoc.lng)) {
+        deviceFixRef.current = gpsLoc;
         initialAccuracyRef.current = gpsLoc.accuracy ?? undefined;
         setCoords({ lat: gpsLoc.lat, lng: gpsLoc.lng });
         setMapStart({ lat: gpsLoc.lat, lng: gpsLoc.lng });
@@ -564,6 +545,7 @@ export function LocationMapPicker({
         }
         setHasPositionedPin(true);
         handlePositionChange(gpsLoc.lat, gpsLoc.lng, true);
+        sourceRef.current = "gps";
         toast.success(
           gpsLoc.accuracy && gpsLoc.accuracy <= MAX_CUSTOMER_DELIVERY_ACCURACY_M
             ? "Precise GPS location found"
@@ -617,13 +599,14 @@ export function LocationMapPicker({
     const lng = Number(result.lng);
     if (isValidCoordinate(lat, lng)) {
       handlePositionChange(lat, lng, true);
+      sourceRef.current = "address_search";
       setSearchQuery("");
       setSearchResults([]);
     }
   };
 
   const handleConfirm = () => {
-    if (!coords || !isValidCoordinate(coords.lat, coords.lng)) return;
+    if (!coords || !hasPositionedPin || !isValidCoordinate(coords.lat, coords.lng)) return;
     const finalLocation: DeliveryLocation = {
       id: `confirmed-${Date.now()}`,
       label:
@@ -635,8 +618,22 @@ export function LocationMapPicker({
       lat: coords.lat,
       lng: coords.lng,
       pincode: addressDetails.pincode,
-      isGPS: true,
+      isGPS: false,
+      ...Object.fromEntries(Object.entries(addressEdits).filter(([, value]) => value.trim())),
+      latitude: deviceFixRef.current?.lat,
+      longitude: deviceFixRef.current?.lng,
+      accuracy: deviceFixRef.current?.accuracy ?? initialAccuracyRef.current ?? null,
+      altitude: deviceFixRef.current?.altitude,
+      capturedAt: deviceFixRef.current?.capturedAt,
+      entranceLatitude: coords.lat,
+      entranceLongitude: coords.lng,
+      locationSource: sourceRef.current,
+      verifiedByCustomer: true,
+      updatedAt: new Date().toISOString(),
     };
+    if (Object.values(addressEdits).some((value) => value.trim())) {
+      finalLocation.label = [addressEdits.buildingName, addressEdits.street, addressEdits.area || addressDetails.area, addressEdits.city || addressDetails.city, addressEdits.district, addressEdits.state, addressEdits.pincode || addressDetails.pincode].filter(Boolean).join(", ");
+    }
     onSelectLocation(finalLocation);
   };
 
@@ -674,7 +671,7 @@ export function LocationMapPicker({
             className="hidden shrink-0 items-center gap-2 rounded-xl bg-[#981495] px-3.5 py-2.5 text-xs font-black text-white shadow-md shadow-[#981495]/15 transition hover:bg-[#7d1079] disabled:opacity-60 sm:flex"
           >
             {isLocating ? <Loader2 className="h-4 w-4 animate-spin" /> : <LocateFixed className="h-4 w-4" />}
-            Use my location
+            Use My Current Location
           </button>
         </div>
 
@@ -768,9 +765,9 @@ export function LocationMapPicker({
           <div className="flex h-full items-center justify-center px-6 text-center">
             <div className="space-y-2">
               <LocateFixed className="mx-auto h-8 w-8 text-[#981495]" />
-              <p className="text-sm font-bold text-slate-800">Waiting for live location</p>
+              <p className="text-sm font-bold text-slate-800">Select your delivery area</p>
               <p className="text-xs font-medium text-slate-500">
-                {mapError || "Allow GPS access to position the map."}
+                {mapError || "Search for your street above or use current location to position the map."}
               </p>
             </div>
           </div>
@@ -911,7 +908,8 @@ export function LocationMapPicker({
           type="button"
           onClick={handleGPSLocate}
           disabled={isLocating}
-          title="Center on current GPS position"
+          title="Use My Current Location"
+          aria-label="Use My Current Location"
           className="absolute bottom-3 right-3 z-[1000] grid h-10 w-10 place-items-center rounded-xl bg-white text-[#981495] shadow-lg border border-slate-200 hover:bg-slate-50 transition-colors cursor-pointer"
         >
           {isLocating ? (
@@ -930,6 +928,16 @@ export function LocationMapPicker({
         </div>
       </div>
 
+      {isLocating && <p role="status" className="shrink-0 animate-pulse p-2 text-xs text-[#981495]">{gps.fix ? `Improving GPS accuracy: ±${Math.round(gps.fix.accuracy)} metres · ${gpsAccuracyLabel(gps.fix.accuracy)}` : "Acquiring device location — allow location permission when prompted."}</p>}
+      <details className="mt-2 max-h-48 shrink-0 overflow-y-auto rounded-xl border border-slate-200 p-3 text-xs">
+        <summary className="cursor-pointer font-bold text-[#981495]">Verify address and add entrance instructions</summary>
+        <p className="my-2 text-slate-600">{addressDetails.label}</p>
+        <div className="grid grid-cols-2 gap-2">
+          {Object.keys(addressEdits).map((field) => <label key={field} className="capitalize">{field === "buildingName" ? "Building / apartment" : field}<input className="mt-1 w-full rounded-lg border p-2" value={addressEdits[field as keyof typeof addressEdits]} placeholder={field === "landmark" ? "Main gate, near school…" : field === "area" ? addressDetails.area : field === "city" ? addressDetails.city : field === "pincode" ? addressDetails.pincode : ""} onChange={(event) => setAddressEdits((previous) => ({ ...previous, [field]: event.target.value }))} /></label>)}
+        </div>
+        <p className="mt-2">Entrance: {coords ? `${coords.lat.toFixed(6)}, ${coords.lng.toFixed(6)}` : "Choose a point on the map"}</p>
+        <p>GPS accuracy: {initialAccuracyRef.current != null ? `±${Math.round(initialAccuracyRef.current)} metres (device reading)` : "Not available for this pin"}</p>
+      </details>
       {/* Selected Address Preview & Confirmation Card */}
       <div className="mt-2.5 shrink-0 flex flex-col sm:flex-row items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm sm:px-4 sm:py-3">
         <div className="flex min-w-0 items-center gap-3 w-full sm:w-auto flex-1">
@@ -942,7 +950,7 @@ export function LocationMapPicker({
           </div>
           <div className="flex-1 min-w-0">
             <span className="block text-[10px] font-black uppercase tracking-wider text-slate-400">
-              Selected delivery location
+              Exact delivery entrance
             </span>
             <h4 className="truncate text-sm font-black leading-snug text-slate-900 sm:text-base">
               {addressDetails.area || "Selected location"}
@@ -958,11 +966,11 @@ export function LocationMapPicker({
         <button
           type="button"
           onClick={handleConfirm}
-          disabled={!coords}
+          disabled={!coords || !hasPositionedPin || isGeocoding}
           className="flex w-full sm:w-auto shrink-0 items-center justify-center gap-2 rounded-xl bg-[#981495] px-7 py-3.5 text-sm font-black text-white shadow-lg shadow-[#981495]/20 transition-all hover:bg-[#7b1078] active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
         >
           <Check className="h-4 w-4 stroke-[3]" />
-          Confirm location
+          Confirm Delivery Entrance
         </button>
       </div>
     </div>

@@ -32,11 +32,13 @@ import {
   getPopularAreasForLocation,
   MAX_APPROXIMATE_GPS_PREVIEW_ACCURACY_M,
   type DeliveryLocation,
+  gpsAccuracyLabel,
 } from "@/lib/location-store";
 import { geocodeSearch } from "@/lib/map-service/providers";
 import { MAX_CUSTOMER_DELIVERY_ACCURACY_M } from "@/lib/coordinates";
 import { LocationMapPicker } from "@/components/ui/location-map-picker";
 import { toast } from "sonner";
+import { saveDeliveryEntrance } from "@/lib/save-delivery-entrance";
 
 interface LocationModalProps {
   isOpen: boolean;
@@ -48,7 +50,7 @@ export function LocationModal({ isOpen, onClose }: LocationModalProps) {
   const locationState = useLocationState();
   const gpsStatusState = useGPSStatus();
   const recentFix =
-    gpsStatusState.fix && Date.now() - gpsStatusState.fix.timestamp <= 60000
+    gpsStatusState.fix && gpsStatusState.fix.accuracy <= MAX_APPROXIMATE_GPS_PREVIEW_ACCURACY_M && Date.now() - gpsStatusState.fix.timestamp <= 60000
       ? gpsStatusState.fix
       : null;
 
@@ -125,8 +127,9 @@ export function LocationModal({ isOpen, onClose }: LocationModalProps) {
       }
       setPendingGPSLocation(detected);
       setMapOrigin("gps");
+      setViewMode("map");
       toast.success("Current location detected", {
-        description: `${detected.area || detected.label} (±${Math.round(accuracy)}m). Click 'Confirm current location' below to save.`,
+        description: `${detected.area || detected.label} (±${Math.round(accuracy)}m). Confirm the delivery entrance below to save.`,
       });
     } catch (error) {
       if (import.meta.env?.DEV) console.warn("[LocalShore GPS] modal request failed", error);
@@ -145,6 +148,10 @@ export function LocationModal({ isOpen, onClose }: LocationModalProps) {
       onClose();
       return;
     }
+    if (!candidate.id.startsWith("confirmed-")) {
+      openMap(pendingGPSLocation ? "gps" : "selected");
+      return;
+    }
     // High accuracy (low uncertainty radius <= 100m) is required for delivery destination
     if (
       candidate.isGPS &&
@@ -152,7 +159,7 @@ export function LocationModal({ isOpen, onClose }: LocationModalProps) {
       candidate.accuracy > MAX_CUSTOMER_DELIVERY_ACCURACY_M
     ) {
       toast.error(
-        `GPS accuracy is ±${Math.round(candidate.accuracy)}m. Low accuracy radius (within ${MAX_CUSTOMER_DELIVERY_ACCURACY_M}m) is required. Please adjust your pin on the map.`
+        `GPS accuracy is ±${Math.round(candidate.accuracy)}m. A delivery pin within ${MAX_CUSTOMER_DELIVERY_ACCURACY_M}m is required. Please adjust the entrance pin on the map.`
       );
       openMap("gps");
       return;
@@ -238,11 +245,16 @@ export function LocationModal({ isOpen, onClose }: LocationModalProps) {
     toast.info("Location selected. Review and confirm it to save.");
   };
 
-  const handleMapLocationSelect = (loc: DeliveryLocation) => {
+  const handleMapLocationSelect = async (loc: DeliveryLocation) => {
     commitDetectedLocation(loc);
     setPendingGPSLocation(null);
-    toast.success("Delivery location saved", { description: loc.label });
     onClose();
+    try {
+      const result = await saveDeliveryEntrance(loc);
+      toast.success(result === "synced" ? "Delivery entrance saved to your account" : "Delivery entrance saved on this device", { description: loc.label });
+    } catch {
+      toast.warning("Entrance saved on this device. Account sync failed; please try saving again when connected.");
+    }
   };
 
   // Get dynamic popular areas ONLY when user explicitly requests/confirms location
@@ -342,9 +354,10 @@ export function LocationModal({ isOpen, onClose }: LocationModalProps) {
           {viewMode === "map" ? (
             <div className="min-h-0 flex-1 flex flex-col pt-2.5 overflow-hidden">
               <LocationMapPicker
+                initialDeviceLocation={pendingGPSLocation?.isGPS ? pendingGPSLocation : null}
                 initialLat={pendingGPSLocation?.lat ?? mapFix?.lat ?? activeLocation?.lat}
                 initialLng={pendingGPSLocation?.lng ?? mapFix?.lng ?? activeLocation?.lng}
-                initialAccuracy={pendingGPSLocation?.accuracy ?? mapFix?.accuracy}
+                initialAccuracy={pendingGPSLocation?.accuracy ?? mapFix?.accuracy ?? activeLocation?.accuracy ?? undefined}
                 initialArea={pendingGPSLocation?.area ?? activeLocation?.area}
                 initialCity={pendingGPSLocation?.city ?? activeLocation?.city}
                 initialLabel={pendingGPSLocation?.label ?? activeLocation?.label}
@@ -365,8 +378,8 @@ export function LocationModal({ isOpen, onClose }: LocationModalProps) {
                     <div className="min-w-0 flex-1">
                       <span className="text-[10px] font-black text-[#981495] uppercase tracking-wider block">
                         {pendingGPSLocation
-                          ? "📍 Current Location Detected"
-                          : "Selected Delivery Location"}
+                          ? "Detected location — review before saving"
+                          : selectedLocation.id.startsWith("confirmed-") ? "Saved delivery pin" : "Saved location — verify entrance"}
                       </span>
                       <h4 className="break-words text-sm font-black leading-snug text-slate-900 mt-0.5 sm:text-base">
                         {selectedLocation.area || selectedLocation.city}
@@ -377,6 +390,17 @@ export function LocationModal({ isOpen, onClose }: LocationModalProps) {
                       >
                         {selectedLocation.label}
                       </p>
+                      <div className="mt-2 rounded-xl border border-[#981495]/15 bg-white/75 px-2.5 py-2 text-[11px] leading-relaxed text-slate-600">
+                        <span className="font-black text-slate-800">Delivery entrance:</span>{" "}
+                        {pendingGPSLocation
+                          ? "Move the pin to the gate, door, or shop entrance where the rider should arrive."
+                          : "This is the saved pin riders will use. Adjust it if the entrance is elsewhere."}
+                      </div>
+                      {Number.isFinite(selectedLocation.lat) && Number.isFinite(selectedLocation.lng) && (
+                        <p className="mt-1.5 font-mono text-[10px] font-semibold text-slate-500">
+                          Pin coordinates: {selectedLocation.lat.toFixed(6)}, {selectedLocation.lng.toFixed(6)}
+                        </p>
+                      )}
                       {typeof selectedLocation.accuracy === "number" && (
                         <p
                           className={`text-[11px] font-medium mt-1 ${
@@ -385,9 +409,9 @@ export function LocationModal({ isOpen, onClose }: LocationModalProps) {
                               : "text-amber-700 font-bold"
                           }`}
                         >
-                          GPS Accuracy: ±{Math.round(selectedLocation.accuracy)}m
+                          GPS Accuracy: ±{Math.round(selectedLocation.accuracy)}m · {gpsAccuracyLabel(selectedLocation.accuracy)}
                           {selectedLocation.accuracy <= MAX_CUSTOMER_DELIVERY_ACCURACY_M
-                            ? " · High accuracy"
+                            ? " · Estimate — verify your entrance on the map"
                             : " · Approximate area (pin adjustment required)"}
                         </p>
                       )}
@@ -397,7 +421,7 @@ export function LocationModal({ isOpen, onClose }: LocationModalProps) {
                   <div className="mt-3 flex flex-wrap gap-2">
                     <button
                       type="button"
-                      onClick={() => openMap("gps")}
+                      onClick={() => openMap(pendingGPSLocation ? "gps" : "selected")}
                       className="inline-flex min-h-10 items-center gap-1.5 rounded-xl border border-[#d58bd8] bg-white px-3.5 py-2 text-xs font-black text-[#981495] shadow-xs transition-colors hover:bg-[var(--sand)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#981495]"
                     >
                       <Map className="h-3.5 w-3.5" />
@@ -426,7 +450,7 @@ export function LocationModal({ isOpen, onClose }: LocationModalProps) {
                     className="min-h-12 w-full flex items-center justify-center gap-2 rounded-xl bg-amber-600 px-4 py-3 text-sm font-black text-white shadow-md transition hover:bg-amber-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 active:translate-y-px"
                   >
                     <Map className="h-4 w-4 stroke-[2.5]" />
-                    Adjust pin on map (Accuracy ±{Math.round(selectedLocation.accuracy)}m is too broad)
+                    Place exact entrance pin (GPS ±{Math.round(selectedLocation.accuracy)}m is too broad)
                   </button>
                 ) : (
                   <button
@@ -435,7 +459,7 @@ export function LocationModal({ isOpen, onClose }: LocationModalProps) {
                     className="min-h-12 w-full flex items-center justify-center gap-2 rounded-xl bg-[#981495] px-4 py-3 text-sm font-black text-white shadow-[0_10px_24px_rgba(152,20,149,0.22)] transition hover:bg-[#7d1079] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#981495] focus-visible:ring-offset-2 active:translate-y-px"
                   >
                     <Check className="h-4 w-4 stroke-[3]" />
-                    {pendingGPSLocation ? "Confirm current location" : "Confirm selected address"}
+                    {selectedLocation.id.startsWith("confirmed-") ? "Use saved delivery pin" : "Review entrance on map"}
                   </button>
                 )
               )}
@@ -453,9 +477,9 @@ export function LocationModal({ isOpen, onClose }: LocationModalProps) {
                     <p className="text-xs text-slate-600 font-medium mt-0.5" role="status">
                       {gpsStatusState.fix
                         ? gpsStatusState.fix.accuracy > MAX_CUSTOMER_DELIVERY_ACCURACY_M
-                          ? `Current reading ±${Math.round(gpsStatusState.fix.accuracy)}m. Waiting for a better fix (up to ±${MAX_APPROXIMATE_GPS_PREVIEW_ACCURACY_M}m)…`
+                          ? `Your device returned an approximate location (±${Math.round(gpsStatusState.fix.accuracy / 1000)} km). Trying for a more precise reading. You can place your entrance pin now.`
                           : "Looking up your address…"
-                        : "Requesting your device’s location. Allow browser access when prompted; this can take up to 15 seconds."}
+                        : "Requesting location permission and acquiring device location. This can take up to 30 seconds."}
                     </p>
                   </div>
                   <button
@@ -463,7 +487,7 @@ export function LocationModal({ isOpen, onClose }: LocationModalProps) {
                     onClick={() => openMap("gps")}
                     className="rounded-lg px-2 py-1 text-xs font-bold text-[#981495] underline underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#981495]"
                   >
-                    Confirm delivery entrance on map
+                    Place the exact delivery entrance on the map
                   </button>
                 </div>
               ) : (
