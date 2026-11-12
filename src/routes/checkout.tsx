@@ -3,7 +3,7 @@ import { deliveryLocationSignature, isConfirmedDeliveryLocation } from "@/lib/de
 import { createFileRoute, Link, useNavigate, redirect } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { AppShell } from "@/components/app-shell";
+import { SocialCommerceShell } from "@/components/social-commerce/social-commerce-shell";
 import { cartStore, useCart, cartTotals } from "@/modules/shopper/services/cart-store";
 import { persistentCart } from "@/modules/shopper/services/persistent-cart";
 import { getStore, APPROVED_STORE } from "@/lib/mock-data";
@@ -709,7 +709,7 @@ function CheckoutPage() {
 
   if ((!store || cart.lines.length === 0) && !showOrderSuccess) {
     return (
-      <AppShell>
+      <SocialCommerceShell hideFloatingCreatorDock hideMobileBottomDock>
         <div className="mx-auto max-w-lg px-4 py-20 text-center">
           <div className="mx-auto mb-6 flex h-24 w-24 items-center justify-center rounded-3xl bg-primary/10 text-primary ring-8 ring-primary/5 shadow-inner">
             <ShoppingBag className="h-12 w-12" strokeWidth={1.75} />
@@ -732,7 +732,7 @@ function CheckoutPage() {
             </Link>
           </div>
         </div>
-      </AppShell>
+      </SocialCommerceShell>
     );
   }
 
@@ -944,7 +944,15 @@ function CheckoutPage() {
       code: verifyRes.order.code,
       storeId: verifyRes.order.seller_id,
       storeName: store.name,
-      lines: cart.lines,
+      lines: cart.lines.map((l) => ({
+        productId: l.productId,
+        orderItemId: `item-${l.productId}`,
+        storeId: store.id,
+        name: l.name,
+        unit: l.unit,
+        price: l.price,
+        qty: l.qty,
+      })),
       subtotal: totals.subtotal,
       deliveryFee: displayDeliveryFee,
       total: verifyRes.order.total,
@@ -953,9 +961,24 @@ function CheckoutPage() {
       paymentMethod: pay === "gpay" ? "Google Pay (UPI)" : "Razorpay Online",
       createdAt: Date.now(),
       status: "new" as const,
-      etaMin: computedEtaMin,
-      distanceKm: computedDistanceKm,
+      etaMin: computedEtaMin || 25,
+      distanceKm: Number.isFinite(computedDistanceKm) ? computedDistanceKm : 2.0,
+      couponCode: couponQuote?.code,
+      discountAmount,
     };
+
+    try {
+      supabase.auth.getSession().then(({ data: session }) => {
+        const userId = session.session?.user?.id;
+        if (userId) {
+          const key = `localshore.demo-orders.${userId}.v1`;
+          const raw = localStorage.getItem(key);
+          const existing = raw ? JSON.parse(raw) : [];
+          localStorage.setItem(key, JSON.stringify([newOrderObj, ...existing].slice(0, 50)));
+        }
+      });
+    } catch {}
+
     addPlacedOrderToCache(newOrderObj);
     setPlacedOrder(newOrderObj);
     setPaymentRecovery(null);
@@ -1031,11 +1054,18 @@ function CheckoutPage() {
         address: fullAddressWithNotes, latitude: destinationCoords.lat, longitude: destinationCoords.lng, couponCode: couponQuote?.code,
       } }) : await createRazorpayOrder({
         data: {
-          items: cart.lines.map((line) => ({ product_id: line.productId, qty: line.qty })),
+          items: cart.lines.map((line) => ({
+            product_id: line.productId,
+            qty: line.qty,
+            price: line.price,
+            name: line.name,
+          })),
           address: fullAddressWithNotes,
           coupon_code: couponQuote?.code,
           customer_latitude: destinationCoords.lat,
           customer_longitude: destinationCoords.lng,
+          shop_id: store.id,
+          shop_name: store.name,
         },
       });
 
@@ -1079,10 +1109,17 @@ function CheckoutPage() {
                   buyer_name: user?.user_metadata?.display_name || user?.email || "Customer",
                   buyer_phone: user?.phone,
                   buyer_address: selectedAddressLine,
-                  items: cart.lines.map((l) => ({ product_id: l.productId, qty: l.qty })),
+                  items: cart.lines.map((l) => ({
+                    product_id: l.productId,
+                    qty: l.qty,
+                    price: l.price,
+                    name: l.name,
+                  })),
                   coupon_code: couponQuote?.code,
                   customer_latitude: destinationCoords.lat,
                   customer_longitude: destinationCoords.lng,
+                  shop_id: store.id,
+                  shop_name: store.name,
                 };
               if (verificationInput.test_checkout_token) await finishTestPayment(verificationInput);
               else {
@@ -1101,10 +1138,17 @@ function CheckoutPage() {
                   buyer_name: user?.user_metadata?.display_name || user?.email || "Customer",
                   buyer_phone: user?.phone,
                   buyer_address: selectedAddressLine,
-                  items: cart.lines.map((line) => ({ product_id: line.productId, qty: line.qty })),
+                  items: cart.lines.map((line) => ({
+                    product_id: line.productId,
+                    qty: line.qty,
+                    price: line.price,
+                    name: line.name,
+                  })),
                   coupon_code: couponQuote?.code,
                   customer_latitude: destinationCoords.lat,
                   customer_longitude: destinationCoords.lng,
+                  shop_id: store.id,
+                  shop_name: store.name,
                 });
               }
               toast.error(err.message || "Payment signature verification failed.");
@@ -1251,7 +1295,7 @@ function CheckoutPage() {
   };
 
   return (
-    <AppShell>
+    <SocialCommerceShell hideFloatingCreatorDock hideMobileBottomDock>
       {/* Order Placement Lottie Loader */}
       <SmartLottieLoader
         show={isPlacing}
@@ -2199,7 +2243,7 @@ function CheckoutPage() {
       </div>
 
       {/* Mobile Sticky Bottom Floating Action Bar */}
-      <div className="fixed bottom-[calc(3.5rem+env(safe-area-inset-bottom,0px))] left-0 right-0 z-40 bg-card/95 backdrop-blur-xl border-t border-border/80 p-3 shadow-[0_-8px_30px_rgba(0,0,0,0.12)] lg:hidden">
+      <div className="fixed bottom-0 left-0 right-0 z-40 bg-card/95 backdrop-blur-xl border-t border-border/80 p-3 pb-[max(0.875rem,env(safe-area-inset-bottom,0.875rem))] shadow-[0_-8px_30px_rgba(0,0,0,0.12)] lg:hidden">
         <div className="mx-auto max-w-md flex items-center justify-between gap-3">
           <div className="flex flex-col pl-1">
             <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
@@ -2382,7 +2426,7 @@ function CheckoutPage() {
           </m.div>
         )}
       </AnimatePresence>
-    </AppShell>
+    </SocialCommerceShell>
   );
 }
 

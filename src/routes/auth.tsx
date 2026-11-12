@@ -606,11 +606,11 @@ function AuthPage() {
             className="inline-flex items-center group"
           >
             <img
-              src="/assets/localshore-logo.jpeg"
+              src="/assets/localshore-logo.png"
               alt="LocalShore"
               width={260}
               height={138}
-              className="h-14 w-[245px] rounded-xl bg-white object-cover object-center shadow-md transition-transform group-hover:scale-[1.02]"
+              className="h-14 w-auto object-contain transition-transform group-hover:scale-[1.02]"
             />
           </Link>
         </div>
@@ -774,11 +774,11 @@ function AuthPage() {
             className="lg:hidden inline-flex items-center"
           >
             <img
-              src="/assets/localshore-logo.jpeg"
+              src="/assets/localshore-logo.png"
               alt="LocalShore"
               width={210}
               height={112}
-              className="h-11 w-[190px] object-cover object-center"
+              className="h-11 w-auto object-contain"
             />
           </Link>
 

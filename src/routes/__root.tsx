@@ -49,12 +49,24 @@ function ErrorComponent({ error, reset }: ErrorComponentProps) {
   const router = useRouter();
   useEffect(() => {
     reportLovableError(error, { boundary: "tanstack_root_error_component" });
+    console.error("[TanStack Root ErrorBoundary]", error);
   }, [error]);
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="max-w-md text-center">
         <h1 className="text-xl font-display text-foreground">This page didn't load</h1>
         <p className="mt-2 text-sm text-muted-foreground">Try again, or head home.</p>
+        {(error as any)?.message && (
+          <div className="mt-3 p-3 bg-rose-50 border border-rose-200 rounded-xl text-left text-xs font-mono text-rose-700 max-h-48 overflow-y-auto">
+            <p className="font-bold">Error:</p>
+            <p className="break-all">{(error as any).message}</p>
+            {(error as any)?.stack && (
+              <pre className="mt-2 text-[10px] text-rose-500 whitespace-pre-wrap max-h-32 overflow-y-auto">
+                {(error as any).stack}
+              </pre>
+            )}
+          </div>
+        )}
         <div className="mt-6 flex flex-wrap justify-center gap-2">
           <button
             onClick={() => {

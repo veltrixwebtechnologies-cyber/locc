@@ -35,4 +35,8 @@ export interface Order {
   etaMin: number;
   distanceKm: number;
   cancellationReason?: string;
+  cancellationInitiator?: string;
+  cancellationFee?: number;
+  refundAmount?: number;
+  paymentStatus?: "unpaid" | "pending" | "authorized" | "captured" | "paid" | "failed" | "refunded" | string;
 }

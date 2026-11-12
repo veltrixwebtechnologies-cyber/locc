@@ -100,48 +100,48 @@
 }
 
 :root {
-  --radius: 0.75rem;
+  --radius: 0.85rem;
 
-  /* Brand — Localshore reference palette (Signature Orchid #981495) */
-  --teal: #981495; /* Orchid Primary #981495 */
-  --teal-deep: #700b6e; /* Deep Orchid #700b6e */
-  --orchid-deep: #700b6e;
-  --orchid: #981495;
-  --orchid-light: #c026d3;
-  --sand: oklch(0.98 0.01 295); /* Clean orchid tint */
-  --ink: oklch(0.22 0.05 295); /* Deep slate ink */
+  /* Brand — LocalShore Social Commerce Palette */
+  --teal: #8B2FC9; /* Modern vibrant purple */
+  --teal-deep: #581C87; /* Deep purple */
+  --orchid-deep: #581C87;
+  --orchid: #8B2FC9;
+  --orchid-light: #C084FC;
+  --sand: #F8FAFC; /* Clean neutral canvas */
+  --ink: #0F172A; /* Deep slate */
 
-  /* Gold Palette — User exact image palette */
-  --gold-50: #fbf4be;
-  --gold-100: #f3d053;
-  --gold-200: #e5c158;
-  --gold-500: #d4af37;
-  --gold-600: #b8860b;
-  --gold-700: #945700;
-  --marigold: #d4af37; /* Rich Gold Accent */
-  --marigold-foreground: #1e1b4b;
-  --coral: oklch(0.72 0.14 30); /* Muted coral #E88A7A */
-  --success: oklch(0.64 0.15 155);
+  /* Gold Palette — Accent yellow #FFD92F */
+  --gold-50: #FFFDEB;
+  --gold-100: #FFF8B8;
+  --gold-200: #FFEFA3;
+  --gold-500: #FFD92F;
+  --gold-600: #E6C117;
+  --gold-700: #B39500;
+  --marigold: #F59E0B; /* Refined amber */
+  --marigold-foreground: #0F172A;
+  --coral: #FF5A79;
+  --success: #10B981;
 
-  --background: oklch(0.945 0.018 295);
-  --foreground: var(--ink);
-  --card: oklch(0.975 0.014 295);
-  --card-foreground: var(--ink);
-  --popover: oklch(0.975 0.014 295);
-  --popover-foreground: var(--ink);
-  --primary: var(--orchid);
-  --primary-foreground: oklch(1 0 0);
-  --secondary: #fdf2fe;
-  --secondary-foreground: #700b6e;
-  --muted: oklch(0.96 0.015 295);
-  --muted-foreground: oklch(0.5 0.04 295);
-  --accent: var(--gold-500);
-  --accent-foreground: var(--marigold-foreground);
-  --destructive: var(--coral);
-  --destructive-foreground: oklch(1 0 0);
-  --border: #f0abfc; /* Light orchid hairline border */
-  --input: oklch(0.9 0.03 295);
-  --ring: var(--orchid);
+  --background: #F8FAFC;
+  --foreground: #0F172A;
+  --card: #FFFFFF;
+  --card-foreground: #0F172A;
+  --popover: #FFFFFF;
+  --popover-foreground: #0F172A;
+  --primary: #8B2FC9;
+  --primary-foreground: #FFFFFF;
+  --secondary: #F3E8FF;
+  --secondary-foreground: #6B21A8;
+  --muted: #F1F5F9;
+  --muted-foreground: #64748B;
+  --accent: #F59E0B;
+  --accent-foreground: #0F172A;
+  --destructive: #EF4444;
+  --destructive-foreground: #FFFFFF;
+  --border: #E2E8F0;
+  --input: #F1F5F9;
+  --ring: #8B2FC9;
 }
 
 @layer base {
@@ -581,8 +581,64 @@ input.bg-transparent:focus-visible {
   overscroll-behavior-x: contain;
 }
 
-/* Ensure body prevents horizontal layout break */
+/* Ensure html and body prevent horizontal layout breaks on all viewports */
+html,
 body {
   overflow-x: hidden;
   max-width: 100vw;
+  background-color: var(--background);
 }
+
+/* LocalShore Social Commerce Design System Extensions */
+.story-gradient-ring {
+  background: linear-gradient(135deg, #8B2FC9, #F59E0B);
+  padding: 2.5px;
+  border-radius: 26px;
+  display: inline-block;
+}
+
+.story-gradient-ring-active {
+  background: linear-gradient(135deg, #A838BD 0%, #D270D7 50%, #FFD92F 100%);
+  padding: 2.5px;
+  border-radius: 26px;
+  display: inline-block;
+}
+
+.sc-card-shadow {
+  box-shadow: 0 4px 24px -2px rgba(112, 11, 110, 0.07), 0 2px 8px -1px rgba(0, 0, 0, 0.04);
+}
+
+.sc-card-hover {
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.sc-card-hover:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 30px -4px rgba(112, 11, 110, 0.12), 0 4px 12px -2px rgba(0, 0, 0, 0.06);
+}
+
+.sc-glass {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.center-dock-shield {
+  background: linear-gradient(135deg, #FFD92F 0%, #FFA800 40%, #A838BD 100%);
+  box-shadow: 0 6px 20px rgba(168, 56, 189, 0.35), 0 2px 8px rgba(255, 217, 47, 0.4);
+}
+
+/* ── Near Me MapLibre Custom Speech Bubble Popup ── */
+.ls-maplibre-shop-popup {
+  z-index: 50 !important;
+  pointer-events: auto !important;
+}
+.ls-maplibre-shop-popup .maplibregl-popup-content {
+  padding: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  border: none !important;
+}
+.ls-maplibre-shop-popup .maplibregl-popup-tip {
+  display: none !important;
+}
+

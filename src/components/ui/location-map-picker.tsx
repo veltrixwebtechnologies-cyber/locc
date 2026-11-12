@@ -85,6 +85,24 @@ export function LocationMapPicker({
   const addressRequestRef = useRef(0);
 
   const parsedInitial = parseCoordinates(initialLat, initialLng);
+
+  // Sync coords when initialLat / initialLng change
+  useEffect(() => {
+    if (initialLat !== undefined && initialLng !== undefined) {
+      const parsed = parseCoordinates(initialLat, initialLng);
+      if (parsed) {
+        setCoords(parsed);
+        setHasPositionedPin(true);
+        if (initialArea || initialLabel) {
+          setAddressDetails({
+            area: initialArea || "",
+            city: initialCity || "",
+            label: initialLabel || `${parsed.lat.toFixed(6)}, ${parsed.lng.toFixed(6)}`,
+          });
+        }
+      }
+    }
+  }, [initialLat, initialLng, initialArea, initialCity, initialLabel]);
   const initialCoords = parsedInitial;
   const [addressEdits, setAddressEdits] = useState({ buildingName: "", street: "", area: "", city: "", district: "", state: "", pincode: "", landmark: "" });
   const sourceRef = useRef<"gps" | "manual_pin" | "address_search">(initialDeviceLocation ? "gps" : "manual_pin");
@@ -606,7 +624,7 @@ export function LocationMapPicker({
   };
 
   const handleConfirm = () => {
-    if (!coords || !hasPositionedPin || !isValidCoordinate(coords.lat, coords.lng)) return;
+    if (!coords || !isValidCoordinate(coords.lat, coords.lng)) return;
     const finalLocation: DeliveryLocation = {
       id: `confirmed-${Date.now()}`,
       label:
@@ -966,7 +984,7 @@ export function LocationMapPicker({
         <button
           type="button"
           onClick={handleConfirm}
-          disabled={!coords || !hasPositionedPin || isGeocoding}
+          disabled={!coords || isGeocoding}
           className="flex w-full sm:w-auto shrink-0 items-center justify-center gap-2 rounded-xl bg-[#981495] px-7 py-3.5 text-sm font-black text-white shadow-lg shadow-[#981495]/20 transition-all hover:bg-[#7b1078] active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
         >
           <Check className="h-4 w-4 stroke-[3]" />

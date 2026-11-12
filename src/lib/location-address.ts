@@ -23,17 +23,6 @@ const uniqueParts = (parts: string[]) =>
  */
 export function resolveNominatimAddress(result: NominatimReverseResult): ResolvedLocationAddress {
   const address = result.address || {};
-  const area =
-    firstValue(
-      address.neighbourhood,
-      address.quarter,
-      address.suburb,
-      address.residential,
-      address.village,
-      address.hamlet,
-      address.locality,
-      address.road,
-    ) || "Live GPS Location";
   const locality = firstValue(
     address.city,
     address.town,
@@ -43,13 +32,30 @@ export function resolveNominatimAddress(result: NominatimReverseResult): Resolve
   );
   const state = firstValue(address.state);
   const city = uniqueParts([locality, state]).join(", ");
+
+  const area =
+    firstValue(
+      address.neighbourhood,
+      address.suburb,
+      address.quarter,
+      address.residential,
+      address.village,
+      address.hamlet,
+      address.locality,
+      address.road,
+      address.commercial,
+      address.industrial,
+      address.city_district,
+      locality,
+    ) || (result.display_name ? result.display_name.split(",")[0].trim() : "Current Location");
+
   const street = [address.house_number, address.road].filter(Boolean).join(" ");
   const labelParts = uniqueParts([street, area, locality, state, address.postcode || ""]);
 
   return {
     area,
-    city,
-    label: labelParts.join(", ") || result.display_name || "Live GPS Location",
+    city: city || "Coimbatore, TN",
+    label: labelParts.join(", ") || result.display_name || "Current Location",
     pincode: address.postcode,
   };
 }

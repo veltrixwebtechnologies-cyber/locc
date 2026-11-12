@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
-import { AppShell } from "@/components/app-shell";
+import { SocialCommerceShell } from "@/components/social-commerce/social-commerce-shell";
 import { useAuth } from "@/lib/auth-store";
 import {
   Sparkles,
@@ -39,7 +39,7 @@ const tierIcon = (tier: string) => {
 
 const txColor = (type: RewardTransaction["type"]) => {
   if (type === "earned" || type === "bonus" || type === "referral") return "text-emerald-600";
-  if (type === "redeemed") return "text-[#981495]";
+  if (type === "redeemed") return "text-[#8B2FC9]";
   return "text-slate-400";
 };
 
@@ -68,25 +68,25 @@ function RewardsPage() {
 
   if (!auth.id) {
     return (
-      <AppShell>
-        <div className="mx-auto flex min-h-[calc(100dvh-9rem)] max-w-xl items-center justify-center px-4 py-10 sm:px-6">
-          <section className="w-full rounded-3xl border border-[#eadff0] bg-white p-8 text-center shadow-sm sm:p-10">
-            <div className="mx-auto grid h-16 w-16 place-items-center rounded-2xl bg-[var(--sand)] text-[#981495]">
+      <SocialCommerceShell>
+        <div className="mx-auto flex max-w-xl items-center justify-center py-6 sm:py-10">
+          <section className="w-full rounded-3xl border border-[#E2E8F0] bg-white p-8 text-center shadow-xs sm:p-10">
+            <div className="mx-auto grid h-16 w-16 place-items-center rounded-2xl bg-purple-50 text-[#8B2FC9]">
               <Sparkles className="h-8 w-8" />
             </div>
-            <p className="mt-5 text-xs font-extrabold uppercase tracking-[0.18em] text-[#981495]">
+            <p className="mt-5 text-xs font-extrabold uppercase tracking-[0.18em] text-[#8B2FC9]">
               LocalShore Rewards
             </p>
-            <h1 className="mt-2 font-display text-2xl font-extrabold text-slate-900 sm:text-3xl">
+            <h1 className="mt-2 text-2xl font-bold text-[#0F172A] sm:text-3xl">
               Sign in to view your rewards
             </h1>
-            <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-slate-500">
+            <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-[#746A85]">
               Your Shore Points, membership tier, reward history, and redemption options are private to your account.
             </p>
             <Link
               to="/auth"
               search={{ redirect: "/rewards" }}
-              className="mt-7 inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#981495] px-6 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-[#700b6e]"
+              className="mt-7 inline-flex min-h-11 items-center justify-center gap-2 rounded-2xl bg-[#8B2FC9] px-6 py-3 text-sm font-bold text-white shadow-xs transition hover:bg-[#581C87]"
             >
               Sign in to continue
               <ArrowRight className="h-4 w-4" />
@@ -94,19 +94,19 @@ function RewardsPage() {
             <Link
               to="/"
               search={{ category: undefined, q: undefined }}
-              className="mt-4 block text-sm font-semibold text-slate-500 hover:text-[#981495]"
+              className="mt-4 block text-sm font-semibold text-[#746A85] hover:text-[#8B2FC9]"
             >
               Continue shopping as guest
             </Link>
           </section>
         </div>
-      </AppShell>
+      </SocialCommerceShell>
     );
   }
 
   return (
-    <AppShell>
-      <div className="mx-auto max-w-5xl px-4 py-6 sm:px-6">
+    <SocialCommerceShell>
+      <div className="space-y-6">
         {/* Breadcrumb */}
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
           <Link
@@ -125,7 +125,7 @@ function RewardsPage() {
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4 }}
-          className="mt-5 overflow-hidden rounded-3xl bg-gradient-to-br from-[#981495] via-[#981495] to-fuchsia-900 p-6 text-white shadow-xl sm:p-8"
+          className="mt-5 overflow-hidden rounded-3xl bg-gradient-to-br from-[#8B2FC9] via-[#8B2FC9] to-fuchsia-900 p-6 text-white shadow-xl sm:p-8"
         >
           <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
             <div>
@@ -177,7 +177,7 @@ function RewardsPage() {
               label: "Current Points",
               value: s.currentPoints.toLocaleString(),
               icon: Sparkles,
-              color: "text-[#981495] bg-[var(--sand)]",
+              color: "text-[#8B2FC9] bg-[var(--sand)]",
             },
             {
               label: "This Month",
@@ -234,7 +234,7 @@ function RewardsPage() {
                     <span className="text-lg">{tierIcon(tier.id)}</span>
                     <span className="text-sm font-bold text-slate-900">{tier.name}</span>
                     {isActive && (
-                      <span className="rounded-full bg-[#981495] px-2 py-0.5 text-[9px] font-bold text-white">
+                      <span className="rounded-full bg-[#8B2FC9] px-2 py-0.5 text-[9px] font-bold text-white">
                         You
                       </span>
                     )}
@@ -279,7 +279,7 @@ function RewardsPage() {
               {!showAllActions && REWARD_ACTIONS.length > 4 && (
                 <button
                   onClick={() => setShowAllActions(true)}
-                  className="w-full rounded-xl bg-slate-50 py-2.5 text-xs font-bold text-[#981495] hover:bg-[var(--sand)] transition"
+                  className="w-full rounded-xl bg-slate-50 py-2.5 text-xs font-bold text-[#8B2FC9] hover:bg-[var(--sand)] transition"
                 >
                   Show all {REWARD_ACTIONS.length} ways to earn →
                 </button>
@@ -303,7 +303,7 @@ function RewardsPage() {
                   </div>
                   <button
                     disabled={s.currentPoints < opt.pointsCost}
-                    className="shrink-0 rounded-xl bg-[#981495] px-3 py-2 text-xs font-bold text-white shadow-xs transition hover:bg-[#981495] disabled:opacity-40 disabled:cursor-not-allowed"
+                    className="shrink-0 rounded-xl bg-[#8B2FC9] px-3 py-2 text-xs font-bold text-white shadow-xs transition hover:bg-[#8B2FC9] disabled:opacity-40 disabled:cursor-not-allowed"
                   >
                     {opt.pointsCost} pts
                   </button>
@@ -325,7 +325,7 @@ function RewardsPage() {
                 onClick={() => setHistoryFilter(f)}
                 className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-bold capitalize transition ${
                   historyFilter === f
-                    ? "bg-[#981495] text-white"
+                    ? "bg-[#8B2FC9] text-white"
                     : "bg-slate-100 text-slate-600 hover:bg-[var(--sand)]"
                 }`}
               >
@@ -367,6 +367,6 @@ function RewardsPage() {
           </div>
         </section>
       </div>
-    </AppShell>
+    </SocialCommerceShell>
   );
 }

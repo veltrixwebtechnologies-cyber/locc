@@ -17,11 +17,16 @@ import { Route as BrandsRouteImport } from './routes/brands'
 import { Route as CartRouteImport } from './routes/cart'
 import { Route as CheckoutRouteImport } from './routes/checkout'
 import { Route as CitiesRouteImport } from './routes/cities'
+import { Route as CommunityRouteImport } from './routes/community'
 import { Route as CompareRouteImport } from './routes/compare'
 import { Route as CustomerCareRouteImport } from './routes/customer-care'
 import { Route as ExploreRouteImport } from './routes/explore'
+import { Route as FollowingRouteImport } from './routes/following'
 import { Route as GiftCardsRouteImport } from './routes/gift-cards'
 import { Route as HelpRouteImport } from './routes/help'
+import { Route as LiveMarketRouteImport } from './routes/live-market'
+import { Route as MessagesRouteImport } from './routes/messages'
+import { Route as NearMeRouteImport } from './routes/near-me'
 import { Route as NewsRouteImport } from './routes/news'
 import { Route as NotificationsRouteImport } from './routes/notifications'
 import { Route as OrdersRouteImport } from './routes/orders'
@@ -81,6 +86,11 @@ const CitiesRoute = CitiesRouteImport.update({
   path: '/cities',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CommunityRoute = CommunityRouteImport.update({
+  id: '/community',
+  path: '/community',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const CompareRoute = CompareRouteImport.update({
   id: '/compare',
   path: '/compare',
@@ -96,6 +106,11 @@ const ExploreRoute = ExploreRouteImport.update({
   path: '/explore',
   getParentRoute: () => rootRouteImport,
 } as any)
+const FollowingRoute = FollowingRouteImport.update({
+  id: '/following',
+  path: '/following',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const GiftCardsRoute = GiftCardsRouteImport.update({
   id: '/gift-cards',
   path: '/gift-cards',
@@ -104,6 +119,21 @@ const GiftCardsRoute = GiftCardsRouteImport.update({
 const HelpRoute = HelpRouteImport.update({
   id: '/help',
   path: '/help',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LiveMarketRoute = LiveMarketRouteImport.update({
+  id: '/live-market',
+  path: '/live-market',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MessagesRoute = MessagesRouteImport.update({
+  id: '/messages',
+  path: '/messages',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const NearMeRoute = NearMeRouteImport.update({
+  id: '/near-me',
+  path: '/near-me',
   getParentRoute: () => rootRouteImport,
 } as any)
 const NewsRoute = NewsRouteImport.update({
@@ -206,11 +236,16 @@ export interface FileRoutesByFullPath {
   '/cart': typeof CartRoute
   '/checkout': typeof CheckoutRoute
   '/cities': typeof CitiesRoute
+  '/community': typeof CommunityRoute
   '/compare': typeof CompareRoute
   '/customer-care': typeof CustomerCareRoute
   '/explore': typeof ExploreRoute
+  '/following': typeof FollowingRoute
   '/gift-cards': typeof GiftCardsRoute
   '/help': typeof HelpRoute
+  '/live-market': typeof LiveMarketRoute
+  '/messages': typeof MessagesRoute
+  '/near-me': typeof NearMeRoute
   '/news': typeof NewsRoute
   '/notifications': typeof NotificationsRoute
   '/orders': typeof OrdersRoute
@@ -239,11 +274,16 @@ export interface FileRoutesByTo {
   '/cart': typeof CartRoute
   '/checkout': typeof CheckoutRoute
   '/cities': typeof CitiesRoute
+  '/community': typeof CommunityRoute
   '/compare': typeof CompareRoute
   '/customer-care': typeof CustomerCareRoute
   '/explore': typeof ExploreRoute
+  '/following': typeof FollowingRoute
   '/gift-cards': typeof GiftCardsRoute
   '/help': typeof HelpRoute
+  '/live-market': typeof LiveMarketRoute
+  '/messages': typeof MessagesRoute
+  '/near-me': typeof NearMeRoute
   '/news': typeof NewsRoute
   '/notifications': typeof NotificationsRoute
   '/orders': typeof OrdersRoute
@@ -273,11 +313,16 @@ export interface FileRoutesById {
   '/cart': typeof CartRoute
   '/checkout': typeof CheckoutRoute
   '/cities': typeof CitiesRoute
+  '/community': typeof CommunityRoute
   '/compare': typeof CompareRoute
   '/customer-care': typeof CustomerCareRoute
   '/explore': typeof ExploreRoute
+  '/following': typeof FollowingRoute
   '/gift-cards': typeof GiftCardsRoute
   '/help': typeof HelpRoute
+  '/live-market': typeof LiveMarketRoute
+  '/messages': typeof MessagesRoute
+  '/near-me': typeof NearMeRoute
   '/news': typeof NewsRoute
   '/notifications': typeof NotificationsRoute
   '/orders': typeof OrdersRoute
@@ -308,11 +353,16 @@ export interface FileRouteTypes {
     | '/cart'
     | '/checkout'
     | '/cities'
+    | '/community'
     | '/compare'
     | '/customer-care'
     | '/explore'
+    | '/following'
     | '/gift-cards'
     | '/help'
+    | '/live-market'
+    | '/messages'
+    | '/near-me'
     | '/news'
     | '/notifications'
     | '/orders'
@@ -341,11 +391,16 @@ export interface FileRouteTypes {
     | '/cart'
     | '/checkout'
     | '/cities'
+    | '/community'
     | '/compare'
     | '/customer-care'
     | '/explore'
+    | '/following'
     | '/gift-cards'
     | '/help'
+    | '/live-market'
+    | '/messages'
+    | '/near-me'
     | '/news'
     | '/notifications'
     | '/orders'
@@ -374,11 +429,16 @@ export interface FileRouteTypes {
     | '/cart'
     | '/checkout'
     | '/cities'
+    | '/community'
     | '/compare'
     | '/customer-care'
     | '/explore'
+    | '/following'
     | '/gift-cards'
     | '/help'
+    | '/live-market'
+    | '/messages'
+    | '/near-me'
     | '/news'
     | '/notifications'
     | '/orders'
@@ -408,11 +468,16 @@ export interface RootRouteChildren {
   CartRoute: typeof CartRoute
   CheckoutRoute: typeof CheckoutRoute
   CitiesRoute: typeof CitiesRoute
+  CommunityRoute: typeof CommunityRoute
   CompareRoute: typeof CompareRoute
   CustomerCareRoute: typeof CustomerCareRoute
   ExploreRoute: typeof ExploreRoute
+  FollowingRoute: typeof FollowingRoute
   GiftCardsRoute: typeof GiftCardsRoute
   HelpRoute: typeof HelpRoute
+  LiveMarketRoute: typeof LiveMarketRoute
+  MessagesRoute: typeof MessagesRoute
+  NearMeRoute: typeof NearMeRoute
   NewsRoute: typeof NewsRoute
   NotificationsRoute: typeof NotificationsRoute
   OrdersRoute: typeof OrdersRoute
@@ -490,6 +555,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CitiesRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/community': {
+      id: '/community'
+      path: '/community'
+      fullPath: '/community'
+      preLoaderRoute: typeof CommunityRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/compare': {
       id: '/compare'
       path: '/compare'
@@ -511,6 +583,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ExploreRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/following': {
+      id: '/following'
+      path: '/following'
+      fullPath: '/following'
+      preLoaderRoute: typeof FollowingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/gift-cards': {
       id: '/gift-cards'
       path: '/gift-cards'
@@ -523,6 +602,27 @@ declare module '@tanstack/react-router' {
       path: '/help'
       fullPath: '/help'
       preLoaderRoute: typeof HelpRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/live-market': {
+      id: '/live-market'
+      path: '/live-market'
+      fullPath: '/live-market'
+      preLoaderRoute: typeof LiveMarketRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/messages': {
+      id: '/messages'
+      path: '/messages'
+      fullPath: '/messages'
+      preLoaderRoute: typeof MessagesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/near-me': {
+      id: '/near-me'
+      path: '/near-me'
+      fullPath: '/near-me'
+      preLoaderRoute: typeof NearMeRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/news': {
@@ -674,11 +774,16 @@ const rootRouteChildren: RootRouteChildren = {
   CartRoute: CartRoute,
   CheckoutRoute: CheckoutRoute,
   CitiesRoute: CitiesRoute,
+  CommunityRoute: CommunityRoute,
   CompareRoute: CompareRoute,
   CustomerCareRoute: CustomerCareRoute,
   ExploreRoute: ExploreRoute,
+  FollowingRoute: FollowingRoute,
   GiftCardsRoute: GiftCardsRoute,
   HelpRoute: HelpRoute,
+  LiveMarketRoute: LiveMarketRoute,
+  MessagesRoute: MessagesRoute,
+  NearMeRoute: NearMeRoute,
   NewsRoute: NewsRoute,
   NotificationsRoute: NotificationsRoute,
   OrdersRoute: OrdersRoute,

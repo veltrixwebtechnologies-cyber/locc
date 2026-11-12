@@ -188,7 +188,7 @@ export function AppShell({
           className="flex shrink-0 items-center gap-2"
         >
           <img
-            src="/assets/localshore-logo.jpeg"
+            src="/assets/localshore-logo.png"
             alt="LocalShore"
             width={132}
             height={48}
@@ -385,7 +385,7 @@ export function AppShell({
             className="flex min-w-0 shrink-0 items-center gap-2"
           >
             <m.img
-              src="/assets/localshore-logo.jpeg"
+              src="/assets/localshore-logo.png"
               alt="LocalShore"
               width={176}
               height={54}
@@ -810,7 +810,7 @@ export function AppShell({
   );
 }
 
-function LocationModalHost() {
+export function LocationModalHost() {
   const [isOpen, setIsOpen] = useState(false);
 
   useEffect(() => {
@@ -874,7 +874,7 @@ function ShopperFooter() {
                 aria-label="LocalShore home"
               >
                 <img
-                  src="/assets/localshore-logo.jpeg"
+                  src="/assets/localshore-logo.png"
                   alt="LocalShore"
                   width={200}
                   height={68}

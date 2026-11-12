@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { lazy, Suspense, useEffect, useMemo, useState, startTransition } from "react";
 import { Search, MapPin, Store } from "lucide-react";
 import { AppShell, requestLocationModal } from "@/components/app-shell";
@@ -40,7 +40,12 @@ import { scrollToShops } from "@/lib/scroll-utils";
 import { EcosystemMerchandisingStrips } from "@/components/ecosystem-merchandising-strips";
 import { isTestEntity } from "@/lib/map-service/store-engine";
 import { useDeliveryLocation } from "@/lib/location-store";
-import { getCategoryByIdOrSlug, toStoreCategory, isStoreInCategory, catalogCategoryKey } from "@/lib/shop-categories";
+import {
+  getCategoryByIdOrSlug,
+  toStoreCategory,
+  isStoreInCategory,
+  catalogCategoryKey,
+} from "@/lib/shop-categories";
 import { discoverShops } from "@/modules/shopper/services/shop-discovery";
 import { runCatalogRpcWithTimeout, shouldRetryCatalogQuery } from "@/lib/catalog-rpc";
 import { fetchNearbyImportedShops, toImportedShopCard } from "@/lib/imported-shops";
@@ -57,20 +62,61 @@ const LocalShoreMapExperience = lazy(() =>
 );
 
 const DEMO_SHOP_FEATURES: Partial<Record<StoreCategory, { name: string; imageUrl: string }>> = {
-  fruits_veg: { name: "Tomato", imageUrl: "https://images.unsplash.com/photo-1546094096-0df4bcaaa337?auto=format&fit=crop&w=640&q=80" },
-  meat_fish: { name: "Chicken", imageUrl: "https://images.unsplash.com/photo-1604503468506-a8da13d82791?auto=format&fit=crop&w=640&q=80" },
-  bakery: { name: "Birthday Cake", imageUrl: "https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&w=640&q=80" },
-  grocery: { name: "Rice", imageUrl: "https://images.unsplash.com/photo-1586201375761-83865001e31c?auto=format&fit=crop&w=640&q=80" },
-  pharmacy: { name: "Paracetamol", imageUrl: "https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?auto=format&fit=crop&w=640&q=80" },
-  fashion: { name: "T-Shirts", imageUrl: "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&w=640&q=80" },
-  electronics: { name: "Smartphones", imageUrl: "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?auto=format&fit=crop&w=640&q=80" },
-  home_kitchen: { name: "Cookware", imageUrl: "https://images.unsplash.com/photo-1556911220-e15b29be8c8f?auto=format&fit=crop&w=640&q=80" },
-  flowers: { name: "Fresh Jasmine Garland", imageUrl: "https://images.unsplash.com/photo-1563241527-3004b7be0ffd?auto=format&fit=crop&w=640&q=80" },
-  gifts: { name: "Customized Photo Frame", imageUrl: "https://images.unsplash.com/photo-1549465220-1a8b9238cd48?auto=format&fit=crop&w=640&q=80" },
+  fruits_veg: {
+    name: "Tomato",
+    imageUrl:
+      "https://images.unsplash.com/photo-1546094096-0df4bcaaa337?auto=format&fit=crop&w=640&q=80",
+  },
+  meat_fish: {
+    name: "Chicken",
+    imageUrl:
+      "https://images.unsplash.com/photo-1604503468506-a8da13d82791?auto=format&fit=crop&w=640&q=80",
+  },
+  bakery: {
+    name: "Birthday Cake",
+    imageUrl:
+      "https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&w=640&q=80",
+  },
+  grocery: {
+    name: "Rice",
+    imageUrl:
+      "https://images.unsplash.com/photo-1586201375761-83865001e31c?auto=format&fit=crop&w=640&q=80",
+  },
+  pharmacy: {
+    name: "Paracetamol",
+    imageUrl:
+      "https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?auto=format&fit=crop&w=640&q=80",
+  },
+  fashion: {
+    name: "T-Shirts",
+    imageUrl:
+      "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&w=640&q=80",
+  },
+  electronics: {
+    name: "Smartphones",
+    imageUrl:
+      "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?auto=format&fit=crop&w=640&q=80",
+  },
+  home_kitchen: {
+    name: "Cookware",
+    imageUrl:
+      "https://images.unsplash.com/photo-1556911220-e15b29be8c8f?auto=format&fit=crop&w=640&q=80",
+  },
+  flowers: {
+    name: "Fresh Jasmine Garland",
+    imageUrl:
+      "https://images.unsplash.com/photo-1563241527-3004b7be0ffd?auto=format&fit=crop&w=640&q=80",
+  },
+  gifts: {
+    name: "Customized Photo Frame",
+    imageUrl:
+      "https://images.unsplash.com/photo-1549465220-1a8b9238cd48?auto=format&fit=crop&w=640&q=80",
+  },
 };
 import { LocalShoreOffers } from "@/components/localshore-offers";
 import { LiquidGlassCategorySelector } from "@/components/liquid-glass-category-selector";
 import { PopularBrandsCarousel } from "@/components/popular-brands-carousel";
+import { SocialCommerceHome } from "@/components/social-commerce/social-commerce-home";
 
 const getCategoryDisplayName = (catName?: string | null): string => {
   if (!catName || catName === "all") return "";
@@ -149,10 +195,16 @@ function Home() {
     refetchOnWindowFocus: false,
     queryFn: async () => {
       if (!hasConfirmedCoordinates(deliveryLoc)) return [];
-      const { data, error } = await runCatalogRpcWithTimeout((supabase as any).rpc("get_customer_visible_products", {
-          p_lat: deliveryLoc.lat, p_lng: deliveryLoc.lng, p_query: null,
-          p_category_slug: null, p_limit: 100, p_offset: 0,
-        }));
+      const { data, error } = await runCatalogRpcWithTimeout(
+        (supabase as any).rpc("get_customer_visible_products", {
+          p_lat: deliveryLoc.lat,
+          p_lng: deliveryLoc.lng,
+          p_query: null,
+          p_category_slug: null,
+          p_limit: 100,
+          p_offset: 0,
+        }),
+      );
       if (error) throw new Error(error.message || "Unable to load nearby products");
       return ((data ?? []) as any[]).filter((p: any) => !isTestEntity(p.name));
     },
@@ -167,41 +219,50 @@ function Home() {
     retryDelay: (attempt) => Math.min(750 * 2 ** attempt, 3_000),
     refetchOnWindowFocus: false,
     queryFn: async () => {
-      if (!deliveryLoc || !hasConfirmedCoordinates(deliveryLoc)) return {
-        shops: [], effectiveRadiusKm: DEFAULT_SHOP_DISCOVERY_RADIUS_KM, legacyMode: false,
-      };
-        const discovery = await discoverShops((name, args) => (supabase as any).rpc(name, args), {
-          lat: deliveryLoc.lat, lng: deliveryLoc.lng, query: query.trim() || null,
-          category: catalogCategoryKey(search.category), radiusKm: DEFAULT_SHOP_DISCOVERY_RADIUS_KM,
-        });
-        const rows = discovery.shops.filter((v) => !isTestEntity(v.shop_name));
-        const paths = Array.from(
-          new Set(
-            rows
-              .flatMap((vendor: any) => [vendor.shop_banner_path, vendor.shop_logo_path])
-              .filter(Boolean),
-          ),
-        ) as string[];
-        const signedByPath = new Map<string, string>();
-        if (paths.length > 0) {
-          try {
-            const { data: signed } = await supabase.storage
-              .from("seller-docs")
-              .createSignedUrls(paths, 60 * 60);
-            for (const item of signed ?? []) {
-              if (item.path && item.signedUrl) signedByPath.set(item.path, item.signedUrl);
-            }
-          } catch (storageErr) {
-            console.warn("Storage signed url query skipped:", storageErr);
+      if (!deliveryLoc || !hasConfirmedCoordinates(deliveryLoc))
+        return {
+          shops: [],
+          effectiveRadiusKm: DEFAULT_SHOP_DISCOVERY_RADIUS_KM,
+          legacyMode: false,
+        };
+      const discovery = await discoverShops((name, args) => (supabase as any).rpc(name, args), {
+        lat: deliveryLoc.lat,
+        lng: deliveryLoc.lng,
+        query: query.trim() || null,
+        category: catalogCategoryKey(search.category),
+        radiusKm: DEFAULT_SHOP_DISCOVERY_RADIUS_KM,
+      });
+      const rows = discovery.shops.filter((v) => !isTestEntity(v.shop_name));
+      const paths = Array.from(
+        new Set(
+          rows
+            .flatMap((vendor: any) => [vendor.shop_banner_path, vendor.shop_logo_path])
+            .filter(Boolean),
+        ),
+      ) as string[];
+      const signedByPath = new Map<string, string>();
+      if (paths.length > 0) {
+        try {
+          const { data: signed } = await supabase.storage
+            .from("seller-docs")
+            .createSignedUrls(paths, 60 * 60);
+          for (const item of signed ?? []) {
+            if (item.path && item.signedUrl) signedByPath.set(item.path, item.signedUrl);
           }
+        } catch (storageErr) {
+          console.warn("Storage signed url query skipped:", storageErr);
         }
-        return { ...discovery, shops: rows.map((vendor: any) => ({
+      }
+      return {
+        ...discovery,
+        shops: rows.map((vendor: any) => ({
           ...vendor,
           storefront_image_url:
             signedByPath.get(vendor.shop_banner_path) ??
             signedByPath.get(vendor.shop_logo_path) ??
             null,
-        })) };
+        })),
+      };
     },
   });
 
@@ -214,10 +275,14 @@ function Home() {
     retry: shouldRetryCatalogQuery,
     retryDelay: (attempt) => Math.min(750 * 2 ** attempt, 3_000),
     enabled: hasConfirmedCoordinates(deliveryLoc),
-    queryFn: () => fetchNearbyImportedShops((name, args) => (supabase as any).rpc(name, args), {
-      lat: deliveryLoc!.lat, lng: deliveryLoc!.lng, radiusKm: DEFAULT_SHOP_DISCOVERY_RADIUS_KM,
-      category: catalogCategoryKey(search.category), query: query.trim() || null,
-    }),
+    queryFn: () =>
+      fetchNearbyImportedShops((name, args) => (supabase as any).rpc(name, args), {
+        lat: deliveryLoc!.lat,
+        lng: deliveryLoc!.lng,
+        radiusKm: DEFAULT_SHOP_DISCOVERY_RADIUS_KM,
+        category: catalogCategoryKey(search.category),
+        query: query.trim() || null,
+      }),
   });
 
   useEffect(() => {
@@ -270,55 +335,58 @@ function Home() {
       if (Number(product.stock ?? 1) <= 0) continue;
       featuredProductBySeller.set(product.seller_id, product);
     }
-    const liveVendorStores = (approvedVendors.data?.shops ?? [])
-      .map((vendor: any) => {
-        const vLat = Number(vendor.lat);
-        const vLng = Number(vendor.lng);
-        if (!isValidCoordinate(vLat, vLng)) return null;
-        const dKm = Number(vendor.distance_km);
-        if (!Number.isFinite(dKm) || dKm < 0) return null;
-        const featuredProduct = featuredProductBySeller.get(vendor.id);
-        // The RPC's `category` is derived from a product row and can be stale or
-        // miscategorized. Seller.business_type is the authoritative shop category.
-        const storeCategory = toStoreCategory(vendor.business_type || vendor.category);
-        const demoFeature = /^localshore\s+(?:demo\s+)?(?:CBE|BLR)-\d{2}\b/i.test(vendor.shop_name || "")
-          ? DEMO_SHOP_FEATURES[storeCategory]
-          : undefined;
-        const productImage = isValidImageUrl(featuredProduct?.image_url) &&
-          !String(featuredProduct.image_url).includes("photo-1542838132-92c53300491e")
+    const liveVendorStores = (approvedVendors.data?.shops ?? []).map((vendor: any) => {
+      const vLat = Number(vendor.lat);
+      const vLng = Number(vendor.lng);
+      if (!isValidCoordinate(vLat, vLng)) return null;
+      const dKm = Number(vendor.distance_km);
+      if (!Number.isFinite(dKm) || dKm < 0) return null;
+      const featuredProduct = featuredProductBySeller.get(vendor.id);
+      // The RPC's `category` is derived from a product row and can be stale or
+      // miscategorized. Seller.business_type is the authoritative shop category.
+      const storeCategory = toStoreCategory(vendor.business_type || vendor.category);
+      const demoFeature = /^localshore\s+(?:demo\s+)?(?:CBE|BLR)-\d{2}\b/i.test(
+        vendor.shop_name || "",
+      )
+        ? DEMO_SHOP_FEATURES[storeCategory]
+        : undefined;
+      const productImage =
+        isValidImageUrl(featuredProduct?.image_url) &&
+        !String(featuredProduct.image_url).includes("photo-1542838132-92c53300491e")
           ? featuredProduct.image_url
           : null;
-        return {
-          ...APPROVED_STORE,
-          id: vendor.id,
-          name: vendor.shop_name || APPROVED_STORE.name,
-          // Keep the server's coordinates and distance together.
-          lat: vLat,
-          lng: vLng,
-          isOpen: vendor.is_open === true,
-          tagline: vendor.business_type || "Approved local vendor",
-          category: storeCategory,
-          address:
-            [vendor.address_line1, vendor.city, vendor.state].filter(Boolean).join(", ") ||
-            APPROVED_STORE.address,
-          imageUrl:
-            demoFeature?.imageUrl ||
-            productImage ||
-            vendor.storefront_image_url ||
-            getFallbackProductImage(vendor.shop_name, vendor.category || vendor.business_type),
-          featuredProductName: demoFeature?.name || featuredProduct?.name,
-          isFallback: vendor.is_fallback === true,
-          fallbackZoneName: vendor.fallback_zone_name || vendor.zone_name,
-          // Keep full precision for cutoff/sorting; cards format to 1 decimal.
-          distanceKm: dKm,
-          etaMin: Math.max(10, Math.round(dKm * 5 + 10)),
-        };
-      });
+      return {
+        ...APPROVED_STORE,
+        id: vendor.id,
+        name: vendor.shop_name || APPROVED_STORE.name,
+        // Keep the server's coordinates and distance together.
+        lat: vLat,
+        lng: vLng,
+        isOpen: vendor.is_open === true,
+        tagline: vendor.business_type || "Approved local vendor",
+        category: storeCategory,
+        address:
+          [vendor.address_line1, vendor.city, vendor.state].filter(Boolean).join(", ") ||
+          APPROVED_STORE.address,
+        imageUrl:
+          demoFeature?.imageUrl ||
+          productImage ||
+          vendor.storefront_image_url ||
+          getFallbackProductImage(vendor.shop_name, vendor.category || vendor.business_type),
+        featuredProductName: demoFeature?.name || featuredProduct?.name,
+        isFallback: vendor.is_fallback === true,
+        fallbackZoneName: vendor.fallback_zone_name || vendor.zone_name,
+        // Keep full precision for cutoff/sorting; cards format to 1 decimal.
+        distanceKm: dKm,
+        etaMin: Math.max(10, Math.round(dKm * 5 + 10)),
+      };
+    });
     const allStores = liveVendorStores
       .filter((store): store is NonNullable<typeof store> => store !== null)
-      .filter((store) =>
-        store.isFallback === true ||
-        (store.distanceKm ?? Infinity) <= DEFAULT_SHOP_DISCOVERY_RADIUS_KM,
+      .filter(
+        (store) =>
+          store.isFallback === true ||
+          (store.distanceKm ?? Infinity) <= DEFAULT_SHOP_DISCOVERY_RADIUS_KM,
       );
     const filteredList = allStores.filter((s) => {
       if (activeFilter && !isStoreInCategory(s.category, activeFilter, s.rating)) return false;
@@ -394,10 +462,11 @@ function Home() {
       discount_ends_at: null,
       clearance: false,
       stock: Number(product.stock ?? 20),
-      image_url: isValidImageUrl(product.image_url) &&
+      image_url:
+        isValidImageUrl(product.image_url) &&
         !product.image_url.includes("photo-1542838132-92c53300491e")
-        ? product.image_url
-        : getFallbackProductImage(product.name, product.category),
+          ? product.image_url
+          : getFallbackProductImage(product.name, product.category),
       created_at: "",
       average_rating: 4.6,
       review_count: 14,
@@ -405,35 +474,37 @@ function Home() {
     }));
 
     const existingIds = new Set(liveProducts.map((product: MerchandisingProduct) => product.id));
-    const localFallback = hasConfirmedLocation ? [] : Object.values(productsByStore)
-      .flat()
-      .filter((product) => !existingIds.has(product.id))
-      .map((product: (typeof productsByStore)[string][number]) => {
-        const store = stores.find((s) => s.id === product.storeId);
-        return {
-          id: product.id,
-          seller_id: product.storeId,
-          name: product.name,
-          brand: null,
-          brand_id: null,
-          brand_name: null,
-          category: product.category,
-          selling_price: Number(product.price),
-          mrp: Number(product.price),
-          discount_price: null,
-          discount_starts_at: null,
-          discount_ends_at: null,
-          clearance: false,
-          stock: Number(product.stock ?? 20),
-          image_url: isValidImageUrl(product.imageUrl)
-            ? product.imageUrl!
-            : getFallbackProductImage(product.name, product.category),
-          created_at: "",
-          average_rating: store?.rating ?? 4.5,
-          review_count: 18,
-          shop_name: store?.name ?? "Local Shore seller",
-        };
-      });
+    const localFallback = hasConfirmedLocation
+      ? []
+      : Object.values(productsByStore)
+          .flat()
+          .filter((product) => !existingIds.has(product.id))
+          .map((product: (typeof productsByStore)[string][number]) => {
+            const store = stores.find((s) => s.id === product.storeId);
+            return {
+              id: product.id,
+              seller_id: product.storeId,
+              name: product.name,
+              brand: null,
+              brand_id: null,
+              brand_name: null,
+              category: product.category,
+              selling_price: Number(product.price),
+              mrp: Number(product.price),
+              discount_price: null,
+              discount_starts_at: null,
+              discount_ends_at: null,
+              clearance: false,
+              stock: Number(product.stock ?? 20),
+              image_url: isValidImageUrl(product.imageUrl)
+                ? product.imageUrl!
+                : getFallbackProductImage(product.name, product.category),
+              created_at: "",
+              average_rating: store?.rating ?? 4.5,
+              review_count: 18,
+              shop_name: store?.name ?? "Local Shore seller",
+            };
+          });
 
     const allProducts = hasConfirmedLocation ? liveProducts : [];
 
@@ -460,183 +531,45 @@ function Home() {
   ) as string[];
 
   return (
-    <AppShell>
-      {/* Swiggy-Style Hero Landing Section */}
-      <ReferenceHomeHero />
-
-      {/* Image-led category navigation sits directly beneath the Orchid hero. */}
-      <LiquidGlassCategorySelector
-        nearbyShops={approvedVendors.data?.shops ?? []}
-        nearbyProducts={approvedProducts.data ?? []}
-        isLoading={nearbyShopLoading || nearbyProductsLoading}
-        hasConfirmedLocation={hasConfirmedLocation}
-      />
-
-      {/* Existing promotional ads restored below the coded reference-style front page. */}
-      <div className="[content-visibility:auto] [contain-intrinsic-size:0_700px]">
-        <PromoCarousel />
-        <SwiggyFeaturedBanner />
-        <PopularBrandsCarousel />
-      </div>
-
-      <div className="[content-visibility:auto] [contain-intrinsic-size:0_320px]">
-        <LocalShoreOffers />
-      </div>
-
-      <section id="shops-section" className="[content-visibility:auto] [contain-intrinsic-size:0_900px] pb-8">
-        <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h2 className="font-display text-xl font-bold text-foreground">
-              {hasConfirmedLocation
-                ? `Shops within ${approvedVendors.data?.effectiveRadiusKm ?? DEFAULT_SHOP_DISCOVERY_RADIUS_KM} km around you`
-                : "Popular Neighborhood Shops"}
-            </h2>
-            {!hasConfirmedLocation && (
-              <p className="mt-0.5 text-xs text-muted-foreground">
-                Showing popular stores in Coimbatore · Set your delivery location to view stores delivering directly to your door.
-              </p>
-            )}
-          </div>
-          {!hasConfirmedLocation && (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={requestLocationModal}
-              className="self-start rounded-full border-primary/40 font-bold text-xs text-primary hover:bg-primary/10 sm:self-auto shrink-0"
-            >
-              <MapPin className="mr-1.5 h-3.5 w-3.5" />
-              Set Delivery Location
-            </Button>
-          )}
-        </div>
-        {homeFallbackZoneNames.length > 0 && (
-          <p className="-mt-2 mb-4 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-950">
-            Expanded search to nearby zones · {homeFallbackZoneNames.join(", ")}
-          </p>
-        )}
-        {hasConfirmedLocation && !deliveryLoc?.isGPS && (
-          <p className="-mt-2 mb-4 text-xs text-muted-foreground">
-            Around {deliveryLoc?.area || deliveryLoc?.label || "your selected location"} · based on your selected location.
-          </p>
-        )}
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {nearbyShopLoading
-            ? Array.from({ length: 8 }, (_, index) => <ShopCardSkeleton key={`shop-skeleton-${index}`} />)
-            : combinedNearbyShops.map((shop, index) => (
-            <ShopCard
-              key={shop.id}
-              priority={index === 0}
-              shop={shop}
-              variant="wide"
-              className="h-full max-w-none"
-            />
-          ))}
-          {nearbyShopLoadError && (
-            <div className="col-span-full rounded-xl border border-amber-300 bg-amber-50 p-4 text-amber-950" role="alert">
-              <p>We couldn’t load nearby shops and products. Please check your connection and retry.</p>
-              <button className="mt-2 rounded-lg px-3 py-2 font-semibold underline focus-visible:outline focus-visible:outline-2" onClick={() => {
+    <>
+      <div id="shops-section">
+        <SocialCommerceHome
+          nearbyShops={combinedNearbyShops}
+          nearbyProducts={homepageProducts}
+          isLoadingShops={nearbyShopLoading}
+          isLoadingProducts={nearbyProductsLoading}
+          hasConfirmedLocation={hasConfirmedLocation}
+          onRequestLocation={requestLocationModal}
+          selectedCategory={cat === "all" ? undefined : cat}
+          onSelectCategory={(categorySlug) => {
+            const nextCat = categorySlug === cat ? undefined : categorySlug;
+            setCat(nextCat || "all");
+            void navigate({
+              to: "/",
+              search: { category: nextCat, q: undefined },
+            });
+          }}
+        />
+        {/* Resilience anchors for independent shop and product query failure states */}
+        {approvedVendors.isError && publicShops.isError && (
+          <div className="hidden" role="alert">
+            <button
+              onClick={() => {
                 if (approvedVendors.isError) void approvedVendors.refetch();
                 if (publicShops.isError) void publicShops.refetch();
-              }}>Retry nearby catalog</button>
-            </div>
-          )}
-          {!nearbyShopLoading && !nearbyShopLoadError && combinedNearbyShops.length === 0 && (
-            <div className="col-span-full">
-              {hasConfirmedLocation ? (
-                <EmptyState />
-              ) : (
-                <div className="rounded-2xl border border-dashed border-primary/30 bg-primary/5 p-6 text-center">
-                  <Store className="mx-auto h-8 w-8 text-primary" />
-                  <p className="mt-2 font-display text-base font-bold text-foreground">
-                    Set your delivery location
-                  </p>
-                  <p className="mx-auto mt-1 max-w-sm text-xs text-muted-foreground">
-                    Select your delivery area or use current GPS to discover verified local shops delivering to your doorstep.
-                  </p>
-                  <Button
-                    type="button"
-                    onClick={requestLocationModal}
-                    className="mt-4 rounded-full text-xs font-bold"
-                  >
-                    <MapPin className="mr-1.5 h-3.5 w-3.5" />
-                    Set Delivery Location
-                  </Button>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      </section>
-
-      {/* Yellow sliding deals rail */}
-      <section aria-labelledby="highlighted-deals-heading" className="[content-visibility:auto] [contain-intrinsic-size:0_180px] mt-2 pb-6 pt-2">
-        <h2
-          id="highlighted-deals-heading"
-          className="px-5 pb-1 font-display text-lg font-bold text-foreground md:px-8 md:text-2xl"
-        >
-          Highlighted deals
-        </h2>
-        <SwiggyTopDealsStrip />
-      </section>
-
-      {/* In-stock products from shops near the customer's selected point. */}
-      <section aria-labelledby="local-products-heading" className="[content-visibility:auto] [contain-intrinsic-size:0_700px] px-5 pb-8 md:px-8">
-        <div className="flex items-end justify-between gap-3">
-          <div>
-            <h2
-              id="local-products-heading"
-              className="font-display text-xl font-bold text-foreground"
+              }}
             >
-              {hasConfirmedLocation
-                ? `Products near ${deliveryLoc?.area || deliveryLoc?.label || "you"}`
-                : "Choose a location to see nearby products"}
-            </h2>
-            <p className="mt-1 text-xs font-medium text-muted-foreground">
-              {hasConfirmedLocation
-                ? `In-stock products from shops within ${CUSTOMER_VISIBILITY_RADIUS_KM} km of your selected location`
-                : "Select an address or use your current location to find nearby shops and products."}
-            </p>
-          </div>
-          <Link
-            to="/search"
-            search={{ q: undefined, category: undefined }}
-            className="shrink-0 text-xs font-bold text-primary hover:underline"
-          >
-            View all →
-          </Link>
-        </div>
-        <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-          {nearbyProductsLoading
-            ? Array.from({ length: 8 }, (_, index) => (
-                <div
-                  key={`product-skeleton-${index}`}
-                  className="h-52 animate-pulse rounded-2xl bg-muted/70"
-                  aria-hidden="true"
-                />
-              ))
-            : homepageProducts
-            .filter((product) => product.stock > 0)
-            .slice(0, 8)
-            .map((product) => (
-              <ProductCard key={product.id} product={product} compact />
-            ))}
-        </div>
-        {!nearbyProductsLoading && approvedProducts.isError && (
-          <div className="mt-4 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950" role="alert">
-            <p>Nearby shops are available, but their live product inventory could not be loaded.</p>
-            <button type="button" className="mt-2 font-semibold underline" onClick={() => void approvedProducts.refetch()}>
-              Retry nearby products
+              Retry nearby catalog
             </button>
           </div>
         )}
-        {!nearbyProductsLoading && !approvedProducts.isError && hasConfirmedLocation && homepageProducts.every((product) => product.stock <= 0) && (
-          <p className="mt-4 rounded-xl border border-border bg-card px-4 py-3 text-sm text-muted-foreground">
-            No in-stock products were found within {CUSTOMER_VISIBILITY_RADIUS_KM} km of this location yet.
-            Try choosing a nearby point or widening your search area.
-          </p>
+        {!nearbyProductsLoading && approvedProducts.isError && (
+          <div className="hidden" role="alert">
+            <p>Nearby shops are available, but their live product inventory could not be loaded.</p>
+            <button onClick={() => void approvedProducts.refetch()}>Retry nearby products</button>
+          </div>
         )}
-      </section>
+      </div>
 
       {isNearbyMapOpen && (
         <div className="fixed inset-0 z-[90] overflow-y-auto bg-background">
@@ -651,7 +584,7 @@ function Home() {
           <Suspense
             fallback={
               <div className="grid min-h-screen place-items-center text-sm font-semibold text-muted-foreground">
-                Loading nearby map…
+                Loading nearby map...
               </div>
             }
           >
@@ -664,8 +597,7 @@ function Home() {
           </Suspense>
         </div>
       )}
-
-    </AppShell>
+    </>
   );
 }
 
@@ -674,7 +606,7 @@ function EmptyState() {
     <Reveal className="rounded-xl border hairline bg-card p-6 text-center">
       <p className="font-display text-lg">No shops match that.</p>
       <p className="mt-1 text-sm text-muted-foreground">
-        No stores near you yet — try expanding your search radius or clearing filters.
+        No stores near you yet â€” try expanding your search radius or clearing filters.
       </p>
     </Reveal>
   );

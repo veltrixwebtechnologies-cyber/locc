@@ -76,7 +76,7 @@ export const processRazorpayWebhookFn = createServerFn({ method: "POST" })
 
     console.info(`[razorpay-webhook] Processing event: ${event} for order: ${razorpayOrderId}`);
 
-    // 3. Idempotent Processing of Razorpay Payment Events
+    // 3. Idempotent Processing of Razorpay Payment & Refund Events
     switch (event) {
       case "payment.captured":
       case "order.paid": {
@@ -95,6 +95,43 @@ export const processRazorpayWebhookFn = createServerFn({ method: "POST" })
               event,
               message: "Payment already processed and captured (idempotent skip).",
             };
+          }
+
+          // Check if the order was already cancelled before payment success webhook arrived
+          // (Race condition 4: Payment success webhook arrives after cancellation)
+          if (attempt.order_id) {
+            const { data: currentOrder } = await admin
+              .from("orders")
+              .select("status, total")
+              .eq("id", attempt.order_id)
+              .maybeSingle();
+
+            if (currentOrder && (currentOrder.status === "cancelled" || currentOrder.status === "cancelled_by_vendor")) {
+              console.warn(
+                `[razorpay-webhook] Out-of-order payment captured after cancellation for order ${attempt.order_id}. Auto-initiating refund.`
+              );
+
+              // Update payment attempt to captured for audit
+              await admin.from("payment_attempts").update({
+                status: "captured",
+                provider_payment_id: razorpayPaymentId || attempt.provider_payment_id,
+              }).eq("id", attempt.id);
+
+              // Auto-reconcile refund via reconciliation helper
+              const { reconcileOutOfOrderPayment } = await import("./cancellation/refund-service");
+              await reconcileOutOfOrderPayment(
+                attempt.order_id,
+                razorpayPaymentId || attempt.provider_payment_id || "pay_unknown",
+                Number(currentOrder.total || 0),
+                admin
+              );
+
+              return {
+                success: true,
+                event,
+                message: "Order already cancelled; out-of-order payment captured and auto-refund initiated.",
+              };
+            }
           }
 
           // Finalize payment attempt & update linked order to paid
@@ -124,6 +161,56 @@ export const processRazorpayWebhookFn = createServerFn({ method: "POST" })
             p_order_id: attempt.order_id,
             p_status: "failed",
           });
+        }
+        break;
+      }
+
+      case "refund.processed": {
+        const refundEntity = payload?.payload?.refund?.entity;
+        const refundId = refundEntity?.id;
+        const localReceipt = refundEntity?.receipt; // Localshore refund UUID
+        console.info(`[razorpay-webhook] Refund processed: ${refundId}, receipt: ${localReceipt}`);
+
+        if (localReceipt) {
+          await admin
+            .from("refunds")
+            .update({
+              status: "refunded",
+              gateway_refund_id: refundId,
+              processed_at: new Date().toISOString(),
+              gateway_response: refundEntity,
+            })
+            .eq("id", localReceipt);
+        } else if (refundId) {
+          await admin
+            .from("refunds")
+            .update({
+              status: "refunded",
+              processed_at: new Date().toISOString(),
+              gateway_response: refundEntity,
+            })
+            .eq("gateway_refund_id", refundId);
+        }
+        break;
+      }
+
+      case "refund.failed": {
+        const refundEntity = payload?.payload?.refund?.entity;
+        const refundId = refundEntity?.id;
+        const localReceipt = refundEntity?.receipt;
+        const failureReason = refundEntity?.error_description || "Gateway marked refund as failed";
+        console.error(`[razorpay-webhook] Refund failed: ${refundId}, reason: ${failureReason}`);
+
+        if (localReceipt) {
+          await admin
+            .from("refunds")
+            .update({
+              status: "failed",
+              failure_reason: failureReason,
+              failed_at: new Date().toISOString(),
+              gateway_response: refundEntity,
+            })
+            .eq("id", localReceipt);
         }
         break;
       }

@@ -38,6 +38,7 @@ import {
   getStore,
   APPROVED_STORE,
   productsByStore,
+  seedProducts,
   categoryColor,
   categoryLabel,
   stores,
@@ -132,7 +133,7 @@ export const Route = createFileRoute("/store/$storeId")({
           lng: demoShop.lng,
           imageUrl: getFallbackShopImage(demoShop.category, demoShop.name),
         },
-        products: [],
+        products: seedProducts(demoShop.id, demoShop.category),
       };
     }
     const store =
@@ -141,7 +142,10 @@ export const Route = createFileRoute("/store/$storeId")({
         : (getStore(params.storeId) ??
           (isUuid(params.storeId) ? { ...APPROVED_STORE, id: params.storeId } : undefined));
     if (!store) throw notFound();
-    return { store, products: productsByStore[store.id] ?? [] };
+    const storeProducts = (productsByStore[store.id] && productsByStore[store.id].length > 0)
+      ? productsByStore[store.id]
+      : seedProducts(store.id, store.category || "kirana");
+    return { store, products: storeProducts };
   },
   component: StoreRoutePage,
   notFoundComponent: () => (
@@ -683,28 +687,28 @@ function StorePage({ catalog }: { catalog?: ReturnType<typeof importedStorefront
           </span>
         </nav>
 
-        {/* ── STORE HERO BANNER (Horizontal Full-Width Design matching Image 2) ── */}
-        <div className="relative overflow-hidden rounded-3xl bg-slate-900 border-2 border-[#981495]/70 shadow-[0_0_24px_rgba(152,20,149,0.18)] shadow-xl mb-6 min-h-[210px] sm:min-h-[230px] flex items-center group">
+        {/* ── STORE HERO BANNER (Horizontal Full-Width Design) ── */}
+        <div className="relative overflow-hidden rounded-3xl bg-white border border-[#E2E8F0] shadow-sm mb-6 min-h-[210px] sm:min-h-[230px] flex items-center group">
           {/* Full-width Background Image */}
           <img
             src={resolveImageUrl(store.imageUrl, store.name, store.category)}
             alt={store.name}
-            className="absolute inset-0 h-full w-full object-cover object-center opacity-95 transition-transform duration-700 group-hover:scale-105"
+            className="absolute inset-0 h-full w-full object-cover object-center transition-transform duration-700 group-hover:scale-105"
           />
 
-          {/* Smooth Light Fade Gradient on Left (Zero blank white space) */}
-          <div className="absolute inset-0 bg-gradient-to-r from-[#f3edf5] via-[#f3edf5]/95 via-80% to-transparent w-full md:w-[62%] z-10" />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-black/30 z-10 md:hidden" />
+          {/* Smooth Light Fade Gradient on Left */}
+          <div className="absolute inset-0 bg-gradient-to-r from-white via-white/95 via-55% to-white/25 backdrop-blur-[1px] z-10" />
+          <div className="absolute inset-0 bg-gradient-to-t from-white/95 via-white/70 to-white/30 z-10 md:hidden" />
 
-          {/* Top Bar with Back Button on Left and Badge + Wishlist on Right (Unified Row to prevent mobile overlap) */}
+          {/* Top Bar with Back Button on Left and Badge + Wishlist on Right */}
           <div className="absolute top-3.5 inset-x-3 sm:top-4 sm:inset-x-4 z-30 flex items-center justify-between gap-2 pointer-events-none">
             {categoryContext ? (
               <Link
                 to="/search"
                 search={{ category: searchParams.category }}
-                className="pointer-events-auto inline-flex items-center gap-1.5 rounded-full bg-[#fffafd]/95 hover:bg-[#fffafd] text-slate-900 backdrop-blur-md px-3 py-1.5 sm:px-3.5 sm:py-1.5 text-[11px] sm:text-xs font-bold transition-all shadow-md border border-[#f0abfc]/80 cursor-pointer shrink min-w-0 max-w-[58%] sm:max-w-none"
+                className="pointer-events-auto inline-flex items-center gap-1.5 rounded-full bg-white/90 hover:bg-white text-[#0F172A] backdrop-blur-md px-3 py-1.5 sm:px-3.5 sm:py-1.5 text-[11px] sm:text-xs font-bold transition-all shadow-xs border border-[#E2E8F0] cursor-pointer shrink min-w-0 max-w-[58%] sm:max-w-none"
               >
-                <ArrowLeft className="h-3.5 w-3.5 shrink-0" />
+                <ArrowLeft className="h-3.5 w-3.5 shrink-0 text-[#8B2FC9]" />
                 <span className="truncate">Back to {categoryContext.name}</span>
               </Link>
             ) : (
@@ -714,23 +718,23 @@ function StorePage({ catalog }: { catalog?: ReturnType<typeof importedStorefront
                 onClick={() => {
                   scrollToShops();
                 }}
-                className="pointer-events-auto inline-flex items-center gap-1.5 rounded-full bg-[#fffafd]/95 hover:bg-[#fffafd] text-slate-900 backdrop-blur-md px-3 py-1.5 sm:px-3.5 sm:py-1.5 text-[11px] sm:text-xs font-bold transition-all shadow-md border border-[#f0abfc]/80 cursor-pointer shrink min-w-0 max-w-[58%] sm:max-w-none"
+                className="pointer-events-auto inline-flex items-center gap-1.5 rounded-full bg-white/90 hover:bg-white text-[#0F172A] backdrop-blur-md px-3 py-1.5 sm:px-3.5 sm:py-1.5 text-[11px] sm:text-xs font-bold transition-all shadow-xs border border-[#E2E8F0] cursor-pointer shrink min-w-0 max-w-[58%] sm:max-w-none"
               >
-                <ArrowLeft className="h-3.5 w-3.5 shrink-0" />
+                <ArrowLeft className="h-3.5 w-3.5 shrink-0 text-[#8B2FC9]" />
                 <span className="truncate">All shops</span>
               </Link>
             )}
 
             <div className="pointer-events-auto flex items-center gap-1.5 sm:gap-2 shrink-0">
-              <div className="inline-flex items-center gap-1 sm:gap-1.5 rounded-full bg-[#fffafd]/95 backdrop-blur-md px-2.5 py-1 sm:px-3.5 sm:py-1.5 text-[10px] sm:text-xs font-black text-slate-900 shadow-md border border-[#f0abfc]/80 whitespace-nowrap">
-                <ShieldCheck className="h-3.5 w-3.5 text-[#981495] fill-[#981495]/20 shrink-0" />
-                <span>{isImported ? "Public shop" : isDemoShop ? "Shop preview" : "Local shop"}</span>
+              <div className="inline-flex items-center gap-1 sm:gap-1.5 rounded-full bg-white/90 backdrop-blur-md px-2.5 py-1 sm:px-3.5 sm:py-1.5 text-[10px] sm:text-xs font-extrabold text-[#0F172A] shadow-xs border border-[#E2E8F0] whitespace-nowrap">
+                <ShieldCheck className="h-3.5 w-3.5 text-[#8B2FC9] fill-[#8B2FC9]/20 shrink-0" />
+                <span>{isImported ? "Public shop" : isDemoShop ? "Shop preview" : "Verified Local Shop"}</span>
               </div>
               <WishlistButton
                 productId={`shop-${store.id}`}
                 productName={store.name}
                 entityType="shop"
-                className="bg-[#fffafd]/95 shadow-md border-[#f0abfc]/80"
+                className="bg-white/90 shadow-xs border-[#E2E8F0]"
                 item={{
                   productId: `shop-${store.id}`,
                   name: store.name,
@@ -745,61 +749,71 @@ function StorePage({ catalog }: { catalog?: ReturnType<typeof importedStorefront
             </div>
           </div>
 
-          {/* Bottom Right Handwritten Watermark (Traditional Elegance Modern Living) */}
-          <div className="absolute bottom-4 right-6 z-20 text-right hidden sm:block">
-            <p className="font-['Caveat'] text-2xl sm:text-3xl font-extrabold text-amber-200 tracking-wide drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)] leading-tight">
-              Traditional Elegance
-            </p>
-            <p className="font-['Caveat'] text-xl sm:text-2xl font-bold text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]">
-              Modern Living
-            </p>
+          {/* Right Highlight Badge for Desktop */}
+          <div className="absolute bottom-4 right-6 z-20 text-right hidden sm:flex flex-col items-end gap-1.5 pointer-events-none">
+            <div className="inline-flex items-center gap-1.5 rounded-full bg-white/90 backdrop-blur-md px-3.5 py-1.5 text-xs font-bold text-[#8B2FC9] shadow-xs border border-[#E2E8F0]">
+              <Sparkles className="h-3.5 w-3.5 fill-[#8B2FC9]/20 text-[#8B2FC9]" />
+              <span>Verified Neighborhood Merchant</span>
+            </div>
+            <div className="inline-flex items-center gap-1 rounded-full bg-emerald-50/90 backdrop-blur-xs px-2.5 py-1 text-[11px] font-bold text-emerald-800 border border-emerald-200/70 shadow-2xs">
+              <Clock className="h-3 w-3 text-emerald-600" />
+              <span>Instant 20–35 min Delivery</span>
+            </div>
           </div>
 
-          {/* Left Content Area (Logo Box + Store Details) */}
+          {/* Left Content Area (Store Avatar + Store Details) */}
           <div className="relative z-20 p-5 sm:p-7 md:p-8 max-w-3xl flex flex-col sm:flex-row items-start sm:items-center gap-4.5 pt-14 sm:pt-8">
-            {/* Store Brand Emblem Logo Box */}
-            <div className="h-20 w-20 sm:h-24 sm:w-24 rounded-2xl bg-[#310938] text-[#f5d061] flex flex-col items-center justify-center border-2 border-[#981495]/70 shadow-[0_0_18px_rgba(152,20,149,0.16)] shrink-0">
-              <Sparkles className="h-7 w-7 text-amber-400 fill-amber-400/30 mb-0.5" />
-              <span className="font-display font-black text-[9px] uppercase tracking-widest text-amber-200">
-                STORE
-              </span>
+            {/* Store Brand Avatar */}
+            <div className="relative h-20 w-20 sm:h-24 sm:w-24 rounded-2xl overflow-hidden bg-white ring-4 ring-white/95 shadow-md border border-[#E2E8F0] shrink-0 group-hover:scale-102 transition-transform">
+              <img
+                src={resolveImageUrl(store.imageUrl, store.name, store.category)}
+                alt={store.name}
+                className="h-full w-full object-cover"
+                onError={(e) => {
+                  e.currentTarget.style.display = "none";
+                  if (e.currentTarget.parentElement) {
+                    e.currentTarget.parentElement.innerHTML = `<div class="h-full w-full flex items-center justify-center bg-[#FAF3FF] text-[#8B2FC9] font-black text-2xl">🏪</div>`;
+                  }
+                }}
+              />
             </div>
 
             {/* Store Info & Ratings */}
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2 mb-1">
-                <span className="inline-flex items-center gap-1 rounded-full bg-[var(--sand)]/90 px-2.5 py-0.5 text-[10px] font-bold text-[#981495] border border-[#f0abfc]">
-                  {isImported ? "Prototype catalog" : isDemoShop ? "Sample product catalog" : "LocalShore Merchant"}
+                <span className="inline-flex items-center gap-1 rounded-full bg-[#FAF3FF] px-2.5 py-0.5 text-[10px] font-bold text-[#8B2FC9] border border-[#E2E8F0]">
+                  <Sparkles className="h-3 w-3 fill-[#8B2FC9]/20 text-[#8B2FC9]" />
+                  <span>{(store.category && (categoryLabel as Record<string, string>)[store.category]) || (isImported ? "Prototype catalog" : isDemoShop ? "Sample product catalog" : "LocalShore Merchant")}</span>
                 </span>
               </div>
 
-              <h1 className="font-display text-xl sm:text-2xl md:text-3xl font-black text-slate-900 leading-tight tracking-tight">
+              <h1 className="font-display text-xl sm:text-2xl md:text-3xl font-black text-[#0F172A] leading-tight tracking-tight">
                 {store.name}
               </h1>
 
-              <p className="text-xs sm:text-sm font-semibold text-slate-600 truncate mt-0.5">
+              <p className="text-xs sm:text-sm font-semibold text-[#64748B] truncate mt-0.5">
                 {store.tagline ||
-                  "Showrooms. Multistorey showroom for silk, smart TV's & appliances"}
+                  `Authentic local ${(store.category && (categoryLabel as Record<string, string>)[store.category]) || "neighborhood"} store`}
               </p>
 
               {/* Info Badges Row */}
               <div className="mt-3 flex flex-wrap items-center gap-1.5 sm:gap-2 text-[11px] sm:text-xs font-bold text-slate-700">
-                <div className="flex items-center gap-1 text-slate-600 bg-[#fffafd]/80 backdrop-blur-xs px-2.5 py-1 rounded-full border border-slate-200/80 shadow-2xs max-w-full">
-                  <MapPin className="h-3.5 w-3.5 text-[#981495] shrink-0" />
+                <div className="flex items-center gap-1 text-[#64748B] bg-white/90 backdrop-blur-xs px-2.5 py-1 rounded-full border border-[#E2E8F0] shadow-2xs max-w-full">
+                  <MapPin className="h-3.5 w-3.5 text-[#8B2FC9] shrink-0" />
                   <span className="truncate max-w-[200px] sm:max-w-[280px]">{store.address}</span>
                 </div>
 
-                <div className="flex items-center gap-1 rounded-full bg-emerald-50/90 px-2.5 py-1 text-emerald-800 border border-emerald-200/70 shadow-2xs">
-                  <Clock className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
+                <div className="flex items-center gap-1.5 rounded-full bg-emerald-50/90 px-2.5 py-1 text-emerald-800 border border-emerald-200/70 shadow-2xs">
+                  <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
                   <span className="truncate max-w-[220px] sm:max-w-none">{isImported || isLiveSellerStore ? "Check opening hours with shop" : store.isOpen ? "Open now" : "Closed"}</span>
                 </div>
 
                 {!isLiveSellerStore && typeof store.rating === "number" && store.rating > 0 && (
-                  <div className="flex items-center gap-1 rounded-full bg-[var(--sand)]/90 px-2.5 py-1 text-[#700b6e] border border-[#f0abfc]/70 shadow-2xs">
-                    <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400 shrink-0" />
+                  <div className="flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-1 text-amber-900 border border-amber-200/80 shadow-2xs">
+                    <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-500 shrink-0" />
                     <span>{store.rating.toFixed(1)}</span>
                     {Boolean(isImported ? catalog?.reviewCount : (store as any).reviewCount ?? (store as any).review_count) && (
-                      <span className="text-[#981495]/80 font-normal">
+                      <span className="text-amber-800/80 font-normal">
                         ({isImported ? catalog?.reviewCount : ((store as any).reviewCount ?? (store as any).review_count)} reviews)
                       </span>
                     )}
@@ -807,7 +821,7 @@ function StorePage({ catalog }: { catalog?: ReturnType<typeof importedStorefront
                 )}
 
                 {deliveryLoc && computedDistanceKm !== undefined && (
-                  <div className="flex items-center gap-1 rounded-full bg-[var(--sand)]/90 px-2.5 py-1 text-[#981495] border border-[#f0abfc]/80 shadow-2xs shrink-0">
+                  <div className="flex items-center gap-1 rounded-full bg-[#FAF3FF] px-2.5 py-1 text-[#8B2FC9] border border-[#E2E8F0] shadow-2xs shrink-0 font-extrabold">
                     <span>
                       {computedDistanceKm} km · {computedEtaMin} mins
                     </span>
@@ -821,14 +835,14 @@ function StorePage({ catalog }: { catalog?: ReturnType<typeof importedStorefront
         {/* ── STORE SEARCH + CATEGORIES + COMPACT FILTER TOOLBAR ── */}
         <div className="relative mb-6 space-y-3">
           {/* Search bar + Filter Toggle */}
-          <div className="relative rounded-2xl bg-white border border-[#f0abfc]/80 p-2 sm:p-2.5 shadow-xs flex items-center gap-3 transition-all focus-within:border-[#981495] focus-within:ring-2 focus-within:ring-[#981495]/20">
+          <div className="relative rounded-2xl bg-white border border-[#E2E8F0] p-2 sm:p-2.5 shadow-xs flex items-center gap-3 transition-all focus-within:border-[#8B2FC9] focus-within:ring-2 focus-within:ring-[#8B2FC9]/20">
             <div className="flex-1 flex items-center gap-2.5 px-3 py-1">
-              <Search className="h-5 w-5 text-slate-400 shrink-0" />
+              <Search className="h-5 w-5 text-[#8B2FC9] shrink-0" />
               <input
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder={`Search products in ${store.name}...`}
-                className="w-full bg-transparent text-sm sm:text-base font-medium text-slate-900 outline-none placeholder:text-slate-400"
+                className="w-full bg-transparent text-sm sm:text-base font-medium text-[#0F172A] outline-none placeholder:text-[#8E82A3]"
               />
               {query && (
                 <button
@@ -845,8 +859,8 @@ function StorePage({ catalog }: { catalog?: ReturnType<typeof importedStorefront
               onClick={() => setShowFilters((f) => !f)}
               className={`relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-all cursor-pointer border ${
                 showFilters || minPrice || maxPrice || sortBy !== "popular"
-                  ? "bg-[#981495] text-white border-[#981495]"
-                  : "bg-[var(--sand)] text-[#981495] hover:bg-[#981495] hover:text-white border-[#f0abfc]/60"
+                  ? "bg-[#8B2FC9] text-white border-[#8B2FC9] shadow-xs"
+                  : "bg-[#F8FAFC] text-[#8B2FC9] hover:bg-[#8B2FC9] hover:text-white border-[#E2E8F0]"
               }`}
               title="Toggle filters"
             >
@@ -861,7 +875,7 @@ function StorePage({ catalog }: { catalog?: ReturnType<typeof importedStorefront
 
           {/* Horizontal Scrollable Category Chips for fast mobile browsing */}
           {productCategories.length > 1 && (
-            <div className="flex items-center gap-2.5 overflow-x-auto pb-1.5 pt-0.5 no-scrollbar scroll-smooth">
+            <div className="flex items-center gap-2 overflow-x-auto pb-1.5 pt-0.5 no-scrollbar scroll-smooth">
               {productCategories.map((cat) => {
                 const active =
                   selectedCategory.toLowerCase() === cat.id.toLowerCase() ||
@@ -872,17 +886,17 @@ function StorePage({ catalog }: { catalog?: ReturnType<typeof importedStorefront
                     key={cat.id}
                     type="button"
                     onClick={() => setSelectedCategory(cat.id)}
-                    className={`inline-flex shrink-0 items-center gap-2 rounded-full px-4 py-2 text-xs font-bold transition-all cursor-pointer border ${
+                    className={`inline-flex shrink-0 items-center gap-2 rounded-full px-4 py-2 text-xs font-bold transition-all cursor-pointer border select-none ${
                       active
-                        ? "bg-[#981495] text-white border-[#981495] shadow-xs"
-                        : "bg-white text-slate-700 hover:text-[#981495] hover:bg-purple-50/50 border-slate-200/90 hover:border-purple-200 shadow-2xs"
+                        ? "bg-[#8B2FC9] text-white border-[#8B2FC9] shadow-[0_4px_14px_rgba(168,56,189,0.25)] scale-[1.02]"
+                        : "bg-white text-[#64748B] hover:text-[#0F172A] hover:bg-[#F8FAFC] border-[#E2E8F0] hover:border-[#E2E8F0] shadow-2xs"
                     }`}
                   >
-                    <IconComponent className={`h-4 w-4 shrink-0 ${active ? "text-white" : "text-[#981495]"}`} />
+                    <IconComponent className={`h-3.5 w-3.5 shrink-0 ${active ? "text-white" : "text-[#8B2FC9]"}`} />
                     <span>{cat.name}</span>
                     <span
                       className={`rounded-full px-2 py-0.5 text-[10px] font-extrabold ${
-                        active ? "bg-white/20 text-white" : "bg-slate-100 text-slate-500"
+                        active ? "bg-white/20 text-white" : "bg-[#F8FAFC] text-[#64748B] border border-[#E2E8F0]"
                       }`}
                     >
                       {cat.count}
@@ -895,7 +909,7 @@ function StorePage({ catalog }: { catalog?: ReturnType<typeof importedStorefront
 
           {/* Collapsible compact inline filters */}
           {showFilters && (
-            <div className="rounded-2xl bg-white border border-[#f0abfc]/80 p-4 shadow-sm flex flex-wrap items-end gap-4">
+            <div className="rounded-2xl bg-white border border-[#E2E8F0] p-4 shadow-sm flex flex-wrap items-end gap-4">
               {/* Price Range */}
               <div className="flex items-end gap-2">
                 <div>
@@ -905,7 +919,7 @@ function StorePage({ catalog }: { catalog?: ReturnType<typeof importedStorefront
                     placeholder="Min"
                     value={minPrice}
                     onChange={(e) => setMinPrice(e.target.value)}
-                    className="w-24 rounded-xl border border-[#f0abfc]/70 px-3 py-1.5 text-xs font-bold text-slate-900 outline-none focus:border-[#981495] bg-slate-50/50"
+                    className="w-24 rounded-xl border border-[#E2E8F0] px-3 py-1.5 text-xs font-bold text-slate-900 outline-none focus:border-[#8B2FC9] bg-slate-50/50"
                   />
                 </div>
                 <span className="text-slate-400 font-bold text-sm mb-1.5">–</span>
@@ -916,7 +930,7 @@ function StorePage({ catalog }: { catalog?: ReturnType<typeof importedStorefront
                     placeholder="Max"
                     value={maxPrice}
                     onChange={(e) => setMaxPrice(e.target.value)}
-                    className="w-24 rounded-xl border border-[#f0abfc]/70 px-3 py-1.5 text-xs font-bold text-slate-900 outline-none focus:border-[#981495] bg-slate-50/50"
+                    className="w-24 rounded-xl border border-[#E2E8F0] px-3 py-1.5 text-xs font-bold text-slate-900 outline-none focus:border-[#8B2FC9] bg-slate-50/50"
                   />
                 </div>
               </div>
@@ -935,10 +949,10 @@ function StorePage({ catalog }: { catalog?: ReturnType<typeof importedStorefront
                       key={opt.id}
                       type="button"
                       onClick={() => setSortBy(opt.id as any)}
-                      className={`rounded-full px-3 py-1.5 text-xs font-bold transition-all ${
+                      className={`rounded-full px-3 py-1.5 text-xs font-bold transition-all cursor-pointer ${
                         active
-                          ? "bg-[#981495] text-white shadow-xs"
-                          : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                          ? "bg-[#8B2FC9] text-white shadow-xs"
+                          : "bg-[#F8FAFC] text-[#64748B] hover:bg-[#F1F5F9] hover:text-[#0F172A] border border-[#E2E8F0]"
                       }`}
                     >
                       {opt.label}
@@ -957,7 +971,7 @@ function StorePage({ catalog }: { catalog?: ReturnType<typeof importedStorefront
                     setSortBy("popular");
                     setSelectedCategory("all");
                   }}
-                  className="text-xs font-bold text-[#981495] hover:underline ml-auto"
+                  className="text-xs font-bold text-[#8B2FC9] hover:underline ml-auto cursor-pointer"
                 >
                   Reset filters
                 </button>
@@ -1081,24 +1095,25 @@ function StorePage({ catalog }: { catalog?: ReturnType<typeof importedStorefront
                     initial={{ opacity: 0, y: 10 }}
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true, amount: 0.15 }}
-                    className="group relative flex flex-col justify-between overflow-hidden rounded-2xl border border-slate-200/90 bg-[#fffafd] p-3 shadow-xs hover:border-[#f0abfc] hover:shadow-md transition-all duration-200"
+                    className="group relative flex flex-col justify-between overflow-hidden rounded-2xl border border-[#E2E8F0] bg-white p-3 shadow-xs hover:border-[#8B2FC9]/50 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200"
                   >
                     <div>
                       {/* Top Image Frame with floating badges */}
-                      <div className="relative aspect-square w-full overflow-hidden rounded-xl bg-slate-50/90 border border-slate-100 p-2 flex items-center justify-center">
+                      <div className="relative aspect-square w-full overflow-hidden rounded-xl bg-[#FAF6FC] border border-[#F2E8FA] p-2 flex items-center justify-center">
                         {/* Wishlist Button top-right */}
                         <div className="absolute right-2 top-2 z-10">
                           <WishlistButton
                             productId={p.id}
                             productName={p.name}
-                          item={{
-                            productId: p.id,
-                            name: p.name,
-                            shopName: p.shopName || store.name,
+                            item={{
+                              productId: p.id,
+                              name: p.name,
+                              shopName: p.shopName || store.name,
                               category: p.category,
                               price: p.price,
                               imageUrl: p.imageUrl,
                               sellerId: p.storeId,
+                              itemType: "shop",
                             }}
                           />
                         </div>
@@ -1109,25 +1124,24 @@ function StorePage({ catalog }: { catalog?: ReturnType<typeof importedStorefront
                         </div>
 
                         <Link to="/product/$productId" params={{ productId: p.id }} search={isImported ? { shopLat: store.lat, shopLng: store.lng } : {}} aria-label={`View details for ${p.name}`} className="block h-full w-full">
-                        <ProductThumb
-                          src={p.imageUrl}
-                          alt={p.name}
-                          // Validate the image against the product's own
-                          // category. The shop can be opened from a category
-                          // result even when its legacy store category differs.
-                          category={p.category as Store["category"]}
-                          size="lg"
-                        />
+                          <ProductThumb
+                            src={p.imageUrl}
+                            alt={p.name}
+                            category={p.category as Store["category"]}
+                            size="lg"
+                            fit="cover"
+                            className="h-full w-full rounded-lg group-hover:scale-105 transition-transform duration-300"
+                          />
                         </Link>
 
-                        {/* ADD Button positioned at bottom-right corner of image frame (Matching Image 2 position!) */}
+                        {/* ADD Button positioned at bottom-right corner of image frame */}
                         <div className="absolute right-2 bottom-2 z-20">
                           {q === 0 ? (
                             <button
                               type="button"
                               onClick={(event) => addProductToCart(p, event)}
                               disabled={!Number.isSafeInteger(p.stock) || Number(p.stock) <= 0}
-                              className="rounded-lg bg-[#fffafd] border border-emerald-600 text-emerald-700 hover:bg-emerald-600 hover:text-white px-3.5 py-1 text-xs font-black uppercase tracking-wider shadow-sm transition-all active:scale-95 cursor-pointer flex items-center gap-1"
+                              className="rounded-lg bg-white/95 border border-[#8B2FC9] text-[#8B2FC9] hover:bg-[#8B2FC9] hover:text-white px-3.5 py-1 text-xs font-black uppercase tracking-wider shadow-xs transition-all active:scale-95 cursor-pointer flex items-center gap-1 backdrop-blur-xs"
                             >
                               <span>{Number.isSafeInteger(p.stock) && Number(p.stock) > 0 ? "ADD" : "Out of stock"}</span>
                             </button>
@@ -1137,7 +1151,7 @@ function StorePage({ catalog }: { catalog?: ReturnType<typeof importedStorefront
                               max={p.stock}
                               onAdd={() => addProductToCart(p)}
                               onChange={(n) => cartStore.setQty(p.id, n)}
-                              addClassName="rounded-lg bg-emerald-700 text-white px-2 py-0.5 text-xs font-bold shadow-sm"
+                              addClassName="rounded-lg bg-[#8B2FC9] text-white px-2 py-0.5 text-xs font-bold shadow-sm"
                             />
                           )}
                         </div>
@@ -1158,51 +1172,53 @@ function StorePage({ catalog }: { catalog?: ReturnType<typeof importedStorefront
                       >
                         {/* Price line with strikethrough MRP */}
                         <div className="flex items-baseline gap-2">
-                          <span className="text-base font-black text-slate-900">
+                          <span className="text-base font-black text-[#0F172A]">
                             ₹{p.price.toLocaleString("en-IN")}
                           </span>
                           {mrp && mrp > p.price && (
-                            <span className="text-xs font-semibold text-slate-400 line-through">
+                            <span className="text-xs font-semibold text-[#8E82A3] line-through">
                               ₹{mrp.toLocaleString("en-IN")}
                             </span>
                           )}
                         </div>
 
                         {discountPct > 0 && (
-                          <p className="text-[11px] font-extrabold text-blue-600 uppercase tracking-tight">
-                            {discountPct}% OFF ON MRP
+                          <p className="text-[10px] font-extrabold text-emerald-700 uppercase tracking-tight">
+                            {discountPct}% OFF
                           </p>
                         )}
 
                         {/* Title */}
-                        <h3 className="line-clamp-2 text-xs sm:text-sm font-bold text-slate-800 leading-snug group-hover:text-[#981495] transition-colors">
+                        <h3 className="line-clamp-2 text-xs sm:text-sm font-bold text-[#0F172A] leading-snug group-hover:text-[#8B2FC9] transition-colors">
                           {p.name}
                         </h3>
 
                         {p.shopName && (
-                          <p className="truncate pt-0.5 text-[11px] font-medium text-slate-500">
+                          <p className="truncate pt-0.5 text-[11px] font-medium text-[#64748B]">
                             {isImported ? "Catalog for" : "Sold by"} {p.shopName}
                           </p>
                         )}
 
                         {/* Rating & ETA */}
-                        {isImported ? <p className="text-[11px] text-muted-foreground">Representative item · sample price</p> : (
-                        <div className="flex items-center gap-2 pt-0.5 text-[11px] font-bold text-slate-600">
-                          <span className="flex items-center gap-0.5 text-amber-600">
-                            <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
-                            4.8
-                          </span>
-                          <span className="text-slate-300">•</span>
-                          {deliveryLoc && (
-                            <span className="text-slate-500">⏱ {computedEtaMin} mins</span>
-                          )}
-                        </div>
+                        {isImported ? (
+                          <p className="text-[11px] text-muted-foreground">Representative item · sample price</p>
+                        ) : (
+                          <div className="flex items-center gap-2 pt-0.5 text-[11px] font-bold text-[#64748B]">
+                            <span className="flex items-center gap-0.5 text-amber-700">
+                              <Star className="h-3 w-3 fill-amber-400 text-amber-500" />
+                              4.8
+                            </span>
+                            <span className="text-slate-300">•</span>
+                            {deliveryLoc && (
+                              <span className="text-[#64748B]">⏱ {computedEtaMin} mins</span>
+                            )}
+                          </div>
                         )}
 
                         {/* Category pill with arrow */}
                         <div className="pt-1">
-                          <span className="inline-flex items-center gap-1 rounded-md bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-600 group-hover:bg-[var(--sand)] group-hover:text-[#981495] transition-colors">
-                            <span>All {p.category || "Item"}</span>
+                          <span className="inline-flex items-center gap-1 rounded-md bg-[#F8FAFC] px-2 py-0.5 text-[10px] font-bold text-[#64748B] group-hover:bg-[#F1F5F9] group-hover:text-[#8B2FC9] border border-[#E2E8F0] transition-colors">
+                            <span>{p.category || "Item"}</span>
                             <span className="text-[8px]">▶</span>
                           </span>
                         </div>

@@ -1581,14 +1581,1115 @@ const categoryCoverageStores: Store[] = categoryCoverageSeeds.flatMap((seed, cat
   })),
 );
 
+export const extraDiscoveredStores: Store[] = [
+  {
+    "id": "s_book_nook",
+    "name": "The Book Nook & Stationery",
+    "category": "books_stationery",
+    "rating": 4.8,
+    "imageUrl": "https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&w=400&q=80",
+    "address": "Diwan Bahadur Road, RS Puram, Coimbatore",
+    "lat": 11.0138,
+    "lng": 76.9538,
+    "tagline": "Authentic local Books & Stationery",
+    "distanceKm": 1,
+    "isOpen": true,
+    "etaMin": 25
+  },
+  {
+    "id": "s_paap1",
+    "name": "Ravi's Artisan Bakery",
+    "category": "bakery",
+    "rating": 4.7,
+    "imageUrl": "https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=400&q=80",
+    "address": "DB Road, RS Puram, Coimbatore",
+    "lat": 11.0125,
+    "lng": 76.9535,
+    "tagline": "Authentic local Bakery & Sweets",
+    "distanceKm": 1,
+    "isOpen": true,
+    "etaMin": 25
+  },
+  {
+    "id": "s_kovai_fresh",
+    "name": "Kovai Fresh Mart",
+    "category": "palamuthir",
+    "rating": 4.6,
+    "imageUrl": "https://images.unsplash.com/photo-1610832958506-aa56368176cf?auto=format&fit=crop&w=400&q=80",
+    "address": "NSR Road, Saibaba Colony, Coimbatore",
+    "lat": 11.025,
+    "lng": 76.945,
+    "tagline": "Authentic local Fresh Produce",
+    "distanceKm": 1,
+    "isOpen": true,
+    "etaMin": 25
+  },
+  {
+    "id": "s_apollo_ramnagar",
+    "name": "Apollo Pharmacy",
+    "category": "pharmacy",
+    "rating": 4.8,
+    "imageUrl": "https://images.unsplash.com/photo-1587854692152-cbe660dbde88?auto=format&fit=crop&w=400&q=80",
+    "address": "Cross Cut Road, Ram Nagar, Coimbatore",
+    "lat": 11.018,
+    "lng": 76.962,
+    "tagline": "Authentic local Pharmacy & Healthcare",
+    "distanceKm": 1,
+    "isOpen": true,
+    "etaMin": 25
+  },
+  {
+    "id": "s_kovilmedu_medicals",
+    "name": "Kovilmedu Care Medicals",
+    "category": "pharmacy",
+    "rating": 4.8,
+    "imageUrl": "https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?auto=format&fit=crop&w=400&q=80",
+    "address": "Junction Arch, Kovilmedu, Coimbatore",
+    "lat": 11.0286,
+    "lng": 76.9256,
+    "tagline": "Authentic local Individual Pharmacy",
+    "distanceKm": 1,
+    "isOpen": true,
+    "etaMin": 25
+  },
+  {
+    "id": "s_roja_bakes",
+    "name": "Roja Bakes & Sweets",
+    "category": "bakery",
+    "rating": 4.9,
+    "imageUrl": "https://images.unsplash.com/photo-1555507036-ab1f4038808a?auto=format&fit=crop&w=400&q=80",
+    "address": "Thadagam Main Road, Kovilmedu, Coimbatore",
+    "lat": 11.0288,
+    "lng": 76.926,
+    "tagline": "Authentic local Bakery & Sweets",
+    "distanceKm": 1,
+    "isOpen": true,
+    "etaMin": 25
+  },
+  {
+    "id": "s_amman_flour",
+    "name": "Sri Amman Flour & Masala Mill",
+    "category": "flour_mill",
+    "rating": 4.9,
+    "imageUrl": "https://images.unsplash.com/photo-1586201375761-83865001e31c?auto=format&fit=crop&w=400&q=80",
+    "address": "Temple Street, Kovilmedu, Coimbatore",
+    "lat": 11.0278,
+    "lng": 76.925,
+    "tagline": "Authentic local Flour & Masala Mill",
+    "distanceKm": 1,
+    "isOpen": true,
+    "etaMin": 25
+  },
+  {
+    "id": "s_boutique1",
+    "name": "StyleHub Apparel",
+    "category": "fashion",
+    "rating": 4.8,
+    "imageUrl": "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&w=400&q=80",
+    "address": "Cross Cut Road, Gandhipuram, Coimbatore",
+    "lat": 11.0195,
+    "lng": 76.9682,
+    "tagline": "Authentic local Individual Fashion",
+    "distanceKm": 1,
+    "isOpen": true,
+    "etaMin": 25
+  },
+  {
+    "id": "s_paap4",
+    "name": "City Bites Kitchen & Mess",
+    "category": "restaurants",
+    "rating": 4.9,
+    "imageUrl": "https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?auto=format&fit=crop&w=400&q=80",
+    "address": "Trichy Road, Sungam Junction, Coimbatore",
+    "lat": 10.9995,
+    "lng": 76.9745,
+    "tagline": "Authentic local Restaurants & Dining",
+    "distanceKm": 1,
+    "isOpen": true,
+    "etaMin": 25
+  },
+  {
+    "id": "s_sweets1",
+    "name": "Sri Krishna Sweets",
+    "category": "bakery",
+    "rating": 4.9,
+    "imageUrl": "https://images.unsplash.com/photo-1582293041079-7814c2f12063?auto=format&fit=crop&w=400&q=80",
+    "address": "Diwan Bahadur Road, RS Puram, Coimbatore",
+    "lat": 11.0135,
+    "lng": 76.9542,
+    "tagline": "Authentic local Bakery & Sweets",
+    "distanceKm": 1,
+    "isOpen": true,
+    "etaMin": 25
+  },
+  {
+    "id": "s_kovil_chicken",
+    "name": "Kongu Country Chicken Stall",
+    "category": "meat_fish",
+    "rating": 4.8,
+    "imageUrl": "https://images.unsplash.com/photo-1607623814075-e51df1bdc82f?auto=format&fit=crop&w=400&q=80",
+    "address": "West Corner, Kovilmedu, Coimbatore",
+    "lat": 11.0274,
+    "lng": 76.9245,
+    "tagline": "Authentic local Meat, Fish & Chicken",
+    "distanceKm": 1,
+    "isOpen": true,
+    "etaMin": 25
+  },
+  {
+    "id": "s_kovil_super",
+    "name": "Kovilmedu Supermarket",
+    "category": "supermarkets",
+    "rating": 4.7,
+    "imageUrl": "https://images.unsplash.com/photo-1578916171728-46686eac8d58?auto=format&fit=crop&w=400&q=80",
+    "address": "Bus Stop Junction, Kovilmedu, Coimbatore",
+    "lat": 11.0292,
+    "lng": 76.9265,
+    "tagline": "Authentic local Kirana & Grocery",
+    "distanceKm": 1,
+    "isOpen": true,
+    "etaMin": 25
+  },
+  {
+    "id": "s_meenakshi_fashions",
+    "name": "Meenakshi Fashions & Sarees",
+    "category": "fashion",
+    "rating": 4.6,
+    "imageUrl": "https://images.unsplash.com/photo-1558769132-cb1aea458c5e?auto=format&fit=crop&w=400&q=80",
+    "address": "Near Panchayat Office, Kovilmedu, Coimbatore",
+    "lat": 11.0298,
+    "lng": 76.927,
+    "tagline": "Authentic local Individual Fashion",
+    "distanceKm": 1,
+    "isOpen": true,
+    "etaMin": 25
+  },
+  {
+    "id": "s_anand_organics",
+    "name": "Kovilmedu Organics & Millets",
+    "category": "palamuthir",
+    "rating": 4.9,
+    "imageUrl": "https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=400&q=80",
+    "address": "School Road, Kovilmedu, Coimbatore",
+    "lat": 11.0282,
+    "lng": 76.9238,
+    "tagline": "Authentic local Organic Grocery",
+    "distanceKm": 1,
+    "isOpen": true,
+    "etaMin": 25
+  },
+  {
+    "id": "s_cbe_doraisingh",
+    "name": "Doraisingh Supermarket",
+    "category": "supermarkets",
+    "rating": 4.8,
+    "imageUrl": "https://images.unsplash.com/photo-1586201375761-83865001e31c?auto=format&fit=crop&w=400&q=80",
+    "address": "7th Street, Gandhipuram, Coimbatore",
+    "lat": 11.0182,
+    "lng": 76.9677,
+    "tagline": "Authentic local Kirana & Grocery",
+    "distanceKm": 1,
+    "isOpen": true,
+    "etaMin": 25
+  },
+  {
+    "id": "s_cbe_pothys",
+    "name": "POTHYS Gandhipuram",
+    "category": "fashion",
+    "rating": 4.7,
+    "imageUrl": "https://images.unsplash.com/photo-1489987707025-afc232f7ea0f?auto=format&fit=crop&w=400&q=80",
+    "address": "Cross Cut Road, Gandhipuram, Coimbatore",
+    "lat": 11.0182,
+    "lng": 76.9677,
+    "tagline": "Authentic local Fashion & Textiles",
+    "distanceKm": 1,
+    "isOpen": true,
+    "etaMin": 25
+  },
+  {
+    "id": "s_cbe_poorvika",
+    "name": "Poorvika Mobiles Vadavalli",
+    "category": "electronics",
+    "rating": 4.6,
+    "imageUrl": "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?auto=format&fit=crop&w=400&q=80",
+    "address": "Marudhamalai Main Rd, Vadavalli, Coimbatore",
+    "lat": 11.0253,
+    "lng": 76.9051,
+    "tagline": "Authentic local Electronics & Mobile",
+    "distanceKm": 1,
+    "isOpen": true,
+    "etaMin": 25
+  },
+  {
+    "id": "s_cbe_cheran",
+    "name": "Cheran Mart",
+    "category": "supermarkets",
+    "rating": 4.7,
+    "imageUrl": "https://images.unsplash.com/photo-1578916171728-46686eac8d58?auto=format&fit=crop&w=400&q=80",
+    "address": "Kalapatti Main Rd, Coimbatore",
+    "lat": 11.0787,
+    "lng": 77.037,
+    "tagline": "Authentic local Kirana & Grocery",
+    "distanceKm": 1,
+    "isOpen": true,
+    "etaMin": 25
+  },
+  {
+    "id": "s_jp_books",
+    "name": "The Book Nook & Stationery (JP Nagar)",
+    "category": "books_stationery",
+    "rating": 4.8,
+    "imageUrl": "https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&w=400&q=80",
+    "address": "24th Main, JP Nagar 2nd Phase, Bengaluru",
+    "lat": 12.914,
+    "lng": 77.5825,
+    "tagline": "Authentic local Books & Stationery",
+    "distanceKm": 1,
+    "isOpen": true,
+    "etaMin": 25
+  },
+  {
+    "id": "s_jp_bakery",
+    "name": "Ravi's Artisan Bakery (JP Nagar)",
+    "category": "bakery",
+    "rating": 4.9,
+    "imageUrl": "/assets/ravis-sourdough-hero.jpg",
+    "address": "24th Main Road, JP Nagar 2nd Phase, Bengaluru",
+    "lat": 12.9125,
+    "lng": 77.584,
+    "tagline": "Authentic local Bakery & Sweets",
+    "distanceKm": 1,
+    "isOpen": true,
+    "etaMin": 25
+  },
+  {
+    "id": "s_jp_produce",
+    "name": "Namma Fresh Produce & Organics",
+    "category": "palamuthir",
+    "rating": 4.9,
+    "imageUrl": "https://images.unsplash.com/photo-1610832958506-aa56368176cf?auto=format&fit=crop&w=400&q=80",
+    "address": "Ring Road Junction, JP Nagar 2nd Phase, Bengaluru",
+    "lat": 12.9082,
+    "lng": 77.5878,
+    "tagline": "Authentic local Fresh Produce",
+    "distanceKm": 1,
+    "isOpen": true,
+    "etaMin": 25
+  },
+  {
+    "id": "s_jp_medicals",
+    "name": "Apollo Pharmacy & Care - JP Nagar",
+    "category": "pharmacy",
+    "rating": 4.8,
+    "imageUrl": "https://images.unsplash.com/photo-1587854692152-cbe660dbde88?auto=format&fit=crop&w=400&q=80",
+    "address": "15th Main Road, JP Nagar 2nd Phase, Bengaluru",
+    "lat": 12.9112,
+    "lng": 77.5852,
+    "tagline": "Authentic local Pharmacy & Healthcare",
+    "distanceKm": 1,
+    "isOpen": true,
+    "etaMin": 25
+  },
+  {
+    "id": "s_jp_apparel",
+    "name": "JP Nagar Readymades & Menswear",
+    "category": "fashion",
+    "rating": 4.8,
+    "imageUrl": "https://images.unsplash.com/photo-1441986300917-64674bd600d8?auto=format&fit=crop&w=400&q=80",
+    "address": "15th Main Road, JP Nagar 2nd Phase, Bengaluru",
+    "lat": 12.9055,
+    "lng": 77.591,
+    "tagline": "Authentic local Individual Fashion",
+    "distanceKm": 1,
+    "isOpen": true,
+    "etaMin": 25
+  },
+  {
+    "id": "s_jp_dining",
+    "name": "City Bites Kitchen & Mess (JP Nagar)",
+    "category": "restaurants",
+    "rating": 4.8,
+    "imageUrl": "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=400&q=80",
+    "address": "14th Cross Rd, JP Nagar 2nd Phase, Bengaluru",
+    "lat": 12.9135,
+    "lng": 77.5868,
+    "tagline": "Authentic local Restaurants & Dining",
+    "distanceKm": 1,
+    "isOpen": true,
+    "etaMin": 25
+  },
+  {
+    "id": "s_jp_sweets",
+    "name": "Sri Krishna Sweets & Bakes",
+    "category": "bakery",
+    "rating": 4.9,
+    "imageUrl": "https://images.unsplash.com/photo-1582293041079-7814c2f12063?auto=format&fit=crop&w=400&q=80",
+    "address": "100 Feet Ring Road, JP Nagar 2nd Phase, Bengaluru",
+    "lat": 12.907,
+    "lng": 77.589,
+    "tagline": "Authentic local Bakery & Sweets",
+    "distanceKm": 1,
+    "isOpen": true,
+    "etaMin": 25
+  },
+  {
+    "id": "s_jp_mill",
+    "name": "Sri Amman Flour & Grain Mill",
+    "category": "flour_mill",
+    "rating": 4.9,
+    "imageUrl": "https://images.unsplash.com/photo-1586201375761-83865001e31c?auto=format&fit=crop&w=400&q=80",
+    "address": "9th Cross, JP Nagar 2nd Phase, Bengaluru",
+    "lat": 12.9095,
+    "lng": 77.5865,
+    "tagline": "Authentic local Flour & Masala Mill",
+    "distanceKm": 1,
+    "isOpen": true,
+    "etaMin": 25
+  },
+  {
+    "id": "s_jp_kirana",
+    "name": "JP Nagar Supermarket & Provisions",
+    "category": "supermarkets",
+    "rating": 4.8,
+    "imageUrl": "https://images.unsplash.com/photo-1578916171728-46686eac8d58?auto=format&fit=crop&w=400&q=80",
+    "address": "21st Main, JP Nagar 2nd Phase, Bengaluru",
+    "lat": 12.909,
+    "lng": 77.583,
+    "tagline": "Authentic local Kirana & Grocery",
+    "distanceKm": 1,
+    "isOpen": true,
+    "etaMin": 25
+  },
+  {
+    "id": "s_jp_boutique",
+    "name": "StyleHub Boutique & Apparel",
+    "category": "fashion",
+    "rating": 4.8,
+    "imageUrl": "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&w=400&q=80",
+    "address": "Bannerghatta Main Road, JP Nagar 3rd Phase, Bengaluru",
+    "lat": 12.9055,
+    "lng": 77.591,
+    "tagline": "Authentic local Individual Fashion",
+    "distanceKm": 1,
+    "isOpen": true,
+    "etaMin": 25
+  },
+  {
+    "id": "s_jp_organics",
+    "name": "Green Leaf Organics & Farm Produce",
+    "category": "palamuthir",
+    "rating": 4.8,
+    "imageUrl": "https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=400&q=80",
+    "address": "6th Main, JP Nagar 3rd Phase, Bengaluru",
+    "lat": 12.9045,
+    "lng": 77.5925,
+    "tagline": "Authentic local Organic Fruits & Vegetables",
+    "distanceKm": 1,
+    "isOpen": true,
+    "etaMin": 25
+  },
+  {
+    "id": "s_jp_croma",
+    "name": "Croma Electronics & Mobiles",
+    "category": "electronics",
+    "rating": 4.7,
+    "imageUrl": "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?auto=format&fit=crop&w=400&q=80",
+    "address": "Outer Ring Road, JP Nagar 2nd Phase, Bengaluru",
+    "lat": 12.9065,
+    "lng": 77.584,
+    "tagline": "Authentic local Electronics & Smart Devices",
+    "distanceKm": 1,
+    "isOpen": true,
+    "etaMin": 25
+  },
+  {
+    "id": "s_jp_kongu",
+    "name": "Kongu Country Kitchen (JP Nagar)",
+    "category": "restaurants",
+    "rating": 4.9,
+    "imageUrl": "https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?auto=format&fit=crop&w=400&q=80",
+    "address": "5th Phase Ring Rd, JP Nagar, Bengaluru",
+    "lat": 12.903,
+    "lng": 77.587,
+    "tagline": "Authentic local South Indian Mess & Kitchen",
+    "distanceKm": 1,
+    "isOpen": true,
+    "etaMin": 25
+  },
+  {
+    "id": "s_jp_meats",
+    "name": "Fresh Catch Seafood & Country Cuts",
+    "category": "meat_fish",
+    "rating": 4.8,
+    "imageUrl": "https://images.unsplash.com/photo-1607623814075-e51df1bdc82f?auto=format&fit=crop&w=400&q=80",
+    "address": "8th Main Road, JP Nagar 3rd Phase, Bengaluru",
+    "lat": 12.904,
+    "lng": 77.594,
+    "tagline": "Authentic local Meat, Fish & Chicken",
+    "distanceKm": 1,
+    "isOpen": true,
+    "etaMin": 25
+  },
+  {
+    "id": "s_jp_meena",
+    "name": "Meena General Store & Spices",
+    "category": "supermarkets",
+    "rating": 4.7,
+    "imageUrl": "https://images.unsplash.com/photo-1583391733956-6c78276477e2?auto=format&fit=crop&w=400&q=80",
+    "address": "12th Cross, JP Nagar 2nd Phase, Bengaluru",
+    "lat": 12.9118,
+    "lng": 77.5885,
+    "tagline": "Authentic local Kirana & Spices",
+    "distanceKm": 1,
+    "isOpen": true,
+    "etaMin": 25
+  },
+  {
+    "id": "s_blr_jayanagar",
+    "name": "Jayanagar Market Provisions",
+    "category": "supermarkets",
+    "rating": 4.7,
+    "imageUrl": "https://images.unsplash.com/photo-1586201375761-83865001e31c?auto=format&fit=crop&w=400&q=80",
+    "address": "4th Block, Jayanagar, Bengaluru",
+    "lat": 12.9292,
+    "lng": 77.5824,
+    "tagline": "Authentic local Kirana & Grocery",
+    "distanceKm": 1,
+    "isOpen": true,
+    "etaMin": 25
+  },
+  {
+    "id": "s_blr_mywow",
+    "name": "MY WOW Fashion & Trends",
+    "category": "fashion",
+    "rating": 4.8,
+    "imageUrl": "https://images.unsplash.com/photo-1489987707025-afc232f7ea0f?auto=format&fit=crop&w=400&q=80",
+    "address": "11th Main, Jayanagar 4th Block, Bengaluru",
+    "lat": 12.9292,
+    "lng": 77.5824,
+    "tagline": "Authentic local Clothing & Fashion",
+    "distanceKm": 1,
+    "isOpen": true,
+    "etaMin": 25
+  },
+  {
+    "id": "s_blr_gtworld",
+    "name": "GT World Mall Stores",
+    "category": "supermarkets",
+    "rating": 4.6,
+    "imageUrl": "https://images.unsplash.com/photo-1513519245088-0e12902e5a38?auto=format&fit=crop&w=400&q=80",
+    "address": "Magadi Main Rd, Vijayanagar, Bengaluru",
+    "lat": 12.9709,
+    "lng": 77.5373,
+    "tagline": "Authentic local Shopping & Lifestyle",
+    "distanceKm": 1,
+    "isOpen": true,
+    "etaMin": 25
+  },
+  {
+    "id": "s_kiran1",
+    "name": "Meena Fresh Produce",
+    "imageUrl": "https://images.unsplash.com/photo-1553279768-865429fa0078?auto=format&fit=crop&w=400&q=80",
+    "address": "Saibaba Colony",
+    "category": "palamuthir",
+    "rating": 4.8,
+    "distanceKm": 0.8,
+    "isOpen": true,
+    "etaMin": 20,
+    "tagline": "Curated local storefront for Meena Fresh Produce",
+    "lat": 11.0138,
+    "lng": 76.9538
+  },
+  {
+    "id": "s_haribhavanam",
+    "name": "City Bites Kitchen",
+    "imageUrl": "https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?auto=format&fit=crop&w=400&q=80",
+    "address": "RS Puram, Coimbatore",
+    "category": "restaurants",
+    "rating": 4.8,
+    "distanceKm": 0.8,
+    "isOpen": true,
+    "etaMin": 20,
+    "tagline": "Curated local storefront for City Bites Kitchen",
+    "lat": 11.0138,
+    "lng": 76.9538
+  },
+  {
+    "id": "s_groc2",
+    "name": "Kumar Stores Groceries",
+    "imageUrl": "https://images.unsplash.com/photo-1604719312566-8912e9227c6a?auto=format&fit=crop&w=400&q=80",
+    "address": "Gandhipuram, Coimbatore",
+    "category": "supermarkets",
+    "rating": 4.8,
+    "distanceKm": 0.8,
+    "isOpen": true,
+    "etaMin": 20,
+    "tagline": "Curated local storefront for Kumar Stores Groceries",
+    "lat": 11.0138,
+    "lng": 76.9538
+  },
+  {
+    "id": "s_tiffin1",
+    "name": "Annapoorna Tiffin",
+    "imageUrl": "https://images.unsplash.com/photo-1589301760014-d929f3979dbc?auto=format&fit=crop&w=400&q=80",
+    "address": "Gandhipuram, Coimbatore",
+    "category": "restaurants",
+    "rating": 4.8,
+    "distanceKm": 0.8,
+    "isOpen": true,
+    "etaMin": 20,
+    "tagline": "Curated local storefront for Annapoorna Tiffin",
+    "lat": 11.0138,
+    "lng": 76.9538
+  },
+  {
+    "id": "s_organic1",
+    "name": "Green Farmers Organics",
+    "imageUrl": "https://images.unsplash.com/photo-1610832958506-aa56368176cf?auto=format&fit=crop&w=400&q=80",
+    "address": "Saibaba Colony, Coimbatore",
+    "category": "palamuthir",
+    "rating": 4.8,
+    "distanceKm": 0.8,
+    "isOpen": true,
+    "etaMin": 20,
+    "tagline": "Curated local storefront for Green Farmers Organics",
+    "lat": 11.0138,
+    "lng": 76.9538
+  },
+  {
+    "id": "s_kovil_pala",
+    "name": "Kovilmedu Organic Palamuthir Nilayam",
+    "imageUrl": "https://images.unsplash.com/photo-1610832958506-aa56368176cf?auto=format&fit=crop&w=400&q=80",
+    "address": "Thadagam Road, Near Bus Stop, Kovilmedu, Coimbatore",
+    "category": "palamuthir",
+    "rating": 4.8,
+    "distanceKm": 0.8,
+    "isOpen": true,
+    "etaMin": 20,
+    "tagline": "Curated local storefront for Kovilmedu Organic Palamuthir Nilayam",
+    "lat": 11.0138,
+    "lng": 76.9538
+  },
+  {
+    "id": "s_kovil_meat",
+    "name": "Kongu Country Mutton & Chicken Stall",
+    "imageUrl": "https://images.unsplash.com/photo-1607623814075-e51df1bdc82f?auto=format&fit=crop&w=400&q=80",
+    "address": "Thadagam Main Road, Kovilmedu, Coimbatore",
+    "category": "meat_fish",
+    "rating": 4.8,
+    "distanceKm": 0.8,
+    "isOpen": true,
+    "etaMin": 20,
+    "tagline": "Curated local storefront for Kongu Country Mutton & Chicken Stall",
+    "lat": 11.0138,
+    "lng": 76.9538
+  },
+  {
+    "id": "s_kovil_jewel",
+    "name": "Meenakshi Fashion Jewellery & Gift Corner",
+    "imageUrl": "https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?auto=format&fit=crop&w=400&q=80",
+    "address": "Bazaar Street, Kovilmedu, Coimbatore",
+    "category": "fashion",
+    "rating": 4.8,
+    "distanceKm": 0.8,
+    "isOpen": true,
+    "etaMin": 20,
+    "tagline": "Curated local storefront for Meenakshi Fashion Jewellery & Gift Corner",
+    "lat": 11.0138,
+    "lng": 76.9538
+  },
+  {
+    "id": "s_kovil_cloth",
+    "name": "Kovilmedu Readymades & Menswear",
+    "imageUrl": "https://images.unsplash.com/photo-1441986300917-64674bd600d8?auto=format&fit=crop&w=400&q=80",
+    "address": "Main Road, Kovilmedu, Coimbatore",
+    "category": "supermarkets",
+    "rating": 4.8,
+    "distanceKm": 0.8,
+    "isOpen": true,
+    "etaMin": 20,
+    "tagline": "Curated local storefront for Kovilmedu Readymades & Menswear",
+    "lat": 11.0138,
+    "lng": 76.9538
+  }
+];
+
+export const feedTaggedProductsMap: Record<string, any[]> = {
+  "s_kovilmedu_medicals": [
+    {
+      "id": "prod_sourdough_1",
+      "name": "Sourdough Loaf",
+      "price": 180,
+      "stock": 14,
+      "imageUrl": "/assets/ravis-sourdough-hero.jpg",
+      "unit": "loaf",
+      "storeId": "s_paap1",
+      "storeName": "Ravi's Artisan Bakery"
+    },
+    {
+      "id": "prod_croissant_1",
+      "name": "Butter Croissant",
+      "price": 70,
+      "stock": 25,
+      "imageUrl": "https://images.unsplash.com/photo-1555507036-ab1f4038808a?auto=format&fit=crop&w=400&q=80",
+      "unit": "piece",
+      "storeId": "s_paap1",
+      "storeName": "Ravi's Artisan Bakery"
+    },
+    {
+      "id": "prod_vitaminc_1",
+      "name": "Vitamin C Immune Boost (60 caps)",
+      "price": 180,
+      "stock": 40,
+      "imageUrl": "https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?auto=format&fit=crop&w=400&q=80",
+      "unit": "bottle",
+      "storeId": "s_kovilmedu_medicals",
+      "storeName": "Kovilmedu Care Medicals & Chemist"
+    },
+    {
+      "id": "prod_firstaid_1",
+      "name": "Home First-Aid Antiseptic Kit",
+      "price": 120,
+      "stock": 25,
+      "imageUrl": "https://images.unsplash.com/photo-1587854692152-cbe660dbde88?auto=format&fit=crop&w=400&q=80",
+      "unit": "kit",
+      "storeId": "s_kovilmedu_medicals",
+      "storeName": "Kovilmedu Care Medicals & Chemist"
+    }
+  ],
+  "s_kiran1": [
+    {
+      "id": "prod_mango_1",
+      "name": "Salem Alphonso Mango",
+      "price": 220,
+      "stock": 35,
+      "imageUrl": "https://images.unsplash.com/photo-1553279768-865429fa0078?auto=format&fit=crop&w=400&q=80",
+      "unit": "1 kg",
+      "storeId": "s_kiran1",
+      "storeName": "Meena Fresh Produce"
+    },
+    {
+      "id": "prod_spinach_1",
+      "name": "Organic Baby Spinach",
+      "price": 35,
+      "stock": 40,
+      "imageUrl": "https://images.unsplash.com/photo-1576045057995-568f588f82fb?auto=format&fit=crop&w=400&q=80",
+      "unit": "bunch",
+      "storeId": "s_kiran1",
+      "storeName": "Meena Fresh Produce"
+    }
+  ],
+  "s_haribhavanam": [
+    {
+      "id": "prod_biryani_1",
+      "name": "Seeraga Samba Biryani",
+      "price": 320,
+      "stock": 25,
+      "imageUrl": "https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?auto=format&fit=crop&w=400&q=80",
+      "unit": "plate",
+      "storeId": "s_haribhavanam",
+      "storeName": "City Bites Kitchen"
+    },
+    {
+      "id": "prod_chicken65_1",
+      "name": "Crispy Chicken 65",
+      "price": 180,
+      "stock": 30,
+      "imageUrl": "https://images.unsplash.com/photo-1610057099443-fde8c4d50f91?auto=format&fit=crop&w=400&q=80",
+      "unit": "portion",
+      "storeId": "s_haribhavanam",
+      "storeName": "City Bites Kitchen"
+    }
+  ],
+  "s_boutique1": [
+    {
+      "id": "prod_tshirt_1",
+      "name": "Bio-Washed Cotton Tee",
+      "price": 499,
+      "stock": 12,
+      "imageUrl": "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&w=400&q=80",
+      "unit": "piece",
+      "storeId": "s_boutique1",
+      "storeName": "StyleHub Apparel"
+    },
+    {
+      "id": "prod_chinos_1",
+      "name": "Linen Drawstring Chinos",
+      "price": 899,
+      "stock": 15,
+      "imageUrl": "https://images.unsplash.com/photo-1479064555552-3ef4979f8908?auto=format&fit=crop&w=400&q=80",
+      "unit": "pair",
+      "storeId": "s_boutique1",
+      "storeName": "StyleHub Apparel"
+    }
+  ],
+  "s_groc2": [
+    {
+      "id": "prod_oil_1",
+      "name": "Cold-Pressed Coconut Oil (1L)",
+      "price": 260,
+      "stock": 20,
+      "imageUrl": "https://images.unsplash.com/photo-1471193945509-9ad0617afabf?auto=format&fit=crop&w=400&q=80",
+      "unit": "1L bottle",
+      "storeId": "s_groc2",
+      "storeName": "Kumar Stores Groceries"
+    },
+    {
+      "id": "prod_oil_2",
+      "name": "Wood-Pressed Sesame Oil",
+      "price": 190,
+      "stock": 18,
+      "imageUrl": "https://images.unsplash.com/photo-1604719312566-8912e9227c6a?auto=format&fit=crop&w=400&q=80",
+      "unit": "500ml",
+      "storeId": "s_groc2",
+      "storeName": "Kumar Stores Groceries"
+    }
+  ],
+  "s_sweets1": [
+    {
+      "id": "prod_mysorepak_1",
+      "name": "Pure Ghee Mysore Pak (500g)",
+      "price": 340,
+      "stock": 22,
+      "imageUrl": "https://images.unsplash.com/photo-1582293041079-7814c2f12063?auto=format&fit=crop&w=400&q=80",
+      "unit": "box",
+      "storeId": "s_sweets1",
+      "storeName": "Sri Krishna Sweets"
+    },
+    {
+      "id": "prod_halwa_1",
+      "name": "Tirunelveli Wheat Halwa",
+      "price": 220,
+      "stock": 15,
+      "imageUrl": "https://images.unsplash.com/photo-1599785209707-a456fc1337bb?auto=format&fit=crop&w=400&q=80",
+      "unit": "box",
+      "storeId": "s_sweets1",
+      "storeName": "Sri Krishna Sweets"
+    }
+  ],
+  "s_tiffin1": [
+    {
+      "id": "prod_dosa_1",
+      "name": "Special Ghee Roast Dosa",
+      "price": 110,
+      "stock": 50,
+      "imageUrl": "https://images.unsplash.com/photo-1589301760014-d929f3979dbc?auto=format&fit=crop&w=400&q=80",
+      "unit": "plate",
+      "storeId": "s_tiffin1",
+      "storeName": "Annapoorna Tiffin"
+    },
+    {
+      "id": "prod_coffee_1",
+      "name": "Degree Filter Coffee (Flask)",
+      "price": 80,
+      "stock": 35,
+      "imageUrl": "https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?auto=format&fit=crop&w=400&q=80",
+      "unit": "flask",
+      "storeId": "s_tiffin1",
+      "storeName": "Annapoorna Tiffin"
+    }
+  ],
+  "s_organic1": [
+    {
+      "id": "prod_country_eggs_1",
+      "name": "Free-Range Country Eggs (6 pcs)",
+      "price": 90,
+      "stock": 25,
+      "imageUrl": "https://images.unsplash.com/photo-1518492104633-130d0cc84637?auto=format&fit=crop&w=400&q=80",
+      "unit": "pack",
+      "storeId": "s_organic1",
+      "storeName": "Green Farmers Organics"
+    },
+    {
+      "id": "prod_palak_1",
+      "name": "Pollachi Farm Fresh Palak",
+      "price": 25,
+      "stock": 30,
+      "imageUrl": "https://images.unsplash.com/photo-1540420773420-3366772f4999?auto=format&fit=crop&w=400&q=80",
+      "unit": "bunch",
+      "storeId": "s_organic1",
+      "storeName": "Green Farmers Organics"
+    }
+  ],
+  "s_roja_bakes": [
+    {
+      "id": "prod_eggpuff_1",
+      "name": "Crispy Masala Egg Puff (2 pcs)",
+      "price": 50,
+      "stock": 35,
+      "imageUrl": "https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=400&q=80",
+      "unit": "plate",
+      "storeId": "s_roja_bakes",
+      "storeName": "Roja Bakes & Sweets"
+    },
+    {
+      "id": "prod_honeycake_1",
+      "name": "Classic Honey Sponge Cake",
+      "price": 70,
+      "stock": 20,
+      "imageUrl": "https://images.unsplash.com/photo-1582293041079-7814c2f12063?auto=format&fit=crop&w=400&q=80",
+      "unit": "box",
+      "storeId": "s_roja_bakes",
+      "storeName": "Roja Bakes & Sweets"
+    }
+  ],
+  "s_amman_flour": [
+    {
+      "id": "prod_sambar_powder_1",
+      "name": "Authentic Stone-Ground Sambar Powder (250g)",
+      "price": 85,
+      "stock": 30,
+      "imageUrl": "https://images.unsplash.com/photo-1586201375761-83865001e31c?auto=format&fit=crop&w=400&q=80",
+      "unit": "pack",
+      "storeId": "s_amman_flour",
+      "storeName": "Sri Amman Flour & Masala Mill"
+    },
+    {
+      "id": "prod_rice_flour_1",
+      "name": "Pure Raw Rice Flour (1 kg)",
+      "price": 65,
+      "stock": 40,
+      "imageUrl": "https://images.unsplash.com/photo-1604719312566-8912e9227c6a?auto=format&fit=crop&w=400&q=80",
+      "unit": "1 kg",
+      "storeId": "s_amman_flour",
+      "storeName": "Sri Amman Flour & Masala Mill"
+    }
+  ],
+  "s_kovil_super": [
+    {
+      "id": "prod_sona_rice_1",
+      "name": "Premium Sona Masoori Rice (5kg)",
+      "price": 330,
+      "stock": 40,
+      "imageUrl": "https://images.unsplash.com/photo-1586201375761-83865001e31c?auto=format&fit=crop&w=400&q=80",
+      "unit": "5kg bag",
+      "storeId": "s_kovil_super",
+      "storeName": "Kovilmedu Supermarket & Kirana"
+    },
+    {
+      "id": "prod_sesame_oil_1",
+      "name": "Idhayam Sesame Cooking Oil (1L)",
+      "price": 285,
+      "stock": 25,
+      "imageUrl": "https://images.unsplash.com/photo-1471193945509-9ad0617afabf?auto=format&fit=crop&w=400&q=80",
+      "unit": "1L pouch",
+      "storeId": "s_kovil_super",
+      "storeName": "Kovilmedu Supermarket & Kirana"
+    }
+  ],
+  "s_kovil_pala": [
+    {
+      "id": "prod_pollachi_elaneer_1",
+      "name": "Fresh Pollachi Tender Coconut",
+      "price": 55,
+      "stock": 60,
+      "imageUrl": "https://images.unsplash.com/photo-1610832958506-aa56368176cf?auto=format&fit=crop&w=400&q=80",
+      "unit": "piece",
+      "storeId": "s_kovil_pala",
+      "storeName": "Kovilmedu Organic Palamuthir Nilayam"
+    },
+    {
+      "id": "prod_hill_banana_1",
+      "name": "Sirumalai Hill Banana (1kg)",
+      "price": 75,
+      "stock": 30,
+      "imageUrl": "https://images.unsplash.com/photo-1571771894821-ce9b6c11b08e?auto=format&fit=crop&w=400&q=80",
+      "unit": "1 kg",
+      "storeId": "s_kovil_pala",
+      "storeName": "Kovilmedu Organic Palamuthir Nilayam"
+    }
+  ],
+  "s_kovil_meat": [
+    {
+      "id": "prod_naattu_kozhi_1",
+      "name": "Fresh Naattu Kozhi (Country Chicken)",
+      "price": 390,
+      "stock": 20,
+      "imageUrl": "https://images.unsplash.com/photo-1604503468506-a8da13d82791?auto=format&fit=crop&w=400&q=80",
+      "unit": "1 kg",
+      "storeId": "s_kovil_meat",
+      "storeName": "Kongu Country Mutton & Chicken Stall"
+    },
+    {
+      "id": "prod_country_eggs_2",
+      "name": "Organic Country Chicken Eggs (6 pcs)",
+      "price": 60,
+      "stock": 40,
+      "imageUrl": "https://images.unsplash.com/photo-1516448620398-c5f44bf9f441?auto=format&fit=crop&w=400&q=80",
+      "unit": "6 pack",
+      "storeId": "s_kovil_meat",
+      "storeName": "Kongu Country Mutton & Chicken Stall"
+    }
+  ],
+  "s_kovil_jewel": [
+    {
+      "id": "prod_kemp_jhumka_1",
+      "name": "Antique Kemp Stone Temple Jhumkas",
+      "price": 280,
+      "stock": 18,
+      "imageUrl": "https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?auto=format&fit=crop&w=400&q=80",
+      "unit": "pair",
+      "storeId": "s_kovil_jewel",
+      "storeName": "Meenakshi Fashion Jewellery & Gift Corner"
+    },
+    {
+      "id": "prod_brass_diya_1",
+      "name": "Handcrafted Brass Lotus Diya Pair",
+      "price": 195,
+      "stock": 25,
+      "imageUrl": "https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?auto=format&fit=crop&w=400&q=80",
+      "unit": "pair",
+      "storeId": "s_kovil_jewel",
+      "storeName": "Meenakshi Fashion Jewellery & Gift Corner"
+    }
+  ],
+  "s_kovil_cloth": [
+    {
+      "id": "prod_zari_dhoti_1",
+      "name": "Pure Cotton Gold Zari Dhoti (4 Mulam)",
+      "price": 380,
+      "stock": 25,
+      "imageUrl": "https://images.unsplash.com/photo-1441986300917-64674bd600d8?auto=format&fit=crop&w=400&q=80",
+      "unit": "piece",
+      "storeId": "s_kovil_cloth",
+      "storeName": "Kovilmedu Readymades & Menswear"
+    },
+    {
+      "id": "prod_cotton_shirt_1",
+      "name": "Handloom Pure Cotton Casual Shirt",
+      "price": 549,
+      "stock": 20,
+      "imageUrl": "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&w=400&q=80",
+      "unit": "piece",
+      "storeId": "s_kovil_cloth",
+      "storeName": "Kovilmedu Readymades & Menswear"
+    }
+  ],
+  "s_jp_apparel": [
+    {
+      "id": "prod_jp_dhoti",
+      "name": "Pure Cotton Gold Zari Dhoti",
+      "price": 380,
+      "stock": 25,
+      "imageUrl": "https://images.unsplash.com/photo-1441986300917-64674bd600d8?auto=format&fit=crop&w=400&q=80",
+      "unit": "piece",
+      "storeId": "s_jp_apparel",
+      "storeName": "JP Nagar Readymades & Menswear"
+    },
+    {
+      "id": "prod_jp_shirt",
+      "name": "Handloom Pure Cotton Casual Shirt",
+      "price": 549,
+      "stock": 20,
+      "imageUrl": "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&w=400&q=80",
+      "unit": "piece",
+      "storeId": "s_jp_apparel",
+      "storeName": "JP Nagar Readymades & Menswear"
+    }
+  ],
+  "s_jp_bakery": [
+    {
+      "id": "prod_jp_sourdough",
+      "name": "Sourdough Loaf",
+      "price": 180,
+      "stock": 15,
+      "imageUrl": "/assets/ravis-sourdough-hero.jpg",
+      "unit": "loaf",
+      "storeId": "s_jp_bakery",
+      "storeName": "Ravi's Artisan Bakery (JP Nagar)"
+    },
+    {
+      "id": "prod_jp_croissant",
+      "name": "Butter Croissant",
+      "price": 70,
+      "stock": 24,
+      "imageUrl": "https://images.unsplash.com/photo-1555507036-ab1f4038808a?auto=format&fit=crop&w=400&q=80",
+      "unit": "piece",
+      "storeId": "s_jp_bakery",
+      "storeName": "Ravi's Artisan Bakery (JP Nagar)"
+    }
+  ],
+  "s_jp_produce": [
+    {
+      "id": "prod_jp_mango",
+      "name": "Alphonso Mango (Devgad/Salem)",
+      "price": 240,
+      "stock": 40,
+      "imageUrl": "https://images.unsplash.com/photo-1553279768-865429fa0078?auto=format&fit=crop&w=400&q=80",
+      "unit": "kg",
+      "storeId": "s_jp_produce",
+      "storeName": "Namma Fresh Produce & Organics"
+    },
+    {
+      "id": "prod_jp_palak",
+      "name": "Fresh Country Palak (Spinach)",
+      "price": 25,
+      "stock": 60,
+      "imageUrl": "https://images.unsplash.com/photo-1576045057995-568f588f82fb?auto=format&fit=crop&w=400&q=80",
+      "unit": "bunch",
+      "storeId": "s_jp_produce",
+      "storeName": "Namma Fresh Produce & Organics"
+    }
+  ],
+  "s_jp_dining": [
+    {
+      "id": "prod_jp_thatte",
+      "name": "Thatte Idli with Vada & Chutney",
+      "price": 65,
+      "stock": 50,
+      "imageUrl": "https://images.unsplash.com/photo-1589301760014-d929f3979dbc?auto=format&fit=crop&w=400&q=80",
+      "unit": "plate",
+      "storeId": "s_jp_dining",
+      "storeName": "City Bites Kitchen & Mess (JP Nagar)"
+    }
+  ],
+  "s_jp_mill": [
+    {
+      "id": "prod_jp_batter",
+      "name": "Fresh Idli & Dosa Batter (1 kg)",
+      "price": 45,
+      "stock": 40,
+      "imageUrl": "https://images.unsplash.com/photo-1586201375761-83865001e31c?auto=format&fit=crop&w=400&q=80",
+      "unit": "pack",
+      "storeId": "s_jp_mill",
+      "storeName": "Sri Amman Flour & Grain Mill (JP Nagar)"
+    }
+  ],
+  "s_jp_medicals": [
+    {
+      "id": "prod_jp_firstaid",
+      "name": "First Aid & Wellness Kit",
+      "price": 299,
+      "stock": 25,
+      "imageUrl": "https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?auto=format&fit=crop&w=400&q=80",
+      "unit": "kit",
+      "storeId": "s_jp_medicals",
+      "storeName": "Apollo Pharmacy & Wellness - JP Nagar"
+    }
+  ],
+  "s_jp_sweets": [
+    {
+      "id": "prod_jp_mysurpa",
+      "name": "Original Pure Ghee Mysurpa (250g)",
+      "price": 195,
+      "stock": 30,
+      "imageUrl": "https://images.unsplash.com/photo-1582293041079-7814c2f12063?auto=format&fit=crop&w=400&q=80",
+      "unit": "box",
+      "storeId": "s_jp_sweets",
+      "storeName": "Sri Krishna Sweets & Bakes (JP Nagar)"
+    }
+  ]
+};
+
 export const stores: Store[] = [
   ...kovilmeduStores,
   ...legacyStores,
   ...starterStores,
   ...categoryCoverageStores,
+  ...extraDiscoveredStores,
 ];
 
-const seedProducts = (storeId: string, cat: StoreCategory): Product[] => {
+export const seedProducts = (storeId: string, rawCat: StoreCategory | string): Product[] => {
   const catalogs: Record<StoreCategory, Array<Omit<Product, "id" | "storeId">>> = {
     flour_mill: [
       {
@@ -2457,6 +3558,7 @@ const seedProducts = (storeId: string, cat: StoreCategory): Product[] => {
       },
     ],
   };
+  const cat = (rawCat in catalogs ? rawCat : "supermarkets") as StoreCategory;
   const baseCatalog = [
     ...(catalogs[cat] || catalogs.palamuthir),
     ...(relatedLocalEssentials[cat] ?? []),
@@ -2488,13 +3590,87 @@ const seedProducts = (storeId: string, cat: StoreCategory): Product[] => {
   }));
 };
 
-export const productsByStore: Record<string, Product[]> = Object.fromEntries(
-  stores.map((s) => [s.id, seedProducts(s.id, s.category)]),
+export const createStoreProducts = (store: Store): Product[] => {
+  const tagged = feedTaggedProductsMap[store.id] || [];
+  const taggedProducts: Product[] = tagged.map((t, idx) => ({
+    id: t.id || `${store.id}-tagged-${idx}`,
+    storeId: store.id,
+    name: t.name,
+    price: t.price,
+    unit: t.unit || "1 unit",
+    stock: t.stock ?? 50,
+    imageUrl: t.imageUrl,
+    category: store.category,
+  }));
+
+  const standard = seedProducts(store.id, store.category);
+  const taggedNames = new Set(taggedProducts.map((tp) => tp.name.toLowerCase()));
+  const filteredStandard = standard.filter((sp) => !taggedNames.has(sp.name.toLowerCase()));
+
+  return [...taggedProducts, ...filteredStandard];
+};
+
+const initialProductsByStore: Record<string, Product[]> = Object.fromEntries(
+  stores.map((s) => [s.id, createStoreProducts(s)]),
 );
 
-export const getStore = (id: string) =>
-  stores.find((s) => s.id === id) ?? {
+export const productsByStore: Record<string, Product[]> = new Proxy(
+  initialProductsByStore,
+  {
+    get(target, prop: string) {
+      if (typeof prop !== "string" || prop === "$typeof") return (target as any)[prop];
+      if (target[prop] && target[prop].length > 0) {
+        return target[prop];
+      }
+      const existsInStores = stores.some((s) => s.id === prop) || extraDiscoveredStores.some((s) => s.id === prop);
+      if (!existsInStores) {
+        return target[prop];
+      }
+      const store = getStore(prop);
+      const prods = createStoreProducts(store);
+      target[prop] = prods;
+      return prods;
+    },
+  }
+);
+
+export const getStore = (id: string): Store => {
+  const found = stores.find((s) => s.id === id) || extraDiscoveredStores.find((s) => s.id === id);
+  if (found) return found;
+  const isBLR = id.includes("jp_") || id.includes("blr_");
+  const lower = id.toLowerCase();
+  const inferredCategory: StoreCategory = lower.includes("book") || lower.includes("stationery")
+    ? "books_stationery"
+    : lower.includes("electro") || lower.includes("mobile") || lower.includes("tech")
+    ? "electronics"
+    : lower.includes("bake") || lower.includes("sweet") || lower.includes("pastry")
+    ? "bakery"
+    : lower.includes("medic") || lower.includes("pharma") || lower.includes("health") || lower.includes("care")
+    ? "pharmacy"
+    : lower.includes("cloth") || lower.includes("fashion") || lower.includes("apparel") || lower.includes("jewel")
+    ? "fashion"
+    : lower.includes("mutton") || lower.includes("chicken") || lower.includes("meat") || lower.includes("fish")
+    ? "meat_fish"
+    : lower.includes("dine") || lower.includes("kitchen") || lower.includes("mess") || lower.includes("rest")
+    ? "restaurants"
+    : lower.includes("fruit") || lower.includes("veg") || lower.includes("pala")
+    ? "palamuthir"
+    : "grocery";
+
+  return {
     ...APPROVED_STORE,
     id,
-    name: id.startsWith("s_") ? id.replace("s_", "").replace(/_/g, " ") : "Local Shore Shop",
+    name: id.startsWith("s_")
+      ? id
+          .replace("s_", "")
+          .replace(/_/g, " ")
+          .replace(/\b\w/g, (c) => c.toUpperCase())
+      : "Local Shore Shop",
+    category: inferredCategory,
+    address: isBLR
+      ? "JP Nagar 2nd Phase, Bengaluru, Karnataka"
+      : "RS Puram, Coimbatore, Tamil Nadu",
+    lat: isBLR ? 12.909694 : 11.0138,
+    lng: isBLR ? 77.586607 : 76.9538,
   };
+};

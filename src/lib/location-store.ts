@@ -21,6 +21,7 @@ import { haversineDistanceKm } from "./geo";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { reverseGeocode } from "@/lib/geocoding.functions";
+import { isBengaluruLocation } from "./social-feed-data";
 
 export interface DeliveryLocation {
   id: string;
@@ -435,10 +436,97 @@ export function useDeliveryLocation(): [DeliveryLocation | null, (loc: DeliveryL
  * Only returns areas AFTER a location is explicitly selected.
  * Returns empty array when NO_LOCATION_SELECTED.
  */
+export const POPULAR_LOCATIONS: { city: string; areas: DeliveryLocation[] }[] = [
+  {
+    city: "Coimbatore, TN",
+    areas: [
+      {
+        id: "confirmed-preset-cbe-rspuram",
+        label: "DB Road, RS Puram, Coimbatore, Tamil Nadu 641002",
+        area: "RS Puram",
+        city: "Coimbatore, TN",
+        lat: 11.0138,
+        lng: 76.9538,
+        verifiedByCustomer: true,
+      },
+      {
+        id: "confirmed-preset-cbe-gandhipuram",
+        label: "Cross Cut Road, Gandhipuram, Coimbatore, Tamil Nadu 641012",
+        area: "Gandhipuram",
+        city: "Coimbatore, TN",
+        lat: 11.018,
+        lng: 76.962,
+        verifiedByCustomer: true,
+      },
+      {
+        id: "confirmed-preset-cbe-saibaba",
+        label: "NSR Road, Saibaba Colony, Coimbatore, Tamil Nadu 641011",
+        area: "Saibaba Colony",
+        city: "Coimbatore, TN",
+        lat: 11.025,
+        lng: 76.945,
+        verifiedByCustomer: true,
+      },
+      {
+        id: "confirmed-preset-cbe-peelamedu",
+        label: "Avinashi Road, Peelamedu, Coimbatore, Tamil Nadu 641004",
+        area: "Peelamedu",
+        city: "Coimbatore, TN",
+        lat: 11.025,
+        lng: 77.012,
+        verifiedByCustomer: true,
+      },
+    ],
+  },
+  {
+    city: "Bengaluru, KA",
+    areas: [
+      {
+        id: "confirmed-preset-blr-jpnagar",
+        label: "11th Cross Road, JP Nagar 2nd Phase, Bengaluru, Karnataka 560078",
+        area: "JP Nagar 2nd Phase",
+        city: "Bengaluru, KA",
+        lat: 12.909694,
+        lng: 77.586607,
+        verifiedByCustomer: true,
+      },
+      {
+        id: "confirmed-preset-blr-jayanagar",
+        label: "4th Block, Jayanagar, Bengaluru, Karnataka 560011",
+        area: "Jayanagar",
+        city: "Bengaluru, KA",
+        lat: 12.9308,
+        lng: 77.5838,
+        verifiedByCustomer: true,
+      },
+      {
+        id: "confirmed-preset-blr-koramangala",
+        label: "80 Feet Road, 4th Block, Koramangala, Bengaluru, Karnataka 560034",
+        area: "Koramangala",
+        city: "Bengaluru, KA",
+        lat: 12.9352,
+        lng: 77.6245,
+        verifiedByCustomer: true,
+      },
+      {
+        id: "confirmed-preset-blr-indiranagar",
+        label: "100 Feet Road, HAL 2nd Stage, Indiranagar, Bengaluru, Karnataka 560038",
+        area: "Indiranagar",
+        city: "Bengaluru, KA",
+        lat: 12.9784,
+        lng: 77.6408,
+        verifiedByCustomer: true,
+      },
+    ],
+  },
+];
+
 export function getPopularAreasForLocation(location: DeliveryLocation | null): DeliveryLocation[] {
-  // Area presets must never invent coordinates. Areas are populated from the
-  // live location/search result by the backend when that feature is available.
-  return [];
+  const isBLR = location ? isBengaluruLocation(location) : false;
+  const match = POPULAR_LOCATIONS.find((group) =>
+    isBLR ? group.city.includes("Bengaluru") : group.city.includes("Coimbatore")
+  );
+  return match ? match.areas : POPULAR_LOCATIONS[0].areas;
 }
 
 /**

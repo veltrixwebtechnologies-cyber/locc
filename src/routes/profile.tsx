@@ -34,7 +34,7 @@ import {
   ShieldCheck,
   Globe,
 } from "lucide-react";
-import { AppShell } from "@/components/app-shell";
+import { SocialCommerceShell } from "@/components/social-commerce/social-commerce-shell";
 import { useAuth } from "@/lib/auth-store";
 import { cartStore } from "@/modules/shopper/services/cart-store";
 import {
@@ -121,15 +121,15 @@ function ProfilePage() {
   const recentOrder = orders[0];
 
   return (
-    <AppShell>
-      <div className="mx-auto max-w-5xl px-4 py-6 sm:px-6 lg:px-8">
+    <SocialCommerceShell>
+      <div className="space-y-6">
         {/* ── 1. PROFILE HEADER CARD ───────────────────────────────────────── */}
         <div className="overflow-hidden rounded-3xl border border-purple-100/80 bg-gradient-to-br from-purple-50/70 via-white to-amber-50/30 p-5 shadow-xs sm:p-7">
           {signedIn ? (
             <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-center gap-4 sm:gap-6">
                 <div className="relative">
-                  <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-tr from-[#981495] to-[#c026d3] font-display text-2xl font-bold text-white shadow-md shadow-[#981495]/20 sm:h-20 sm:w-20 sm:text-3xl">
+                  <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-tr from-[#8B2FC9] to-[#D270D7] font-display text-2xl font-bold text-white shadow-md shadow-[#8B2FC9]/20 sm:h-20 sm:w-20 sm:text-3xl">
                     {auth.name
                       ? auth.name
                           .split(" ")
@@ -149,19 +149,19 @@ function ProfilePage() {
                     <h1 className="font-display text-2xl font-bold text-slate-900 sm:text-3xl">
                       {auth.name || "LocalShore Member"}
                     </h1>
-                    <span className="inline-flex items-center gap-1 rounded-full bg-purple-50 px-2.5 py-0.5 text-xs font-bold text-[#981495] border border-purple-200">
-                      <Sparkles className="h-3 w-3 fill-[#c026d3] text-[#c026d3]" />
+                    <span className="inline-flex items-center gap-1 rounded-full bg-purple-50 px-2.5 py-0.5 text-xs font-bold text-[#8B2FC9] border border-purple-200">
+                      <Sparkles className="h-3 w-3 fill-[#D270D7] text-[#D270D7]" />
                       LocalShore Member
                     </span>
                   </div>
 
                   <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-slate-600">
                     <span className="inline-flex items-center gap-1.5 rounded-lg bg-white/80 px-2.5 py-1 font-mono border border-slate-200/60 shadow-2xs">
-                      <Mail className="h-3.5 w-3.5 text-[#981495]" />
+                      <Mail className="h-3.5 w-3.5 text-[#8B2FC9]" />
                       {auth.email || "No email registered"}
                     </span>
                     <span className="inline-flex items-center gap-1.5 rounded-lg bg-white/80 px-2.5 py-1 font-mono border border-slate-200/60 shadow-2xs">
-                      <Phone className="h-3.5 w-3.5 text-[#981495]" />
+                      <Phone className="h-3.5 w-3.5 text-[#8B2FC9]" />
                       {maskPhone(auth.phone)}
                     </span>
                   </div>
@@ -172,7 +172,7 @@ function ProfilePage() {
                 <button
                   type="button"
                   onClick={() => setIsEditProfileOpen(true)}
-                  className="inline-flex items-center gap-1.5 rounded-xl border border-purple-200 bg-white px-4 py-2 text-xs font-bold text-[#981495] shadow-xs transition hover:bg-purple-50"
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-purple-200 bg-white px-4 py-2 text-xs font-bold text-[#8B2FC9] shadow-xs transition hover:bg-purple-50"
                 >
                   <Edit3 className="h-3.5 w-3.5" /> Edit Profile
                 </button>
@@ -193,7 +193,7 @@ function ProfilePage() {
           ) : (
             <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
               <div className="max-w-xl">
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-purple-50 px-3 py-1 text-xs font-bold text-[#981495] border border-purple-200">
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-purple-50 px-3 py-1 text-xs font-bold text-[#8B2FC9] border border-purple-200">
                   <Store className="h-3.5 w-3.5" /> Your Neighborhood, Delivered
                 </span>
                 <h1 className="mt-2 font-display text-2xl font-bold text-slate-900 sm:text-3xl">
@@ -209,14 +209,14 @@ function ProfilePage() {
                 <Link
                   to="/auth"
                   search={{ redirect: "/profile" }}
-                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#981495] px-5 py-3 text-sm font-bold text-white shadow-md shadow-[#981495]/20 transition hover:bg-[#831080]"
+                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#8B2FC9] px-5 py-3 text-sm font-bold text-white shadow-md shadow-[#8B2FC9]/20 transition hover:bg-[#581C87]"
                 >
                   <User className="h-4 w-4" /> Sign in / Create account
                 </Link>
                 <Link
                   to="/"
                   search={{ category: undefined, q: undefined }}
-                  className="inline-flex items-center justify-center gap-2 rounded-xl border border-purple-200 bg-white px-5 py-2.5 text-xs font-bold text-[#981495] transition hover:bg-purple-50"
+                  className="inline-flex items-center justify-center gap-2 rounded-xl border border-purple-200 bg-white px-5 py-2.5 text-xs font-bold text-[#8B2FC9] transition hover:bg-purple-50"
                 >
                   <Store className="h-3.5 w-3.5" /> Explore local shops
                 </Link>
@@ -258,7 +258,7 @@ function ProfilePage() {
                   key={i}
                   className="rounded-2xl border border-slate-200/80 bg-white p-4 text-center shadow-xs"
                 >
-                  <div className="mx-auto grid h-10 w-10 place-items-center rounded-xl bg-purple-50 text-[#981495]">
+                  <div className="mx-auto grid h-10 w-10 place-items-center rounded-xl bg-purple-50 text-[#8B2FC9]">
                     <b.icon className="h-5 w-5" />
                   </div>
                   <h3 className="mt-2.5 text-xs font-bold text-slate-900">{b.title}</h3>
@@ -277,7 +277,7 @@ function ProfilePage() {
               onClick={() => setActiveTab("orders")}
               className={`flex items-center gap-3.5 rounded-2xl border p-3.5 text-left shadow-xs transition group ${
                 activeTab === "orders"
-                  ? "border-[#981495] bg-purple-50/40 ring-1 ring-[#981495]/30"
+                  ? "border-[#8B2FC9] bg-purple-50/40 ring-1 ring-[#8B2FC9]/30"
                   : "border-slate-200/80 bg-white hover:border-purple-200 hover:shadow-sm"
               }`}
             >
@@ -299,7 +299,7 @@ function ProfilePage() {
               onClick={() => setActiveTab("addresses")}
               className={`flex items-center gap-3.5 rounded-2xl border p-3.5 text-left shadow-xs transition group ${
                 activeTab === "addresses"
-                  ? "border-[#981495] bg-purple-50/40 ring-1 ring-[#981495]/30"
+                  ? "border-[#8B2FC9] bg-purple-50/40 ring-1 ring-[#8B2FC9]/30"
                   : "border-slate-200/80 bg-white hover:border-purple-200 hover:shadow-sm"
               }`}
             >
@@ -338,11 +338,11 @@ function ProfilePage() {
               onClick={() => setActiveTab("rewards")}
               className={`flex items-center gap-3.5 rounded-2xl border p-3.5 text-left shadow-xs transition group ${
                 activeTab === "rewards"
-                  ? "border-[#981495] bg-purple-50/40 ring-1 ring-[#981495]/30"
+                  ? "border-[#8B2FC9] bg-purple-50/40 ring-1 ring-[#8B2FC9]/30"
                   : "border-slate-200/80 bg-white hover:border-purple-200 hover:shadow-sm"
               }`}
             >
-              <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-purple-50 text-[#981495]">
+              <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-purple-50 text-[#8B2FC9]">
                 <Sparkles className="h-5 w-5" />
               </div>
               <div>
@@ -375,11 +375,11 @@ function ProfilePage() {
                   onClick={() => setActiveTab(tab.id as any)}
                   className={`flex flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-xl py-2.5 px-3 text-xs font-bold transition ${
                     isActive
-                      ? "bg-white text-[#981495] shadow-xs"
+                      ? "bg-white text-[#8B2FC9] shadow-xs"
                       : "text-slate-600 hover:text-slate-900"
                   }`}
                 >
-                  <Icon className={`h-4 w-4 ${isActive ? "text-[#981495]" : "text-slate-400"}`} />
+                  <Icon className={`h-4 w-4 ${isActive ? "text-[#8B2FC9]" : "text-slate-400"}`} />
                   {tab.label}
                 </button>
               );
@@ -399,7 +399,7 @@ function ProfilePage() {
                     <div className="flex items-center justify-between border-b border-slate-100 pb-4">
                       <div>
                         <h2 className="font-display text-lg font-bold text-slate-900 flex items-center gap-2">
-                          <MapPin className="h-5 w-5 text-[#981495]" /> Saved Delivery Addresses
+                          <MapPin className="h-5 w-5 text-[#8B2FC9]" /> Saved Delivery Addresses
                         </h2>
                         <p className="text-xs text-slate-500">
                           Manage where your groceries and goods are delivered
@@ -408,7 +408,7 @@ function ProfilePage() {
                       <button
                         type="button"
                         onClick={() => setIsAddAddressOpen(true)}
-                        className="inline-flex items-center gap-1.5 rounded-xl bg-[#981495] px-3.5 py-2 text-xs font-bold text-white shadow-xs hover:bg-[#831080] transition"
+                        className="inline-flex items-center gap-1.5 rounded-xl bg-[#8B2FC9] px-3.5 py-2 text-xs font-bold text-white shadow-xs hover:bg-[#581C87] transition"
                       >
                         <Plus className="h-3.5 w-3.5" /> Add Address
                       </button>
@@ -424,7 +424,7 @@ function ProfilePage() {
                         <button
                           type="button"
                           onClick={() => setIsAddAddressOpen(true)}
-                          className="mt-4 inline-flex items-center gap-1.5 rounded-xl bg-[#981495] px-4 py-2 text-xs font-bold text-white shadow-xs hover:bg-[#831080]"
+                          className="mt-4 inline-flex items-center gap-1.5 rounded-xl bg-[#8B2FC9] px-4 py-2 text-xs font-bold text-white shadow-xs hover:bg-[#581C87]"
                         >
                           <Plus className="h-3.5 w-3.5" /> Add your first address
                         </button>
@@ -440,7 +440,7 @@ function ProfilePage() {
                             >
                               <div>
                                 <div className="flex items-center justify-between">
-                                  <span className="inline-flex items-center gap-1.5 rounded-lg bg-purple-50 px-2.5 py-1 text-xs font-bold text-[#981495]">
+                                  <span className="inline-flex items-center gap-1.5 rounded-lg bg-purple-50 px-2.5 py-1 text-xs font-bold text-[#8B2FC9]">
                                     <IconComponent className="h-3.5 w-3.5" />
                                     {addr.label}
                                   </span>
@@ -479,7 +479,7 @@ function ProfilePage() {
                     <div className="flex items-center justify-between border-b border-slate-100 pb-4">
                       <div>
                         <h2 className="font-display text-lg font-bold text-slate-900 flex items-center gap-2">
-                          <CreditCard className="h-5 w-5 text-[#981495]" /> Payment Methods
+                          <CreditCard className="h-5 w-5 text-[#8B2FC9]" /> Payment Methods
                         </h2>
                         <p className="text-xs text-slate-500">
                           Saved UPI IDs and cards for seamless checkout
@@ -488,7 +488,7 @@ function ProfilePage() {
                       <button
                         type="button"
                         onClick={() => setIsAddPaymentOpen(true)}
-                        className="inline-flex items-center gap-1 text-xs font-bold text-[#981495] hover:bg-purple-50 px-3 py-1.5 rounded-xl border border-purple-200 transition"
+                        className="inline-flex items-center gap-1 text-xs font-bold text-[#8B2FC9] hover:bg-purple-50 px-3 py-1.5 rounded-xl border border-purple-200 transition"
                       >
                         <Plus className="h-3.5 w-3.5" /> Add Payment
                       </button>
@@ -501,14 +501,14 @@ function ProfilePage() {
                           className="flex items-center justify-between rounded-2xl border border-slate-200 p-3.5 bg-slate-50/40"
                         >
                           <div className="flex items-center gap-3">
-                            <div className="grid h-9 w-9 place-items-center rounded-xl bg-purple-100/70 text-[#981495] font-bold text-[11px]">
+                            <div className="grid h-9 w-9 place-items-center rounded-xl bg-purple-100/70 text-[#8B2FC9] font-bold text-[11px]">
                               {pay.type === "upi" ? "UPI" : "CARD"}
                             </div>
                             <div>
                               <p className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
                                 {pay.title}
                                 {pay.isDefault && (
-                                  <span className="rounded-full bg-purple-50 px-2 py-0.2 text-[9px] font-bold text-[#981495]">
+                                  <span className="rounded-full bg-purple-50 px-2 py-0.2 text-[9px] font-bold text-[#8B2FC9]">
                                     Default
                                   </span>
                                 )}
@@ -538,12 +538,12 @@ function ProfilePage() {
                   <section className="rounded-3xl border border-slate-200/80 bg-white p-5 shadow-xs">
                     <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                       <h2 className="font-display text-base font-bold text-slate-900 flex items-center gap-2">
-                        <User className="h-4.5 w-4.5 text-[#981495]" /> Profile Information
+                        <User className="h-4.5 w-4.5 text-[#8B2FC9]" /> Profile Information
                       </h2>
                       <button
                         type="button"
                         onClick={() => setIsEditProfileOpen(true)}
-                        className="text-xs font-bold text-[#981495] hover:underline"
+                        className="text-xs font-bold text-[#8B2FC9] hover:underline"
                       >
                         Edit
                       </button>
@@ -574,7 +574,7 @@ function ProfilePage() {
                       <div className="border-t border-slate-100 pt-2.5">
                         <span className="text-slate-400 block font-medium">Preferred Language</span>
                         <p className="mt-0.5 font-semibold text-slate-800 flex items-center gap-1.5">
-                          <Globe className="h-3.5 w-3.5 text-[#981495]" />
+                          <Globe className="h-3.5 w-3.5 text-[#8B2FC9]" />
                           {profileExtra.preferredLanguage}
                         </p>
                       </div>
@@ -584,7 +584,7 @@ function ProfilePage() {
                   {/* Security overview */}
                   <section className="rounded-3xl border border-slate-200/80 bg-white p-5 shadow-xs">
                     <h2 className="font-display text-base font-bold text-slate-900 flex items-center gap-2 border-b border-slate-100 pb-3">
-                      <ShieldCheck className="h-4.5 w-4.5 text-[#981495]" /> Security & Account
+                      <ShieldCheck className="h-4.5 w-4.5 text-[#8B2FC9]" /> Security & Account
                     </h2>
                     <div className="mt-3.5 space-y-2 text-xs">
                       <div className="flex items-center justify-between py-1.5 text-slate-600">
@@ -648,7 +648,7 @@ function ProfilePage() {
                   <div className="flex items-center justify-between border-b border-slate-100 pb-4">
                     <div>
                       <h2 className="font-display text-lg font-bold text-slate-900 flex items-center gap-2">
-                        <Package className="h-5 w-5 text-[#981495]" /> Order History
+                        <Package className="h-5 w-5 text-[#8B2FC9]" /> Order History
                       </h2>
                       <p className="text-xs text-slate-500">
                         View past receipts, store details, and delivery statuses
@@ -656,7 +656,7 @@ function ProfilePage() {
                     </div>
                     <Link
                       to="/orders"
-                      className="text-xs font-bold text-[#981495] hover:underline inline-flex items-center gap-1"
+                      className="text-xs font-bold text-[#8B2FC9] hover:underline inline-flex items-center gap-1"
                     >
                       View all orders <ChevronRight className="h-3.5 w-3.5" />
                     </Link>
@@ -673,7 +673,7 @@ function ProfilePage() {
                       <Link
                         to="/"
                         search={{ category: undefined, q: undefined }}
-                        className="mt-4 inline-flex items-center gap-1.5 rounded-xl bg-[#981495] px-4 py-2 text-xs font-bold text-white shadow-xs hover:bg-[#831080]"
+                        className="mt-4 inline-flex items-center gap-1.5 rounded-xl bg-[#8B2FC9] px-4 py-2 text-xs font-bold text-white shadow-xs hover:bg-[#581C87]"
                       >
                         <Store className="h-3.5 w-3.5" /> Explore nearby shops
                       </Link>
@@ -706,7 +706,7 @@ function ProfilePage() {
                           <Link
                             to="/order/$orderId"
                             params={{ orderId: order.id }}
-                            className="inline-flex items-center gap-1 text-xs font-bold text-[#981495] hover:underline"
+                            className="inline-flex items-center gap-1 text-xs font-bold text-[#8B2FC9] hover:underline"
                           >
                             View details →
                           </Link>
@@ -723,7 +723,7 @@ function ProfilePage() {
               <div className="space-y-6">
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   {/* Shore Points */}
-                  <div className="rounded-3xl bg-gradient-to-br from-[#981495] via-[#7e117b] to-[#5a0c58] p-6 text-white shadow-md">
+                  <div className="rounded-3xl bg-gradient-to-br from-[#8B2FC9] via-[#581C87] to-[#500850] p-6 text-white shadow-md">
                     <div className="flex items-center justify-between">
                       <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-purple-200">
                         <Sparkles className="h-4 w-4 fill-purple-200" /> Shore Points Balance
@@ -741,7 +741,7 @@ function ProfilePage() {
                     <button
                       type="button"
                       onClick={() => setIsRedeemOpen(true)}
-                      className="mt-5 inline-flex items-center gap-1.5 rounded-xl bg-white px-4 py-2 text-xs font-bold text-[#981495] shadow-xs hover:bg-purple-50 transition"
+                      className="mt-5 inline-flex items-center gap-1.5 rounded-xl bg-white px-4 py-2 text-xs font-bold text-[#8B2FC9] shadow-xs hover:bg-purple-50 transition"
                     >
                       Redeem Points →
                     </button>
@@ -770,7 +770,7 @@ function ProfilePage() {
                 <section className="rounded-3xl border border-slate-200/80 bg-white p-5 shadow-xs sm:p-6">
                   <div className="border-b border-slate-100 pb-4">
                     <h2 className="font-display text-lg font-bold text-slate-900 flex items-center gap-2">
-                      <Ticket className="h-5 w-5 text-[#981495]" /> Available Neighborhood Coupons
+                      <Ticket className="h-5 w-5 text-[#8B2FC9]" /> Available Neighborhood Coupons
                     </h2>
                     <p className="text-xs text-slate-500">
                       Exclusive promo codes for your next neighborhood order
@@ -787,10 +787,10 @@ function ProfilePage() {
                         >
                           <div>
                             <div className="flex items-center gap-2">
-                              <span className="font-mono text-xs font-bold text-[#981495] bg-white px-2.5 py-0.5 rounded-md border border-purple-200 shadow-2xs">
+                              <span className="font-mono text-xs font-bold text-[#8B2FC9] bg-white px-2.5 py-0.5 rounded-md border border-purple-200 shadow-2xs">
                                 {c.code}
                               </span>
-                              <span className="text-xs font-extrabold text-[#981495]">
+                              <span className="text-xs font-extrabold text-[#8B2FC9]">
                                 {c.discountText}
                               </span>
                             </div>
@@ -811,7 +811,7 @@ function ProfilePage() {
                             className={`rounded-xl px-3 py-1.5 text-xs font-bold transition flex items-center gap-1 ${
                               isCopied
                                 ? "bg-emerald-600 text-white"
-                                : "bg-white text-[#981495] border border-purple-200 hover:bg-purple-100/60"
+                                : "bg-white text-[#8B2FC9] border border-purple-200 hover:bg-purple-100/60"
                             }`}
                           >
                             {isCopied ? (
@@ -839,7 +839,7 @@ function ProfilePage() {
                 <div className="space-y-6 lg:col-span-6">
                   <section className="rounded-3xl border border-slate-200/80 bg-white p-5 shadow-xs sm:p-6">
                     <h2 className="font-display text-base font-bold text-slate-900 flex items-center gap-2 border-b border-slate-100 pb-3">
-                      <Truck className="h-4.5 w-4.5 text-[#981495]" /> Delivery Preferences
+                      <Truck className="h-4.5 w-4.5 text-[#8B2FC9]" /> Delivery Preferences
                     </h2>
 
                     <div className="mt-4 space-y-3.5 text-xs">
@@ -856,7 +856,7 @@ function ProfilePage() {
                           onChange={(e) =>
                             profileStore.updateDeliveryPreferences({ contactless: e.target.checked })
                           }
-                          className="h-4 w-4 rounded accent-[#981495]"
+                          className="h-4 w-4 rounded accent-[#8B2FC9]"
                         />
                       </label>
 
@@ -875,7 +875,7 @@ function ProfilePage() {
                               callBeforeDelivery: e.target.checked,
                             })
                           }
-                          className="h-4 w-4 rounded accent-[#981495]"
+                          className="h-4 w-4 rounded accent-[#8B2FC9]"
                         />
                       </label>
 
@@ -919,7 +919,7 @@ function ProfilePage() {
                   {/* Notifications */}
                   <section className="rounded-3xl border border-slate-200/80 bg-white p-5 shadow-xs sm:p-6">
                     <h2 className="font-display text-base font-bold text-slate-900 flex items-center gap-2 border-b border-slate-100 pb-3">
-                      <Bell className="h-4.5 w-4.5 text-[#981495]" /> Notifications & Alerts
+                      <Bell className="h-4.5 w-4.5 text-[#8B2FC9]" /> Notifications & Alerts
                     </h2>
 
                     <div className="mt-4 space-y-2.5 text-xs">
@@ -937,7 +937,7 @@ function ProfilePage() {
                             type="checkbox"
                             checked={(profileExtra.notificationSettings as any)[item.key]}
                             onChange={() => profileStore.toggleNotification(item.key as any)}
-                            className="h-4 w-4 rounded accent-[#981495]"
+                            className="h-4 w-4 rounded accent-[#8B2FC9]"
                           />
                         </label>
                       ))}
@@ -947,16 +947,16 @@ function ProfilePage() {
                   {/* Help & Support */}
                   <section className="rounded-3xl border border-slate-200/80 bg-white p-5 shadow-xs sm:p-6">
                     <h2 className="font-display text-base font-bold text-slate-900 flex items-center gap-2 border-b border-slate-100 pb-3">
-                      <HelpCircle className="h-4.5 w-4.5 text-[#981495]" /> Help & Support
+                      <HelpCircle className="h-4.5 w-4.5 text-[#8B2FC9]" /> Help & Support
                     </h2>
 
                     <div className="mt-4 space-y-2.5 text-xs">
                       <Link
                         to="/help"
-                        className="flex items-center justify-between rounded-xl bg-purple-50/70 p-3 font-bold text-[#981495] hover:bg-purple-100/70 transition"
+                        className="flex items-center justify-between rounded-xl bg-purple-50/70 p-3 font-bold text-[#8B2FC9] hover:bg-purple-100/70 transition"
                       >
                         <span className="flex items-center gap-2">
-                          <MessageSquare className="h-4 w-4 text-[#981495]" /> LocalShore Help Center
+                          <MessageSquare className="h-4 w-4 text-[#8B2FC9]" /> LocalShore Help Center
                         </span>
                         <ChevronRight className="h-4 w-4" />
                       </Link>
@@ -975,7 +975,7 @@ function ProfilePage() {
                         className="w-full flex items-center justify-between rounded-xl border border-slate-200 p-3 font-semibold text-slate-800 hover:bg-slate-50 transition text-left"
                       >
                         <span className="flex items-center gap-2">
-                          <Lock className="h-4 w-4 text-[#981495]" /> Security & Privacy
+                          <Lock className="h-4 w-4 text-[#8B2FC9]" /> Security & Privacy
                         </span>
                         <ChevronRight className="h-4 w-4 text-slate-400" />
                       </button>
@@ -1051,7 +1051,7 @@ function ProfilePage() {
                   toast.success("Profile updated!");
                   setIsEditProfileOpen(false);
                 }}
-                className="rounded-xl bg-[#981495] px-5 py-2 text-xs font-bold text-white shadow-xs hover:bg-[#831080]"
+                className="rounded-xl bg-[#8B2FC9] px-5 py-2 text-xs font-bold text-white shadow-xs hover:bg-[#581C87]"
               >
                 Save Changes
               </button>
@@ -1086,7 +1086,7 @@ function ProfilePage() {
                       onClick={() => setNewAddrLabel(lbl)}
                       className={`flex-1 rounded-xl py-2 font-bold text-xs border ${
                         newAddrLabel === lbl
-                          ? "bg-[#981495] text-white border-[#981495]"
+                          ? "bg-[#8B2FC9] text-white border-[#8B2FC9]"
                           : "bg-slate-50 text-slate-700 border-slate-200"
                       }`}
                     >
@@ -1109,8 +1109,8 @@ function ProfilePage() {
                 />
               </div>
 
-              <div className="rounded-2xl bg-purple-50 p-3 border border-purple-100 text-[11px] text-[#981495] flex items-center gap-2">
-                <Map className="h-4 w-4 shrink-0 text-[#981495]" />
+              <div className="rounded-2xl bg-purple-50 p-3 border border-purple-100 text-[11px] text-[#8B2FC9] flex items-center gap-2">
+                <Map className="h-4 w-4 shrink-0 text-[#8B2FC9]" />
                 <span>
                   {deliveryLoc
                     ? "Using your current selected delivery location."
@@ -1148,7 +1148,7 @@ function ProfilePage() {
                   setNewAddrLine("");
                   setIsAddAddressOpen(false);
                 }}
-                className="rounded-xl bg-[#981495] px-5 py-2 text-xs font-bold text-white shadow-xs hover:bg-[#831080]"
+                className="rounded-xl bg-[#8B2FC9] px-5 py-2 text-xs font-bold text-white shadow-xs hover:bg-[#581C87]"
               >
                 Save Address
               </button>
@@ -1179,7 +1179,7 @@ function ProfilePage() {
                   onClick={() => setNewPayType("upi")}
                   className={`flex-1 rounded-xl py-2 font-bold text-xs border ${
                     newPayType === "upi"
-                      ? "bg-[#981495] text-white border-[#981495]"
+                      ? "bg-[#8B2FC9] text-white border-[#8B2FC9]"
                       : "bg-slate-50 text-slate-700 border-slate-200"
                   }`}
                 >
@@ -1190,7 +1190,7 @@ function ProfilePage() {
                   onClick={() => setNewPayType("card")}
                   className={`flex-1 rounded-xl py-2 font-bold text-xs border ${
                     newPayType === "card"
-                      ? "bg-[#981495] text-white border-[#981495]"
+                      ? "bg-[#8B2FC9] text-white border-[#8B2FC9]"
                       : "bg-slate-50 text-slate-700 border-slate-200"
                   }`}
                 >
@@ -1249,7 +1249,7 @@ function ProfilePage() {
                   setNewPaySub("");
                   setIsAddPaymentOpen(false);
                 }}
-                className="rounded-xl bg-[#981495] px-5 py-2 text-xs font-bold text-white shadow-xs hover:bg-[#831080]"
+                className="rounded-xl bg-[#8B2FC9] px-5 py-2 text-xs font-bold text-white shadow-xs hover:bg-[#581C87]"
               >
                 Save Payment Method
               </button>
@@ -1304,7 +1304,7 @@ function ProfilePage() {
                   <div>
                     <p className="text-xs font-bold text-slate-900">{rw.title}</p>
                     <p className="text-[11px] text-slate-500">{rw.description}</p>
-                    <span className="mt-1 inline-block text-xs font-black text-[#981495]">
+                    <span className="mt-1 inline-block text-xs font-black text-[#8B2FC9]">
                       {rw.pointsRequired} Points
                     </span>
                   </div>
@@ -1320,7 +1320,7 @@ function ProfilePage() {
                         toast.error(e.message);
                       }
                     }}
-                    className="rounded-xl bg-[#981495] px-3.5 py-1.5 text-xs font-bold text-white shadow-xs disabled:opacity-50 hover:bg-[#831080] transition"
+                    className="rounded-xl bg-[#8B2FC9] px-3.5 py-1.5 text-xs font-bold text-white shadow-xs disabled:opacity-50 hover:bg-[#581C87] transition"
                   >
                     Redeem
                   </button>
@@ -1337,7 +1337,7 @@ function ProfilePage() {
           <div className="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <h3 className="font-display text-lg font-bold text-slate-900 flex items-center gap-2">
-                <Lock className="h-4.5 w-4.5 text-[#981495]" /> Security & Privacy
+                <Lock className="h-4.5 w-4.5 text-[#8B2FC9]" /> Security & Privacy
               </h3>
               <button
                 type="button"
@@ -1364,7 +1364,7 @@ function ProfilePage() {
                   <p className="font-bold text-slate-900">Two-Factor Auth (2FA)</p>
                   <p className="text-[11px] text-slate-500">SMS OTP Verification</p>
                 </div>
-                <span className="rounded-full bg-purple-50 border border-purple-200 px-2 py-0.5 text-[10px] font-bold text-[#981495]">
+                <span className="rounded-full bg-purple-50 border border-purple-200 px-2 py-0.5 text-[10px] font-bold text-[#8B2FC9]">
                   Enabled
                 </span>
               </div>
@@ -1374,7 +1374,7 @@ function ProfilePage() {
                 onClick={() => {
                   toast.success("Password reset link sent to your registered email!");
                 }}
-                className="w-full rounded-xl border border-purple-200 bg-purple-50/70 p-2.5 text-xs font-bold text-[#981495] hover:bg-purple-100/70 transition text-center"
+                className="w-full rounded-xl border border-purple-200 bg-purple-50/70 p-2.5 text-xs font-bold text-[#8B2FC9] hover:bg-purple-100/70 transition text-center"
               >
                 Send Password Reset Email
               </button>
@@ -1392,6 +1392,6 @@ function ProfilePage() {
           </div>
         </div>
       )}
-    </AppShell>
+    </SocialCommerceShell>
   );
 }

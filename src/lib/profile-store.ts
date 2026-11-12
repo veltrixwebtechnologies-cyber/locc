@@ -91,6 +91,7 @@ export interface ProfileExtra {
 }
 
 const DEFAULT_PROFILE_EXTRA: ProfileExtra = {
+  avatarUrl: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80",
   preferredLanguage: "English",
   preferredHub: "Singanallur",
   rewardsPoints: 280,
@@ -349,7 +350,16 @@ export const profileStore = {
     };
     persist();
   },
-  updateProfileDetails(patch: { preferredLanguage?: string; preferredHub?: string; bio?: string }) {
+  setAvatarUrl(avatarUrl: string) {
+    state = { ...state, avatarUrl };
+    persist();
+  },
+  updateProfileDetails(patch: {
+    preferredLanguage?: string;
+    preferredHub?: string;
+    bio?: string;
+    avatarUrl?: string;
+  }) {
     state = { ...state, ...patch };
     persist();
   },

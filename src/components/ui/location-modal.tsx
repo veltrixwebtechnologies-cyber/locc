@@ -30,6 +30,7 @@ import {
   detectCurrentGPSLocation,
   commitDetectedLocation,
   getPopularAreasForLocation,
+  POPULAR_LOCATIONS,
   MAX_APPROXIMATE_GPS_PREVIEW_ACCURACY_M,
   type DeliveryLocation,
   gpsAccuracyLabel,
@@ -64,7 +65,7 @@ export function LocationModal({ isOpen, onClose }: LocationModalProps) {
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [searchError, setSearchError] = useState("");
-  const [showPopularAreas, setShowPopularAreas] = useState(false);
+  const [showPopularAreas, setShowPopularAreas] = useState(true);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const modalRef = useRef<HTMLDivElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
@@ -79,7 +80,7 @@ export function LocationModal({ isOpen, onClose }: LocationModalProps) {
       setSearchQuery("");
       setSearchResults([]);
       setSearchError("");
-      setShowPopularAreas(false);
+      setShowPopularAreas(true);
       requestAnimationFrame(() => closeButtonRef.current?.focus());
     }
   }, [isOpen]);
@@ -115,13 +116,13 @@ export function LocationModal({ isOpen, onClose }: LocationModalProps) {
       const detected = await detectCurrentGPSLocation({
         silent: false,
         commit: false,
-        allowApproximate: false,
+        allowApproximate: true,
       });
       const accuracy = detected.accuracy ?? 0;
       if (accuracy > MAX_CUSTOMER_DELIVERY_ACCURACY_M) {
         setPendingGPSLocation(detected);
         setMapOrigin("gps");
-        toast.error("GPS reading is approximate. Please adjust and confirm your pin on the map.");
+        toast.info("Device location detected! Please verify and place your entrance pin on the map.");
         openMap("gps");
         return;
       }
@@ -148,25 +149,17 @@ export function LocationModal({ isOpen, onClose }: LocationModalProps) {
       onClose();
       return;
     }
-    if (!candidate.id.startsWith("confirmed-")) {
-      openMap(pendingGPSLocation ? "gps" : "selected");
-      return;
-    }
-    // High accuracy (low uncertainty radius <= 100m) is required for delivery destination
-    if (
-      candidate.isGPS &&
-      typeof candidate.accuracy === "number" &&
-      candidate.accuracy > MAX_CUSTOMER_DELIVERY_ACCURACY_M
-    ) {
-      toast.error(
-        `GPS accuracy is ±${Math.round(candidate.accuracy)}m. A delivery pin within ${MAX_CUSTOMER_DELIVERY_ACCURACY_M}m is required. Please adjust the entrance pin on the map.`
-      );
-      openMap("gps");
-      return;
-    }
-    commitDetectedLocation(candidate);
+    const confirmedCandidate: DeliveryLocation = {
+      ...candidate,
+      id: candidate.id.startsWith("confirmed-") ? candidate.id : `confirmed-${candidate.id}`,
+      verifiedByCustomer: true,
+      updatedAt: new Date().toISOString(),
+    };
+    commitDetectedLocation(confirmedCandidate);
     setPendingGPSLocation(null);
-    toast.success("Delivery location saved", { description: candidate.label });
+    toast.success("Delivery location confirmed!", {
+      description: confirmedCandidate.label || `${confirmedCandidate.area}, ${confirmedCandidate.city}`,
+    });
     onClose();
   };
 
@@ -216,8 +209,16 @@ export function LocationModal({ isOpen, onClose }: LocationModalProps) {
   };
 
   const handleSelectPreset = (loc: DeliveryLocation) => {
-    setPendingGPSLocation(loc);
-    setViewMode("quick");
+    const confirmedLoc: DeliveryLocation = {
+      ...loc,
+      id: loc.id.startsWith("confirmed-") ? loc.id : `confirmed-${loc.id}`,
+      verifiedByCustomer: true,
+      updatedAt: new Date().toISOString(),
+    };
+    commitDetectedLocation(confirmedLoc);
+    setPendingGPSLocation(null);
+    toast.success("Delivery location updated!", { description: loc.area || loc.label });
+    onClose();
   };
 
   const handleSelectSearchResult = (result: any) => {
@@ -230,19 +231,23 @@ export function LocationModal({ isOpen, onClose }: LocationModalProps) {
     const city = parts.slice(1, 3).join(", ") || parts[1] || "";
 
     const newLoc: DeliveryLocation = {
-      id: `custom-${Date.now()}`,
+      id: `confirmed-search-${Date.now()}`,
       label: rawName || `${area}, ${city}`,
       area,
       city,
       lat: Number(result.lat),
       lng: Number(result.lng),
+      verifiedByCustomer: true,
+      locationSource: "address_search",
+      updatedAt: new Date().toISOString(),
     };
 
-    setPendingGPSLocation(newLoc);
-    setViewMode("quick");
+    commitDetectedLocation(newLoc);
+    setPendingGPSLocation(null);
     setSearchQuery("");
     setSearchResults([]);
-    toast.info("Location selected. Review and confirm it to save.");
+    toast.success("Delivery location updated!", { description: newLoc.label });
+    onClose();
   };
 
   const handleMapLocationSelect = async (loc: DeliveryLocation) => {
@@ -354,6 +359,7 @@ export function LocationModal({ isOpen, onClose }: LocationModalProps) {
           {viewMode === "map" ? (
             <div className="min-h-0 flex-1 flex flex-col pt-2.5 overflow-hidden">
               <LocationMapPicker
+                key={`${pendingGPSLocation?.lat ?? mapFix?.lat ?? activeLocation?.lat ?? "def"}-${pendingGPSLocation?.lng ?? mapFix?.lng ?? activeLocation?.lng ?? "def"}`}
                 initialDeviceLocation={pendingGPSLocation?.isGPS ? pendingGPSLocation : null}
                 initialLat={pendingGPSLocation?.lat ?? mapFix?.lat ?? activeLocation?.lat}
                 initialLng={pendingGPSLocation?.lng ?? mapFix?.lng ?? activeLocation?.lng}
@@ -459,7 +465,7 @@ export function LocationModal({ isOpen, onClose }: LocationModalProps) {
                     className="min-h-12 w-full flex items-center justify-center gap-2 rounded-xl bg-[#981495] px-4 py-3 text-sm font-black text-white shadow-[0_10px_24px_rgba(152,20,149,0.22)] transition hover:bg-[#7d1079] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#981495] focus-visible:ring-offset-2 active:translate-y-px"
                   >
                     <Check className="h-4 w-4 stroke-[3]" />
-                    {selectedLocation.id.startsWith("confirmed-") ? "Use saved delivery pin" : "Review entrance on map"}
+                    Confirm & Save Delivery Location
                   </button>
                 )
               )}
@@ -477,7 +483,11 @@ export function LocationModal({ isOpen, onClose }: LocationModalProps) {
                     <p className="text-xs text-slate-600 font-medium mt-0.5" role="status">
                       {gpsStatusState.fix
                         ? gpsStatusState.fix.accuracy > MAX_CUSTOMER_DELIVERY_ACCURACY_M
-                          ? `Your device returned an approximate location (±${Math.round(gpsStatusState.fix.accuracy / 1000)} km). Trying for a more precise reading. You can place your entrance pin now.`
+                          ? `Your device returned an approximate location (±${
+                              gpsStatusState.fix.accuracy >= 1000
+                                ? `${(gpsStatusState.fix.accuracy / 1000).toFixed(1)} km`
+                                : `${Math.round(gpsStatusState.fix.accuracy)} m`
+                            }). Trying for a more precise reading. You can place your entrance pin now.`
                           : "Looking up your address…"
                         : "Requesting location permission and acquiring device location. This can take up to 30 seconds."}
                     </p>
@@ -664,53 +674,63 @@ export function LocationModal({ isOpen, onClose }: LocationModalProps) {
                 </>
               )}
 
-              {/* DYNAMIC POPULAR AREAS (Only shown when explicitly toggled or after selection) */}
-              {showPopularAreas && activeLocation && dynamicPopularAreas.length > 0 && (
-                <div className="pt-2 border-t border-slate-100">
-                  <h3 className="text-xs font-black text-slate-400 uppercase tracking-wider mb-2">
-                    Popular Areas in {selectedCityName}
-                  </h3>
-                  <div className="space-y-1.5 pb-2">
-                    {dynamicPopularAreas.map((preset) => {
-                      const isSelected = activeLocation?.area === preset.area;
-                      return (
-                        <button
-                          key={preset.id}
-                          type="button"
-                          onClick={() => handleSelectPreset(preset)}
-                          className={`w-full flex items-center justify-between rounded-xl px-3.5 py-2.5 text-left transition-all ${
-                            isSelected
-                              ? "bg-[#981495] text-white shadow-md font-bold"
-                              : "bg-slate-50 hover:bg-[var(--sand)]/70 text-slate-800 hover:text-[#981495] font-semibold"
-                          }`}
-                        >
-                          <div className="flex items-center gap-2.5 min-w-0">
-                            <MapPin
-                              className={`h-4 w-4 shrink-0 ${
-                                isSelected ? "text-white fill-white/20" : "text-[#981495]"
-                              }`}
-                            />
-                            <div className="min-w-0">
-                              <span className="block text-xs sm:text-sm font-bold truncate">
-                                {preset.area}
-                              </span>
-                              <span
-                                className={`block text-[10px] truncate ${
-                                  isSelected ? "text-[var(--sand)]" : "text-slate-400"
+              {/* POPULAR HUBS & LOCALITIES */}
+              {showPopularAreas && POPULAR_LOCATIONS.length > 0 && (
+                <div className="pt-3 border-t border-slate-100">
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="text-xs font-black text-slate-700 uppercase tracking-wider">
+                      Popular Cities & Localities
+                    </h3>
+                    <span className="text-[10px] font-semibold text-slate-400">
+                      Tap to switch instantly
+                    </span>
+                  </div>
+
+                  <div className="space-y-3">
+                    {POPULAR_LOCATIONS.map((group) => (
+                      <div key={group.city}>
+                        <div className="text-[11px] font-black text-[#981495] mb-1.5 flex items-center gap-1">
+                          <span className="h-1.5 w-1.5 rounded-full bg-[#981495]" />
+                          {group.city}
+                        </div>
+                        <div className="grid grid-cols-2 gap-1.5">
+                          {group.areas.map((preset) => {
+                            const isSelected = activeLocation?.area === preset.area;
+                            return (
+                              <button
+                                key={preset.id}
+                                type="button"
+                                onClick={() => handleSelectPreset(preset)}
+                                className={`flex items-center gap-2 rounded-xl p-2.5 text-left transition-all border ${
+                                  isSelected
+                                    ? "border-[#981495] bg-[#981495]/10 text-[#981495] font-bold shadow-xs ring-1 ring-[#981495]"
+                                    : "border-slate-200 bg-white hover:border-[#981495]/40 hover:bg-[var(--sand)]/50 text-slate-800"
                                 }`}
                               >
-                                {preset.city}
-                              </span>
-                            </div>
-                          </div>
-                          {isSelected && (
-                            <div className="grid h-6 w-6 place-items-center rounded-full bg-white text-[#981495] shrink-0">
-                              <Check className="h-3.5 w-3.5 stroke-[3]" />
-                            </div>
-                          )}
-                        </button>
-                      );
-                    })}
+                                <MapPin
+                                  className={`h-3.5 w-3.5 shrink-0 ${
+                                    isSelected ? "text-[#981495] fill-[#981495]/20" : "text-slate-400"
+                                  }`}
+                                />
+                                <div className="min-w-0 flex-1">
+                                  <span className="block text-xs font-bold truncate leading-tight">
+                                    {preset.area}
+                                  </span>
+                                  <span className="block text-[10px] text-slate-400 truncate">
+                                    {preset.city}
+                                  </span>
+                                </div>
+                                {isSelected && (
+                                  <div className="grid h-4 w-4 place-items-center rounded-full bg-[#981495] text-white shrink-0">
+                                    <Check className="h-2.5 w-2.5 stroke-[3]" />
+                                  </div>
+                                )}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
               )}

@@ -5,13 +5,15 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { validatePaymentItems, assertCapturedPayment } from "./payment-validation";
 
 export interface CreateRazorpayOrderInput {
-  items: Array<{ product_id: string; qty: number }>;
+  items: Array<{ product_id: string; qty: number; price?: number; name?: string }>;
   address: string;
   coupon_code?: string;
   customer_latitude?: number | null;
   customer_longitude?: number | null;
   buyer_name?: string;
   buyer_phone?: string;
+  shop_id?: string;
+  shop_name?: string;
 }
 
 export interface CreateRazorpayOrderResult {
@@ -31,10 +33,12 @@ export interface VerifyRazorpayPaymentInput {
   buyer_name: string;
   buyer_phone?: string;
   buyer_address: string;
-  items: Array<{ product_id: string; qty: number }>;
+  items: Array<{ product_id: string; qty: number; price?: number; name?: string }>;
   coupon_code?: string;
   customer_latitude?: number | null;
   customer_longitude?: number | null;
+  shop_id?: string;
+  shop_name?: string;
 }
 
 export interface VerifyRazorpayPaymentResult {

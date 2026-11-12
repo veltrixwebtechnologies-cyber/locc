@@ -13,7 +13,8 @@ import {
   Clock,
   Compass,
 } from "lucide-react";
-import { AppShell, requestLocationModal } from "@/components/app-shell";
+import { requestLocationModal } from "@/components/app-shell";
+import { SocialCommerceShell } from "@/components/social-commerce/social-commerce-shell";
 import { Button } from "@/components/ui/button";
 import { useMLTracker } from "@/hooks/use-ml-tracker";
 import { parseQueryIntent } from "@/lib/ml-shop-ranker";
@@ -82,7 +83,33 @@ function SwiggySearchPage() {
 
   // Shop Discovery Engine (Local Shops matching search/filters)
   const { data: shopData, isLoading: shopsLoading, isError: shopsError, refetch: retryShops } = useShopDiscovery(filterState);
-  const shops = shopData?.shops ?? [];
+  const rawShops = shopData?.shops ?? [];
+  const fallbackShops = useMemo(() => {
+    const cat = (filterState.category || "").toLowerCase();
+    const q = (query || "").toLowerCase();
+    return stores
+      .filter((s) => {
+        if (!cat && !q) return true;
+        const sCat = (s.category || "").toLowerCase();
+        const sName = (s.name || "").toLowerCase();
+        const sDesc = (s.tagline || "").toLowerCase();
+        const matchesCat = !cat || sCat.includes(cat) || cat.includes(sCat);
+        const matchesQ = !q || sName.includes(q) || sDesc.includes(q) || sCat.includes(q);
+        return matchesCat && matchesQ;
+      })
+      .map((s) => ({
+        id: s.id,
+        name: s.name,
+        category: s.category,
+        imageUrl: s.imageUrl,
+        rating: s.rating ?? 4.8,
+        distanceKm: s.distanceKm ?? 0.5,
+        isOpen: s.isOpen ?? true,
+        address: s.address,
+        description: s.tagline,
+      }));
+  }, [filterState.category, query]);
+  const shops = rawShops.length > 0 ? rawShops : fallbackShops;
   const shopRadiusKm = shopData?.effectiveRadiusKm ?? filterState.maxDistanceKm ?? DEFAULT_SHOP_DISCOVERY_RADIUS_KM;
 
   // Product Filters Engine
@@ -257,7 +284,7 @@ function SwiggySearchPage() {
     : "Recommended Shops";
 
   return (
-    <AppShell>
+    <SocialCommerceShell>
       <div className="min-h-screen w-full min-w-0 max-w-7xl mx-auto overflow-x-clip rounded-[28px] border border-[#eadff0] bg-[#fbf9fc] px-3 pb-20 pt-4 shadow-[0_16px_50px_rgba(76,29,149,0.06)] [touch-action:pan-y_pinch-zoom] sm:px-6">
         {/* Search Bar Header */}
         <form onSubmit={handleSearchSubmit} className="relative mb-4">
@@ -543,12 +570,7 @@ function SwiggySearchPage() {
                 </div>
               )}
 
-              {!hasConfirmedLocation ? (
-                <div className="rounded-xl border border-primary/20 bg-primary/5 p-5 text-center" role="status">
-                  <p className="font-bold">Select your delivery location to find nearby shops</p>
-                  <button onClick={requestLocationModal} className="mt-3 rounded-lg bg-primary px-4 py-2 text-primary-foreground focus-visible:outline focus-visible:outline-2">Set location</button>
-                </div>
-              ) : shopsLoading ? (
+              {shopsLoading ? (
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
                   {[1, 2, 3].map((i) => (
                     <div
@@ -601,18 +623,17 @@ function SwiggySearchPage() {
                   </div>
                 </div>
               ) : (
-                <div className="grid min-w-0 grid-cols-1 gap-3 md:grid-cols-2 md:gap-4 lg:grid-cols-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 items-stretch">
                   {shops.map((shop, index) => (
-                    <div key={shop.id} className="w-full min-w-0">
-                      <ShopCard
-                        shop={shop}
-                        priority={index === 0}
-                        searchQuery={query}
-                        activeCategory={filterState.category}
-                        variant="compact"
-                        className="w-full max-w-none md:w-full"
-                      />
-                    </div>
+                    <ShopCard
+                      key={shop.id}
+                      shop={shop}
+                      priority={index === 0}
+                      searchQuery={query}
+                      activeCategory={filterState.category}
+                      variant="wide"
+                      className="h-full w-full"
+                    />
                   ))}
                 </div>
               )}
@@ -745,6 +766,6 @@ function SwiggySearchPage() {
           onClearAll={handleClearAll}
         />
       </div>
-    </AppShell>
+    </SocialCommerceShell>
   );
 }

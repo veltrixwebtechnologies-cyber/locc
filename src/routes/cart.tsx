@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { AppShell } from "@/components/app-shell";
+import { SocialCommerceShell } from "@/components/social-commerce/social-commerce-shell";
 import { cartStore, useCart, cartTotals } from "@/modules/shopper/services/cart-store";
 import { persistentCart } from "@/modules/shopper/services/persistent-cart";
 import { QtyStepper } from "@/components/qty-stepper";
@@ -142,41 +142,41 @@ function CartPage() {
     : [...availableStoreAddOns, ...fallbackImpulse.filter((f) => !inCartIds.has(f.id))].slice(0, 4);
 
   return (
-    <AppShell>
-      {/* ── Stepper & Header ────────────────────────────────── */}
-      <div className="border-b border-border/80 bg-gradient-to-r from-primary/[0.06] via-card to-primary/[0.02] px-4 py-6 sm:px-6 md:px-8">
-        <div className="mx-auto max-w-6xl">
-          <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground mb-2">
-            <span className="font-bold text-primary">1. Basket Review</span>
+    <SocialCommerceShell hideFloatingCreatorDock hideMobileBottomDock>
+      <div className="space-y-4 sm:space-y-6">
+        {/* ── Stepper & Header ────────────────────────────────── */}
+        <div className="rounded-3xl border border-[#E2E8F0] bg-gradient-to-r from-purple-900/10 via-purple-600/5 to-transparent p-5 sm:p-7 shadow-xs">
+          <div className="flex items-center gap-2 text-xs font-bold text-[#8B2FC9] mb-2 uppercase tracking-wider">
+            <span className="font-extrabold text-[#581C87]">1. Basket Review</span>
             <span>/</span>
-            <span className="text-muted-foreground/60">2. Checkout &amp; Address</span>
+            <span className="text-[#64748B]">2. Checkout &amp; Address</span>
             <span>/</span>
-            <span className="text-muted-foreground/60">3. Payment</span>
+            <span className="text-[#64748B]">3. Payment</span>
           </div>
 
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
-              <h1 className="font-display text-2xl sm:text-3xl font-black tracking-tight text-foreground">
+              <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-[#0F172A]">
                 Your Shopping Basket
               </h1>
-              <p className="mt-1 text-xs sm:text-sm text-muted-foreground">
+              <p className="mt-1 text-xs sm:text-sm text-[#746A85]">
                 Review your items from your local neighborhood vendor
               </p>
             </div>
 
             {store && cart.lines.length > 0 && (
-              <div className="inline-flex items-center gap-3 rounded-2xl bg-card border border-border/80 px-4 py-2.5 shadow-2xs">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary font-bold text-base">
+              <div className="inline-flex items-center gap-3 rounded-2xl bg-white border border-[#E2E8F0] px-4 py-2.5 shadow-2xs">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-purple-100 text-[#8B2FC9] font-bold text-base">
                   {store.name[0]}
                 </div>
                 <div className="min-w-0">
                   <div className="flex items-center gap-1.5">
-                    <span className="font-display text-xs sm:text-sm font-bold text-foreground truncate max-w-[170px]">
+                    <span className="text-xs sm:text-sm font-bold text-[#0F172A] truncate max-w-[170px]">
                       {store.name}
                     </span>
-                    <ShieldCheck className="h-3.5 w-3.5 text-primary shrink-0" />
+                    <ShieldCheck className="h-3.5 w-3.5 text-[#8B2FC9] shrink-0" />
                   </div>
-                  <div className="flex items-center gap-2 text-[11px] text-muted-foreground font-mono">
+                  <div className="flex items-center gap-2 text-[11px] text-[#746A85] font-mono">
                     <span className="flex items-center gap-1 text-emerald-600 font-semibold">
                       <Zap className="h-3 w-3 fill-emerald-600 text-emerald-600" />
                       ~{computedEtaMin || 20}m
@@ -189,7 +189,7 @@ function CartPage() {
                   to="/store/$storeId"
                   params={{ storeId: store.id }}
                   search={{ shopLat: shopPin?.lat, shopLng: shopPin?.lng }}
-                  className="ml-2 hidden sm:inline-flex items-center gap-1 rounded-lg border border-border/70 hover:border-primary/40 px-2.5 py-1 text-xs font-semibold text-muted-foreground hover:text-foreground transition-all"
+                  className="ml-2 hidden sm:inline-flex items-center gap-1 rounded-xl border border-purple-100 hover:border-purple-300 px-2.5 py-1 text-xs font-semibold text-[#746A85] hover:text-[#0F172A] transition-all"
                 >
                   <span>Shop more</span>
                   <ChevronRight className="h-3.5 w-3.5" />
@@ -198,36 +198,34 @@ function CartPage() {
             )}
           </div>
         </div>
-      </div>
 
-      {/* ── Delivery Info Bar ──────────────────────────────────────── */}
-      <div className="border-b border-border/70 bg-background/80 backdrop-blur-sm">
-        <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 overflow-x-auto px-4 py-2 text-xs font-medium text-muted-foreground sm:px-6 md:px-8 [scrollbar-width:none]">
-          <div className="flex items-center gap-6 shrink-0">
-            <span className="inline-flex items-center gap-1.5 text-foreground font-semibold">
-              <MapPin className="h-3.5 w-3.5 text-primary" />
-              <span>Delivering to {deliveryLoc?.area || deliveryLoc?.label || "Select your location"}</span>
-            </span>
-            <span className="inline-flex items-center gap-1.5 text-emerald-700 font-medium">
-              <Zap className="h-3.5 w-3.5 text-emerald-600" />
-              <span>{Number.isFinite(computedEtaMin) ? `~${computedEtaMin} min estimated delivery` : "Express doorstep dispatch"}</span>
-            </span>
-            <span className="hidden md:inline-flex items-center gap-1.5 text-muted-foreground">
-              <ShieldCheck className="h-3.5 w-3.5 text-primary" />
-              <span>100% Genuine Local Storefront</span>
-            </span>
+        {/* ── Delivery Info Bar ──────────────────────────────────────── */}
+        <div className="rounded-2xl border border-[#E2E8F0] bg-white p-3 shadow-xs">
+          <div className="flex flex-wrap items-center justify-between gap-3 text-xs font-medium text-[#746A85]">
+            <div className="flex items-center gap-4 sm:gap-6 flex-wrap">
+              <span className="inline-flex items-center gap-1.5 text-[#0F172A] font-bold">
+                <MapPin className="h-3.5 w-3.5 text-[#8B2FC9]" />
+                <span>Delivering to {deliveryLoc?.area || deliveryLoc?.label || "Select your location"}</span>
+              </span>
+              <span className="inline-flex items-center gap-1.5 text-emerald-700 font-medium">
+                <Zap className="h-3.5 w-3.5 text-emerald-600" />
+                <span>{Number.isFinite(computedEtaMin) ? `~${computedEtaMin} min estimated delivery` : "Express doorstep dispatch"}</span>
+              </span>
+              <span className="hidden md:inline-flex items-center gap-1.5 text-[#746A85]">
+                <ShieldCheck className="h-3.5 w-3.5 text-[#8B2FC9]" />
+                <span>100% Genuine Local Storefront</span>
+              </span>
+            </div>
+
+            {cart.lines.length > 0 && (
+              <span className="font-mono text-xs font-extrabold text-[#8B2FC9]">
+                {totals.itemCount} {totals.itemCount === 1 ? "item" : "items"} in basket
+              </span>
+            )}
           </div>
-
-          {cart.lines.length > 0 && (
-            <span className="font-mono text-xs font-bold text-primary shrink-0">
-              {totals.itemCount} {totals.itemCount === 1 ? "item" : "items"} in basket
-            </span>
-          )}
         </div>
-      </div>
 
-      {/* ── Main Content ────────────────────────────────────────── */}
-      <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 md:px-8">
+        {/* ── Main Content ────────────────────────────────────────── */}
         {cart.lines.length === 0 ? (
           !persistentCart.isRestored() ? (
             <div className="mt-8 rounded-3xl border border-border bg-card p-14 text-center shadow-xs animate-pulse">
@@ -750,7 +748,7 @@ function CartPage() {
 
         {/* ── STICKY BOTTOM BAR FOR MOBILE ───────────────────────── */}
         {cart.lines.length > 0 && (
-          <div className="fixed bottom-[calc(3.5rem+env(safe-area-inset-bottom,0px))] inset-x-0 z-50 border-t border-border/80 bg-card/95 p-3.5 shadow-[0_-6px_25px_rgba(0,0,0,0.12)] backdrop-blur-xl lg:hidden">
+          <div className="fixed bottom-0 inset-x-0 z-50 border-t border-border/80 bg-card/95 p-3.5 pb-[max(0.875rem,env(safe-area-inset-bottom,0.875rem))] shadow-[0_-6px_25px_rgba(0,0,0,0.12)] backdrop-blur-xl lg:hidden">
             <div className="flex items-center justify-between gap-3 max-w-md mx-auto">
               <div className="flex flex-col pl-1">
                 <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
@@ -784,6 +782,6 @@ function CartPage() {
           </div>
         )}
       </div>
-    </AppShell>
+    </SocialCommerceShell>
   );
 }

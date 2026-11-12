@@ -168,6 +168,12 @@ export function ShopCardSheet({ marker, userLocation, onClose, onDirectionsCalcu
             <p className="text-xs font-medium text-muted-foreground line-clamp-1">
               {marker.productName} · {marker.distanceKm.toFixed(1)} km away
             </p>
+            {marker.address && (
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-1">
+                <MapPin className="h-3.5 w-3.5 text-primary shrink-0" />
+                <span className="line-clamp-1">{marker.address}</span>
+              </div>
+            )}
           </div>
           {marker.rating > 0 && (
             <div className="flex items-center gap-1 rounded-lg bg-amber-500/10 px-2 py-1 text-xs font-extrabold text-foreground shrink-0 border border-amber-500/20">
