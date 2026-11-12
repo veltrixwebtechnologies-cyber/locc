@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { SocialCommerceShell } from "@/components/social-commerce/social-commerce-shell";
+import { AppShell } from "@/components/app-shell";
 import {
   useOrdersState,
   getCachedOrder,
@@ -43,7 +43,6 @@ import { OrderSupport } from "@/components/order-support";
 import { DeliveryAnimation } from "@/components/delivery-animation";
 import { LottieLoading } from "@/components/ui/lottie-loading";
 import { OrderRefundPanel } from "@/components/order-refund-panel";
-import { CancelOrderModal } from "@/components/cancel-order-modal";
 import { getOrderProgressIndex } from "@/lib/order-progress";
 
 export const Route = createFileRoute("/order/$orderId")({
@@ -451,7 +450,7 @@ function OrderPage() {
 
   if (isLoading) {
     return (
-      <SocialCommerceShell>
+      <AppShell>
         <div className="mx-auto max-w-xl py-16 px-4 flex justify-center">
           <LottieLoading
             message="Loading your order details..."
@@ -459,13 +458,13 @@ function OrderPage() {
             size="lg"
           />
         </div>
-      </SocialCommerceShell>
+      </AppShell>
     );
   }
 
   if (!order) {
     return (
-      <SocialCommerceShell>
+      <AppShell>
         <div className="mx-5 mt-8 rounded-xl border hairline bg-card p-6 text-center">
           <p className="font-display text-lg">Order not found</p>
           <Link
@@ -475,14 +474,14 @@ function OrderPage() {
             All orders
           </Link>
         </div>
-      </SocialCommerceShell>
+      </AppShell>
     );
   }
 
   const progress = currentIndex < 0 ? 0 : ((currentIndex + 1) / orderStatusFlow.length) * 100;
 
   return (
-    <SocialCommerceShell>
+    <AppShell>
       <div className="px-5 pt-6 flex flex-wrap items-start justify-between gap-4">
         <div>
           <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
@@ -527,83 +526,23 @@ function OrderPage() {
       </div>
 
       {order.status === "cancelled" && (
-        <div className="mx-5 mt-4 overflow-hidden rounded-3xl border border-rose-200 bg-rose-50/70 p-5 dark:border-rose-900/50 dark:bg-rose-950/40 shadow-xs space-y-4">
-          <div className="flex items-start justify-between gap-3">
-            <div className="flex items-start gap-3">
-              <div className="grid h-10 w-10 place-items-center rounded-2xl bg-rose-100 dark:bg-rose-900/60 text-rose-600 dark:text-rose-300 font-bold shrink-0">
-                <XCircle className="h-6 w-6" />
-              </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <h3 className="font-display text-base font-bold text-rose-950 dark:text-rose-100">
-                    Order Cancelled
-                  </h3>
-                  <span className="rounded-full bg-rose-200/80 dark:bg-rose-900/80 px-2 py-0.5 text-[10px] font-bold text-rose-800 dark:text-rose-200 uppercase tracking-wider">
-                    Terminal State
-                  </span>
-                </div>
-                {order.cancellationReason && (
-                  <p className="mt-1 text-xs text-rose-800 dark:text-rose-200">
-                    <span className="font-semibold">Reason:</span> {order.cancellationReason}
-                  </p>
-                )}
-                <p className="text-[11px] text-muted-foreground mt-0.5 font-mono">
-                  Cancelled at: {new Date().toLocaleDateString("en-IN", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+        <div className="mx-5 mt-4 rounded-2xl border border-rose-200 bg-rose-50 p-4 dark:border-rose-900/50 dark:bg-rose-950/40">
+          <div className="flex items-start gap-3">
+            <XCircle className="mt-0.5 h-5 w-5 text-rose-600 dark:text-rose-400 shrink-0" />
+            <div>
+              <h3 className="font-display text-sm font-bold text-rose-900 dark:text-rose-200">
+                This Order Has Been Cancelled
+              </h3>
+              {order.cancellationReason && (
+                <p className="mt-1 text-xs text-rose-700 dark:text-rose-300">
+                  <strong>Reason:</strong> {order.cancellationReason}
                 </p>
-              </div>
+              )}
+              <p className="mt-1 text-[11px] text-rose-600/80 dark:text-rose-400/80">
+                If a payment was captured, check the refund status below or contact Customer Care.
+                Cancellation alone does not confirm a refund.
+              </p>
             </div>
-            <a
-              href="mailto:support@localshore.in?subject=Help%20with%20Cancelled%20Order%20"
-              className="hidden sm:inline-flex items-center gap-1 text-[11px] font-bold text-rose-700 dark:text-rose-300 hover:underline shrink-0"
-            >
-              Need Help?
-            </a>
-          </div>
-
-          {/* Refund Progress & Status Tracker */}
-          <div className="rounded-2xl bg-white/80 dark:bg-card/80 border border-rose-200/60 dark:border-rose-900/40 p-4 space-y-3">
-            <div className="flex items-center justify-between text-xs font-bold text-foreground">
-              <span>Refund Status Tracker</span>
-              <span className="text-primary font-semibold">
-                {order.paymentStatus === "captured" || order.paymentStatus === "paid"
-                  ? "Refund in Progress"
-                  : "No Payment Debited"}
-              </span>
-            </div>
-
-            <div className="grid grid-cols-3 gap-2 text-center pt-1">
-              <div className="flex flex-col items-center">
-                <div className="grid h-7 w-7 place-items-center rounded-full bg-emerald-100 text-emerald-600 dark:bg-emerald-950 dark:text-emerald-400 text-xs font-bold mb-1">
-                  ✓
-                </div>
-                <span className="text-[10px] font-bold text-foreground">Cancelled</span>
-                <span className="text-[9px] text-muted-foreground">Order voided</span>
-              </div>
-
-              <div className="flex flex-col items-center">
-                <div className={`grid h-7 w-7 place-items-center rounded-full text-xs font-bold mb-1 ${
-                  order.paymentStatus === "captured" || order.paymentStatus === "paid"
-                    ? "bg-amber-100 text-amber-600 dark:bg-amber-950 dark:text-amber-400 animate-pulse"
-                    : "bg-muted text-muted-foreground"
-                }`}>
-                  {order.paymentStatus === "captured" || order.paymentStatus === "paid" ? "⏳" : "—"}
-                </div>
-                <span className="text-[10px] font-bold text-foreground">Initiated</span>
-                <span className="text-[9px] text-muted-foreground">Razorpay SLA</span>
-              </div>
-
-              <div className="flex flex-col items-center">
-                <div className="grid h-7 w-7 place-items-center rounded-full bg-muted text-muted-foreground text-xs font-bold mb-1">
-                  💳
-                </div>
-                <span className="text-[10px] font-bold text-foreground">Completed</span>
-                <span className="text-[9px] text-muted-foreground">5-7 Business Days</span>
-              </div>
-            </div>
-
-            <p className="text-[10px] text-muted-foreground border-t border-border/50 pt-2">
-              💡 Razorpay refund reference is dispatched automatically. You will receive an SMS and email notification once credited to your account.
-            </p>
           </div>
         </div>
       )}
@@ -924,11 +863,155 @@ function OrderPage() {
       {isInvoiceModalOpen && (
         <TaxInvoiceModal order={order} onClose={() => setIsInvoiceModalOpen(false)} />
       )}
-    </SocialCommerceShell>
+    </AppShell>
   );
 }
 
+const CANCEL_REASONS = [
+  { id: "delay", icon: "🕒", label: "Delivery is taking longer than expected" },
+  { id: "mistake", icon: "🛒", label: "Placed order by mistake / Changed my mind" },
+  { id: "address", icon: "📍", label: "Incorrect delivery address or phone number" },
+  { id: "payment", icon: "💳", label: "Want to change payment method or coupon" },
+  { id: "duplicate", icon: "📦", label: "Ordered duplicate items / No longer needed" },
+  { id: "modify", icon: "✏️", label: "Need to change items or quantities" },
+  { id: "other", icon: "💬", label: "Other reason" },
+];
 
+function CancelOrderModal({
+  order,
+  onClose,
+  onCancelled,
+}: {
+  order: Order;
+  onClose: () => void;
+  onCancelled: () => void;
+}) {
+  const [selectedReason, setSelectedReason] = useState(CANCEL_REASONS[0].label);
+  const [customReason, setCustomReason] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleConfirmCancel = async () => {
+    const finalReason =
+      selectedReason === "Other reason" && customReason.trim()
+        ? customReason.trim()
+        : selectedReason;
+
+    setIsSubmitting(true);
+    try {
+      const cancelled = await cancelOrder(order.id, finalReason);
+      if (!cancelled) {
+        throw new Error("This order can no longer be cancelled or was not found.");
+      }
+      toast.success(`Order #${order.code} cancelled successfully`);
+      onCancelled();
+    } catch (err: any) {
+      toast.error(err.message || "Failed to cancel order");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-xs animate-in fade-in duration-200">
+      <div className="w-full max-w-md overflow-hidden rounded-3xl bg-card border border-border shadow-2xl animate-in zoom-in-95 duration-200">
+        {/* Modal Header */}
+        <div className="flex items-center justify-between border-b border-border px-6 py-4 bg-secondary/30">
+          <div className="flex items-center gap-2.5">
+            <div className="grid h-9 w-9 place-items-center rounded-full bg-rose-100 dark:bg-rose-950 text-rose-600 font-bold">
+              <XCircle className="h-5 w-5" />
+            </div>
+            <div>
+              <h3 className="font-display text-base font-bold text-foreground">Cancel Order</h3>
+              <p className="text-[11px] text-muted-foreground font-mono">Order #{order.code}</p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="grid h-8 w-8 place-items-center rounded-full bg-secondary text-muted-foreground hover:text-foreground hover:bg-muted font-bold text-sm"
+          >
+            ✕
+          </button>
+        </div>
+
+        {/* Modal Content - Reasons */}
+        <div className="p-6 space-y-4 max-h-[75vh] overflow-y-auto">
+          <p className="text-xs font-semibold text-foreground">
+            Please select a reason for cancelling your order:
+          </p>
+
+          <div className="space-y-2">
+            {CANCEL_REASONS.map((r) => {
+              const isSelected = selectedReason === r.label;
+              return (
+                <label
+                  key={r.id}
+                  onClick={() => setSelectedReason(r.label)}
+                  className={`flex items-center justify-between p-3 rounded-2xl border cursor-pointer transition-all ${isSelected
+                    ? "border-rose-500 bg-rose-50/50 dark:bg-rose-950/30 ring-1 ring-rose-500/30"
+                    : "border-border hover:border-muted-foreground/30 hover:bg-muted/30"
+                    }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="text-base">{r.icon}</span>
+                    <span className="text-xs font-medium text-foreground">{r.label}</span>
+                  </div>
+                  <input
+                    type="radio"
+                    name="cancel_reason"
+                    checked={isSelected}
+                    onChange={() => setSelectedReason(r.label)}
+                    className="h-4 w-4 accent-rose-600"
+                  />
+                </label>
+              );
+            })}
+          </div>
+
+          {selectedReason === "Other reason" && (
+            <div className="pt-2">
+              <label className="text-[11px] font-semibold text-muted-foreground block mb-1">
+                Tell us more about your reason:
+              </label>
+              <textarea
+                value={customReason}
+                onChange={(e) => setCustomReason(e.target.value)}
+                placeholder="Enter custom cancellation reason..."
+                rows={2}
+                className="w-full rounded-xl border border-border bg-background p-2.5 text-xs text-foreground focus:border-rose-500 focus:outline-none"
+              />
+            </div>
+          )}
+
+          <div className="rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200/60 p-3 text-[11px] text-amber-800 dark:text-amber-300">
+            💡 <strong>Note:</strong> Cancellation does not itself process a payment refund. Any
+            refund request and its status are shown separately on the order page.
+          </div>
+        </div>
+
+        {/* Modal Actions */}
+        <div className="flex items-center justify-end gap-3 border-t border-border px-6 py-4 bg-secondary/30">
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={isSubmitting}
+            className="rounded-xl px-4 py-2.5 text-xs font-bold text-muted-foreground hover:text-foreground hover:bg-muted transition-all"
+          >
+            Keep Order
+          </button>
+          <button
+            type="button"
+            onClick={handleConfirmCancel}
+            disabled={isSubmitting}
+            className="rounded-xl bg-rose-600 px-5 py-2.5 text-xs font-bold text-white shadow-md hover:bg-rose-700 active:scale-95 transition-all disabled:opacity-50"
+          >
+            {isSubmitting ? "Cancelling..." : "Confirm Cancellation"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function Row({ label, value, bold }: { label: string; value: string; bold?: boolean }) {
   return (
