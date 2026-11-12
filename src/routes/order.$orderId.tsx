@@ -152,45 +152,12 @@ function DeliveryTimingHero({ order }: { order: Order }) {
   const isDelivered = order.status === "delivered";
   const isCancelled = order.status === "cancelled";
 
-  // Re-evaluate periodically so remaining minutes decrement in real-time
-  const [now, setNow] = useState(() => Date.now());
-
-  useEffect(() => {
-    if (isDelivered || isCancelled) return;
-    const interval = setInterval(() => setNow(Date.now()), 10000);
-    return () => clearInterval(interval);
-  }, [isDelivered, isCancelled]);
-
-  const timing = useMemo(() => {
-    const orderCreatedAtMs = new Date(order.createdAt).getTime();
-    const initialEtaMins = order.etaMin || 25;
-    const initialEtaMs = initialEtaMins * 60 * 1000;
-    const targetArrivalMs = orderCreatedAtMs + initialEtaMs;
-
-    // Remaining minutes until delivery
-    const remainingMs = targetArrivalMs - now;
-    const remainingMins = Math.round(remainingMs / 60000);
-
-    const arrivalDate = new Date(targetArrivalMs);
-    const expectedTimeStr = arrivalDate.toLocaleTimeString([], {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-
-    if (remainingMins <= 0) {
-      return {
-        title: "Arriving Any Moment",
-        isDelayed: true,
-        expectedTimeStr,
-      };
-    }
-
-    return {
-      title: remainingMins === 1 ? "Arriving in ~1 Min" : `Arriving in ~${remainingMins} Mins`,
-      isDelayed: false,
-      expectedTimeStr,
-    };
-  }, [order.createdAt, order.etaMin, now]);
+  const expectedTimeStr = useMemo(() => {
+    const orderTime = new Date(order.createdAt);
+    const etaMs = (order.etaMin || 25) * 60 * 1000;
+    const arrivalTime = new Date(orderTime.getTime() + etaMs);
+    return arrivalTime.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  }, [order.createdAt, order.etaMin]);
 
   return (
     <div className="mx-5 mt-4 overflow-hidden rounded-2xl bg-gradient-to-br from-slate-900 via-teal-950 to-emerald-950 p-5 text-white shadow-xl ring-1 ring-white/10">
@@ -215,24 +182,15 @@ function DeliveryTimingHero({ order }: { order: Order }) {
               ? "Delivered Successfully 🎉"
               : isCancelled
                 ? "Order Cancelled"
-                : timing.title}
+                : `Arriving in ~${order.etaMin || 25} Mins`}
           </h2>
 
           {!isDelivered && !isCancelled && (
             <p className="mt-1 flex items-center gap-1.5 text-xs text-slate-300">
               <Clock className="h-3.5 w-3.5 text-emerald-400" />
               <span>
-                {timing.isDelayed ? (
-                  <>
-                    Estimated Arrival ~<strong className="text-white font-semibold">{timing.expectedTimeStr}</strong>
-                    {" "}<span className="text-emerald-300 font-medium">(Arriving any moment)</span>
-                  </>
-                ) : (
-                  <>
-                    Expected Arrival by{" "}
-                    <strong className="text-white font-semibold">{timing.expectedTimeStr}</strong>
-                  </>
-                )}
+                Expected Arrival by{" "}
+                <strong className="text-white font-semibold">{expectedTimeStr}</strong>
               </span>
             </p>
           )}
@@ -242,10 +200,7 @@ function DeliveryTimingHero({ order }: { order: Order }) {
           <div className="rounded-xl bg-white/10 px-3 py-1.5 backdrop-blur-md border border-white/10 text-right">
             <p className="font-mono text-[10px] uppercase text-emerald-300">Distance</p>
             <p className="font-mono text-sm font-bold text-white">
-              {(Number.isFinite(Number(order.distanceKm)) && Number(order.distanceKm) > 0
-                ? Number(order.distanceKm)
-                : 2.4
-              ).toFixed(1)} km
+              {order.distanceKm.toFixed(1)} km
             </p>
           </div>
         </div>
@@ -374,11 +329,10 @@ function DeliveryPartnerCard({
                 title={`Rate ${star} star${star > 1 ? "s" : ""}`}
               >
                 <Star
-                  className={`h-4 w-4 transition-colors ${
-                    (hoverRating ?? userRating ?? 0) >= star
-                      ? "fill-amber-400 text-amber-400"
-                      : "text-muted-foreground/30"
-                  }`}
+                  className={`h-4 w-4 transition-colors ${(hoverRating ?? userRating ?? 0) >= star
+                    ? "fill-amber-400 text-amber-400"
+                    : "text-muted-foreground/30"
+                    }`}
                 />
               </button>
             ))}
@@ -664,11 +618,10 @@ function OrderPage() {
               <button
                 type="button"
                 onClick={() => setIsAutoSimulating((prev) => !prev)}
-                className={`inline-flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-bold transition-all cursor-pointer ${
-                  isAutoSimulating
-                    ? "bg-amber-500/15 border-amber-500/30 text-amber-600 animate-pulse"
-                    : "bg-muted/70 border-border text-foreground hover:bg-muted"
-                }`}
+                className={`inline-flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-bold transition-all cursor-pointer ${isAutoSimulating
+                  ? "bg-amber-500/15 border-amber-500/30 text-amber-600 animate-pulse"
+                  : "bg-muted/70 border-border text-foreground hover:bg-muted"
+                  }`}
                 title="Auto-play all 7 steps with animated delivery"
               >
                 {isAutoSimulating ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}
@@ -729,11 +682,10 @@ function OrderPage() {
                 {/* Connecting Line */}
                 {!isLast && (
                   <div
-                    className={`absolute left-[19px] top-10 bottom-0 w-0.5 transition-colors duration-500 ${
-                      done && currentIndex > i
-                        ? "bg-emerald-500"
-                        : "bg-border/60"
-                    }`}
+                    className={`absolute left-[19px] top-10 bottom-0 w-0.5 transition-colors duration-500 ${done && currentIndex > i
+                      ? "bg-emerald-500"
+                      : "bg-border/60"
+                      }`}
                   />
                 )}
 
@@ -758,13 +710,12 @@ function OrderPage() {
                 <div className="flex-1 min-w-0 pt-0.5">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <h3
-                      className={`text-sm sm:text-base font-bold transition-colors ${
-                        active
-                          ? "text-primary"
-                          : done
-                            ? "text-foreground"
-                            : "text-muted-foreground/80"
-                      }`}
+                      className={`text-sm sm:text-base font-bold transition-colors ${active
+                        ? "text-primary"
+                        : done
+                          ? "text-foreground"
+                          : "text-muted-foreground/80"
+                        }`}
                     >
                       {step.label}
                     </h3>
@@ -788,9 +739,8 @@ function OrderPage() {
                     </div>
                   </div>
                   <p
-                    className={`mt-1 text-xs leading-relaxed transition-colors ${
-                      active ? "text-foreground/90 font-medium" : "text-muted-foreground"
-                    }`}
+                    className={`mt-1 text-xs leading-relaxed transition-colors ${active ? "text-foreground/90 font-medium" : "text-muted-foreground"
+                      }`}
                   >
                     {step.desc}
                   </p>
@@ -802,9 +752,9 @@ function OrderPage() {
       </section>
 
       {order.deliveryOtp &&
-      order.status !== "delivered" &&
-      order.status !== "cancelled" &&
-      order.status !== "returned" ? (
+        order.status !== "delivered" &&
+        order.status !== "cancelled" &&
+        order.status !== "returned" ? (
         <section className="mx-5 mt-4 rounded-xl border border-primary/30 bg-primary/5 p-4 text-center">
           <p className="text-xs font-semibold uppercase tracking-widest text-primary">
             Delivery OTP
@@ -997,11 +947,10 @@ function CancelOrderModal({
                 <label
                   key={r.id}
                   onClick={() => setSelectedReason(r.label)}
-                  className={`flex items-center justify-between p-3 rounded-2xl border cursor-pointer transition-all ${
-                    isSelected
-                      ? "border-rose-500 bg-rose-50/50 dark:bg-rose-950/30 ring-1 ring-rose-500/30"
-                      : "border-border hover:border-muted-foreground/30 hover:bg-muted/30"
-                  }`}
+                  className={`flex items-center justify-between p-3 rounded-2xl border cursor-pointer transition-all ${isSelected
+                    ? "border-rose-500 bg-rose-50/50 dark:bg-rose-950/30 ring-1 ring-rose-500/30"
+                    : "border-border hover:border-muted-foreground/30 hover:bg-muted/30"
+                    }`}
                 >
                   <div className="flex items-center gap-3">
                     <span className="text-base">{r.icon}</span>
@@ -1223,3 +1172,4 @@ function TaxInvoiceModal({ order, onClose }: { order: Order; onClose: () => void
     </div>
   );
 }
+
